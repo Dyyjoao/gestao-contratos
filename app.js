@@ -8,6 +8,7 @@ import "./js/providers.js";
 import "./js/fleet.js";
 import "./js/fleet-maintenance.js";
 import "./js/inventory.js";
+import "./js/inventory-history.js";
 import "./js/quotes.js";
 import "./js/controllership.js";
 import "./js/dashboard.js";
