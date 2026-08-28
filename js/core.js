@@ -51,29 +51,56 @@ export function abrirPagina(nome){
 export function configurarMenus(){
   Object.entries(MENUS).forEach(([modulo,[id]])=>$(id)?.classList.toggle("hidden",!permite(modulo)));
   $("menuAdministracao")?.classList.toggle("hidden",!podeAdministrar());
-  document.querySelectorAll("[data-ir-pagina]").forEach(b=>{const p=b.dataset.irPagina;const modulo=p; b.classList.toggle("hidden",!permite(modulo))});
+  document.querySelectorAll("[data-ir-pagina]").forEach(b=>{const p=b.dataset.irPagina;b.classList.toggle("hidden",!permite(p))});
 }
 function primeira(){for(const m of ["dashboard","contratos","cotacoes","frota","almoxarifado","prestadores","controladoria"])if(permite(m))return m;if(podeAdministrar())return"administracao";return"dashboard"}
 
 export async function carregarGrupoAtual(){if(!state.usuario?.grupoId){state.grupo=null;return}const s=await getDoc(doc(db,"gruposEmpresariais",state.usuario.grupoId));state.grupo=s.exists()?{id:s.id,...s.data()}:null}
 
+function idsEmpresasUsuario(){return [...new Set([state.usuario?.empresaId,...(Array.isArray(state.usuario?.empresasAcesso)?state.usuario.empresasAcesso:[])].filter(Boolean))]}
+async function carregarEmpresasAdministrativas(grupoId){
+  const mapa=new Map();
+  const precisa=admin()||permite("empresas","visualizar")||permite("empresas","cadastrar")||permite("empresas","editar")||permite("usuarios","visualizar")||permite("usuarios","cadastrar")||permite("usuarios","editar");
+  if(!precisa)return mapa;
+  if(admin()||state.usuario?.acessoGlobal===true){
+    const s=await getDocs(query(collection(db,"empresas"),where("grupoId","==",grupoId)));s.forEach(r=>mapa.set(r.id,{id:r.id,...r.data()}));
+  }else{
+    for(const id of idsEmpresasUsuario()){try{const s=await getDoc(doc(db,"empresas",id));if(s.exists()&&s.data().grupoId===grupoId)mapa.set(s.id,{id:s.id,...s.data()})}catch{}}
+  }
+  return mapa;
+}
+async function carregarUsuariosAdministrativos(grupoId){
+  const mapa=new Map();
+  if(!(admin()||permite("usuarios","visualizar")))return mapa;
+  const s=await getDocs(query(collection(db,"usuarios"),where("grupoId","==",grupoId)));s.forEach(r=>mapa.set(r.id,{id:r.id,...r.data()}));return mapa;
+}
+async function carregarPerfisAdministrativos(grupoId){
+  const mapa=new Map();
+  const precisa=admin()||permite("perfisAcesso","visualizar")||permite("perfisAcesso","cadastrar")||permite("perfisAcesso","editar")||permite("usuarios","cadastrar")||permite("usuarios","editar");
+  if(!precisa)return mapa;
+  const s=await getDocs(query(collection(db,"perfisAcesso"),where("grupoId","==",grupoId)));s.forEach(r=>mapa.set(r.id,{id:r.id,...r.data()}));
+  if(admin()){try{const ap=await getDoc(doc(db,"perfisAcesso","administrador"));if(ap.exists())mapa.set(ap.id,{id:ap.id,...ap.data()})}catch{}}
+  return mapa;
+}
+
 export async function carregarAdmin(){
   if(!podeAdministrar()||!state.usuario?.grupoId)return;
   const grupoId=state.usuario.grupoId;
-  const tarefas=[];
-  tarefas.push(getDocs(query(collection(db,"empresas"),where("grupoId","==",grupoId))));
-  tarefas.push(getDocs(query(collection(db,"usuarios"),where("grupoId","==",grupoId))));
-  tarefas.push(getDocs(query(collection(db,"perfisAcesso"),where("grupoId","==",grupoId))));
-  const[e,u,p]=await Promise.all(tarefas);
-  state.empresas=new Map();state.usuarios=new Map();state.perfis=new Map();
-  e.forEach(r=>state.empresas.set(r.id,{id:r.id,...r.data()}));
-  u.forEach(r=>state.usuarios.set(r.id,{id:r.id,...r.data()}));
-  p.forEach(r=>state.perfis.set(r.id,{id:r.id,...r.data()}));
-  try{const ap=await getDoc(doc(db,"perfisAcesso","administrador"));if(ap.exists())state.perfis.set(ap.id,{id:ap.id,...ap.data()})}catch{}
+  const [empresas,usuarios,perfis]=await Promise.all([carregarEmpresasAdministrativas(grupoId),carregarUsuariosAdministrativos(grupoId),carregarPerfisAdministrativos(grupoId)]);
+  state.empresas=empresas;state.usuarios=usuarios;state.perfis=perfis;
   if(state.usuario&&!state.usuarios.has(state.usuario.id))state.usuarios.set(state.usuario.id,state.usuario);
+  if(state.perfil&&!state.perfis.has(state.perfil.id))state.perfis.set(state.perfil.id,state.perfil);
 }
 
-export async function atualizarResumo(){if(!podeAdministrar())return;try{await carregarAdmin();if($("resumoEmpresas"))$("resumoEmpresas").textContent=state.empresas.size;if($("resumoUsuarios"))$("resumoUsuarios").textContent=[...state.usuarios.values()].filter(x=>x.ativo===true).length;if($("resumoPerfis"))$("resumoPerfis").textContent=[...state.perfis.values()].filter(x=>x.ativo===true).length}catch(e){console.error(e);["resumoEmpresas","resumoUsuarios","resumoPerfis"].forEach(id=>{if($(id))$(id).textContent="—"})}}
+export async function atualizarResumo(){
+  if(!podeAdministrar())return;
+  try{
+    await carregarAdmin();
+    if($("resumoEmpresas"))$("resumoEmpresas").textContent=state.empresas.size||"—";
+    if($("resumoUsuarios"))$("resumoUsuarios").textContent=permite("usuarios","visualizar")?[...state.usuarios.values()].filter(x=>x.ativo===true).length:"—";
+    if($("resumoPerfis"))$("resumoPerfis").textContent=(admin()||permite("perfisAcesso","visualizar"))?[...state.perfis.values()].filter(x=>x.ativo===true).length:"—";
+  }catch(e){console.error(e);["resumoEmpresas","resumoUsuarios","resumoPerfis"].forEach(id=>{if($(id))$(id).textContent="—"})}
+}
 
 on(formLogin,"submit",async ev=>{ev.preventDefault();if(loginBusy)return;const em=email?.value.trim(),pw=senha?.value;if(!em||!pw)return;setBusy(true);try{await signInWithEmailAndPassword(auth,em,pw);msg(mensagemLogin,"Credenciais validadas. Carregando seu acesso...")}catch(e){console.error(e);msg(mensagemLogin,erroLogin(e));setBusy(false)}});
 on(btnSair,"click",()=>signOut(auth));
