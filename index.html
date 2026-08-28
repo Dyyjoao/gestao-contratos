@@ -85,7 +85,7 @@
   </main>
 
 
-  <!-- SISTEMA -->
+  
   <!-- SISTEMA -->
 <div id="sistema" class="hidden">
 
@@ -246,12 +246,17 @@
 
           <div class="admin-grid">
 
-            <div class="admin-card">
-              <h3>Empresas</h3>
-              <p>
-                Cadastro e gestão das empresas.
-              </p>
-            </div>
+            <button
+  id="cardEmpresas"
+  class="admin-card admin-card-button"
+  type="button"
+>
+  <h3>Empresas</h3>
+
+  <p>
+    Cadastro e gestão das empresas.
+  </p>
+</button>
 
             <div class="admin-card">
               <h3>Usuários</h3>
@@ -285,6 +290,179 @@
   </div>
 
 </div>
+<!-- EMPRESAS -->
+<section
+  id="pagina-empresas"
+  class="pagina hidden"
+>
+
+  <div class="pagina-cabecalho">
+
+    <div>
+
+      <button
+        id="btnVoltarAdministracao"
+        class="btn-voltar"
+        type="button"
+      >
+        ← Administração
+      </button>
+
+      <h2>Empresas</h2>
+
+      <p>
+        Cadastro das empresas pertencentes ao grupo empresarial.
+      </p>
+
+    </div>
+
+    <button
+      id="btnMostrarNovaEmpresa"
+      class="btn-primario"
+      type="button"
+    >
+      + Nova empresa
+    </button>
+
+  </div>
+
+
+  <!-- FORMULÁRIO -->
+  <section
+    id="formNovaEmpresaContainer"
+    class="form-card hidden"
+  >
+
+    <h3>Nova empresa</h3>
+
+    <form id="formNovaEmpresa">
+
+      <div class="form-grid">
+
+        <div class="campo">
+
+          <label for="empresaRazaoSocial">
+            Razão social
+          </label>
+
+          <input
+            id="empresaRazaoSocial"
+            type="text"
+            required
+          >
+
+        </div>
+
+
+        <div class="campo">
+
+          <label for="empresaNomeFantasia">
+            Nome fantasia
+          </label>
+
+          <input
+            id="empresaNomeFantasia"
+            type="text"
+            required
+          >
+
+        </div>
+
+
+        <div class="campo">
+
+          <label for="empresaCnpj">
+            CNPJ
+          </label>
+
+          <input
+            id="empresaCnpj"
+            type="text"
+            maxlength="18"
+            required
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-acoes">
+
+        <button
+          id="btnCancelarEmpresa"
+          class="btn-secundario"
+          type="button"
+        >
+          Cancelar
+        </button>
+
+        <button
+          class="btn-primario"
+          type="submit"
+        >
+          Salvar empresa
+        </button>
+
+      </div>
+
+      <p
+        id="mensagemEmpresa"
+        class="mensagem-form"
+      ></p>
+
+    </form>
+
+  </section>
+
+
+  <!-- LISTAGEM -->
+  <section class="lista-card">
+
+    <div class="lista-cabecalho">
+
+      <div>
+        <h3>Empresas cadastradas</h3>
+        <p id="quantidadeEmpresas">
+          Carregando...
+        </p>
+      </div>
+
+    </div>
+
+
+    <div class="tabela-container">
+
+      <table class="tabela">
+
+        <thead>
+
+          <tr>
+            <th>Razão social</th>
+            <th>Nome fantasia</th>
+            <th>CNPJ</th>
+            <th>Status</th>
+          </tr>
+
+        </thead>
+
+        <tbody id="listaEmpresas">
+
+          <tr>
+            <td colspan="4">
+              Carregando empresas...
+            </td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+</section>
   <script
     type="module"
     src="app.js"

@@ -12,10 +12,13 @@ import {
   import {
   getFirestore,
   doc,
-  getDoc
+  getDoc,
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp
 } from
   "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-
 
 // ========================================
 // FIREBASE
@@ -68,7 +71,41 @@ const nomeUsuario =
 
 const btnSair =
   document.getElementById("btnSair");
+const cardEmpresas =
+  document.getElementById("cardEmpresas");
 
+const btnVoltarAdministracao =
+  document.getElementById("btnVoltarAdministracao");
+
+const btnMostrarNovaEmpresa =
+  document.getElementById("btnMostrarNovaEmpresa");
+
+const formNovaEmpresaContainer =
+  document.getElementById("formNovaEmpresaContainer");
+
+const formNovaEmpresa =
+  document.getElementById("formNovaEmpresa");
+
+const btnCancelarEmpresa =
+  document.getElementById("btnCancelarEmpresa");
+
+const empresaRazaoSocial =
+  document.getElementById("empresaRazaoSocial");
+
+const empresaNomeFantasia =
+  document.getElementById("empresaNomeFantasia");
+
+const empresaCnpj =
+  document.getElementById("empresaCnpj");
+
+const listaEmpresas =
+  document.getElementById("listaEmpresas");
+
+const quantidadeEmpresas =
+  document.getElementById("quantidadeEmpresas");
+
+const mensagemEmpresa =
+  document.getElementById("mensagemEmpresa");
 
 // ========================================
 // LOGIN
@@ -351,3 +388,271 @@ itensMenu.forEach((item) => {
   );
 
 });
+function abrirPagina(nomePagina) {
+
+  paginas.forEach((pagina) => {
+
+    pagina.classList.add("hidden");
+
+  });
+
+
+  const pagina =
+    document.getElementById(
+      `pagina-${nomePagina}`
+    );
+
+
+  if (pagina) {
+
+    pagina.classList.remove("hidden");
+
+  }
+
+
+  const titulos = {
+
+    dashboard: "Dashboard",
+
+    contratos: "Contratos",
+
+    administracao: "Administração",
+
+    empresas: "Empresas"
+
+  };
+
+
+  tituloPagina.textContent =
+    titulos[nomePagina] ||
+    "Sistema Integrado";
+
+}
+cardEmpresas.addEventListener(
+  "click",
+  async () => {
+
+    abrirPagina("empresas");
+
+    await carregarEmpresas();
+
+  }
+);
+btnVoltarAdministracao.addEventListener(
+  "click",
+  () => {
+
+    abrirPagina("administracao");
+
+  }
+);
+btnMostrarNovaEmpresa.addEventListener(
+  "click",
+  () => {
+
+    formNovaEmpresaContainer
+      .classList.remove("hidden");
+
+    empresaRazaoSocial.focus();
+
+  }
+);
+btnCancelarEmpresa.addEventListener(
+  "click",
+  () => {
+
+    formNovaEmpresa.reset();
+
+    mensagemEmpresa.textContent = "";
+
+    formNovaEmpresaContainer
+      .classList.add("hidden");
+
+  }
+);
+async function carregarEmpresas() {
+
+  listaEmpresas.innerHTML = `
+    <tr>
+      <td colspan="4">
+        Carregando empresas...
+      </td>
+    </tr>
+  `;
+
+
+  try {
+
+    const empresasRef =
+      collection(db, "empresas");
+
+
+    const empresasSnap =
+      await getDocs(empresasRef);
+
+
+    listaEmpresas.innerHTML = "";
+
+
+    let quantidade = 0;
+
+
+    empresasSnap.forEach((documento) => {
+
+      quantidade++;
+
+
+      const empresa =
+        documento.data();
+
+
+      const linha =
+        document.createElement("tr");
+
+
+      linha.innerHTML = `
+        <td>
+          ${empresa.razaoSocial || "-"}
+        </td>
+
+        <td>
+          ${empresa.nomeFantasia || "-"}
+        </td>
+
+        <td>
+          ${empresa.cnpj || "-"}
+        </td>
+
+        <td>
+          <span
+            class="${
+              empresa.ativo === true
+                ? "status-ativo"
+                : "status-inativo"
+            }"
+          >
+            ${
+              empresa.ativo === true
+                ? "Ativa"
+                : "Inativa"
+            }
+          </span>
+        </td>
+      `;
+
+
+      listaEmpresas.appendChild(linha);
+
+    });
+
+
+    quantidadeEmpresas.textContent =
+      `${quantidade} empresa(s) cadastrada(s)`;
+
+
+    if (quantidade === 0) {
+
+      listaEmpresas.innerHTML = `
+        <tr>
+          <td colspan="4">
+            Nenhuma empresa cadastrada.
+          </td>
+        </tr>
+      `;
+
+    }
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao carregar empresas:",
+      erro
+    );
+
+
+    listaEmpresas.innerHTML = `
+      <tr>
+        <td colspan="4">
+          Não foi possível carregar as empresas.
+        </td>
+      </tr>
+    `;
+
+  }
+
+}
+formNovaEmpresa.addEventListener(
+  "submit",
+  async (evento) => {
+
+    evento.preventDefault();
+
+
+    mensagemEmpresa.textContent =
+      "Salvando empresa...";
+
+
+    try {
+
+      await addDoc(
+        collection(db, "empresas"),
+        {
+
+          razaoSocial:
+            empresaRazaoSocial.value.trim(),
+
+          nomeFantasia:
+            empresaNomeFantasia.value.trim(),
+
+          cnpj:
+            empresaCnpj.value.trim(),
+
+          grupoId:
+            "grupo_001",
+
+          ativo:
+            true,
+
+          criadoEm:
+            serverTimestamp()
+
+        }
+      );
+
+
+      mensagemEmpresa.textContent =
+        "Empresa cadastrada com sucesso.";
+
+
+      formNovaEmpresa.reset();
+
+
+      await carregarEmpresas();
+
+
+      setTimeout(() => {
+
+        formNovaEmpresaContainer
+          .classList.add("hidden");
+
+        mensagemEmpresa.textContent = "";
+
+      }, 1000);
+
+
+    } catch (erro) {
+
+      console.error(
+        "Erro ao cadastrar empresa:",
+        erro
+      );
+
+
+      mensagemEmpresa.textContent =
+        "Não foi possível cadastrar a empresa.";
+
+    }
+
+  }
+);
