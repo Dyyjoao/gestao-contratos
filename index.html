@@ -1,1339 +1,405 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <meta
-    name="description"
-    content="Sistema Integrado de Gestão Empresarial"
-  >
-
-  <title>
-    Sistema Integrado de Gestão
-  </title>
-
-  <link
-    rel="stylesheet"
-<<<<<<< HEAD
-    href="style.css?v=7"
-=======
-    href="style.css?v=5"
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-  >
-
-  <link
-    rel="manifest"
-    href="manifest.json"
-  >
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema Integrado de Gestão Empresarial">
+  <title>SIG - Sistema Integrado de Gestão</title>
+  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="manifest" href="manifest.json">
 </head>
-
-
 <body>
-
-  <!-- ========================================
-       LOGIN
-  ========================================= -->
-
-  <main
-    id="telaLogin"
-    class="login-page"
-  >
-
+  <main id="telaLogin" class="login-page">
     <section class="login-card">
-
-      <div class="login-logo">
-        SIG
-      </div>
-
-      <h1>
-        Sistema Integrado de Gestão
-      </h1>
-
-      <p class="login-subtitulo">
-        Informe suas credenciais para acessar.
-      </p>
-
-
+      <div class="login-logo">SIG</div>
+      <h1>Sistema Integrado de Gestão</h1>
+      <p class="login-subtitulo">Informe suas credenciais para acessar.</p>
       <form id="formLogin">
-
-
         <div class="campo">
-
-          <label for="email">
-            E-mail
-          </label>
-
-          <input
-            type="email"
-            id="email"
-            placeholder="seuemail@empresa.com.br"
-            required
-            autocomplete="email"
-          >
-
+          <label for="email">E-mail</label>
+          <input type="email" id="email" placeholder="seuemail@empresa.com.br" autocomplete="email" required>
         </div>
-
-
         <div class="campo">
-
-          <label for="senha">
-            Senha
-          </label>
-
-          <input
-            type="password"
-            id="senha"
-            placeholder="Digite sua senha"
-            required
-            autocomplete="current-password"
-          >
-
+          <label for="senha">Senha</label>
+          <input type="password" id="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
         </div>
-
-
-        <button
-          type="submit"
-          class="btn-login"
-        >
-          Entrar
-        </button>
-
-
+        <button type="submit" class="btn-primario btn-largo">Entrar</button>
       </form>
-
-
-      <p
-        id="mensagemLogin"
-        class="mensagem"
-      ></p>
-
-
+      <p id="mensagemLogin" class="mensagem"></p>
     </section>
-
   </main>
 
-
-
-  <!-- ========================================
-       SISTEMA
-  ========================================= -->
-
-  <div
-    id="sistema"
-    class="hidden"
-  >
-
+  <div id="sistema" class="hidden">
     <div class="app-shell">
-
-
-      <!-- ========================================
-           MENU LATERAL
-      ========================================= -->
-
       <aside class="sidebar">
-
-
         <div class="sidebar-brand">
-
-          <div class="brand-icon">
-            SIG
-          </div>
-
+          <div class="brand-icon">SIG</div>
           <div>
-
-            <strong>
-              Sistema Integrado
-            </strong>
-
-            <small>
-              Gestão Empresarial
-            </small>
-
+            <strong>Sistema Integrado</strong>
+            <small>Gestão Empresarial</small>
           </div>
-
         </div>
-
 
         <nav class="sidebar-menu">
-
-
-          <button
-            id="menuDashboard"
-            class="menu-item ativo"
-            data-pagina="dashboard"
-            type="button"
-          >
-            Dashboard
-          </button>
-
-
-          <button
-            id="menuContratos"
-            class="menu-item"
-            data-pagina="contratos"
-            type="button"
-          >
-            Contratos
-          </button>
-
-
+          <button id="menuDashboard" class="menu-item ativo" data-pagina="dashboard" type="button">Dashboard</button>
+          <button id="menuContratos" class="menu-item" data-pagina="contratos" type="button">Contratos</button>
           <div class="menu-separador"></div>
-
-
-          <button
-            id="menuAdministracao"
-            class="menu-item hidden"
-            data-pagina="administracao"
-            type="button"
-          >
-            Administração
-          </button>
-
-
+          <button id="menuAdministracao" class="menu-item hidden" data-pagina="administracao" type="button">Administração</button>
         </nav>
-
       </aside>
 
-
-
-      <!-- ========================================
-           ÁREA PRINCIPAL
-      ========================================= -->
-
       <div class="main-area">
-
-
-        <!-- ========================================
-             CABEÇALHO
-        ========================================= -->
-
         <header class="app-topbar">
-
-
           <div>
-
-            <h1 id="tituloPagina">
-              Dashboard
-            </h1>
-
-            <p>
-              Sistema Integrado de Gestão
-            </p>
-
+            <h1 id="tituloPagina">Dashboard</h1>
+            <p id="subtituloContexto">Sistema Integrado de Gestão</p>
           </div>
-
-
-          <!--
-            FUTURAMENTE:
-
-            [ Grupo Empresarial ▼ ]
-            [ Empresa ▼ ]
-            [ Consolidado ▼ ]
-          -->
-
-
           <div class="usuario">
-
             <span id="nomeUsuario"></span>
-
-            <button
-              id="btnSair"
-              type="button"
-            >
-              Sair
-            </button>
-
+            <button id="btnSair" type="button" class="btn-topbar">Sair</button>
           </div>
-
-
         </header>
 
-
-
-        <!-- ========================================
-             CONTEÚDO
-        ========================================= -->
-
         <main class="conteudo">
-
-
-
-          <!-- ========================================
-               DASHBOARD
-          ========================================= -->
-
-          <section
-            id="pagina-dashboard"
-            class="pagina"
-          >
-
+          <section id="pagina-dashboard" class="pagina">
             <div class="welcome">
-
-              <h2>
-                Visão Geral
-              </h2>
-
-              <p>
-                Acompanhe os principais dados da operação.
-              </p>
-
+              <h2>Visão Geral</h2>
+              <p>Acompanhe os principais dados da operação.</p>
             </div>
-
-
             <div class="cards">
-
-
-              <div class="card">
-
-                <span>
-                  Contratos ativos
-                </span>
-
-                <strong>
-                  0
-                </strong>
-
-              </div>
-
-
-              <div class="card">
-
-                <span>
-                  A vencer
-                </span>
-
-                <strong>
-                  0
-                </strong>
-
-              </div>
-
-
-              <div class="card">
-
-                <span>
-                  Vencidos
-                </span>
-
-                <strong>
-                  0
-                </strong>
-
-              </div>
-
-
-              <div class="card">
-
-                <span>
-                  Valor mensal
-                </span>
-
-                <strong>
-                  R$ 0,00
-                </strong>
-
-              </div>
-
-
+              <div class="card"><span>Contratos ativos</span><strong>0</strong></div>
+              <div class="card"><span>A vencer</span><strong>0</strong></div>
+              <div class="card"><span>Vencidos</span><strong>0</strong></div>
+              <div class="card"><span>Valor mensal</span><strong>R$ 0,00</strong></div>
             </div>
-
           </section>
 
-
-
-          <!-- ========================================
-               CONTRATOS
-          ========================================= -->
-
-          <section
-            id="pagina-contratos"
-            class="pagina hidden"
-          >
-
+          <section id="pagina-contratos" class="pagina hidden">
             <div class="welcome">
-
-              <h2>
-                Gestão de Contratos
-              </h2>
-
-              <p>
-                Cadastro, acompanhamento e controle contratual.
-              </p>
-
+              <h2>Gestão de Contratos</h2>
+              <p>Cadastro, acompanhamento e controle contratual.</p>
             </div>
-
-
             <div class="painel-vazio">
-
-              <h3>
-                Módulo de Contratos
-              </h3>
-
-              <p>
-                Esta será nossa próxima área de desenvolvimento.
-              </p>
-
+              <h3>Módulo de Contratos</h3>
+              <p>Estrutura preparada para a próxima etapa do SIG.</p>
             </div>
-
           </section>
 
-
-
-          <!-- ========================================
-               ADMINISTRAÇÃO
-          ========================================= -->
-
-          <section
-            id="pagina-administracao"
-            class="pagina hidden"
-          >
-
-            <div class="welcome">
-
-              <h2>
-                Administração
-              </h2>
-
-              <p>
-                Configurações e cadastros estruturais do sistema.
-              </p>
-
+          <section id="pagina-administracao" class="pagina hidden">
+            <div class="pagina-cabecalho">
+              <div>
+                <h2>Administração</h2>
+                <p>Cadastros, acessos e estrutura do grupo empresarial em um só lugar.</p>
+              </div>
             </div>
 
+            <div class="admin-resumo">
+              <div class="mini-card"><span>Empresas</span><strong id="resumoEmpresas">—</strong></div>
+              <div class="mini-card"><span>Usuários ativos</span><strong id="resumoUsuarios">—</strong></div>
+              <div class="mini-card"><span>Perfis ativos</span><strong id="resumoPerfis">—</strong></div>
+            </div>
 
             <div class="admin-grid">
-
-
-              <button
-                id="cardEmpresas"
-                class="admin-card admin-card-button"
-                type="button"
-              >
-
-                <h3>
-                  Empresas
-                </h3>
-
-                <p>
-                  Cadastro e gestão das empresas.
-                </p>
-
+              <button id="cardEmpresas" class="admin-card admin-card-button" type="button">
+                <span class="admin-card-tag">CADASTRO</span>
+                <h3>Empresas</h3>
+                <p>Cadastre, edite, inative e controle as empresas do grupo.</p>
+                <span class="admin-card-link">Gerenciar empresas →</span>
               </button>
 
-
-<<<<<<< HEAD
-
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-              <button
-                id="cardUsuarios"
-                class="admin-card admin-card-button"
-                type="button"
-              >
-
-                <h3>
-                  Usuários
-                </h3>
-
-                <p>
-                  Usuários, bloqueios e acessos.
-                </p>
-
+              <button id="cardUsuarios" class="admin-card admin-card-button" type="button">
+                <span class="admin-card-tag">ACESSOS</span>
+                <h3>Usuários</h3>
+                <p>Crie usuários, vincule empresas, perfis e controle status.</p>
+                <span class="admin-card-link">Gerenciar usuários →</span>
               </button>
 
-
-<<<<<<< HEAD
-
-              <button
-                id="cardPerfisAcesso"
-                class="admin-card admin-card-button"
-                type="button"
-              >
-
-=======
-              <div class="admin-card">
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-                <h3>
-                  Perfis de Acesso
-                </h3>
-
-                <p>
-                  Grupos e permissões por módulo.
-                </p>
-
+              <button id="cardPerfisAcesso" class="admin-card admin-card-button" type="button">
+                <span class="admin-card-tag">PERMISSÕES</span>
+                <h3>Perfis de Acesso</h3>
+                <p>Monte perfis por módulo e defina o que cada equipe poderá fazer.</p>
+                <span class="admin-card-link">Gerenciar perfis →</span>
               </button>
 
-
-<<<<<<< HEAD
-
-              <div
-                id="cardGrupoEmpresarial"
-                class="admin-card"
-              >
-
-=======
-              <div class="admin-card">
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-                <h3>
-                  Grupo Empresarial
-                </h3>
-
-                <p>
-                  Estrutura e consolidação das empresas.
-                </p>
-
-              </div>
-
-
+              <button id="cardGrupoEmpresarial" class="admin-card admin-card-button" type="button">
+                <span class="admin-card-tag">ESTRUTURA</span>
+                <h3>Grupo Empresarial</h3>
+                <p>Consulte e mantenha os dados estruturais do grupo.</p>
+                <span class="admin-card-link">Abrir grupo →</span>
+              </button>
             </div>
-
           </section>
 
-
-
-          <!-- ========================================
-               EMPRESAS
-          ========================================= -->
-
-          <section
-            id="pagina-empresas"
-            class="pagina hidden"
-          >
-
+          <section id="pagina-empresas" class="pagina hidden">
             <div class="pagina-cabecalho">
-
-
               <div>
-
-                <button
-                  id="btnVoltarAdministracao"
-                  class="btn-voltar"
-                  type="button"
-                >
-                  ← Administração
-                </button>
-
-
-                <h2>
-                  Empresas
-                </h2>
-
-
-                <p>
-                  Cadastro das empresas pertencentes ao grupo empresarial.
-                </p>
-
+                <button class="btn-voltar" data-voltar-admin type="button">← Administração</button>
+                <h2>Empresas</h2>
+                <p>Cadastro e manutenção das empresas do grupo.</p>
               </div>
-
-
-              <button
-                id="btnMostrarNovaEmpresa"
-                class="btn-primario"
-                type="button"
-              >
-                + Nova empresa
-              </button>
-
-
+              <button id="btnNovaEmpresa" class="btn-primario" type="button">+ Nova empresa</button>
             </div>
 
-
-
-<<<<<<< HEAD
-=======
-            <!-- ========================================
-                 NOVA EMPRESA
-            ========================================= -->
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-            <section
-              id="formNovaEmpresaContainer"
-              class="form-card hidden"
-            >
-
-              <h3>
-                Nova empresa
-              </h3>
-
-
-              <form id="formNovaEmpresa">
-
-
-                <div class="form-grid">
-
-
+            <section id="formEmpresaContainer" class="form-card hidden">
+              <div class="form-card-titulo">
+                <div>
+                  <h3 id="tituloFormEmpresa">Nova empresa</h3>
+                  <p>Informe os dados básicos da empresa.</p>
+                </div>
+              </div>
+              <form id="formEmpresa">
+                <div class="form-grid form-grid-3">
                   <div class="campo">
-
-                    <label for="empresaRazaoSocial">
-                      Razão social
-                    </label>
-
-                    <input
-                      id="empresaRazaoSocial"
-                      type="text"
-                      required
-                    >
-
+                    <label for="empresaRazaoSocial">Razão social</label>
+                    <input id="empresaRazaoSocial" type="text" required>
                   </div>
-
-
                   <div class="campo">
-
-                    <label for="empresaNomeFantasia">
-                      Nome fantasia
-                    </label>
-
-                    <input
-                      id="empresaNomeFantasia"
-                      type="text"
-                      required
-                    >
-
+                    <label for="empresaNomeFantasia">Nome fantasia</label>
+                    <input id="empresaNomeFantasia" type="text" required>
                   </div>
-
-
                   <div class="campo">
-
-                    <label for="empresaCnpj">
-                      CNPJ
-                    </label>
-
-                    <input
-                      id="empresaCnpj"
-                      type="text"
-                      maxlength="18"
-                      placeholder="00.000.000/0000-00"
-                      inputmode="numeric"
-                      required
-                    >
-
+                    <label for="empresaCnpj">CNPJ</label>
+                    <input id="empresaCnpj" type="text" maxlength="18" placeholder="00.000.000/0000-00" inputmode="numeric" required>
                   </div>
+                </div>
+                <div class="form-acoes">
+                  <button id="btnCancelarEmpresa" class="btn-secundario" type="button">Cancelar</button>
+                  <button class="btn-primario" type="submit">Salvar empresa</button>
+                </div>
+                <p  id="mensageEmpresa" class="mensagem-form"></p>
+              </form>
+            </section>
 
+            <section class="lista-card">
+              <div class="lista-cabecalho">
+                <div>
+                  <h3>Empresas cadastradas</h3>
+                  <p id="quantidadeEmpresas">Carregando...</p>
+                </div>
+                <input id="buscaEmpresa" class="campo-busca" type="search" placeholder="Buscar empresa">
+              </div>
+              <div class="tabela-container">
+                <table class="tabela">
+                  <thead><tr><th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody id="listaEmpresas"><tr><td colspan="5">Carregando empresas...</td></tr></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
 
+          <section id="pagina-usuarios" class="pagina hidden">
+            <div class="pagina-cabecalho">
+              <div>
+                <button class="btn-voltar" data-voltar-admin type="button">← Administração</button>
+                <h2>Usuários</h2>
+                  <p>Cadastro, edicção e controle de acessos ao SIG.</p>
+              </div>
+              <button id="btnNovoUsuario" class="btn-primario" type="button">+ Novo usuário</button>
+            </div>
+            <section id="formUsuarioContainer" class="form-card hidden">
+              <div class="form-card-titulo">
+                <div>
+                  <h3 id="tituloFormUsuario">Novo usuário</h3>
+                  <p>Defina empresa, perfil e alcance de acesso.</p>
+              </div>
+            </div>
+              <form id="formUsuario">
+                <div class="form-grid form-grid-3">
+                  <div class="campo">
+                    <label for="usuarioNome">Nome</label>
+                    <input id="usuarioNome" type="text" required>
+                  </div>
+                  <div class="campo">
+                    <label for="usuarioEmail">E-mail</label>
+                    <input id="usuarioEmail" type="email" required>
+                  </div>
+                  <div class="campo">
+                    <label for="usuarioSenha">Senha inicial</label>
+                    <input id="usuarioSenha" type="password" minlength="6" autocomplete="new-password">
+                    <small id="ajudaSenhaUsuario">Obrigatória no novo usuário. Em edição, deixe em branco para manter a senha.</small>
+                  </div>
+                  <div class="campo">
+                    <label for="usuarioEmpresa">Empresa principal</label>
+                    <select id="usuarioEmpresa" required><option value="">Selecione...</option></select>
+                  </div>
+                  <div class="campo">
+                    <label for="usuarioPerfil">Perfil de acesso</label>
+                    <select id="usuarioPerfil" required><option value="">Selecione...</option></select>
+                  </div>
+                  <div class="campo campo-toggle">
+                    <label class="toggle-linha">
+                      <input id="usuarioAcessoGlobal" type="checkbox">
+                      <span><strong>Acesso global</strong><small>Permite acesso a todas as empresas atuais e futuras.</small></span>
+                    </label>
+                  </div>
                 </div>
 
+                <div id="blocoEmpresasAcesso" class="bloco-acessos">
+                  <div class="bloco-acessos-titulo">
+                    <h4>Empresas com acesso</h4>
+                    <p>A principal é marcada automaticamente. Adicione outras se necessário.</p>
+                  </div>
+                  <div id="listaEmpresasAcesso" class="checkbox-grid"></div>
+                </div>
 
                 <div class="form-acoes">
-
-
-                  <button
-                    id="btnCancelarEmpresa"
-                    class="btn-secundario"
-                    type="button"
-                  >
-                    Cancelar
-                  </button>
-
-
-                  <button
-                    class="btn-primario"
-                    type="submit"
-                  >
-                    Salvar empresa
-                  </button>
-
-
+                  <button id="btnCancelarUsuario" class="btn-secundario" type="button">Cancelar</button>
+                  <button class="btn-primario" type="submit">Salvar usuário</button>
                 </div>
-
-
-                <p
-                  id="mensagemEmpresa"
-                  class="mensagem-form"
-                ></p>
-
-
+                <p id="mensagemUsuario" class="mensagem-form"></p>
               </form>
-
             </section>
-
-
-
-<<<<<<< HEAD
-=======
-            <!-- ========================================
-                 LISTAGEM DE EMPRESAS
-            ========================================= -->
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-            <section class="lista-card">
-
-
-              <div class="lista-cabecalho">
-
-                <div>
-
-                  <h3>
-                    Empresas cadastradas
-                  </h3>
-
-                  <p id="quantidadeEmpresas">
-                    Carregando...
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              <div class="tabela-container">
-
-
-                <table class="tabela">
-
-
-                  <thead>
-
-                    <tr>
-
-                      <th>
-                        Razão social
-                      </th>
-
-                      <th>
-                        Nome fantasia
-                      </th>
-
-                      <th>
-                        CNPJ
-                      </th>
-
-                      <th>
-                        Status
-                      </th>
-
-                      <th>
-                        Ações
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody id="listaEmpresas">
-
-                    <tr>
-
-                      <td colspan="5">
-                        Carregando empresas...
-                      </td>
-
-                    </tr>
-
-                  </tbody>
-
-
-                </table>
-
-
-              </div>
-
-
-            </section>
-
-          </section>
-
-
-
-          <!-- ========================================
-               USUÁRIOS
-          ========================================= -->
-
-          <section
-            id="pagina-usuarios"
-            class="pagina hidden"
-          >
-
-            <div class="pagina-cabecalho">
-
-
-              <div>
-
-                <button
-                  id="btnVoltarUsuarios"
-                  class="btn-voltar"
-                  type="button"
-                >
-                  ← Administração
-                </button>
-
-
-                <h2>
-                  Usuários
-                </h2>
-
-
-                <p>
-                  Controle de usuários e acessos ao sistema.
-                </p>
-
-              </div>
-
-
-              <button
-                id="btnNovoUsuario"
-                class="btn-primario"
-                type="button"
-              >
-                + Novo usuário
-              </button>
-
-
-            </div>
-
-
-            <div
-              id="avisoNovoUsuario"
-              class="aviso-info hidden"
-            >
-
-              A criação de usuários será habilitada na próxima etapa do projeto.
-
-            </div>
-
 
             <section class="lista-card">
-
-
               <div class="lista-cabecalho">
-
                 <div>
-
-                  <h3>
-                    Usuários cadastrados
-                  </h3>
-
-                  <p id="quantidadeUsuarios">
-                    Carregando...
-                  </p>
-
+                  <h3>Usuários cadastrados</h3>
+                  <p id="quantidadeUsuarios">Carregando...</p>
                 </div>
-
+                <input id="buscaUsuario" class="campo-busca" type="search" placeholder="Buscar nome ou e-mail">
               </div>
-
-
               <div class="tabela-container">
-
-
                 <table class="tabela">
-
-
-                  <thead>
-
-                    <tr>
-
-                      <th>
-                        Nome
-                      </th>
-
-                      <th>
-                        E-mail
-                      </th>
-
-                      <th>
-                        Empresa
-                      </th>
-
-                      <th>
-                        Perfil
-                      </th>
-
-                      <th>
-                        Status
-                      </th>
-
-                      <th>
-                        Ação
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody id="listaUsuarios">
-
-                    <tr>
-
-                      <td colspan="6">
-                        Carregando usuários...
-                      </td>
-
-                    </tr>
-
-                  </tbody>
-
-
+                  <thead><tr><th>Usuário</th><th>Empresa principal</th><th>Perfil</th><ka>Acesso</ka><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody id="listaUsuarios"><tr><td colspan="6">Carregando usuários...</td></tr></tbody>
                 </table>
-
-
               </div>
-
-
             </section>
-
           </section>
 
-
-
-          <!-- ========================================
-               PERFIS DE ACESSO
-          ========================================= -->
-
-          <section
-            id="pagina-perfis"
-            class="pagina hidden"
-          >
-
+          <section id="pagina-perfis" class="pagina hidden">
             <div class="pagina-cabecalho">
-
               <div>
-
-                <button
-                  id="btnVoltarPerfis"
-                  class="btn-voltar"
-                  type="button"
-                >
-                  ← Administração
-                </button>
-
-
-                <h2>
-                  Perfis de Acesso
-                </h2>
-
-
-                <p>
-                  Defina quais módulos e ações cada grupo de usuários poderá utilizar.
-                </p>
-
+                <button class="btn-voltar" data-voltar-admin type="button">← Administração</button>
+                <h2>Perfis de Acesso</h2>
+                <p>Monte papéis de acesso para os módulos atuais e futuros do SIG.</p>
               </div>
-
-
-              <button
-                id="btnNovoPerfil"
-                class="btn-primario"
-                type="button"
-              >
-                + Novo perfil
-              </button>
-
+              <button id="btnNovoPerfil" class="btn-primario" type="button">+ Novo perfil</button>
             </div>
 
-
-
-            <section
-              id="formPerfilContainer"
-              class="form-card hidden"
-            >
-
-              <h3 id="tituloFormPerfil">
-                Novo perfil
-              </h3>
-
-
+            <section id="formPerfilContainer" class="form-card hidden">
+              <div class="form-card-titulo">
+                <div>
+                  <h3 id="tituloFormPerfil">Novo perfil</h3>
+                  <p>Defina o nome e as permissões do perfil.</p>
+                </div>
+              </div>
               <form id="formPerfil">
-
-                <div class="form-grid">
-
-
+                <div class="form-grid form-grid-2">
                   <div class="campo">
-
-                    <label for="perfilNome">
-                      Nome do perfil
-                    </label>
-
-                    <input
-                      id="perfilNome"
-                      type="text"
-                      placeholder="Ex.: Gestor de Contratos"
-                      required
-                    >
-
+                    <label for="perfilNome">Nome do perfil</label>
+                    <input id="perfilNome" type="text" placeholder="Ex.: Gestor de Contratos" required>
                   </div>
-
-
-
                   <div class="campo">
-
-                    <label for="perfilDescricao">
-                      Descrição
-                    </label>
-
-                    <input
-                      id="perfilDescricao"
-                      type="text"
-                      placeholder="Ex.: Acesso ao módulo de contratos e aprovações"
-                    >
-
+                    <label for="perfilDescricao">Descrição</label>
+                    <input id="perfilDescricao" type="text" placeholder="Ex.: Gestão e aprovação de contratos">
                   </div>
-
                 </div>
-
-
-
                 <div class="permissoes-cabecalho">
-
                   <div>
-
-                    <h4>
-                      Permissões
-                    </h4>
-
-                    <p>
-                      Marque apenas o que este perfil poderá visualizar ou executar.
-                    </p>
-
+                    <h4>Permissões</h4>
+                    <p>Marque somente as ações que o perfil poderá executar.</p>
                   </div>
-
                 </div>
-
-
-                <div
-                  id="gradePermissoesPerfil"
-                  class="permissoes-grid"
-                ></div>
-
-
-
+                <div id="gradePermissoesPerfil" class="permissoes-grid"></div>
                 <div class="form-acoes">
-
-                  <button
-                    id="btnCancelarPerfil"
-                    class="btn-secundario"
-                    type="button"
-                  >
-                    Cancelar
-                  </button>
-
-
-                  <button
-                    id="btnSalvarPerfil"
-                    class="btn-primario"
-                    type="submit"
-                  >
-                    Salvar perfil
-                  </button>
-
+                  <button id="btnCancelarPerfil" class="btn-secundario" type="button">Cancelar</button>
+                  <button class="btn-primario" type="submit">Salvar perfil</button>
                 </div>
-
-
-                <p
-                  id="mensagemPerfil"
-                  class="mensagem-form"
-                ></p>
-
+                <p id="mensagemPerfil" class="mensagem-form"></p>
               </form>
-
             </section>
-
-
 
             <section class="lista-card">
-
               <div class="lista-cabecalho">
-
                 <div>
-
-                  <h3>
-                    Perfis cadastrados
-                  </h3>
-
-                  <p id="quantidadePerfis">
-                    Carregando...
-                  </p>
-
+                  <h3>Perfis cadastrados</h3>
+                  <p id="quantidadePerfis">Carregando...</p>
                 </div>
-
+                <input id="buscaPerfil" class="campo-busca" type="search" placeholder="Buscar perfil">
               </div>
-
-
               <div class="tabela-container">
-
                 <table class="tabela">
-
-                  <thead>
-
-                    <tr>
-
-                      <th>
-                        Perfil
-                      </th>
-
-                      <th>
-                        Descrição
-                      </th>
-
-                      <th>
-                        Tipo
-                      </th>
-
-                      <th>
-                        Permissões
-                      </th>
-
-                      <th>
-                        Status
-                      </th>
-
-                      <th>
-                        Ações
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody id="listaPerfis">
-
-                    <tr>
-
-                      <td colspan="6">
-                        Carregando perfis...
-                      </td>
-
-                    </tr>
-
-                  </tbody>
-
+                  <thead><tr><th>Perfil</th><th>Tipo</th><th>Permissões</th><th>Usuários</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody id="listaPerfis"><tr><td colspan="6">Carregando perfis...</td></tr></tbody>
                 </table>
-
               </div>
-
             </section>
-
           </section>
 
+          <section id="pagina-grupo" class="pagina hidden">
+            <div class="pagina-cabecalho">
+              <div>
+                <button class="btn-voltar" data-voltar-admin type="button">← Administração</button>
+                <h2>Grupo Empresarial</h2>
+                <p>Estrutura central que reúne as empresas e usuários do SIG.</p>
+              </div>
+            </div>
 
+            <div class="grupo-grid">
+              <section class="form-card">
+                <div class="form-card-titulo">
+                  <div>
+                    <h3>Dados do grupo</h3>
+                    <p>O identificador técnico é permanente; o nome pode ser atualizado.</p>
+                  </div>
+                </div>
+                <form id="formGrupo">
+                  <div class="campo">
+                    <label for="grupoIdExibicao">Identificador</label>
+                    <input id="grupoIdExibicao" type="text" disabled>
+                  </div>
+                  <div class="campo">
+                    <label for="grupoNome">Nome do grupo</label>
+                    <input id="grupoNome" type="text" required>
+                  </div>
+                  <div class="form-acoes">
+                    <button class="btn-primario" type="submit">Salvar alterações</button>
+                  </div>
+                  <p id="mensagemGrupo" class="mensagem-form"></p>
+                </form>
+              </section>
+
+              <section class="grupo-resumo-card">
+                <span class="admin-card-tag">RESUMO</span>
+                <h3 id="grupoNomeResumo">Grupo empresarial</h3>
+                <div class="grupo-status-linha">
+                  <span>Status</span>
+                  <span id="grupoStatus"></span>
+                </div>
+                <div class="grupo-indicadores">
+                  <div><span>Empresas</span><strong id="grupoQtdEmpresas">—</strong></div>
+                  <div><span>Usuários</span><strong id="grupoQtdUsuarios">—</strong></div>
+                  <div><span>Perfis</span><strong id="grupoQtdPerfis">—</strong></div>
+                </div>
+              </section>
+            </div>
+          </section>
         </main>
-
       </div>
-
     </div>
-
   </div>
 
-
-
-  <!-- ========================================
-<<<<<<< HEAD
-       MODAL EXCLUSÃO EMPRESA
-=======
-       MODAL DE EXCLUSÃO DE EMPRESA
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-  ========================================= -->
-
-<<<<<<< HEAD
-  <div
-    id="modalExcluirEmpresa"
-    class="modal-overlay hidden"
-  >
-
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-    >
-
-      <div class="modal-cabecalho">
-
-        <h2>
-          Excluir empresa
-        </h2>
-
-      </div>
-
-
-      <p class="modal-alerta">
-
-        Esta ação é permanente e só é permitida
-        para empresas sem informações vinculadas.
-
-      </p>
-
-
-      <p>
-
-        Empresa:
-
-        <strong id="nomeEmpresaExcluir"></strong>
-
-      </p>
-
-
+  <div id="modalExcluirEmpresa" class="modal-overlay hidden">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tituloModalExcluirEmpresa">
+      <span class="modal-icone-perigo">!</span>
+      <h2 id="tituloModalExcluirEmpresa">Excluir empresa</h2>
+      <p class="modal-alerta">A exclusão é permanente. Empresas com usuários vinculados ou histórico sinalizado não podem ser apagadas.</p>
+      <p>Empresa: <strong id="nomeEmpresaExcluir"></strong></p>
       <form id="formConfirmarExclusaoEmpresa">
-
         <div class="campo campo-modal">
-
-          <label for="senhaExclusaoEmpresa">
-
-            Confirme sua senha de administrador
-
-          </label>
-
-
-          <input
-            id="senhaExclusaoEmpresa"
-            type="password"
-            autocomplete="current-password"
-            required
-          >
-
+          <label for="senhaExclusaoEmpresa">Confirme sua senha de administrador</label>
+          <input id="senhaExclusaoEmpresa" type="password" autocomplete="current-password" required>
         </div>
-
-
-        <p
-          id="mensagemExclusaoEmpresa"
-          class="mensagem-form"
-        ></p>
-
-
+        <p id="mensagemExclusaoEmpresa" class="mensagem-form"></p>
         <div class="form-acoes">
-
-          <button
-            id="btnCancelarExclusaoEmpresa"
-            class="btn-secundario"
-            type="button"
-          >
-            Cancelar
-          </button>
-
-
-          <button
-            class="btn-perigo"
-            type="submit"
-          >
-            Excluir permanentemente
-          </button>
-
+          <button id="btnCancelarExclusaoEmpresa" class="btn-secundario" type="button">Cancelar</button>
+          <button class="btn-perigo" type="submit">Excluir permanentemente</button>
         </div>
-
       </form>
-
     </section>
-
   </div>
 
-
-
-=======
-  <div
-    id="modalExcluirEmpresa"
-    class="modal-overlay hidden"
-  >
-
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-    >
-
-
-      <div class="modal-cabecalho">
-
-        <h2>
-          Excluir empresa
-        </h2>
-
-      </div>
-
-
-      <p class="modal-alerta">
-
-        Esta ação é permanente e só é permitida
-        para empresas sem informações vinculadas.
-
-      </p>
-
-
-      <p>
-
-        Empresa:
-
-        <strong id="nomeEmpresaExcluir"></strong>
-
-      </p>
-
-
-      <form id="formConfirmarExclusaoEmpresa">
-
-
-        <div class="campo campo-modal">
-
-          <label for="senhaExclusaoEmpresa">
-
-            Confirme sua senha de administrador
-
-          </label>
-
-
-          <input
-            id="senhaExclusaoEmpresa"
-            type="password"
-            autocomplete="current-password"
-            required
-          >
-
-        </div>
-
-
-        <p
-          id="mensagemExclusaoEmpresa"
-          class="mensagem-form"
-        ></p>
-
-
-        <div class="form-acoes">
-
-
-          <button
-            id="btnCancelarExclusaoEmpresa"
-            class="btn-secundario"
-            type="button"
-          >
-            Cancelar
-          </button>
-
-
-          <button
-            class="btn-perigo"
-            type="submit"
-          >
-            Excluir permanentemente
-          </button>
-
-
-        </div>
-
-
-      </form>
-
-
-    </section>
-
-  </div>
-
-
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-  <script
-    type="module"
-<<<<<<< HEAD
-    src="app.js?v=7"
-=======
-    src="app.js?v=5"
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-  ></script>
-
+  <script type="module" src="app.js?v=10"></script>
 </body>
-
 </html>

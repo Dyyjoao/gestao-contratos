@@ -1,5806 +1,1562 @@
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 
 import {
   getAuth,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  deleteUser,
+  sendPasswordResetEmail,
   EmailAuthProvider,
   reauthenticateWithCredential
-} from
-  "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 
 import {
   getFirestore,
   doc,
   getDoc,
+  setDoc,
   collection,
   getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp
-} from
-  "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-
-
-
-// ========================================
-// CONFIGURAÇÃO FIREBASE
-// ========================================
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 const firebaseConfig = {
-
-  apiKey:
-    "AIzaSyDhFhXmyg44MqDkMHxgwVJ4DxEW-qqiDkU",
-
-  authDomain:
-    "gestao-de-contratos-b266b.firebaseapp.com",
-
-  projectId:
-    "gestao-de-contratos-b266b",
-
-  storageBucket:
-    "gestao-de-contratos-b266b.firebasestorage.app",
-
-  messagingSenderId:
-    "1090500586579",
-
-  appId:
-    "1:1090500586579:web:90419b7abe37540eeeeaa6"
-
+  apiKey: "AIzaSyDhFhXmyg44MqDkMHxgwVJ4DxEW-qqiDkU",
+  authDomain: "gestao-de-contratos-b266b.firebaseapp.com",
+  projectId: "gestao-de-contratos-b266b",
+  storageBucket: "gestao-de-contratos-b266b.firebasestorage.app",
+  messagingSenderId: "1090500586579",
+  appId: "1:1090500586579:web:90419b7abe37540eeeeaa6"
 };
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
+const appCriacaoUsuarios = initializeApp(firebaseConfig, "sig-criacao-usuarios");
+const authCriacaoUsuarios = getAuth(appCriacaoUsuarios);
 
-const app =
-  initializeApp(firebaseConfig);
+let dadosUsuarioAtual = null;
+let dadosPerfilAtual = null;
+let grupoAtual = null;
 
+let empresasCache = new Map();
+let usuariosCache = new Map();
+let perfisCache = new Map();
 
-const auth =
-  getAuth(app);
-
-
-const db =
-  getFirestore(app);
-
-
-
-// ========================================
-<<<<<<< HEAD
-// CONTEXTO E CACHES
-=======
-// CONTEXTO DO USUÁRIO
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// ========================================
-
-let dadosUsuarioAtual =
-  null;
-
-
-let dadosPerfilAtual =
-  null;
-
-
-<<<<<<< HEAD
-let empresaParaExcluir =
-  null;
-
-
-let perfilEmEdicaoId =
-  null;
-
-
-let empresasCache =
-  new Map();
-
-
-let perfisCache =
-  new Map();
-
-
-
-=======
-let empresaParaExcluir =
-  null;
-
-
-let empresasCache =
-  new Map();
-
-
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// ========================================
-// DEFINIÇÃO DAS PERMISSÕES
-// ========================================
+let empresaEmEdicaoId = null;
+let usuarioEmEdicaoId = null;
+let perfilEmEdicaoId = null;
+let empresaParaExcluir = null;
 
 const DEFINICAO_PERMISSOES = [
-
   {
-
-    modulo:
-      "dashboard",
-
-    nome:
-      "Dashboard",
-
+    modulo: "dashboard",
+    nome: "Dashboard",
     acoes: [
-
-      {
-        id:
-          "visualizar",
-
-        nome:
-          "Visualizar"
-      }
-
+      { id: "visualizar", nome: "Visualizar" }
     ]
-
   },
-
-
   {
-
-    modulo:
-      "contratos",
-
-    nome:
-      "Contratos",
-
+    modulo: "contratos",
+    nome: "Contratos",
     acoes: [
-
-      {
-        id:
-          "visualizar",
-
-        nome:
-          "Visualizar"
-      },
-
-      {
-        id:
-          "cadastrar",
-
-        nome:
-          "Cadastrar"
-      },
-
-      {
-        id:
-          "editar",
-
-        nome:
-          "Editar"
-      },
-
-      {
-        id:
-          "excluir",
-
-        nome:
-          "Excluir"
-      },
-
-      {
-        id:
-          "aprovar",
-
-        nome:
-          "Aprovar"
-      }
-
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "cadastrar", nome: "Cadastrar" },
+      { id: "editar", nome: "Editar" },
+      { id: "excluir", nome: "Excluir" },
+      { id: "aprovar", nome: "Aprovar" }
     ]
-
   },
-
-
   {
-
-    modulo:
-      "empresas",
-
-    nome:
-      "Empresas",
-
+    modulo: "frota",
+    nome: "Frota",
     acoes: [
-
-      {
-        id:
-          "visualizar",
-
-        nome:
-          "Visualizar"
-      },
-
-      {
-        id:
-          "cadastrar",
-
-        nome:
-          "Cadastrar"
-      },
-
-      {
-        id:
-          "editar",
-
-        nome:
-          "Editar"
-      },
-
-      {
-        id:
-          "inativar",
-
-        nome:
-          "Inativar"
-      },
-
-      {
-        id:
-          "excluir",
-
-        nome:
-          "Excluir"
-      }
-
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "cadastrar", nome: "Cadastrar" },
+      { id: "editar", nome: "Editar" },
+      { id: "excluir", nome: "Excluir" }
     ]
-
   },
-
-
   {
-
-    modulo:
-      "usuarios",
-
-    nome:
-      "Usuários",
-
+    modulo: "almoxarifado",
+    nome: "Almoxarifado",
     acoes: [
-
-      {
-        id:
-          "visualizar",
-
-        nome:
-          "Visualizar"
-      },
-
-      {
-        id:
-          "cadastrar",
-
-        nome:
-          "Cadastrar"
-      },
-
-      {
-        id:
-          "editar",
-
-        nome:
-          "Editar"
-      },
-
-      {
-        id:
-          "inativar",
-
-        nome:
-          "Inativar"
-      }
-
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "movimentar", nome: "Movimentar" },
+      { id: "editar", nome: "Editar" },
+      { id: "ajustar", nome: "Ajustar saldo" }
     ]
-
   },
-
-
   {
-
-    modulo:
-      "perfisAcesso",
-
-    nome:
-      "Perfis de Acesso",
-
+    modulo: "cotacoes",
+    nome: "Cotações",
     acoes: [
-
-      {
-        id:
-          "visualizar",
-
-        nome:
-          "Visualizar"
-      },
-
-      {
-        id:
-          "cadastrar",
-
-        nome:
-          "Cadastrar"
-      },
-
-      {
-        id:
-          "editar",
-
-        nome:
-          "Editar"
-      },
-
-      {
-        id:
-          "inativar",
-
-        nome:
-          "Inativar"
-      }
-
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "solicitar", nome: "Solicitar" },
+      { id: "cotacao", nome: "Registrar cotação" },
+      { id: "aprovar", nome: "Aprovar" },
+      { id: "editar", nome: "Editar" }
     ]
-
   },
-
-
   {
-
-    modulo:
-      "grupoEmpresarial",
-
-    nome:
-      "Grupo Empresarial",
-
+    modulo: "controladoria",
+    nome: "Controladoria",
     acoes: [
-
-      {
-        id:
-          "visualizar",
-
-        nome:
-          "Visualizar"
-      },
-
-      {
-        id:
-          "editar",
-
-        nome:
-          "Editar"
-      }
-
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "importar", nome: "Importar dados" },
+      { id: "editar", nome: "Editar" },
+      { id: "budget", nome: "Budget" },
+      { id: "forecast", nome: "Forecast" }
     ]
-
+  },
+  {
+    modulo: "administracao",
+    nome: "Administração",
+    acoes: [
+      { id: "visualizar", nome: "Visualizar" }
+    ]
+  },
+  {
+    modulo: "empresas",
+    nome: "Empresas",
+    acoes: [
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "cadastrar", nome: "Cadastrar" },
+      { id: "editar", nome: "Editar" },
+      { id: "inativar", nome: "Inativar" },
+      { id: "excluir", nome: "Excluir" }
+    ]
+  },
+  {
+    modulo: "usuarios",
+    nome: "Usuários",
+    acoes: [
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "cadastrar", nome: "Cadastrar" },
+      { id: "editar", nome: "Editar" },
+      { id: "inativar", nome: "Inativar" },
+      { id: "resetarSenha", nome: "Redefinir senha" }
+    ]
+  },
+  {
+    modulo: "perfisAcesso",
+    nome: "Perfis de Acesso",
+    acoes: [
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "cadastrar", nome: "Cadastrar" },
+      { id: "editar", nome: "Editar" },
+      { id: "inativar", nome: "Inativar" }
+    ]
+  },
+  {
+    modulo: "grupoEmpresarial",
+    nome: "Grupo Empresarial",
+    acoes: [
+      { id: "visualizar", nome: "Visualizar" },
+      { id: "editar", nome: "Editar" }
+    ]
   }
-
 ];
 
-
-
-// ========================================
-// ELEMENTOS GERAIS
-// ========================================
-
-const telaLogin =
-  document.getElementById(
-    "telaLogin"
-  );
-
-
-const sistema =
-  document.getElementById(
-    "sistema"
-  );
-
-
-const formLogin =
-  document.getElementById(
-    "formLogin"
-  );
-
-
-const email =
-  document.getElementById(
-    "email"
-  );
-
-
-const senha =
-  document.getElementById(
-    "senha"
-  );
-
-
-const mensagemLogin =
-  document.getElementById(
-    "mensagemLogin"
-  );
-
-
-const nomeUsuario =
-  document.getElementById(
-    "nomeUsuario"
-  );
-
-
-const btnSair =
-  document.getElementById(
-    "btnSair"
-  );
-
-
-const menuDashboard =
-  document.getElementById(
-    "menuDashboard"
-  );
-
-
-const menuContratos =
-  document.getElementById(
-    "menuContratos"
-  );
-
-
-const menuAdministracao =
-  document.getElementById(
-    "menuAdministracao"
-  );
-
-
-const tituloPagina =
-  document.getElementById(
-    "tituloPagina"
-  );
-
-
-const itensMenu =
-  document.querySelectorAll(
-    ".menu-item"
-  );
-
-
-const paginas =
-  document.querySelectorAll(
-    ".pagina"
-  );
-
-
-
-// ========================================
-// ADMINISTRAÇÃO
-// ========================================
-
-const cardEmpresas =
-  document.getElementById(
-    "cardEmpresas"
-  );
-
-
-const cardUsuarios =
-  document.getElementById(
-    "cardUsuarios"
-  );
-
-
-const cardPerfisAcesso =
-  document.getElementById(
-    "cardPerfisAcesso"
-  );
-
-
-const cardGrupoEmpresarial =
-  document.getElementById(
-    "cardGrupoEmpresarial"
-  );
-
-
-
-// ========================================
-// EMPRESAS
-// ========================================
-
-const btnVoltarAdministracao =
-  document.getElementById(
-    "btnVoltarAdministracao"
-  );
-
-
-const btnMostrarNovaEmpresa =
-  document.getElementById(
-    "btnMostrarNovaEmpresa"
-  );
-
-
-const formNovaEmpresaContainer =
-  document.getElementById(
-    "formNovaEmpresaContainer"
-  );
-
-
-const formNovaEmpresa =
-  document.getElementById(
-    "formNovaEmpresa"
-  );
-
-
-const btnCancelarEmpresa =
-  document.getElementById(
-    "btnCancelarEmpresa"
-  );
-
-
-const empresaRazaoSocial =
-  document.getElementById(
-    "empresaRazaoSocial"
-  );
-
-
-const empresaNomeFantasia =
-  document.getElementById(
-    "empresaNomeFantasia"
-  );
-
-
-const empresaCnpj =
-  document.getElementById(
-    "empresaCnpj"
-  );
-
-
-const listaEmpresas =
-  document.getElementById(
-    "listaEmpresas"
-  );
-
-
-const quantidadeEmpresas =
-  document.getElementById(
-    "quantidadeEmpresas"
-  );
-
-
-const mensagemEmpresa =
-  document.getElementById(
-    "mensagemEmpresa"
-  );
-
-
-
-// ========================================
-<<<<<<< HEAD
-// EXCLUSÃO DE EMPRESA
-=======
-// MODAL - EXCLUSÃO DE EMPRESA
-// ========================================
-
-const modalExcluirEmpresa =
-  document.getElementById(
-    "modalExcluirEmpresa"
-  );
-
-
-const nomeEmpresaExcluir =
-  document.getElementById(
-    "nomeEmpresaExcluir"
-  );
-
-
-const formConfirmarExclusaoEmpresa =
-  document.getElementById(
-    "formConfirmarExclusaoEmpresa"
-  );
-
-
-const senhaExclusaoEmpresa =
-  document.getElementById(
-    "senhaExclusaoEmpresa"
-  );
-
-
-const mensagemExclusaoEmpresa =
-  document.getElementById(
-    "mensagemExclusaoEmpresa"
-  );
-
-
-const btnCancelarExclusaoEmpresa =
-  document.getElementById(
-    "btnCancelarExclusaoEmpresa"
-  );
-
-
-
-// ========================================
-// ELEMENTOS - USUÁRIOS
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// ========================================
-
-const modalExcluirEmpresa =
-  document.getElementById(
-    "modalExcluirEmpresa"
-  );
-
-
-const nomeEmpresaExcluir =
-  document.getElementById(
-    "nomeEmpresaExcluir"
-  );
-
-
-const formConfirmarExclusaoEmpresa =
-  document.getElementById(
-    "formConfirmarExclusaoEmpresa"
-  );
-
-
-const senhaExclusaoEmpresa =
-  document.getElementById(
-    "senhaExclusaoEmpresa"
-  );
-
-
-const mensagemExclusaoEmpresa =
-  document.getElementById(
-    "mensagemExclusaoEmpresa"
-  );
-
-
-const btnCancelarExclusaoEmpresa =
-  document.getElementById(
-    "btnCancelarExclusaoEmpresa"
-  );
-
-
-
-// ========================================
-// USUÁRIOS
-// ========================================
-
-const btnVoltarUsuarios =
-  document.getElementById(
-    "btnVoltarUsuarios"
-  );
-
-
-const btnNovoUsuario =
-  document.getElementById(
-    "btnNovoUsuario"
-  );
-
-
-const avisoNovoUsuario =
-  document.getElementById(
-    "avisoNovoUsuario"
-  );
-
-
-const listaUsuarios =
-  document.getElementById(
-    "listaUsuarios"
-  );
-
-
-const quantidadeUsuarios =
-  document.getElementById(
-    "quantidadeUsuarios"
-  );
-
-
-
-// ========================================
-<<<<<<< HEAD
-// PERFIS
-=======
-// NAVEGAÇÃO
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// ========================================
-
-<<<<<<< HEAD
-const btnVoltarPerfis =
-  document.getElementById(
-    "btnVoltarPerfis"
-  );
-=======
-const itensMenu =
-  document.querySelectorAll(
-    ".menu-item"
-  );
-
-
-const paginas =
-  document.querySelectorAll(
-    ".pagina"
-  );
-
-
-
-// ========================================
-// SEGURANÇA DE TEXTO
-// ========================================
+const $ = (id) => document.getElementById(id);
+
+const telaLogin = $("telaLogin");
+const sistema = $("sistema");
+const formLogin = $("formLogin");
+const email = $("email");
+const senha = $("senha");
+const mensagemLogin = $("mensagemLogin");
+const nomeUsuario = $("nomeUsuario");
+const btnSair = $("btnSair");
+const tituloPagina = $("tituloPagina");
+const subtituloContexto = $("subtituloContexto");
+const menuDashboard = $("menuDashboard");
+const menuContratos = $("menuContratos");
+const menuAdministracao = $("menuAdministracao");
+const paginas = document.querySelectorAll(".pagina");
+const itensMenu = document.querySelectorAll(".menu-item");
+
+const cardEmpresas = $("cardEmpresas");
+const cardUsuarios = $("cardUsuarios");
+const cardPerfisAcesso = $("cardPerfisAcesso");
+const cardGrupoEmpresarial = $("cardGrupoEmpresarial");
+
+const resumoEmpresas = $("resumoEmpresas");
+const resumoUsuarios = $("resumoUsuarios");
+const resumoPerfis = $("resumoPerfis");
+
+const btnNovaEmpresa = $("btnNovaEmpresa");
+const formEmpresaContainer = $("formEmpresaContainer");
+const formEmpresa = $("formEmpresa");
+const tituloFormEmpresa = $("tituloFormEmpresa");
+const empresaRazaoSocial = $("empresaRazaoSocial");
+const empresaNomeFantasia = $("empresaNomeFantasia");
+const empresaCnpj = $("empresaCnpj");
+const btnCancelarEmpresa = $("btnCancelarEmpresa");
+const mensagemEmpresa = $("mensagemEmpresa");
+const quantidadeEmpresas = $("quantidadeEmpresas");
+const listaEmpresas = $("listaEmpresas");
+const buscaEmpresa = $("buscaEmpresa");
+
+const modalExcluirEmpresa = $("modalExcluirEmpresa");
+const nomeEmpresaExcluir = $("nomeEmpresaExcluir");
+const formConfirmarExclusaoEmpresa = $("formConfirmarExclusaoEmpresa");
+const senhaExclusaoEmpresa = $("senhaExclusaoEmpresa");
+const mensagemExclusaoEmpresa = $("mensagemExclusaoEmpresa");
+const btnCancelarExclusaoEmpresa = $("btnCancelarExclusaoEmpresa");
+
+const btnNovoUsuario = $("btnNovoUsuario");
+const formUsuarioContainer = $("formUsuarioContainer");
+const formUsuario = $("formUsuario");
+const tituloFormUsuario = $("tituloFormUsuario");
+const descricaoFormUsuario = $("descricaoFormUsuario");
+const usuarioNome = $("usuarioNome");
+const usuarioEmail = $("usuarioEmail");
+const usuarioSenha = $("usuarioSenha");
+const campoSenhaNovoUsuario = $("campoSenhaNovoUsuario");
+const usuarioPerfil = $("usuarioPerfil");
+const usuarioEmpresaPrincipal = $("usuarioEmpresaPrincipal");
+const usuarioAcessoGlobal = $("usuarioAcessoGlobal");
+const listaEmpresasAcesso = $("listaEmpresasAcesso");
+const btnCancelarUsuario = $("btnCancelarUsuario");
+const mensagemUsuario = $("mensagemUsuario");
+const quantidadeUsuarios = $("quantidadeUsuarios");
+const listaUsuarios = $("listaUsuarios");
+const buscaUsuario = $("buscaUsuario");
+
+const btnNovoPerfil = $("btnNovoPerfil");
+const formPerfilContainer = $("formPerfilContainer");
+const formPerfil = $("formPerfil");
+const tituloFormPerfil = $("tituloFormPerfil");
+const perfilNome = $("perfilNome");
+const perfilDescricao = $("perfilDescricao");
+const gradePermissoesPerfil = $("gradePermissoesPerfil");
+const btnCancelarPerfil = $("btnCancelarPerfil");
+const mensagemPerfil = $("mensagemPerfil");
+const quantidadePerfis = $("quantidadePerfis");
+const listaPerfis = $("listaPerfis");
+const buscaPerfil = $("buscaPerfil");
+
+const formGrupo = $("formGrupo");
+const grupoIdExibicao = $("grupoIdExibicao");
+const grupoNome = $("grupoNome");
+const mensagemGrupo = $("mensagemGrupo");
+const grupoNomeResumo = $("grupoNomeResumo");
+const grupoStatus = $("grupoStatus");
+const grupoQtdEmpresas = $("grupoQtdEmpresas");
+const grupoQtdUsuarios = $("grupoQtdUsuarios");
+const grupoQtdPerfis = $("grupoQtdPerfis");
 
 function escaparHtml(valor) {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-const btnNovoPerfil =
-  document.getElementById(
-    "btnNovoPerfil"
-  );
-
-
-const formPerfilContainer =
-  document.getElementById(
-    "formPerfilContainer"
-  );
-
-
-const formPerfil =
-  document.getElementById(
-    "formPerfil"
-  );
-
-
-const tituloFormPerfil =
-  document.getElementById(
-    "tituloFormPerfil"
-  );
-
-
-const perfilNome =
-  document.getElementById(
-    "perfilNome"
-  );
-
-
-const perfilDescricao =
-  document.getElementById(
-    "perfilDescricao"
-  );
-
-
-const gradePermissoesPerfil =
-  document.getElementById(
-    "gradePermissoesPerfil"
-  );
-
-
-const btnCancelarPerfil =
-  document.getElementById(
-    "btnCancelarPerfil"
-  );
-
-
-const btnSalvarPerfil =
-  document.getElementById(
-    "btnSalvarPerfil"
-  );
-
-
-const mensagemPerfil =
-  document.getElementById(
-    "mensagemPerfil"
-  );
-
-
-const listaPerfis =
-  document.getElementById(
-    "listaPerfis"
-  );
-
-
-const quantidadePerfis =
-  document.getElementById(
-    "quantidadePerfis"
-  );
-
-
-
-// ========================================
-// UTILITÁRIOS
-// ========================================
-
-function escaparHtml(
-  valor
-) {
-
-  if (
-    valor === null ||
-    valor === undefined
-  ) {
-
-    return "-";
-
-  }
-
-
+  if (valor === null || valor === undefined) return "-";
   return String(valor)
-
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
-
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-
-
-// ========================================
-<<<<<<< HEAD
-// PERMISSÕES DO USUÁRIO ATUAL
-// ========================================
-
-function temPermissao(
-  modulo,
-  acao = "visualizar"
-) {
-
-  if (
-    dadosPerfilAtual?.acessoTotal ===
-    true
-  ) {
-
-    return true;
-
-  }
-
-
-  return (
-
-    dadosPerfilAtual
-      ?.permissoes
-      ?.[modulo]
-      ?.[acao] ===
-    true
-
-  );
-
+function normalizar(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
-
-
-function temAlgumAcessoAdministrativo() {
-
-  return (
-
-    dadosPerfilAtual?.acessoTotal ===
-      true ||
-
-    temPermissao(
-      "empresas"
-    ) ||
-
-    temPermissao(
-      "usuarios"
-    ) ||
-
-    temPermissao(
-      "perfisAcesso"
-    ) ||
-
-    temPermissao(
-      "grupoEmpresarial"
-    )
-
-  );
-
+function formatarCnpj(valor) {
+  const numeros = String(valor || "").replace(/\D/g, "").slice(0, 14);
+  return numeros
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
+function cnpjValido(valor) {
+  const cnpj = String(valor || "").replace(/\D/g, "");
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
 
+  const calcularDigito = (base) => {
+    let peso = base.length - 7;
+    let soma = 0;
 
-function configurarInterfacePorPermissoes() {
+    for (const numero of base) {
+      soma += Number(numero) * peso--;
+      if (peso < 2) peso = 9;
+    }
 
-  menuDashboard
-    .classList.toggle(
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
 
-      "hidden",
+  const digito1 = calcularDigito(cnpj.slice(0, 12));
+  const digito2 = calcularDigito(cnpj.slice(0, 12) + digito1);
 
-      !temPermissao(
-        "dashboard"
-      )
-
-    );
-
-
-  menuContratos
-    .classList.toggle(
-
-      "hidden",
-
-      !temPermissao(
-        "contratos"
-      )
-
-    );
-
-
-  menuAdministracao
-    .classList.toggle(
-
-      "hidden",
-
-      !temAlgumAcessoAdministrativo()
-
-    );
-
-
-  cardEmpresas
-    .classList.toggle(
-
-      "hidden",
-
-      !temPermissao(
-        "empresas"
-      )
-
-    );
-
-
-  cardUsuarios
-    .classList.toggle(
-
-      "hidden",
-
-      !temPermissao(
-        "usuarios"
-      )
-
-    );
-
-
-  cardPerfisAcesso
-    .classList.toggle(
-
-      "hidden",
-
-      !temPermissao(
-        "perfisAcesso"
-      )
-
-    );
-
-
-  cardGrupoEmpresarial
-    .classList.toggle(
-
-      "hidden",
-
-      !temPermissao(
-        "grupoEmpresarial"
-      )
-
-    );
-
+  return cnpj === cnpj.slice(0, 12) + String(digito1) + String(digito2);
 }
 
+function marcarMensagem(elemento, texto, sucesso = false) {
+  elemento.textContent = texto;
+  elemento.classList.toggle("sucesso", sucesso);
+}
 
+function perfilAdministrador() {
+  return dadosPerfilAtual?.acessoTotal === true;
+}
+
+function temPermissao(modulo, acao = "visualizar") {
+  if (perfilAdministrador()) return true;
+  return dadosPerfilAtual?.permissoes?.[modulo]?.[acao] === true;
+}
+
+function abrirPagina(nomePagina) {
+  const pagina = $(`pagina-${nomePagina}`);
+  if (!pagina) return;
+
+  paginas.forEach((item) => item.classList.add("hidden"));
+  pagina.classList.remove("hidden");
+
+  itensMenu.forEach((item) => item.classList.remove("ativo"));
+
+  const administrativa = ["administracao", "empresas", "usuarios", "perfis", "grupo"].includes(nomePagina);
+  const itemMenu = administrativa
+    ? menuAdministracao
+    : document.querySelector(`.menu-item[data-pagina="${nomePagina}"]`);
+
+  itemMenu?.classList.add("ativo");
+
+  const titulos = {
+    dashboard: "Dashboard",
+    contratos: "Contratos",
+    administracao: "Administração",
+    empresas: "Empresas",
+    usuarios: "Usuários",
+    perfis: "Perfis de Acesso",
+    grupo: "Grupo Empresarial"
+  };
+
+  tituloPagina.textContent = titulos[nomePagina] || "SIG";
+  subtituloContexto.textContent = grupoAtual?.nome || "Sistema Integrado de Gestão";
+}
+
+function configurarMenus() {
+  menuDashboard.classList.toggle("hidden", !temPermissao("dashboard"));
+  menuContratos.classList.toggle("hidden", !temPermissao("contratos"));
+  menuAdministracao.classList.toggle("hidden", !perfilAdministrador());
+}
 
 function primeiraPaginaPermitida() {
-
-  if (
-    temPermissao(
-      "dashboard"
-    )
-  ) {
-
-    return "dashboard";
-
-  }
-
-
-  if (
-    temPermissao(
-      "contratos"
-    )
-  ) {
-
-    return "contratos";
-
-  }
-
-
-  if (
-    temAlgumAcessoAdministrativo()
-  ) {
-
-    return "administracao";
-
-  }
-
-
+  if (temPermissao("dashboard")) return "dashboard";
+  if (temPermissao("contratos")) return "contratos";
+  if (perfilAdministrador()) return "administracao";
   return "dashboard";
-
 }
 
-
-
-// ========================================
-// NAVEGAÇÃO
-// ========================================
-
-function abrirPagina(
-  nomePagina
-) {
-
-  paginas.forEach(
-    (pagina) => {
-
-      pagina
-        .classList.add(
-          "hidden"
-        );
-
-    }
-  );
-
-
-  const pagina =
-    document.getElementById(
-      `pagina-${nomePagina}`
-    );
-
-
-  if (pagina) {
-
-    pagina
-      .classList.remove(
-        "hidden"
-      );
-
+async function carregarGrupoAtual() {
+  if (!dadosUsuarioAtual?.grupoId) {
+    grupoAtual = null;
+    return;
   }
 
-
-  itensMenu.forEach(
-    (item) => {
-
-      item
-        .classList.remove(
-          "ativo"
-        );
-
-    }
-  );
-
-
-  const paginaAdministrativa =
-
-    [
-      "administracao",
-      "empresas",
-      "usuarios",
-      "perfis"
-    ]
-
-      .includes(
-        nomePagina
-      );
-
-
-  const itemMenuAtivo =
-
-    paginaAdministrativa
-
-      ? menuAdministracao
-
-      : document.querySelector(
-
-          `.menu-item[data-pagina="${nomePagina}"]`
-
-        );
-
-
-  if (
-
-    itemMenuAtivo &&
-
-    !itemMenuAtivo
-      .classList
-      .contains(
-        "hidden"
-      )
-
-  ) {
-
-    itemMenuAtivo
-      .classList.add(
-        "ativo"
-      );
-
-  }
-
-
-  const titulos = {
-
-    dashboard:
-      "Dashboard",
-
-    contratos:
-      "Contratos",
-
-    administracao:
-      "Administração",
-
-    empresas:
-      "Empresas",
-
-    usuarios:
-      "Usuários",
-
-    perfis:
-      "Perfis de Acesso"
-
-  };
-
-
-  tituloPagina.textContent =
-
-    titulos[
-      nomePagina
-    ] ||
-
-    "Sistema Integrado";
-
+  const snap = await getDoc(doc(db, "gruposEmpresariais", dadosUsuarioAtual.grupoId));
+  grupoAtual = snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
+async function carregarColecoesAdministrativas() {
+  if (!perfilAdministrador()) return;
 
+  const [empresasSnap, usuariosSnap, perfisSnap] = await Promise.all([
+    getDocs(collection(db, "empresas")),
+    getDocs(collection(db, "usuarios")),
+    getDocs(collection(db, "perfisAcesso"))
+  ]);
 
-// ========================================
-=======
-// ABRIR PÁGINA
-// ========================================
+  empresasCache = new Map();
+  usuariosCache = new Map();
+  perfisCache = new Map();
 
-function abrirPagina(
-  nomePagina
-) {
-
-
-  paginas.forEach(
-    (pagina) => {
-
-      pagina.classList.add(
-        "hidden"
-      );
-
+  empresasSnap.forEach((registro) => {
+    const dados = registro.data();
+    if (!dadosUsuarioAtual?.grupoId || dados.grupoId === dadosUsuarioAtual.grupoId) {
+      empresasCache.set(registro.id, { id: registro.id, ...dados });
     }
-  );
+  });
 
-
-  const pagina =
-    document.getElementById(
-      `pagina-${nomePagina}`
-    );
-
-
-  if (pagina) {
-
-    pagina.classList.remove(
-      "hidden"
-    );
-
-  }
-
-
-  itensMenu.forEach(
-    (item) => {
-
-      item.classList.remove(
-        "ativo"
-      );
-
+  usuariosSnap.forEach((registro) => {
+    const dados = registro.data();
+    if (!dadosUsuarioAtual?.grupoId || !dados.grupoId || dados.grupoId === dadosUsuarioAtual.grupoId) {
+      usuariosCache.set(registro.id, { id: registro.id, ...dados });
     }
-  );
+  });
 
-
-  const paginaAdministrativa =
-
-    nomePagina ===
-      "administracao" ||
-
-    nomePagina ===
-      "empresas" ||
-
-    nomePagina ===
-      "usuarios";
-
-
-  let itemMenuAtivo;
-
-
-  if (
-    paginaAdministrativa
-  ) {
-
-    itemMenuAtivo =
-      menuAdministracao;
-
-  } else {
-
-    itemMenuAtivo =
-      document.querySelector(
-        `.menu-item[data-pagina="${nomePagina}"]`
-      );
-
-  }
-
-
-  if (itemMenuAtivo) {
-
-    itemMenuAtivo
-      .classList.add(
-        "ativo"
-      );
-
-  }
-
-
-  const titulos = {
-
-    dashboard:
-      "Dashboard",
-
-    contratos:
-      "Contratos",
-
-    administracao:
-      "Administração",
-
-    empresas:
-      "Empresas",
-
-    usuarios:
-      "Usuários"
-
-  };
-
-
-  tituloPagina.textContent =
-
-    titulos[nomePagina] ||
-
-    "Sistema Integrado";
-
+  perfisSnap.forEach((registro) => {
+    const dados = registro.data();
+    if (
+      dados.acessoTotal === true ||
+      !dados.grupoId ||
+      dados.grupoId === dadosUsuarioAtual?.grupoId
+    ) {
+      perfisCache.set(registro.id, { id: registro.id, ...dados });
+    }
+  });
 }
 
+async function atualizarResumoAdministracao() {
+  if (!perfilAdministrador()) return;
 
+  try {
+    await carregarColecoesAdministrativas();
 
-// ========================================
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// LOGIN
-// ========================================
-
-formLogin.addEventListener(
-  "submit",
-  async (evento) => {
-
-
-    evento.preventDefault();
-
-
-    mensagemLogin.textContent =
-      "Entrando...";
-
-
-    try {
-
-
-      await signInWithEmailAndPassword(
-
-        auth,
-
-        email.value.trim(),
-
-        senha.value
-
-      );
-
-
-      mensagemLogin.textContent =
-        "";
-
-
-      formLogin.reset();
-
-
-    } catch (erro) {
-
-
-      console.error(
-        "Erro no login:",
-        erro
-      );
-
-
-      mensagemLogin.textContent =
-        "E-mail ou senha inválidos.";
-
-
-    }
-
+    resumoEmpresas.textContent = empresasCache.size;
+    resumoUsuarios.textContent = [...usuariosCache.values()].filter((item) => item.ativo === true).length;
+    resumoPerfis.textContent = [...perfisCache.values()].filter((item) => item.ativo === true).length;
+  } catch (erro) {
+    console.error("Erro ao atualizar resumo administrativo:", erro);
+    resumoEmpresas.textContent = "—";
+    resumoUsuarios.textContent = "—";
+    resumoPerfis.textContent = "—";
   }
-);
+}
 
+/* LOGIN E SESSÃO */
 
+formLogin.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  mensagemLogin.textContent = "Entrando...";
 
-// ========================================
-// LOGOUT
-// ========================================
-
-btnSair.addEventListener(
-  "click",
-  async () => {
-
-
-    try {
-
-<<<<<<< HEAD
-      await signOut(
-        auth
-      );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      await signOut(
-        auth
-      );
-
-
-    } catch (erro) {
-
-
-      console.error(
-        "Erro ao sair:",
-        erro
-      );
-
-
-    }
-
+  try {
+    await signInWithEmailAndPassword(auth, email.value.trim(), senha.value);
+    formLogin.reset();
+  } catch (erro) {
+    console.error("Erro no login:", erro);
+    mensagemLogin.textContent = "E-mail ou senha inválidos.";
   }
-);
+});
 
+btnSair.addEventListener("click", async () => {
+  await signOut(auth);
+});
 
+onAuthStateChanged(auth, async (usuario) => {
+  if (!usuario) {
+    dadosUsuarioAtual = null;
+    dadosPerfilAtual = null;
+    grupoAtual = null;
+    sistema.classList.add("hidden");
+    telaLogin.classList.remove("hidden");
+    nomeUsuario.textContent = "";
+    return;
+  }
 
-// ========================================
-// AUTENTICAÇÃO / AUTORIZAÇÃO
-// ========================================
+  try {
+    const usuarioSnap = await getDoc(doc(db, "usuarios", usuario.uid));
 
-onAuthStateChanged(
-  auth,
-  async (usuario) => {
-
-
-    if (!usuario) {
-
-<<<<<<< HEAD
-      dadosUsuarioAtual =
-        null;
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      dadosUsuarioAtual =
-        null;
-
-<<<<<<< HEAD
-      dadosPerfilAtual =
-        null;
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      dadosPerfilAtual =
-        null;
-
-<<<<<<< HEAD
-      empresaParaExcluir =
-        null;
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      empresaParaExcluir =
-        null;
-
-<<<<<<< HEAD
-      perfilEmEdicaoId =
-        null;
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      sistema
-        .classList.add(
-          "hidden"
-        );
-
-<<<<<<< HEAD
-      sistema
-        .classList.add(
-          "hidden"
-        );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      telaLogin
-        .classList.remove(
-          "hidden"
-        );
-
-<<<<<<< HEAD
-      telaLogin
-        .classList.remove(
-          "hidden"
-        );
-
-
-      menuAdministracao
-        .classList.add(
-          "hidden"
-        );
-
-
-      nomeUsuario.textContent =
-        "";
-
-
-=======
-
-      menuAdministracao
-        .classList.add(
-          "hidden"
-        );
-
-
-      nomeUsuario.textContent =
-        "";
-
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
+    if (!usuarioSnap.exists()) {
+      mensagemLogin.textContent = "Usuário não autorizado.";
+      await signOut(auth);
       return;
-
     }
 
-
-    try {
-
-<<<<<<< HEAD
-      const usuarioSnap =
-        await getDoc(
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-          doc(
-            db,
-            "usuarios",
-            usuario.uid
-          )
-
-        );
-
-
-<<<<<<< HEAD
-      if (
-        !usuarioSnap.exists()
-      ) {
-=======
-      const usuarioSnap =
-        await getDoc(
-          usuarioRef
-        );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-        await signOut(
-          auth
-        );
-
-<<<<<<< HEAD
-=======
-      if (
-        !usuarioSnap.exists()
-      ) {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-=======
-
-        await signOut(
-          auth
-        );
-
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-        mensagemLogin.textContent =
-          "Usuário não autorizado.";
-
-
-        return;
-
-      }
-
-
-      const dadosUsuario =
-        usuarioSnap.data();
-
-
-      if (
-        dadosUsuario.ativo !==
-        true
-      ) {
-
-<<<<<<< HEAD
-        await signOut(
-          auth
-        );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-        await signOut(
-          auth
-        );
-
-
-        mensagemLogin.textContent =
-          "Este usuário está desativado.";
-
-
-        return;
-
-      }
-
-
-<<<<<<< HEAD
-      const perfilSnap =
-        await getDoc(
-
-          doc(
-            db,
-            "perfisAcesso",
-            dadosUsuario.perfilId
-          )
-
-=======
-      const perfilRef =
-        doc(
-          db,
-          "perfisAcesso",
-          dadosUsuario.perfilId
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-        );
-
-
-<<<<<<< HEAD
-      if (
-        !perfilSnap.exists()
-      ) {
-=======
-      const perfilSnap =
-        await getDoc(
-          perfilRef
-        );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-        await signOut(
-          auth
-        );
-
-<<<<<<< HEAD
-=======
-      if (
-        !perfilSnap.exists()
-      ) {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-=======
-
-        await signOut(
-          auth
-        );
-
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-        mensagemLogin.textContent =
-          "Perfil de acesso não encontrado.";
-
-
-        return;
-
-      }
-
-
-      const dadosPerfil =
-        perfilSnap.data();
-
-
-      if (
-        dadosPerfil.ativo !==
-        true
-      ) {
-
-<<<<<<< HEAD
-        await signOut(
-          auth
-        );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-        await signOut(
-          auth
-        );
-
-
-        mensagemLogin.textContent =
-          "Perfil de acesso desativado.";
-
-
-        return;
-
-      }
-
-
-      dadosUsuarioAtual =
-        dadosUsuario;
-
-
-      dadosPerfilAtual =
-        dadosPerfil;
-
-
-      telaLogin
-        .classList.add(
-          "hidden"
-        );
-
-
-      sistema
-        .classList.remove(
-          "hidden"
-        );
-
-
-      nomeUsuario.textContent =
-
-        dadosUsuario.nome ||
-
-        usuario.email;
-
-
-<<<<<<< HEAD
-      configurarInterfacePorPermissoes();
-
-=======
-      if (
-        dadosPerfil.acessoTotal ===
-        true
-      ) {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-      gerarGradePermissoes();
-=======
-
-        menuAdministracao
-          .classList.remove(
-            "hidden"
-          );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-=======
-
-      } else {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-=======
-
-        menuAdministracao
-          .classList.add(
-            "hidden"
-          );
-
-
-      }
-
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-      abrirPagina(
-        primeiraPaginaPermitida()
-      );
-
-
-    } catch (erro) {
-
-
-      console.error(
-        "Erro de autorização:",
-        erro
-      );
-
-
-      await signOut(
-        auth
-      );
-
-
-      mensagemLogin.textContent =
-        "Erro ao verificar as permissões.";
-
-
-    }
-
-  }
-);
-
-
-
-// ========================================
-// MENU PRINCIPAL
-// ========================================
-
-itensMenu.forEach(
-  (item) => {
-
-
-    item.addEventListener(
-      "click",
-      () => {
-
-<<<<<<< HEAD
-        if (
-          item
-            .classList
-            .contains(
-              "hidden"
-            )
-        ) {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-          return;
-
-        }
-
-
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-        abrirPagina(
-          item.dataset.pagina
-        );
-
-
-      }
-    );
-
-
-  }
-);
-
-
-
-// ========================================
-// EMPRESAS - NAVEGAÇÃO
-// ========================================
-
-cardEmpresas.addEventListener(
-  "click",
-  async () => {
-
-<<<<<<< HEAD
-    if (
-      !temPermissao(
-        "empresas"
-      )
-    ) {
-
+    const dadosUsuario = usuarioSnap.data();
+
+    if (dadosUsuario.ativo !== true) {
+      mensagemLogin.textContent = "Este usuário está desativado.";
+      await signOut(auth);
       return;
-
     }
 
+    const perfilSnap = await getDoc(doc(db, "perfisAcesso", dadosUsuario.perfilId));
 
-=======
+    if (!perfilSnap.exists() || perfilSnap.data().ativo !== true) {
+      mensagemLogin.textContent = "Perfil de acesso indisponível.";
+      await signOut(auth);
+      return;
+    }
 
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-    abrirPagina(
-      "empresas"
-    );
+    dadosUsuarioAtual = { id: usuario.uid, ...dadosUsuario };
+    dadosPerfilAtual = { id: perfilSnap.id, ...perfilSnap.data() };
 
+    await carregarGrupoAtual();
 
-    await carregarEmpresas();
+    if (grupoAtual && grupoAtual.ativo === false) {
+      mensagemLogin.textContent = "O grupo empresarial está inativo.";
+      await signOut(auth);
+      return;
+    }
 
+    telaLogin.classList.add("hidden");
+    sistema.classList.remove("hidden");
+    nomeUsuario.textContent = dadosUsuarioAtual.nome || usuario.email;
+    mensagemLogin.textContent = "";
 
+    configurarMenus();
+    gerarGradePermissoes();
+    abrirPagina(primeiraPaginaPermitida());
+
+    if (perfilAdministrador()) {
+      atualizarResumoAdministracao();
+    }
+  } catch (erro) {
+    console.error("Erro de autorização:", erro);
+    mensagemLogin.textContent = "Não foi possível validar seu acesso.";
+    await signOut(auth);
   }
-);
+});
 
+itensMenu.forEach((item) => {
+  item.addEventListener("click", async () => {
+    const pagina = item.dataset.pagina;
 
+    if (pagina === "administracao" && !perfilAdministrador()) return;
 
-btnVoltarAdministracao
-  .addEventListener(
-    "click",
-    () => {
+    abrirPagina(pagina);
 
-<<<<<<< HEAD
-      abrirPagina(
-        "administracao"
-      );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
+    if (pagina === "administracao") {
+      await atualizarResumoAdministracao();
     }
-  );
-=======
-      abrirPagina(
-        "administracao"
-      );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-    }
-  );
-
-<<<<<<< HEAD
-btnMostrarNovaEmpresa
-  .addEventListener(
-    "click",
-    () => {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-      mensagemEmpresa.textContent =
-        "";
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-btnMostrarNovaEmpresa
-  .addEventListener(
-    "click",
-    () => {
-
-<<<<<<< HEAD
-      formNovaEmpresaContainer
-        .classList.remove(
-          "hidden"
-        );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      mensagemEmpresa.textContent =
-        "";
-
-<<<<<<< HEAD
-      empresaRazaoSocial
-        .focus();
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-    }
-  );
-=======
-      formNovaEmpresaContainer
-        .classList.remove(
-          "hidden"
-        );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-      empresaRazaoSocial
-        .focus();
-
-<<<<<<< HEAD
-btnCancelarEmpresa
-  .addEventListener(
-    "click",
-    () => {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-      formNovaEmpresa.reset();
-=======
-    }
-  );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-<<<<<<< HEAD
-      mensagemEmpresa.textContent =
-        "";
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-btnCancelarEmpresa
-  .addEventListener(
-    "click",
-    () => {
-
-<<<<<<< HEAD
-      formNovaEmpresaContainer
-        .classList.add(
-          "hidden"
-        );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-    }
-  );
-=======
-      formNovaEmpresa.reset();
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-      mensagemEmpresa.textContent =
-        "";
-
-
-      formNovaEmpresaContainer
-        .classList.add(
-          "hidden"
-        );
-
-
-    }
-  );
-
-
-
-// ========================================
-<<<<<<< HEAD
-// MÁSCARA CNPJ
-=======
-// MÁSCARA DE CNPJ
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// ========================================
-
-empresaCnpj.addEventListener(
-  "input",
-  () => {
-
-
-    let valor =
-<<<<<<< HEAD
-=======
-      empresaCnpj.value
-        .replace(
-          /\D/g,
-          ""
-        );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-      empresaCnpj.value
-
-        .replace(
-          /\D/g,
-          ""
-        )
-
-        .substring(
-          0,
-          14
-        );
-
-<<<<<<< HEAD
-=======
-    if (
-      valor.length > 12
-    ) {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-    if (
-      valor.length > 12
-    ) {
-
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-      valor =
-        valor.replace(
-
-          /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2}).*/,
-
-          "$1.$2.$3/$4-$5"
-
-        );
-
-<<<<<<< HEAD
-    } else if (
-      valor.length > 8
-    ) {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-    } else if (
-      valor.length > 8
-    ) {
-
-
-      valor =
-        valor.replace(
-
-          /^(\d{2})(\d{3})(\d{3})(\d{0,4}).*/,
-
-          "$1.$2.$3/$4"
-
-        );
-
-<<<<<<< HEAD
-    } else if (
-      valor.length > 5
-    ) {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-    } else if (
-      valor.length > 5
-    ) {
-
-
-      valor =
-        valor.replace(
-
-          /^(\d{2})(\d{3})(\d{0,3}).*/,
-
-          "$1.$2.$3"
-
-        );
-
-<<<<<<< HEAD
-    } else if (
-      valor.length > 2
-    ) {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-    } else if (
-      valor.length > 2
-    ) {
-
-
-      valor =
-        valor.replace(
-
-          /^(\d{2})(\d{0,3}).*/,
-
-          "$1.$2"
-
-        );
-
-
-    }
-
-
-    empresaCnpj.value =
-      valor;
-
-
+  });
+});
+
+document.querySelectorAll("[data-voltar-admin]").forEach((botao) => {
+  botao.addEventListener("click", async () => {
+    abrirPagina("administracao");
+    await atualizarResumoAdministracao();
+  });
+});
+
+/* ADMINISTRAÇÃO */
+
+cardEmpresas.addEventListener("click", async () => {
+  abrirPagina("empresas");
+  await carregarEmpresas();
+});
+
+cardUsuarios.addEventListener("click", async () => {
+  abrirPagina("usuarios");
+  await carregarUsuarios();
+});
+
+cardPerfisAcesso.addEventListener("click", async () => {
+  abrirPagina("perfis");
+  await carregarPerfis();
+});
+
+cardGrupoEmpresarial.addEventListener("click", async () => {
+  abrirPagina("grupo");
+  await carregarGrupo();
+});
+
+/* EMPRESAS */
+
+function limparFormularioEmpresa() {
+  empresaEmEdicaoId = null;
+  formEmpresa.reset();
+  tituloFormEmpresa.textContent = "Nova empresa";
+  marcarMensagem(mensagemEmpresa, "");
+}
+
+function abrirFormularioEmpresa(empresa = null) {
+  limparFormularioEmpresa();
+
+  if (empresa) {
+    empresaEmEdicaoId = empresa.id;
+    tituloFormEmpresa.textContent = "Editar empresa";
+    empresaRazaoSocial.value = empresa.razaoSocial || "";
+    empresaNomeFantasia.value = empresa.nomeFantasia || "";
+    empresaCnpj.value = empresa.cnpj || "";
   }
-);
 
+  formEmpresaContainer.classList.remove("hidden");
+  empresaRazaoSocial.focus();
+}
 
+btnNovaEmpresa.addEventListener("click", () => abrirFormularioEmpresa());
 
-// ========================================
-// CARREGAR EMPRESAS
-// ========================================
+btnCancelarEmpresa.addEventListener("click", () => {
+  limparFormularioEmpresa();
+  formEmpresaContainer.classList.add("hidden");
+});
+
+empresaCnpj.addEventListener("input", () => {
+  empresaCnpj.value = formatarCnpj(empresaCnpj.value);
+});
+
+function renderizarEmpresas(filtro = "") {
+  const termo = normalizar(filtro);
+
+  const empresas = [...empresasCache.values()]
+    .filter((empresa) => {
+      if (!termo) return true;
+      return [
+        empresa.razaoSocial,
+        empresa.nomeFantasia,
+        empresa.cnpj
+      ].some((valor) => normalizar(valor).includes(termo));
+    })
+    .sort((a, b) => String(a.nomeFantasia || a.razaoSocial).localeCompare(String(b.nomeFantasia || b.razaoSocial), "pt-BR"));
+
+  quantidadeEmpresas.textContent = `${empresasCache.size} empresa(s) cadastrada(s)`;
+
+  if (!empresas.length) {
+    listaEmpresas.innerHTML = `<tr><td colspan="4">Nenhuma empresa encontrada.</td></tr>`;
+    return;
+  }
+
+  listaEmpresas.innerHTML = empresas.map((empresa) => `
+    <tr>
+      <td class="celula-principal">
+        <strong>${escaparHtml(empresa.nomeFantasia || empresa.razaoSocial)}</strong>
+        <span>${escaparHtml(empresa.razaoSocial)}</span>
+      </td>
+      <td>${escaparHtml(empresa.cnpj)}</td>
+      <td>
+        <span class="${empresa.ativo === true ? "status-ativo" : "status-inativo"}">
+          ${empresa.ativo === true ? "Ativa" : "Inativa"}
+        </span>
+      </td>
+      <td>
+        <div class="acoes-tabela">
+          <button class="btn-acao destaque" data-empresa-editar="${empresa.id}" type="button">Editar</button>
+          <button class="btn-acao" data-empresa-status="${empresa.id}" type="button">
+            ${empresa.ativo === true ? "Inativar" : "Reativar"}
+          </button>
+          <button class="btn-acao perigo" data-empresa-excluir="${empresa.id}" type="button">Excluir</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  document.querySelectorAll("[data-empresa-editar]").forEach((botao) => {
+    botao.addEventListener("click", () => {
+      abrirFormularioEmpresa(empresasCache.get(botao.dataset.empresaEditar));
+    });
+  });
+
+  document.querySelectorAll("[data-empresa-status]").forEach((botao) => {
+    botao.addEventListener("click", () => alterarStatusEmpresa(botao.dataset.empresaStatus));
+  });
+
+  document.querySelectorAll("[data-empresa-excluir]").forEach((botao) => {
+    botao.addEventListener("click", () => prepararExclusaoEmpresa(botao.dataset.empresaExcluir));
+  });
+}
 
 async function carregarEmpresas() {
-
-
-  listaEmpresas.innerHTML = `
-
-    <tr>
-<<<<<<< HEAD
-
-      <td colspan="5">
-=======
-
-      <td colspan="5">
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-        Carregando empresas...
-
-      </td>
-
-    </tr>
-
-  `;
-
-
-  quantidadeEmpresas.textContent =
-    "Carregando...";
-
-
-  empresasCache =
-    new Map();
-
+  listaEmpresas.innerHTML = `<tr><td colspan="4">Carregando empresas...</td></tr>`;
 
   try {
-
-
-    const empresasSnap =
-      await getDocs(
-
-        collection(
-          db,
-          "empresas"
-        )
-
-      );
-
-
-    listaEmpresas.innerHTML =
-      "";
-
-
-    let quantidade =
-      0;
-
-
-    empresasSnap.forEach(
-      (documento) => {
-
-
-        const empresa =
-          documento.data();
-
-
-        if (
-
-          dadosUsuarioAtual?.grupoId &&
-
-          empresa.grupoId !==
-            dadosUsuarioAtual.grupoId
-
-        ) {
-
-
-          return;
-
-
-        }
-
-
-        quantidade++;
-
-
-        empresasCache.set(
-          documento.id,
-          empresa
-        );
-
-
-        const linha =
-          document.createElement(
-            "tr"
-          );
-
-
-        linha.innerHTML = `
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              empresa.razaoSocial
-            )}
-=======
-
-            ${
-              escaparHtml(
-                empresa.razaoSocial
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              empresa.nomeFantasia
-            )}
-=======
-
-            ${
-              escaparHtml(
-                empresa.nomeFantasia
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              empresa.cnpj
-            )}
-=======
-
-            ${
-              escaparHtml(
-                empresa.cnpj
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-
-            <span
-
-              class="${
-                empresa.ativo === true
-                  ? "status-ativo"
-                  : "status-inativo"
-              }"
-
-            >
-
-              ${
-                empresa.ativo === true
-                  ? "Ativa"
-                  : "Inativa"
-              }
-
-            </span>
-
-          </td>
-
-<<<<<<< HEAD
-          <td>
-
-            <div class="acoes-tabela">
-
-              <button
-                class="btn-acao-empresa btn-status-empresa"
-                data-id="${documento.id}"
-                data-ativo="${empresa.ativo === true}"
-                type="button"
-              >
-                ${
-                  empresa.ativo === true
-                    ? "Inativar"
-                    : "Reativar"
-                }
-              </button>
-
-
-              <button
-                class="btn-acao-empresa btn-excluir-empresa"
-                data-id="${documento.id}"
-                type="button"
-              >
-                Excluir
-              </button>
-
-            </div>
-
-          </td>
-
-=======
-
-          <td>
-
-            <div class="acoes-tabela">
-
-
-              <button
-
-                class="
-                  btn-acao-empresa
-                  btn-status-empresa
-                "
-
-                data-id="${
-                  documento.id
-                }"
-
-                data-ativo="${
-                  empresa.ativo === true
-                }"
-
-                type="button"
-
-              >
-
-                ${
-                  empresa.ativo === true
-                    ? "Inativar"
-                    : "Reativar"
-                }
-
-              </button>
-
-
-              <button
-
-                class="
-                  btn-acao-empresa
-                  btn-excluir-empresa
-                "
-
-                data-id="${
-                  documento.id
-                }"
-
-                type="button"
-
-              >
-
-                Excluir
-
-              </button>
-
-
-            </div>
-
-          </td>
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-        `;
-
-
-        listaEmpresas
-          .appendChild(
-            linha
-          );
-
-
-      }
-    );
-
-
-<<<<<<< HEAD
-    quantidadeEmpresas.textContent =
-
-      `${quantidade} empresa(s) cadastrada(s)`;
-=======
-    quantidadeEmpresas
-      .textContent =
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-        `${quantidade} empresa(s) cadastrada(s)`;
-
-<<<<<<< HEAD
-    if (
-      quantidade === 0
-    ) {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-    if (
-      quantidade === 0
-    ) {
-
-
-      listaEmpresas.innerHTML = `
-
-        <tr>
-
-<<<<<<< HEAD
-          <td colspan="5">
-=======
-          <td colspan="5">
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-            Nenhuma empresa cadastrada.
-
-          </td>
-
-        </tr>
-
-      `;
-
-
+    await carregarColecoesAdministrativas();
+    renderizarEmpresas(buscaEmpresa.value);
+  } catch (erro) {
+    console.error("Erro ao carregar empresas:", erro);
+    listaEmpresas.innerHTML = `<tr><td colspan="4">Não foi possível carregar as empresas.</td></tr>`;
+  }
+}
+
+buscaEmpresa.addEventListener("input", () => renderizarEmpresas(buscaEmpresa.value));
+
+formEmpresa.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+
+  const razaoSocial = empresaRazaoSocial.value.trim();
+  const nomeFantasia = empresaNomeFantasia.value.trim();
+  const cnpj = formatarCnpj(empresaCnpj.value);
+  const cnpjNumeros = cnpj.replace(/\D/g, "");
+
+  if (!cnpjValido(cnpj)) {
+    marcarMensagem(mensagemEmpresa, "Informe um CNPJ válido.");
+    empresaCnpj.focus();
+    return;
+  }
+
+  const duplicada = [...empresasCache.values()].some((empresa) => {
+    if (empresa.id === empresaEmEdicaoId) return false;
+    return String(empresa.cnpj || "").replace(/\D/g, "") === cnpjNumeros;
+  });
+
+  if (duplicada) {
+    marcarMensagem(mensagemEmpresa, "Já existe uma empresa com este CNPJ.");
+    return;
+  }
+
+  if (!dadosUsuarioAtual?.grupoId) {
+    marcarMensagem(mensagemEmpresa, "Seu usuário não está vinculado a um grupo empresarial.");
+    return;
+  }
+
+  marcarMensagem(mensagemEmpresa, "Salvando...");
+
+  const dados = {
+    razaoSocial,
+    nomeFantasia,
+    cnpj,
+    cnpjNumeros,
+    grupoId: dadosUsuarioAtual.grupoId,
+    atualizadoEm: serverTimestamp()
+  };
+
+  try {
+    if (empresaEmEdicaoId) {
+      await updateDoc(doc(db, "empresas", empresaEmEdicaoId), dados);
+      marcarMensagem(mensagemEmpresa, "Empresa atualizada com sucesso.", true);
+    } else {
+      await addDoc(collection(db, "empresas"), {
+        ...dados,
+        ativo: true,
+        criadoEm: serverTimestamp()
+      });
+      marcarMensagem(mensagemEmpresa, "Empresa cadastrada com sucesso.", true);
     }
 
+    await carregarEmpresas();
+    await atualizarResumoAdministracao();
 
-    configurarAcoesEmpresas();
-
-
+    setTimeout(() => {
+      limparFormularioEmpresa();
+      formEmpresaContainer.classList.add("hidden");
+    }, 700);
   } catch (erro) {
+    console.error("Erro ao salvar empresa:", erro);
+    marcarMensagem(mensagemEmpresa, "Não foi possível salvar a empresa.");
+  }
+});
 
+async function alterarStatusEmpresa(empresaId) {
+  const empresa = empresasCache.get(empresaId);
+  if (!empresa) return;
 
-    console.error(
-      "Erro ao carregar empresas:",
-      erro
+  const novoStatus = empresa.ativo !== true;
+  const acao = novoStatus ? "reativar" : "inativar";
+
+  if (!window.confirm(`Deseja ${acao} ${empresa.nomeFantasia || empresa.razaoSocial}?`)) return;
+
+  try {
+    await updateDoc(doc(db, "empresas", empresaId), {
+      ativo: novoStatus,
+      atualizadoEm: serverTimestamp()
+    });
+
+    await carregarEmpresas();
+    await atualizarResumoAdministracao();
+  } catch (erro) {
+    console.error("Erro ao alterar status da empresa:", erro);
+    alert("Não foi possível alterar o status da empresa.");
+  }
+}
+
+function empresaPossuiVinculos(empresaId) {
+  const vinculadaAUsuario = [...usuariosCache.values()].some((usuario) =>
+    usuario.empresaId === empresaId ||
+    (Array.isArray(usuario.empresasAcesso) && usuario.empresasAcesso.includes(empresaId))
+  );
+
+  const empresa = empresasCache.get(empresaId);
+  const possuiHistoricoSinalizado =
+    empresa?.possuiMovimento === true ||
+    Number(empresa?.movimentosCount || 0) > 0;
+
+  return vinculadaAUsuario || possuiHistoricoSinalizado;
+}
+
+async function prepararExclusaoEmpresa(empresaId) {
+  try {
+    await carregarColecoesAdministrativas();
+
+    if (empresaPossuiVinculos(empresaId)) {
+      alert("Esta empresa possui usuários vinculados ou histórico registrado e não pode ser excluída. Use Inativar.");
+      return;
+    }
+
+    const empresa = empresasCache.get(empresaId);
+    if (!empresa) return;
+
+    empresaParaExcluir = empresa;
+    nomeEmpresaExcluir.textContent = empresa.nomeFantasia || empresa.razaoSocial;
+    senhaExclusaoEmpresa.value = "";
+    marcarMensagem(mensagemExclusaoEmpresa, "");
+    modalExcluirEmpresa.classList.remove("hidden");
+
+    setTimeout(() => senhaExclusaoEmpresa.focus(), 30);
+  } catch (erro) {
+    console.error("Erro ao preparar exclusão:", erro);
+    alert("Não foi possível verificar os vínculos da empresa.");
+  }
+}
+
+function fecharModalExclusaoEmpresa() {
+  empresaParaExcluir = null;
+  formConfirmarExclusaoEmpresa.reset();
+  marcarMensagem(mensagemExclusaoEmpresa, "");
+  modalExcluirEmpresa.classList.add("hidden");
+}
+
+btnCancelarExclusaoEmpresa.addEventListener("click", fecharModalExclusaoEmpresa);
+
+modalExcluirEmpresa.addEventListener("click", (evento) => {
+  if (evento.target === modalExcluirEmpresa) fecharModalExclusaoEmpresa();
+});
+
+formConfirmarExclusaoEmpresa.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+
+  if (!empresaParaExcluir || !auth.currentUser?.email) return;
+
+  marcarMensagem(mensagemExclusaoEmpresa, "Validando administrador...");
+
+  try {
+    await carregarColecoesAdministrativas();
+
+    if (empresaPossuiVinculos(empresaParaExcluir.id)) {
+      marcarMensagem(mensagemExclusaoEmpresa, "A empresa possui vínculo e não pode mais ser excluída.");
+      return;
+    }
+
+    const credencial = EmailAuthProvider.credential(
+      auth.currentUser.email,
+      senhaExclusaoEmpresa.value
     );
 
+    await reauthenticateWithCredential(auth.currentUser, credencial);
+    await deleteDoc(doc(db, "empresas", empresaParaExcluir.id));
 
-    listaEmpresas.innerHTML = `
+    fecharModalExclusaoEmpresa();
+    await carregarEmpresas();
+    await atualizarResumoAdministracao();
+    alert("Empresa excluída permanentemente.");
+  } catch (erro) {
+    console.error("Erro ao excluir empresa:", erro);
 
+    if (["auth/invalid-credential", "auth/wrong-password"].includes(erro.code)) {
+      marcarMensagem(mensagemExclusaoEmpresa, "Senha incorreta.");
+      senhaExclusaoEmpresa.select();
+      return;
+    }
+
+    marcarMensagem(mensagemExclusaoEmpresa, "Não foi possível concluir a exclusão.");
+  }
+});
+
+/* USUÁRIOS */
+
+function perfisAtivosParaSelecao() {
+  return [...perfisCache.values()]
+    .filter((perfil) => perfil.ativo === true)
+    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+}
+
+function empresasAtivasParaSelecao() {
+  return [...empresasCache.values()]
+    .filter((empresa) => empresa.ativo === true)
+    .sort((a, b) => String(a.nomeFantasia || a.razaoSocial).localeCompare(String(b.nomeFantasia || b.razaoSocial), "pt-BR"));
+}
+
+function preencherSelectsUsuario() {
+  const empresas = empresasAtivasParaSelecao();
+  const perfis = perfisAtivosParaSelecao();
+
+  usuarioEmpresaPrincipal.innerHTML =
+    `<option value="">Selecione...</option>` +
+    empresas.map((empresa) => `
+      <option value="${empresa.id}">${escaparHtml(empresa.nomeFantasia || empresa.razaoSocial)}</option>
+    `).join("");
+
+  usuarioPerfil.innerHTML =
+    `<option value="">Selecione...</option>` +
+    perfis.map((perfil) => `
+      <option value="${perfil.id}">${escaparHtml(perfil.nome || perfil.id)}</option>
+    `).join("");
+
+  listaEmpresasAcesso.innerHTML = empresas.map((empresa) => `
+    <label class="checkbox-card">
+      <input type="checkbox" class="checkbox-empresa-acesso" value="${empresa.id}">
+      <span>${escaparHtml(empresa.nomeFantasia || empresa.razaoSocial)}</span>
+    </label>
+  `).join("");
+}
+
+function sincronizarEmpresaPrincipalNosAcessos() {
+  const principal = usuarioEmpresaPrincipal.value;
+  if (!principal) return;
+
+  const checkbox = document.querySelector(`.checkbox-empresa-acesso[value="${principal}"]`);
+  if (checkbox) checkbox.checked = true;
+}
+
+function atualizarEstadoEmpresasAcesso() {
+  const global = usuarioAcessoGlobal.checked;
+
+  document.querySelectorAll(".checkbox-empresa-acesso").forEach((checkbox) => {
+    checkbox.disabled = global;
+  });
+
+  listaEmpresasAcesso.style.opacity = global ? "0.55" : "1";
+}
+
+usuarioEmpresaPrincipal.addEventListener("change", sincronizarEmpresaPrincipalNosAcessos);
+usuarioAcessoGlobal.addEventListener("change", atualizarEstadoEmpresasAcesso);
+
+function limparFormularioUsuario() {
+  usuarioEmEdicaoId = null;
+  formUsuario.reset();
+  usuarioEmail.disabled = false;
+  usuarioSenha.required = false;
+  campoSenhaNovoUsuario.classList.remove("hidden");
+  tituloFormUsuario.textContent = "Novo usuário";
+  descricaoFormUsuario.textContent = "Crie o acesso e vincule perfil e empresas.";
+  marcarMensagem(mensagemUsuario, "");
+  preencherSelectsUsuario();
+  atualizarEstadoEmpresasAcesso();
+}
+
+function abrirFormularioUsuario(usuario = null) {
+  limparFormularioUsuario();
+
+  if (usuario) {
+    usuarioEmEdicaoId = usuario.id;
+    tituloFormUsuario.textContent = "Editar usuário";
+    descricaoFormUsuario.textContent = "A conta de autenticação permanece vinculada ao e-mail atual.";
+    campoSenhaNovoUsuario.classList.add("hidden");
+    usuarioEmail.disabled = true;
+
+    usuarioNome.value = usuario.nome || "";
+    usuarioEmail.value = usuario.email || "";
+    usuarioPerfil.value = usuario.perfilId || "";
+    usuarioEmpresaPrincipal.value = usuario.empresaId || "";
+    usuarioAcessoGlobal.checked = usuario.acessoGlobal === true;
+
+    const acessos = new Set(
+      Array.isArray(usuario.empresasAcesso)
+        ? usuario.empresasAcesso
+        : usuario.empresaId
+          ? [usuario.empresaId]
+          : []
+    );
+
+    document.querySelectorAll(".checkbox-empresa-acesso").forEach((checkbox) => {
+      checkbox.checked = acessos.has(checkbox.value);
+    });
+
+    sincronizarEmpresaPrincipalNosAcessos();
+    atualizarEstadoEmpresasAcesso();
+  } else {
+    usuarioSenha.required = true;
+  }
+
+  formUsuarioContainer.classList.remove("hidden");
+  usuarioNome.focus();
+}
+
+btnNovoUsuario.addEventListener("click", async () => {
+  await carregarColecoesAdministrativas();
+  abrirFormularioUsuario();
+});
+
+btnCancelarUsuario.addEventListener("click", () => {
+  limparFormularioUsuario();
+  formUsuarioContainer.classList.add("hidden");
+});
+
+function nomeEmpresaPorId(id) {
+  const empresa = empresasCache.get(id);
+  return empresa?.nomeFantasia || empresa?.razaoSocial || "-";
+}
+
+function nomePerfilPorId(id) {
+  const perfil = perfisCache.get(id);
+  return perfil?.nome || id || "-";
+}
+
+function renderizarUsuarios(filtro = "") {
+  const termo = normalizar(filtro);
+
+  const usuarios = [...usuariosCache.values()]
+    .filter((usuario) => {
+      if (!termo) return true;
+      return [usuario.nome, usuario.email].some((valor) => normalizar(valor).includes(termo));
+    })
+    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+
+  quantidadeUsuarios.textContent = `${usuariosCache.size} usuário(s) cadastrado(s)`;
+
+  if (!usuarios.length) {
+    listaUsuarios.innerHTML = `<tr><td colspan="6">Nenhum usuário encontrado.</td></tr>`;
+    return;
+  }
+
+  listaUsuarios.innerHTML = usuarios.map((usuario) => {
+    const proprioUsuario = auth.currentUser?.uid === usuario.id;
+    const qtdEmpresas = usuario.acessoGlobal === true
+      ? "Grupo completo"
+      : `${new Set([usuario.empresaId, ...(usuario.empresasAcesso || [])].filter(Boolean)).size} empresa(s)`;
+
+    return `
       <tr>
-
-<<<<<<< HEAD
-        <td colspan="5">
-          Não foi possível carregar as empresas.
-=======
-        <td colspan="5">
-
-          Não foi possível carregar
-          as empresas.
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
+        <td class="celula-principal">
+          <strong>${escaparHtml(usuario.nome)}</strong>
+          <span>${escaparHtml(usuario.email)}</span>
         </td>
-
+        <td>${escaparHtml(nomeEmpresaPorId(usuario.empresaId))}</td>
+        <td>${escaparHtml(nomePerfilPorId(usuario.perfilId))}</td>
+        <td>${escaparHtml(qtdEmpresas)}</td>
+        <td>
+          <span class="${usuario.ativo === true ? "status-ativo" : "status-inativo"}">
+            ${usuario.ativo === true ? "Ativo" : "Inativo"}
+          </span>
+        </td>
+        <td>
+          ${
+            proprioUsuario
+              ? `
+                <div class="acoes-tabela">
+                  <span class="acao-propria">Usuário atual</span>
+                  <button class="btn-acao" data-usuario-reset="${usuario.id}" type="button">Redefinir senha</button>
+                </div>
+              `
+              : `
+                <div class="acoes-tabela">
+                  <button class="btn-acao destaque" data-usuario-editar="${usuario.id}" type="button">Editar</button>
+                  <button class="btn-acao" data-usuario-status="${usuario.id}" type="button">
+                    ${usuario.ativo === true ? "Desativar" : "Ativar"}
+                  </button>
+                  <button class="btn-acao" data-usuario-reset="${usuario.id}" type="button">Redefinir senha</button>
+                </div>
+              `
+          }
+        </td>
       </tr>
-
     `;
+  }).join("");
 
+  document.querySelectorAll("[data-usuario-editar]").forEach((botao) => {
+    botao.addEventListener("click", () => {
+      abrirFormularioUsuario(usuariosCache.get(botao.dataset.usuarioEditar));
+    });
+  });
 
-  }
+  document.querySelectorAll("[data-usuario-status]").forEach((botao) => {
+    botao.addEventListener("click", () => alterarStatusUsuario(botao.dataset.usuarioStatus));
+  });
 
+  document.querySelectorAll("[data-usuario-reset]").forEach((botao) => {
+    botao.addEventListener("click", () => enviarRedefinicaoSenha(botao.dataset.usuarioReset));
+  });
 }
-
-
-
-// ========================================
-// CADASTRAR EMPRESA
-// ========================================
-
-formNovaEmpresa.addEventListener(
-  "submit",
-  async (evento) => {
-
-
-    evento.preventDefault();
-
-
-    mensagemEmpresa.textContent =
-      "";
-
-
-    const cnpjSomenteNumeros =
-
-<<<<<<< HEAD
-      empresaCnpj.value
-=======
-      empresaCnpj.value
-        .replace(
-          /\D/g,
-          ""
-        );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-        .replace(
-          /\D/g,
-          ""
-        );
-
-
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-    if (
-      cnpjSomenteNumeros.length !==
-      14
-    ) {
-
-
-      mensagemEmpresa.textContent =
-        "Informe um CNPJ com 14 dígitos.";
-
-
-      empresaCnpj.focus();
-
-
-      return;
-
-
-    }
-
-
-    if (
-      !dadosUsuarioAtual?.grupoId
-    ) {
-
-
-      mensagemEmpresa.textContent =
-
-        "O usuário não está vinculado a um grupo empresarial.";
-
-
-      return;
-
-
-    }
-
-
-    mensagemEmpresa.textContent =
-      "Salvando empresa...";
-
-
-    try {
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-      const empresasSnap =
-        await getDocs(
-
-          collection(
-            db,
-            "empresas"
-          )
-
-        );
-
-
-      let cnpjDuplicado =
-        false;
-
-
-      empresasSnap.forEach(
-        (documento) => {
-
-
-          const empresa =
-            documento.data();
-
-
-          const cnpjExistente =
-
-            String(
-<<<<<<< HEAD
-              empresa.cnpj ||
-              ""
-            )
-=======
-              empresa.cnpj || ""
-            )
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-              .replace(
-                /\D/g,
-                ""
-              );
-
-
-          if (
-            cnpjExistente ===
-            cnpjSomenteNumeros
-          ) {
-
-
-            cnpjDuplicado =
-              true;
-
-
-          }
-
-
-        }
-      );
-
-
-      if (
-        cnpjDuplicado
-      ) {
-
-
-        mensagemEmpresa.textContent =
-
-          "Já existe uma empresa cadastrada com este CNPJ.";
-
-
-        return;
-
-
-      }
-
-
-      await addDoc(
-
-        collection(
-          db,
-          "empresas"
-        ),
-
-        {
-
-
-          razaoSocial:
-
-            empresaRazaoSocial
-              .value
-              .trim(),
-
-
-          nomeFantasia:
-
-            empresaNomeFantasia
-              .value
-              .trim(),
-
-
-          cnpj:
-
-            empresaCnpj
-              .value
-              .trim(),
-
-
-          grupoId:
-<<<<<<< HEAD
-            dadosUsuarioAtual
-              .grupoId,
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-            dadosUsuarioAtual
-              .grupoId,
-
-
-          ativo:
-            true,
-
-
-          criadoEm:
-            serverTimestamp()
-
-
-        }
-
-      );
-
-
-      mensagemEmpresa.textContent =
-        "Empresa cadastrada com sucesso.";
-
-
-      formNovaEmpresa.reset();
-
-
-      await carregarEmpresas();
-
-
-      setTimeout(
-        () => {
-
-
-          formNovaEmpresaContainer
-            .classList.add(
-              "hidden"
-            );
-
-
-          mensagemEmpresa.textContent =
-            "";
-
-
-        },
-        1000
-      );
-
-
-    } catch (erro) {
-
-
-      console.error(
-        "Erro ao cadastrar empresa:",
-        erro
-      );
-
-
-      mensagemEmpresa.textContent =
-        "Não foi possível cadastrar a empresa.";
-
-
-    }
-
-  }
-);
-
-
-
-// ========================================
-<<<<<<< HEAD
-// EMPRESAS - AÇÕES
-=======
-// AÇÕES DAS EMPRESAS
-// ========================================
-
-function configurarAcoesEmpresas() {
-
-
-  const botoesStatus =
-
-    document.querySelectorAll(
-      ".btn-status-empresa"
-    );
-
-
-  const botoesExcluir =
-
-    document.querySelectorAll(
-      ".btn-excluir-empresa"
-    );
-
-
-
-  botoesStatus.forEach(
-    (botao) => {
-
-
-      botao.addEventListener(
-        "click",
-        async () => {
-
-
-          const empresaId =
-            botao.dataset.id;
-
-
-          const estaAtiva =
-
-            botao.dataset.ativo ===
-            "true";
-
-
-          const empresa =
-            empresasCache.get(
-              empresaId
-            );
-
-
-          const acao =
-
-            estaAtiva
-              ? "inativar"
-              : "reativar";
-
-
-          const confirmar =
-
-            window.confirm(
-
-              `Deseja ${acao} a empresa ${
-                empresa?.nomeFantasia ||
-                empresa?.razaoSocial ||
-                "selecionada"
-              }?`
-
-            );
-
-
-          if (
-            !confirmar
-          ) {
-
-
-            return;
-
-
-          }
-
-
-          try {
-
-
-            await updateDoc(
-
-              doc(
-                db,
-                "empresas",
-                empresaId
-              ),
-
-              {
-
-
-                ativo:
-                  !estaAtiva,
-
-
-                atualizadoEm:
-                  serverTimestamp()
-
-
-              }
-
-            );
-
-
-            await carregarEmpresas();
-
-
-          } catch (erro) {
-
-
-            console.error(
-              "Erro ao alterar empresa:",
-              erro
-            );
-
-
-            alert(
-
-              "Não foi possível alterar o status da empresa."
-
-            );
-
-
-          }
-
-
-        }
-      );
-
-
-    }
-  );
-
-
-
-  botoesExcluir.forEach(
-    (botao) => {
-
-
-      botao.addEventListener(
-        "click",
-        async () => {
-
-
-          const empresaId =
-            botao.dataset.id;
-
-
-          await prepararExclusaoEmpresa(
-            empresaId
-          );
-
-
-        }
-      );
-
-
-    }
-  );
-
-}
-
-
-
-// ========================================
-// VERIFICA VÍNCULOS DA EMPRESA
-// ========================================
-
-async function empresaPossuiVinculos(
-  empresaId
-) {
-
-
-  /*
-    NESTA FASE:
-
-    Já existe a coleção USUÁRIOS.
-
-    Conforme criarmos:
-    - contratos
-    - frota
-    - almoxarifado
-    - cotações
-    - controladoria
-    - budget
-    - forecast
-
-    eles entrarão também nesta verificação.
-  */
-
-
-  const usuariosSnap =
-    await getDocs(
-
-      collection(
-        db,
-        "usuarios"
-      )
-
-    );
-
-
-  let possuiVinculo =
-    false;
-
-
-  usuariosSnap.forEach(
-    (documento) => {
-
-
-      const usuario =
-        documento.data();
-
-
-      if (
-        usuario.empresaId ===
-        empresaId
-      ) {
-
-
-        possuiVinculo =
-          true;
-
-
-      }
-
-
-      if (
-
-        Array.isArray(
-          usuario.empresasAcesso
-        ) &&
-
-        usuario.empresasAcesso
-          .includes(
-            empresaId
-          )
-
-      ) {
-
-
-        possuiVinculo =
-          true;
-
-
-      }
-
-
-    }
-  );
-
-
-  return possuiVinculo;
-
-}
-
-
-
-// ========================================
-// PREPARAR EXCLUSÃO
-// ========================================
-
-async function prepararExclusaoEmpresa(
-  empresaId
-) {
-
-
-  if (
-    dadosPerfilAtual?.acessoTotal !==
-    true
-  ) {
-
-
-    alert(
-
-      "Somente administradores podem excluir empresas."
-
-    );
-
-
-    return;
-
-
-  }
-
-
-  try {
-
-
-    const possuiVinculo =
-
-      await empresaPossuiVinculos(
-        empresaId
-      );
-
-
-    if (
-      possuiVinculo
-    ) {
-
-
-      alert(
-
-        "Esta empresa possui informações vinculadas e não pode ser excluída permanentemente. Use a opção Inativar para preservar o histórico."
-
-      );
-
-
-      return;
-
-
-    }
-
-
-    const empresa =
-      empresasCache.get(
-        empresaId
-      );
-
-
-    empresaParaExcluir = {
-
-      id:
-        empresaId,
-
-      nome:
-
-        empresa?.nomeFantasia ||
-
-        empresa?.razaoSocial ||
-
-        "Empresa selecionada"
-
-    };
-
-
-    nomeEmpresaExcluir.textContent =
-      empresaParaExcluir.nome;
-
-
-    senhaExclusaoEmpresa.value =
-      "";
-
-
-    mensagemExclusaoEmpresa.textContent =
-      "";
-
-
-    modalExcluirEmpresa
-      .classList.remove(
-        "hidden"
-      );
-
-
-    setTimeout(
-      () => {
-
-
-        senhaExclusaoEmpresa
-          .focus();
-
-
-      },
-      50
-    );
-
-
-  } catch (erro) {
-
-
-    console.error(
-      "Erro ao verificar vínculos da empresa:",
-      erro
-    );
-
-
-    alert(
-
-      "Não foi possível verificar se a empresa possui vínculos."
-
-    );
-
-
-  }
-
-}
-
-
-
-// ========================================
-// FECHAR MODAL
-// ========================================
-
-function fecharModalExclusaoEmpresa() {
-
-
-  empresaParaExcluir =
-    null;
-
-
-  formConfirmarExclusaoEmpresa
-    .reset();
-
-
-  mensagemExclusaoEmpresa.textContent =
-    "";
-
-
-  modalExcluirEmpresa
-    .classList.add(
-      "hidden"
-    );
-
-}
-
-
-
-btnCancelarExclusaoEmpresa
-  .addEventListener(
-    "click",
-    () => {
-
-
-      fecharModalExclusaoEmpresa();
-
-
-    }
-  );
-
-
-
-modalExcluirEmpresa
-  .addEventListener(
-    "click",
-    (evento) => {
-
-
-      if (
-        evento.target ===
-        modalExcluirEmpresa
-      ) {
-
-
-        fecharModalExclusaoEmpresa();
-
-
-      }
-
-
-    }
-  );
-
-
-
-// ========================================
-// CONFIRMAR EXCLUSÃO
-// ========================================
-
-formConfirmarExclusaoEmpresa
-  .addEventListener(
-    "submit",
-    async (evento) => {
-
-
-      evento.preventDefault();
-
-
-      if (
-
-        !empresaParaExcluir ||
-
-        !auth.currentUser
-
-      ) {
-
-
-        mensagemExclusaoEmpresa
-          .textContent =
-
-            "Não foi possível identificar a operação.";
-
-
-        return;
-
-
-      }
-
-
-      const senhaInformada =
-        senhaExclusaoEmpresa.value;
-
-
-      if (
-        !senhaInformada
-      ) {
-
-
-        mensagemExclusaoEmpresa
-          .textContent =
-
-            "Informe sua senha.";
-
-
-        return;
-
-
-      }
-
-
-      mensagemExclusaoEmpresa
-        .textContent =
-
-          "Confirmando administrador...";
-
-
-      try {
-
-
-        /*
-          Fazemos uma SEGUNDA verificação
-          de vínculo imediatamente antes
-          de excluir.
-        */
-
-        const possuiVinculo =
-
-          await empresaPossuiVinculos(
-            empresaParaExcluir.id
-          );
-
-
-        if (
-          possuiVinculo
-        ) {
-
-
-          mensagemExclusaoEmpresa
-            .textContent =
-
-              "A empresa passou a possuir vínculo e não pode mais ser excluída.";
-
-
-          return;
-
-
-        }
-
-
-        /*
-          Reautenticação real no
-          Firebase Authentication.
-        */
-
-        const credential =
-
-          EmailAuthProvider
-            .credential(
-
-              auth.currentUser.email,
-
-              senhaInformada
-
-            );
-
-
-        await reauthenticateWithCredential(
-
-          auth.currentUser,
-
-          credential
-
-        );
-
-
-        /*
-          Só depois da reautenticação
-          o documento é apagado.
-        */
-
-        await deleteDoc(
-
-          doc(
-
-            db,
-
-            "empresas",
-
-            empresaParaExcluir.id
-
-          )
-
-        );
-
-
-        fecharModalExclusaoEmpresa();
-
-
-        await carregarEmpresas();
-
-
-        alert(
-
-          "Empresa excluída permanentemente."
-
-        );
-
-
-      } catch (erro) {
-
-
-        console.error(
-          "Erro ao excluir empresa:",
-          erro
-        );
-
-
-        if (
-
-          erro.code ===
-            "auth/invalid-credential" ||
-
-          erro.code ===
-            "auth/wrong-password"
-
-        ) {
-
-
-          mensagemExclusaoEmpresa
-            .textContent =
-
-              "Senha incorreta.";
-
-
-          senhaExclusaoEmpresa
-            .select();
-
-
-          return;
-
-
-        }
-
-
-        mensagemExclusaoEmpresa
-          .textContent =
-
-            "Não foi possível concluir a exclusão.";
-
-
-      }
-
-
-    }
-  );
-
-
-
-// ========================================
-// USUÁRIOS - NAVEGAÇÃO
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-// ========================================
-
-function configurarAcoesEmpresas() {
-
-  document
-    .querySelectorAll(
-      ".btn-status-empresa"
-    )
-    .forEach(
-      (botao) => {
-
-        botao.addEventListener(
-          "click",
-          async () => {
-
-            const empresaId =
-              botao.dataset.id;
-
-
-            const estaAtiva =
-
-              botao.dataset.ativo ===
-              "true";
-
-
-            const empresa =
-              empresasCache.get(
-                empresaId
-              );
-
-
-            const acao =
-
-              estaAtiva
-
-                ? "inativar"
-
-                : "reativar";
-
-
-            const confirmar =
-              window.confirm(
-
-                `Deseja ${acao} a empresa ${
-                  empresa?.nomeFantasia ||
-                  empresa?.razaoSocial ||
-                  "selecionada"
-                }?`
-
-              );
-
-
-            if (
-              !confirmar
-            ) {
-
-              return;
-
-            }
-
-
-            try {
-
-              await updateDoc(
-
-                doc(
-                  db,
-                  "empresas",
-                  empresaId
-                ),
-
-                {
-
-                  ativo:
-                    !estaAtiva,
-
-                  atualizadoEm:
-                    serverTimestamp()
-
-                }
-
-              );
-
-
-              await carregarEmpresas();
-
-
-            } catch (erro) {
-
-              console.error(
-                "Erro ao alterar empresa:",
-                erro
-              );
-
-
-              alert(
-                "Não foi possível alterar o status da empresa."
-              );
-
-            }
-
-          }
-        );
-
-      }
-    );
-
-
-
-  document
-    .querySelectorAll(
-      ".btn-excluir-empresa"
-    )
-    .forEach(
-      (botao) => {
-
-        botao.addEventListener(
-          "click",
-          async () => {
-
-            await prepararExclusaoEmpresa(
-              botao.dataset.id
-            );
-
-          }
-        );
-
-      }
-    );
-
-}
-
-
-
-// ========================================
-// VÍNCULOS DA EMPRESA
-// ========================================
-
-async function empresaPossuiVinculos(
-  empresaId
-) {
-
-  const usuariosSnap =
-    await getDocs(
-
-      collection(
-        db,
-        "usuarios"
-      )
-
-    );
-
-
-  let possuiVinculo =
-    false;
-
-
-  usuariosSnap.forEach(
-    (documento) => {
-
-      const usuario =
-        documento.data();
-
-
-      if (
-        usuario.empresaId ===
-        empresaId
-      ) {
-
-        possuiVinculo =
-          true;
-
-      }
-
-
-      if (
-
-        Array.isArray(
-          usuario.empresasAcesso
-        ) &&
-
-        usuario.empresasAcesso
-          .includes(
-            empresaId
-          )
-
-      ) {
-
-        possuiVinculo =
-          true;
-
-      }
-
-    }
-  );
-
-
-  return possuiVinculo;
-
-}
-
-
-
-// ========================================
-// EXCLUSÃO DE EMPRESA
-// ========================================
-
-async function prepararExclusaoEmpresa(
-  empresaId
-) {
-
-  if (
-    dadosPerfilAtual?.acessoTotal !==
-    true
-  ) {
-
-    alert(
-      "Somente administradores podem excluir empresas."
-    );
-
-
-    return;
-
-  }
-
-
-  try {
-
-    const possuiVinculo =
-
-      await empresaPossuiVinculos(
-        empresaId
-      );
-
-
-    if (
-      possuiVinculo
-    ) {
-
-      alert(
-
-        "Esta empresa possui informações vinculadas e não pode ser excluída permanentemente. Use a opção Inativar para preservar o histórico."
-
-      );
-
-
-      return;
-
-    }
-
-
-    const empresa =
-      empresasCache.get(
-        empresaId
-      );
-
-
-    empresaParaExcluir = {
-
-      id:
-        empresaId,
-
-      nome:
-
-        empresa?.nomeFantasia ||
-
-        empresa?.razaoSocial ||
-
-        "Empresa selecionada"
-
-    };
-
-
-    nomeEmpresaExcluir.textContent =
-      empresaParaExcluir.nome;
-
-
-    senhaExclusaoEmpresa.value =
-      "";
-
-
-    mensagemExclusaoEmpresa.textContent =
-      "";
-
-
-    modalExcluirEmpresa
-      .classList.remove(
-        "hidden"
-      );
-
-
-    setTimeout(
-      () => {
-
-        senhaExclusaoEmpresa
-          .focus();
-
-      },
-      50
-    );
-
-
-  } catch (erro) {
-
-    console.error(
-      "Erro ao verificar vínculos da empresa:",
-      erro
-    );
-
-
-    alert(
-      "Não foi possível verificar se a empresa possui vínculos."
-    );
-
-  }
-
-}
-
-
-
-function fecharModalExclusaoEmpresa() {
-
-  empresaParaExcluir =
-    null;
-
-
-  formConfirmarExclusaoEmpresa
-    .reset();
-
-
-  mensagemExclusaoEmpresa.textContent =
-    "";
-
-
-  modalExcluirEmpresa
-    .classList.add(
-      "hidden"
-    );
-
-}
-
-
-
-btnCancelarExclusaoEmpresa
-  .addEventListener(
-    "click",
-    fecharModalExclusaoEmpresa
-  );
-
-
-
-modalExcluirEmpresa
-  .addEventListener(
-    "click",
-    (evento) => {
-
-      if (
-        evento.target ===
-        modalExcluirEmpresa
-      ) {
-
-        fecharModalExclusaoEmpresa();
-
-      }
-
-    }
-  );
-
-
-
-formConfirmarExclusaoEmpresa
-  .addEventListener(
-    "submit",
-    async (evento) => {
-
-      evento.preventDefault();
-
-
-      if (
-
-        !empresaParaExcluir ||
-
-        !auth.currentUser
-
-      ) {
-
-        mensagemExclusaoEmpresa.textContent =
-          "Não foi possível identificar a operação.";
-
-
-        return;
-
-      }
-
-
-      const senhaInformada =
-        senhaExclusaoEmpresa.value;
-
-
-      if (
-        !senhaInformada
-      ) {
-
-        mensagemExclusaoEmpresa.textContent =
-          "Informe sua senha.";
-
-
-        return;
-
-      }
-
-
-      mensagemExclusaoEmpresa.textContent =
-        "Confirmando administrador...";
-
-
-      try {
-
-        const possuiVinculo =
-
-          await empresaPossuiVinculos(
-            empresaParaExcluir.id
-          );
-
-
-        if (
-          possuiVinculo
-        ) {
-
-          mensagemExclusaoEmpresa.textContent =
-            "A empresa passou a possuir vínculo e não pode mais ser excluída.";
-
-
-          return;
-
-        }
-
-
-        const credential =
-
-          EmailAuthProvider
-            .credential(
-
-              auth.currentUser.email,
-
-              senhaInformada
-
-            );
-
-
-        await reauthenticateWithCredential(
-
-          auth.currentUser,
-
-          credential
-
-        );
-
-
-        await deleteDoc(
-
-          doc(
-            db,
-            "empresas",
-            empresaParaExcluir.id
-          )
-
-        );
-
-
-        fecharModalExclusaoEmpresa();
-
-
-        await carregarEmpresas();
-
-
-        alert(
-          "Empresa excluída permanentemente."
-        );
-
-
-      } catch (erro) {
-
-        console.error(
-          "Erro ao excluir empresa:",
-          erro
-        );
-
-
-        if (
-
-          erro.code ===
-            "auth/invalid-credential" ||
-
-          erro.code ===
-            "auth/wrong-password"
-
-        ) {
-
-          mensagemExclusaoEmpresa.textContent =
-            "Senha incorreta.";
-
-
-          senhaExclusaoEmpresa.select();
-
-
-          return;
-
-        }
-
-
-        mensagemExclusaoEmpresa.textContent =
-          "Não foi possível concluir a exclusão.";
-
-      }
-
-    }
-  );
-
-
-
-// ========================================
-// USUÁRIOS
-// ========================================
-
-cardUsuarios.addEventListener(
-  "click",
-  async () => {
-
-<<<<<<< HEAD
-    if (
-      !temPermissao(
-        "usuarios"
-      )
-    ) {
-
-      return;
-
-    }
-
-
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-    abrirPagina(
-      "usuarios"
-    );
-
-
-    await carregarUsuarios();
-
-
-  }
-);
-
-
-
-btnVoltarUsuarios
-  .addEventListener(
-    "click",
-    () => {
-
-<<<<<<< HEAD
-      abrirPagina(
-        "administracao"
-      );
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-    }
-  );
-=======
-      abrirPagina(
-        "administracao"
-      );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-    }
-  );
-
-<<<<<<< HEAD
-btnNovoUsuario
-  .addEventListener(
-    "click",
-    () => {
-=======
-
-
-btnNovoUsuario.addEventListener(
-  "click",
-  () => {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-      avisoNovoUsuario
-        .classList.toggle(
-          "hidden"
-        );
-=======
-
-    avisoNovoUsuario
-      .classList.toggle(
-        "hidden"
-      );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-    }
-  );
-=======
-
-  }
-);
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-
-// ========================================
-// CARREGAR USUÁRIOS
-// ========================================
 
 async function carregarUsuarios() {
-
-
-  listaUsuarios.innerHTML = `
-
-    <tr>
-
-      <td colspan="6">
-
-        Carregando usuários...
-
-      </td>
-
-    </tr>
-
-  `;
-
-
-  quantidadeUsuarios.textContent =
-    "Carregando...";
-
+  listaUsuarios.innerHTML = `<tr><td colspan="6">Carregando usuários...</td></tr>`;
 
   try {
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-    const empresasSnap =
-      await getDocs(
-
-        collection(
-          db,
-          "empresas"
-        )
-
-      );
-
-
-    const empresas =
-      {};
-
-
-    empresasSnap.forEach(
-      (documento) => {
-
-
-        const dados =
-          documento.data();
-
-
-        empresas[
-          documento.id
-        ] =
-
-          dados.nomeFantasia ||
-
-          dados.razaoSocial ||
-
-          documento.id;
-
-
-      }
-    );
-
-
-    const perfisSnap =
-      await getDocs(
-
-        collection(
-          db,
-          "perfisAcesso"
-        )
-
-      );
-
-
-    const perfis =
-      {};
-
-
-    perfisSnap.forEach(
-      (documento) => {
-
-
-        const dados =
-          documento.data();
-
-
-        perfis[
-          documento.id
-        ] =
-
-          dados.nome ||
-
-          documento.id;
-
-
-      }
-    );
-
-
-    const usuariosSnap =
-      await getDocs(
-
-        collection(
-          db,
-          "usuarios"
-        )
-
-      );
-
-
-    listaUsuarios.innerHTML =
-      "";
-
-
-    let quantidade =
-      0;
-
-
-    usuariosSnap.forEach(
-      (documento) => {
-
-
-        const usuario =
-          documento.data();
-
-
-        if (
-
-          dadosUsuarioAtual?.grupoId &&
-
-          usuario.grupoId &&
-
-          usuario.grupoId !==
-            dadosUsuarioAtual.grupoId
-
-        ) {
-
-
-          return;
-
-
-        }
-
-
-        quantidade++;
-
-
-        const uid =
-          documento.id;
-
-
-        const proprioUsuario =
-
-          auth.currentUser &&
-
-          auth.currentUser.uid ===
-            uid;
-
-
-        const linha =
-          document.createElement(
-            "tr"
-          );
-
-
-        linha.innerHTML = `
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              usuario.nome
-            )}
-=======
-
-            ${
-              escaparHtml(
-                usuario.nome
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              usuario.email
-            )}
-=======
-
-            ${
-              escaparHtml(
-                usuario.email
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              empresas[
-                usuario.empresaId
-              ] || "-"
-            )}
-=======
-
-            ${
-              escaparHtml(
-
-                empresas[
-                  usuario.empresaId
-                ] ||
-
-                "-"
-
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-<<<<<<< HEAD
-            ${escaparHtml(
-              perfis[
-                usuario.perfilId
-              ] ||
-              usuario.perfilId ||
-              "-"
-            )}
-=======
-
-            ${
-              escaparHtml(
-
-                perfis[
-                  usuario.perfilId
-                ] ||
-
-                usuario.perfilId ||
-
-                "-"
-
-              )
-            }
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          </td>
-
-
-          <td>
-
-            <span
-
-              class="${
-                usuario.ativo === true
-                  ? "status-ativo"
-                  : "status-inativo"
-              }"
-
-            >
-
-              ${
-                usuario.ativo === true
-                  ? "Ativo"
-                  : "Inativo"
-              }
-
-            </span>
-
-          </td>
-
-
-          <td>
-
-            ${
-              proprioUsuario
-
-                ? `
-
-                  <span
-                    class="acao-propria"
-                  >
-
-                    Usuário atual
-
-                  </span>
-
-                `
-
-                : `
-
-                  <button
-<<<<<<< HEAD
-                    class="btn-status-usuario"
-                    data-uid="${uid}"
-                    data-ativo="${usuario.ativo === true}"
-=======
-
-                    class="
-                      btn-status-usuario
-                    "
-
-                    data-uid="${
-                      uid
-                    }"
-
-                    data-ativo="${
-                      usuario.ativo === true
-                    }"
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-                    type="button"
-
-                  >
-                    ${
-                      usuario.ativo === true
-                        ? "Desativar"
-                        : "Ativar"
-                    }
-                  </button>
-
-                `
-            }
-
-          </td>
-
-        `;
-
-
-        listaUsuarios
-          .appendChild(
-            linha
-          );
-
-
-      }
-    );
-
-
-<<<<<<< HEAD
-    quantidadeUsuarios.textContent =
-
-      `${quantidade} usuário(s) cadastrado(s)`;
-=======
-    quantidadeUsuarios
-      .textContent =
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-        `${quantidade} usuário(s) cadastrado(s)`;
-
-<<<<<<< HEAD
-    if (
-      quantidade === 0
-    ) {
-=======
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-    if (
-      quantidade === 0
-    ) {
-
-
-      listaUsuarios.innerHTML = `
-
-        <tr>
-
-          <td colspan="6">
-
-            Nenhum usuário cadastrado.
-
-          </td>
-
-        </tr>
-
-      `;
-
-
-    }
-
-
-    configurarBotoesUsuarios();
-
-
+    await carregarColecoesAdministrativas();
+    preencherSelectsUsuario();
+    renderizarUsuarios(buscaUsuario.value);
   } catch (erro) {
+    console.error("Erro ao carregar usuários:", erro);
+    listaUsuarios.innerHTML = `<tr><td colspan="6">Não foi possível carregar os usuários.</td></tr>`;
+  }
+}
 
+buscaUsuario.addEventListener("input", () => renderizarUsuarios(buscaUsuario.value));
 
-    console.error(
-      "Erro ao carregar usuários:",
-      erro
-    );
+function obterEmpresasSelecionadas() {
+  return [...document.querySelectorAll(".checkbox-empresa-acesso:checked")]
+    .map((checkbox) => checkbox.value);
+}
 
+formUsuario.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
 
-    listaUsuarios.innerHTML = `
+  const nome = usuarioNome.value.trim();
+  const emailInformado = usuarioEmail.value.trim().toLowerCase();
+  const perfilId = usuarioPerfil.value;
+  const empresaId = usuarioEmpresaPrincipal.value;
+  const acessoGlobal = usuarioAcessoGlobal.checked;
 
-      <tr>
+  sincronizarEmpresaPrincipalNosAcessos();
 
-        <td colspan="6">
+  let empresasAcesso = obterEmpresasSelecionadas();
+  if (empresaId && !empresasAcesso.includes(empresaId)) empresasAcesso.push(empresaId);
 
-          Não foi possível carregar
-          os usuários.
-
-        </td>
-
-      </tr>
-
-    `;
-
-
+  if (!acessoGlobal && empresasAcesso.length === 0) {
+    marcarMensagem(mensagemUsuario, "Selecione ao menos uma empresa permitida.");
+    return;
   }
 
-}
+  if (!perfilId || !empresaId) {
+    marcarMensagem(mensagemUsuario, "Selecione o perfil e a empresa principal.");
+    return;
+  }
 
+  try {
+    if (usuarioEmEdicaoId) {
+      marcarMensagem(mensagemUsuario, "Salvando alterações...");
 
+      await updateDoc(doc(db, "usuarios", usuarioEmEdicaoId), {
+        nome,
+        perfilId,
+        empresaId,
+        acessoGlobal,
+        empresasAcesso,
+        atualizadoEm: serverTimestamp()
+      });
 
-// ========================================
-// USUÁRIOS - ATIVAR / DESATIVAR
-// ========================================
+      marcarMensagem(mensagemUsuario, "Usuário atualizado com sucesso.", true);
+    } else {
+      if (usuarioSenha.value.length < 6) {
+        marcarMensagem(mensagemUsuario, "A senha inicial precisa ter pelo menos 6 caracteres.");
+        return;
+      }
 
-function configurarBotoesUsuarios() {
+      const emailDuplicado = [...usuariosCache.values()]
+        .some((usuario) => normalizar(usuario.email) === normalizar(emailInformado));
 
-<<<<<<< HEAD
-  document
-    .querySelectorAll(
-=======
+      if (emailDuplicado) {
+        marcarMensagem(mensagemUsuario, "Já existe um usuário cadastrado com este e-mail.");
+        return;
+      }
 
-  const botoes =
+      marcarMensagem(mensagemUsuario, "Criando acesso...");
 
-    document.querySelectorAll(
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-      ".btn-status-usuario"
-    )
-    .forEach(
-      (botao) => {
+      let credencialNova = null;
 
-        botao.addEventListener(
-          "click",
-          async () => {
-
-            const uid =
-              botao.dataset.uid;
-
-
-            const estaAtivo =
-
-              botao.dataset.ativo ===
-              "true";
-
-
-            const novoStatus =
-              !estaAtivo;
-
-
-            const confirmar =
-              window.confirm(
-
-                novoStatus
-
-                  ? "Deseja ativar este usuário?"
-
-                  : "Deseja desativar este usuário?"
-
-              );
-
-
-            if (
-              !confirmar
-            ) {
-
-              return;
-
-            }
-
-
-            try {
-
-              await updateDoc(
-
-                doc(
-                  db,
-                  "usuarios",
-                  uid
-                ),
-
-                {
-
-                  ativo:
-                    novoStatus
-
-                }
-
-              );
-
-
-              await carregarUsuarios();
-
-
-            } catch (erro) {
-
-              console.error(
-                "Erro ao alterar usuário:",
-                erro
-              );
-
-
-              alert(
-                "Não foi possível alterar o usuário."
-              );
-
-            }
-
-          }
+      try {
+        credencialNova = await createUserWithEmailAndPassword(
+          authCriacaoUsuarios,
+          emailInformado,
+          usuarioSenha.value
         );
 
-      }
-    );
+        await setDoc(doc(db, "usuarios", credencialNova.user.uid), {
+          nome,
+          email: emailInformado,
+          perfilId,
+          empresaId,
+          empresasAcesso,
+          acessoGlobal,
+          grupoId: dadosUsuarioAtual.grupoId,
+          ativo: true,
+          criadoEm: serverTimestamp()
+        });
+      } catch (erroCriacao) {
+        if (credencialNova?.user) {
+          try {
+            await deleteUser(credencialNova.user);
+          } catch (erroRollback) {
+            console.error("Falha ao desfazer usuário de autenticação:", erroRollback);
+          }
+        }
 
+        throw erroCriacao;
+      } finally {
+        try {
+          await signOut(authCriacaoUsuarios);
+        } catch {
+          // Nada a fazer.
+        }
+      }
+
+      marcarMensagem(mensagemUsuario, "Usuário criado com sucesso.", true);
+    }
+
+    await carregarUsuarios();
+    await atualizarResumoAdministracao();
+
+    setTimeout(() => {
+      limparFormularioUsuario();
+      formUsuarioContainer.classList.add("hidden");
+    }, 800);
+  } catch (erro) {
+    console.error("Erro ao salvar usuário:", erro);
+
+    const mensagens = {
+      "auth/email-already-in-use": "Este e-mail já possui uma conta no Firebase Authentication.",
+      "auth/invalid-email": "O e-mail informado é inválido.",
+      "auth/weak-password": "A senha inicial é muito fraca."
+    };
+
+    marcarMensagem(
+      mensagemUsuario,
+      mensagens[erro.code] || "Não foi possível salvar o usuário."
+    );
+  }
+});
+
+async function alterarStatusUsuario(usuarioId) {
+  const usuario = usuariosCache.get(usuarioId);
+  if (!usuario || auth.currentUser?.uid === usuarioId) return;
+
+  const novoStatus = usuario.ativo !== true;
+
+  if (!window.confirm(`${novoStatus ? "Ativar" : "Desativar"} ${usuario.nome || usuario.email}?`)) return;
+
+  try {
+    await updateDoc(doc(db, "usuarios", usuarioId), {
+      ativo: novoStatus,
+      atualizadoEm: serverTimestamp()
+    });
+
+    await carregarUsuarios();
+    await atualizarResumoAdministracao();
+  } catch (erro) {
+    console.error("Erro ao alterar status do usuário:", erro);
+    alert("Não foi possível alterar o status do usuário.");
+  }
 }
 
+async function enviarRedefinicaoSenha(usuarioId) {
+  const usuario = usuariosCache.get(usuarioId);
+  if (!usuario/.email) return;
 
-<<<<<<< HEAD
-=======
+  if (!window.confirm(`Enviar e-mail de redefinirção de senha para ${usuario.email}?`)) return;
 
-      botao.addEventListener(
-        "click",
-        async () => {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
+  try {
+    await sendPasswordResetEmail(auth, usuario.email);
+    alert("E-mail de redefinição enviado.");
+  } catch (erro) {
+    console.error("Erro ao enviar redefinirção:", erro);
+    alert("Não foi possível enviar a redefinição de senha.");
+  }
+}
 
-<<<<<<< HEAD
-// ========================================
-// PERFIS - GERAÇÃO DA GRADE
-// ========================================
-=======
-
-          const uid =
-            botao.dataset.uid;
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
+/* PERFIS */
 
 function gerarGradePermissoes() {
-
-<<<<<<< HEAD
-  gradePermissoesPerfil.innerHTML =
-    "";
-=======
-          const estaAtivo =
-
-            botao.dataset.ativo ===
-            "true";
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-
-  DEFINICAO_PERMISSOES.forEach(
-    (definicao) => {
-
-      const bloco =
-        document.createElement(
-          "div"
-        );
-
-<<<<<<< HEAD
-=======
-          const confirmar =
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-      bloco.className =
-        "permissao-modulo";
-=======
-            window.confirm(
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-=======
-              novoStatus
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-      const acoesHtml =
-=======
-                ? "Deseja ativar este usuário?"
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-        definicao.acoes
-
-          .map(
-            (acao) => `
-
-              <label class="permissao-opcao">
-
-                <input
-                  type="checkbox"
-                  class="checkbox-permissao"
-                  data-modulo="${definicao.modulo}"
-                  data-acao="${acao.id}"
-                >
-
-                <span>
-                  ${acao.nome}
-                </span>
-
-              </label>
-
-            `
-          )
-
-          .join(
-            ""
-          );
-
-
-      bloco.innerHTML = `
-
-        <div class="permissao-modulo-titulo">
-
-          ${definicao.nome}
-
-        </div>
-
-
-        <div class="permissao-acoes">
-
-          ${acoesHtml}
-
-        </div>
-
-      `;
-
-
-      gradePermissoesPerfil
-        .appendChild(
-          bloco
-        );
-
-    }
-  );
-
+  gradePermissoesPerfil.innerHTML = DEFINICAO_PERMISSOES.map((definicao) => `
+    <div class="permissao-modulo">
+      <div class="permissao-modulo_titulo">${escaparHtml(definicao.nome)}</div>
+      <div class="permissao-acoes">
+        ${definicao.acoes.map((acao) => `
+          <label class="permissao-opcao">
+            <input
+              type="checkbox"
+              class="checkbox-permissao"
+              data-modulo="${definicao.modulo}"
+              data-acao="${acao.id}"
+            >
+            <span>${escaparHtml(acao.nome)}</span>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
 }
-
-
-
-// ========================================
-// PERFIS - FORMULÁRIO
-// ========================================
 
 function limparFormularioPerfil() {
-
-  perfilEmEdicaoId =
-    null;
-
-
+  perfilEmEdicaoId = null;
   formPerfil.reset();
+  tituloFormPerfil.textContent = "Novo perfil";
+  marcarMensagem(mensagemPerfil, "");
 
+  document.querySelectorAll(".checkbox-permissao").forEach((checkbox) => {
+    checkbox.checked = false;
+  });
 
-  tituloFormPerfil.textContent =
-    "Novo perfil";
-
-
-  btnSalvarPerfil.textContent =
-    "Salvar perfil";
-
-
-  mensagemPerfil.textContent =
-    "";
-
-
-  document
-    .querySelectorAll(
-      ".checkbox-permissao"
-    )
-    .forEach(
-      (checkbox) => {
-
-        checkbox.checked =
-          false;
-
-      }
-    );
-
-
-  const dashboardVisualizar =
-
-    document.querySelector(
-
-      '.checkbox-permissao[data-modulo="dashboard"][data-acao="visualizar"]'
-
-    );
-
-
-  if (
-    dashboardVisualizar
-  ) {
-
-    dashboardVisualizar.checked =
-      true;
-
-  }
-
-}
-
-
-
-function coletarPermissoesFormulario() {
-
-  const permissoes =
-    {};
-
-
-  DEFINICAO_PERMISSOES.forEach(
-    (definicao) => {
-
-      permissoes[
-        definicao.modulo
-      ] =
-        {};
-
-
-      definicao.acoes.forEach(
-        (acao) => {
-
-          const checkbox =
-
-            document.querySelector(
-
-              `.checkbox-permissao[data-modulo="${definicao.modulo}"][data-acao="${acao.id}"]`
-
-=======
-                : "Deseja desativar este usuário?"
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-            );
-
-
-<<<<<<< HEAD
-          permissoes[
-            definicao.modulo
-          ][
-            acao.id
-          ] =
-=======
-          if (
-            !confirmar
-          ) {
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-            checkbox?.checked ===
-            true;
-
-        }
-      );
-
-    }
+  const dashboard = document.querySelector(
+    '.checkbox-permissao[data-modulo="dashboard"][data-acao="visualizar"]'
   );
 
+  if (dashboard) dashboard.checked = true;
+}
+
+function coletarPermissoes() {
+  const permissoes = {};
+
+  DEFINICAO_PERMISSOES.forEach((definicao) => {
+    permissoes[definicao.modulo] = {};
+
+    definicao.acoes.forEach((acao) => {
+      const checkbox = document.querySelector(
+        `.checkbox-permissao[data-modulo="${definicao.modulo}"][data-acao="${acao.id}"]`
+      );
+
+      permissoes[definicao.modulo][acao.id] = checkbox?.checked === true;
+    });
+  });
 
   return permissoes;
-
 }
 
-
-
-function preencherPermissoesFormulario(
-  permissoes = {}
-) {
-
-  document
-    .querySelectorAll(
-      ".checkbox-permissao"
-    )
-    .forEach(
-      (checkbox) => {
-
-        const modulo =
-          checkbox.dataset.modulo;
-
-
-        const acao =
-          checkbox.dataset.acao;
-
-
-        checkbox.checked =
-
-          permissoes
-            ?.[modulo]
-            ?.[acao] ===
-          true;
-
-      }
-    );
-
+function preencherPermissoes(permissoes = {}) {
+  document.querySelectorAll(".checkbox-permissao").forEach((checkbox) => {
+    checkbox.checked = permissoes?.[checkbox.dataset.modulo]?.[checkbox.dataset.acao] === true;
+  });
 }
 
-
-
-function contarPermissoesAtivas(
-  permissoes = {}
-) {
-
-  let total =
-    0;
-
-
-  Object
-    .values(
-      permissoes
-    )
-    .forEach(
-      (acoes) => {
-
-        if (
-
-          !acoes ||
-
-          typeof acoes !==
-            "object"
-
-        ) {
-
-          return;
-
-        }
-
-
-        Object
-          .values(
-            acoes
-          )
-          .forEach(
-            (permitido) => {
-
-              if (
-                permitido ===
-                true
-              ) {
-
-                total++;
-
-              }
-
-            }
-          );
-
-      }
-    );
-
-
-  return total;
-
+function contarPermissoes(permissoes = {}) {
+  return Object.values(permissoes).reduce((total, acoes) => {
+    if (!acoes || typeof acoes !== "object") return total;
+    return total + Object.values(acoes).filter((valor) => valor === true).length;
+  }, 0);
 }
 
+function usuariosDoPerfil(perfilId) {
+  return [...usuariosCache.values()].filter((usuario) => usuario.perfilId === perfilId);
+}
 
+function renderizarPerfis(filtro = "") {
+  const termo = normalizar(filtro);
 
-// ========================================
-// PERFIS - NAVEGAÇÃO
-// ========================================
+  const perfis = [...perfisCache.values()]
+    .filter((perfil) => !termo || normalizar(perfil.nome).includes(termo))
+    .sort((a, b) => {
+      if (a.acessoTotal === true) return -1;
+      if (b.acessoTotal === true) return 1;
+      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    });
 
-cardPerfisAcesso
-  .addEventListener(
-    "click",
-    async () => {
+  quantidadePerfis.textContent = `${perfisCache.size} perfil(is) cadastrado(s)`;
 
-      if (
-        !temPermissao(
-          "perfisAcesso"
-        )
-      ) {
+  if (!perfis.length) {
+    listaPerfis.innerHTML = `<tr><td colspan="6">Nenhum perfil encontrado.</td></tr>`;
+    return;
+  }
 
-        return;
+  listaPerfis.innerHTML = perfis.map((perfil) => {
+    const protegido = perfil.acessoTotal === true || perfil.id === "administrador";
+    const qtdUsuarios = usuariosDoPerfil(perfil.id).length;
 
-      }
+    return `
+      <tr>
+        <td class="celula-principal">
+          <strong>${escaparHtml(perfil.nome || perfil.id)}</strong>
+          <span>${escaparHtml(perfil.descricao || "Sem descrição")}</span>
+        </td>
+        <td>${perfil.acessoTotal === true ? '<span class="selo-sistema">Sistema</span>' : "Personalizado"}</td>
+        <td>${perfil.acessoTotal === true ? "Todas" : `${contarPermissoes(perfil.permissoes)} ativa(s)`}</td>
+        <td>${qtdUsuarios}</td>
+        <td>
+          <span class="${perfil.ativo === true ? "status-ativo" : "status-inativo"}">
+            ${perfil.ativo === true ? "Ativo" : "Inativo"}
+          </span>
+        </td>
+        <td>
+          ${
+            protegido
+              ? '<span class="acao-propria">Protegido</span>'
+              : `
+                <div class="acoes-tabela">
+                  <button class="btn-acao destaque" data-perfil-editar="${perfil.id}" type="button">Editar</button>
+                  <button class="btn-acao" data-perfil-status="${perfil.id}" type="button">
+                    ${perfil.ativo === true ? "Inativar" : "Reativar"}
+                  </button>
+                </div>
+              `
+          }
+        </td>
+      </tr>
+    `;
+  }).join("");
 
+  document.querySelectorAll("[data-perfil-editar]").forEach((botao) => {
+    botao.addEventListener("click", () => abrirFormularioPerfil(perfisCache.get(botao.dataset.perfilEditar)));
+  });
 
-      abrirPagina(
-        "perfis"
-      );
+  document.querySelectorAll("[data-perfil-status]").forEach((botao) => {
+    botao.addEventListener("click", () => alterarStatusPerfil(botao.dataset.perfilStatus));
+  });
+}
 
-
-      await carregarPerfisAcesso();
-
-    }
-  );
-
-
-
-btnVoltarPerfis
-  .addEventListener(
-    "click",
-    () => {
-
-      abrirPagina(
-        "administracao"
-      );
-
-    }
-  );
-
-
-
-btnNovoPerfil
-  .addEventListener(
-    "click",
-    () => {
-
-      limparFormularioPerfil();
-
-
-      formPerfilContainer
-        .classList.remove(
-          "hidden"
-        );
-
-
-      perfilNome.focus();
-
-    }
-  );
-
-
-
-btnCancelarPerfil
-  .addEventListener(
-    "click",
-    () => {
-
-      limparFormularioPerfil();
-
-
-      formPerfilContainer
-        .classList.add(
-          "hidden"
-        );
-
-    }
-  );
-
-
-
-// ========================================
-// PERFIS - LISTAGEM
-// ========================================
-
-async function carregarPerfisAcesso() {
-
-  listaPerfis.innerHTML = `
-
-    <tr>
-
-      <td colspan="6">
-        Carregando perfis...
-      </td>
-
-    </tr>
-
-  `;
-
-
-  quantidadePerfis.textContent =
-    "Carregando...";
-
-
-  perfisCache =
-    new Map();
-
+async function carregarPerfis() {
+  listaPerfis.innerHTML = `<tr><td colspan="6">Carregando perfis...</td></tr>`;
 
   try {
+    await carregarColecoesAdministrativas();
+    renderizarPerfis(buscaPerfil.value));
+  } catch (erro) {
+    console.error("Erro ao carregar perfis:", erro);
+    listaPerfis.innerHTML = `<tr><td colspan="6">Não foi possível carregar os perfis.</td></tr>`;
+  }
+}
 
-    const perfisSnap =
-      await getDocs(
+buscaPerfil.addEventListener("input", () => renderizarPerfis(buscaPerfil.value));
 
-        collection(
-          db,
-          "perfisAcesso"
-        )
+function abrirFormularioPerfil(perfil = null) {
+  limparFormularioPerfil();
 
-      );
+  if (perfil) {
+    perfilEmEdicaoId = perfil.id;
+    tituloFormPerfil.textContent = "Editar perfil";
+    perfilNome.value = perfil.nome || "";
+    perfilDescricao.value = perfil.descricao || "";
+    preencherPermissoes(perfil.permissoes || {});
+  }
 
+  formPerfilContainer.classList.remove("hidden");
+  perfilNome.focus();
+}
 
-    listaPerfis.innerHTML =
-      "";
+btnNovoPerfil.addEventListener("click", () => abrirFormularioPerfil());
 
+btnCancelarPerfil.addEventListener("click", () => {
+  limparFormularioPerfil();
+  formPerfilContainer.classList.add("hidden");
+});
 
-    let quantidade =
-      0;
+formPerfil.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
 
+  const nome = perfilNome.value.trim();
+  const descricao = perfilDescricao.value.trim();
+  const permissoes = coletarPermissoes();
 
-    perfisSnap.forEach(
-      (documento) => {
+  const nomeDuplicado = [...perfisCache.values()].some((perfil) => {
+    if (perfil.id === perfilEmEdicaoId) return false;
+    return normalizar(perfil.nome) === normalizar(nome);
+  });
 
-        const perfil =
-          documento.data();
+  if (nomeDuplicado) {
+    marcarMensagem(mensagemPerfil, "Já existe um perfil com este nome.");
+    return;
+  }
 
+  try {
+    marcarMensagem(mensagemPerfil, "Salvando...");
 
-        const perfilDoGrupo =
+    if (perfilEmEdicaoId) {
+      const perfil = perfisCache.get(perfilEmEdicaoId);
 
-          perfil.acessoTotal ===
-            true ||
-
-          !perfil.grupoId ||
-
-          perfil.grupoId ===
-            dadosUsuarioAtual?.grupoId;
-
-
-        if (
-          !perfilDoGrupo
-        ) {
-
-          return;
-
-        }
-
-
-        quantidade++;
-
-
-        perfisCache.set(
-          documento.id,
-          perfil
-        );
-
-
-        const protegido =
-
-          perfil.acessoTotal ===
-            true ||
-
-          documento.id ===
-            "administrador";
-
-
-        const permissoesTexto =
-
-          perfil.acessoTotal ===
-            true
-
-            ? "Todas"
-
-            : `${contarPermissoesAtivas(
-                perfil.permissoes
-              )} ativa(s)`;
-
-
-        const linha =
-          document.createElement(
-            "tr"
-          );
-
-
-        linha.innerHTML = `
-
-          <td>
-            ${escaparHtml(
-              perfil.nome ||
-              documento.id
-            )}
-          </td>
-
-          <td>
-            ${escaparHtml(
-              perfil.descricao ||
-              "-"
-            )}
-          </td>
-
-          <td>
-
-            ${
-              perfil.acessoTotal ===
-                true
-
-                ? `
-                  <span class="selo-sistema">
-                    Sistema
-                  </span>
-                `
-
-                : "Personalizado"
-            }
-
-          </td>
-
-          <td>
-            ${permissoesTexto}
-          </td>
-
-          <td>
-
-            <span
-              class="${
-                perfil.ativo === true
-                  ? "status-ativo"
-                  : "status-inativo"
-              }"
-            >
-
-              ${
-                perfil.ativo === true
-                  ? "Ativo"
-                  : "Inativo"
-              }
-
-            </span>
-
-          </td>
-
-          <td>
-
-            ${
-              protegido
-
-                ? `
-                  <span class="acao-propria">
-                    Protegido
-                  </span>
-                `
-
-                : `
-                  <div class="acoes-tabela">
-
-                    <button
-                      class="btn-editar-perfil"
-                      data-id="${documento.id}"
-                      type="button"
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      class="btn-status-perfil"
-                      data-id="${documento.id}"
-                      data-ativo="${perfil.ativo === true}"
-                      type="button"
-                    >
-                      ${
-                        perfil.ativo === true
-                          ? "Inativar"
-                          : "Reativar"
-                      }
-                    </button>
-
-                  </div>
-                `
-            }
-
-          </td>
-
-        `;
-
-
-        listaPerfis
-          .appendChild(
-            linha
-          );
-
+      if (perfil?.acessoTotal === true || perfilEmEdicaoId === "administrador") {
+        marcarMensagem(mensagemPerfil, "O perfil Administrador é protegido.");
+        return;
       }
-    );
 
+      await updateDoc(doc(db, "perfisAcesso", perfilEmEdicaoId), {
+        nome,
+        descricao,
+        permissoes,
+        atualizadoEm: serverTimestamp()
+      });
 
-    quantidadePerfis.textContent =
+      marcarMensagem(mensagemPerfil, "Perfil atualizado com sucesso.", true);
+    } else {
+      await addDoc(collection(db, "perfisAcesso"), {
+        nome,
+        descricao,
+        grupoId: dadosUsuarioAtual.grupoId,
+        acessoTotal: false,
+        ativo: true,
+        permissoes,
+        criadoEm: serverTimestamp()
+      });
 
-      `${quantidade} perfil(is) cadastrado(s)`;
-
-
-    if (
-      quantidade === 0
-    ) {
-
-      listaPerfis.innerHTML = `
-
-        <tr>
-
-          <td colspan="6">
-            Nenhum perfil cadastrado.
-          </td>
-
-        </tr>
-
-      `;
-
+      marcarMensagem(mensagemPerfil, "Perfil criado com sucesso.", true);
     }
 
+    await carregarPerfis();
+    await atualizarResumoAdministracao();
 
-    configurarAcoesPerfis();
-
-
+    setTimeout(() => {
+      limparFormularioPerfil();
+      formPerfilContainer.classList.add("hidden");
+    }, 700);
   } catch (erro) {
+    console.error("Erro ao salvar perfil:", erro);
+    marcarMensagem(mensagemPerfil, "Não foi possível salvar o perfil.");
+  }
+});
 
-    console.error(
-      "Erro ao carregar perfis:",
-      erro
-    );
+async function alterarStatusPerfil(perfilId) {
+  const perfil = perfisCache.get(perfilId);
+  if (!perfil || perfil.acessoTotal === true || perfilId === "administrador") return;
 
+  const novoStatus = perfil.ativo !== true;
 
-    listaPerfis.innerHTML = `
+  if (!novoStatus) {
+    const usuariosAtivos = usuariosDoPerfil(perfilId).filter((usuario) => usuario.ativo === true);
 
-      <tr>
+    if (usuariosAtivos.length) {
+      alert("Este perfil possui usuários ativos. Altere o perfil desses usuários antes de inativá-lo.");
+      return;
+    }
+  }
 
-        <td colspan="6">
-          Não foi possível carregar os perfis.
-        </td>
+  if (!window.confirm(`${novoStatus ? "Reativar" : "Inativar"} o perfil ${perfil.nome}?`)) return;
 
-      </tr>
+  try {
+    await updateDoc(doc(db, "perfisAcesso", perfilId), {
+      ativo: novoStatus,
+      atualizadoEm: serverTimestamp()
+    });
 
+    await carregarPerfis();
+    await atualizarResumoAdministracao();
+  } catch (erro) {
+    console.error("Erro ao alterar status do perfil:", erro);
+    alert("Não foi possível alterar o perfil.");
+  }
+}
+
+/* GRUPO EMPRESARIAL */
+
+async function carregarGrupo() {
+  try {
+    await carregarGrupoAtual();
+    await carregarColecoesAdministrativas();
+
+    if (!grupoAtual) {
+      grupoIdExibicao.value = dadosUsuarioAtual?.grupoId || "";
+      grupoNome.value = "";
+      grupoNomeResumo.textContent = "Grupo não encontrado";
+      grupoStatus.innerHTML = '<span class="status-aviso">Não encontrado</span>';
+      marcarMensagem(mensagemGrupo, "O documento do grupo não foi localizado.");
+      return;
+    }
+
+    grupoIdExibicao.value = grupoAtual.id;
+    grupoNome.value = grupoAtual.nome || "";
+    grupoNomeResumo.textContent = grupoAtual.nome || "Grupo empresarial";
+    grupoStatus.innerHTML = `
+      <span class="${grupoAtual.ativo === true ? "status-ativo" : "status-inativo"}">
+        ${grupoAtual.ativo === true ? "Ativo" : "Inativo"}
+      </span>
     `;
 
+    grupoQtdEmpresas.textContent = empresasCache.size;
+    grupoQtdUsuarios.textContent = usuariosCache.size;
+    grupoQtdPerfis.textContent = perfisCache.size;
+    marcarMensagem(mensagemGrupo, "");
+  } catch (erro) {
+    console.error("Erro ao carregar grupo:", erro);
+    marcarMensagem(mensagemGrupo, "Não foi possível carregar o grupo empresarial.");
+  }
+}
+
+formGrupo.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+
+  if (!grupoAtual?.id) {
+    marcarMensagem(mensagemGrupo, "Grupo empresarial não encontrado.");
+    return;
   }
 
-}
-
-
-
-// ========================================
-// PERFIS - CRIAR / EDITAR
-// ========================================
-
-formPerfil.addEventListener(
-  "submit",
-  async (evento) => {
-
-    evento.preventDefault();
-
-
-    const nome =
-      perfilNome
-        .value
-        .trim();
-
-
-    const descricao =
-      perfilDescricao
-        .value
-        .trim();
-
-
-    const permissoes =
-      coletarPermissoesFormulario();
-
-
-    if (
-      !nome
-    ) {
-
-      mensagemPerfil.textContent =
-        "Informe o nome do perfil.";
-
-
-      perfilNome.focus();
-
-
-      return;
-
-    }
-
-
-    if (
-      !dadosUsuarioAtual?.grupoId
-    ) {
-
-      mensagemPerfil.textContent =
-        "O usuário não está vinculado a um grupo empresarial.";
-
-
-      return;
-
-    }
-
-
-    mensagemPerfil.textContent =
-
-      perfilEmEdicaoId
-
-        ? "Salvando alterações..."
-
-        : "Criando perfil...";
-
-
-    try {
-
-      const perfisSnap =
-        await getDocs(
-
-          collection(
-            db,
-            "perfisAcesso"
-          )
-
-        );
-
-
-      let nomeDuplicado =
-        false;
-
-
-      perfisSnap.forEach(
-        (documento) => {
-
-          if (
-            documento.id ===
-            perfilEmEdicaoId
-          ) {
-
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-            return;
-
-
-          }
-
-
-          const perfil =
-            documento.data();
-
-<<<<<<< HEAD
-=======
-
-            await updateDoc(
-
-              doc(
-                db,
-                "usuarios",
-                uid
-              ),
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-          const mesmoGrupo =
-
-            !perfil.grupoId ||
-=======
-              {
-
-                ativo:
-                  novoStatus
-
-              }
-
-            );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-            perfil.grupoId ===
-              dadosUsuarioAtual.grupoId;
-
-
-          if (
-
-            mesmoGrupo &&
-
-<<<<<<< HEAD
-            String(
-              perfil.nome ||
-              ""
-            )
-              .trim()
-              .toLowerCase() ===
-=======
-
-            console.error(
-              "Erro ao alterar usuário:",
-              erro
-            );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-            nome
-              .toLowerCase()
-
-<<<<<<< HEAD
-          ) {
-=======
-            alert(
-
-              "Não foi possível alterar o usuário."
-
-            );
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-
-<<<<<<< HEAD
-            nomeDuplicado =
-              true;
-
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-          }
-
-
-        }
-      );
-
-<<<<<<< HEAD
-
-      if (
-        nomeDuplicado
-      ) {
-
-        mensagemPerfil.textContent =
-          "Já existe um perfil com este nome.";
-
-
-        return;
-
-      }
-
-
-      if (
-        perfilEmEdicaoId
-      ) {
-
-        await updateDoc(
-
-          doc(
-            db,
-            "perfisAcesso",
-            perfilEmEdicaoId
-          ),
-
-          {
-
-            nome:
-              nome,
-
-            descricao:
-              descricao,
-
-            permissoes:
-              permissoes,
-
-            atualizadoEm:
-              serverTimestamp()
-
-          }
-
-        );
-
-
-        mensagemPerfil.textContent =
-          "Perfil atualizado com sucesso.";
-
-
-      } else {
-
-        await addDoc(
-
-          collection(
-            db,
-            "perfisAcesso"
-          ),
-
-          {
-
-            nome:
-              nome,
-
-            descricao:
-              descricao,
-
-            grupoId:
-              dadosUsuarioAtual
-                .grupoId,
-
-            acessoTotal:
-              false,
-
-            ativo:
-              true,
-
-            permissoes:
-              permissoes,
-
-            criadoEm:
-              serverTimestamp()
-
-          }
-
-        );
-
-
-        mensagemPerfil.textContent =
-          "Perfil criado com sucesso.";
-
-      }
-
-
-      await carregarPerfisAcesso();
-
-
-      setTimeout(
-        () => {
-
-          limparFormularioPerfil();
-
-
-          formPerfilContainer
-            .classList.add(
-              "hidden"
-            );
-
-        },
-        900
-      );
-
-
-    } catch (erro) {
-
-      console.error(
-        "Erro ao salvar perfil:",
-        erro
-      );
-
-
-      mensagemPerfil.textContent =
-        "Não foi possível salvar o perfil.";
-
-=======
-
->>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
-    }
-
+  const nome = grupoNome.value.trim();
+
+  if (!nome) {
+    marcarMensagem(mensagemGrupo, "Informe o nome do grupo.");
+    return;
   }
-);
 
-
-
-// ========================================
-// PERFIL EM USO
-// ========================================
-
-async function perfilPossuiUsuariosAtivos(
-  perfilId
-) {
-
-  const usuariosSnap =
-    await getDocs(
-
-      collection(
-        db,
-        "usuarios"
-      )
-
-    );
-
-
-  let possui =
-    false;
-
-
-  usuariosSnap.forEach(
-    (documento) => {
-
-      const usuario =
-        documento.data();
-
-
-      if (
-
-        usuario.perfilId ===
-          perfilId &&
-
-        usuario.ativo ===
-          true
-
-      ) {
-
-        possui =
-          true;
-
-      }
-
-    }
-  );
-
-
-  return possui;
-
-}
-
-
-
-// ========================================
-// PERFIS - AÇÕES
-// ========================================
-
-function configurarAcoesPerfis() {
-
-  document
-    .querySelectorAll(
-      ".btn-editar-perfil"
-    )
-    .forEach(
-      (botao) => {
-
-        botao.addEventListener(
-          "click",
-          () => {
-
-            const perfilId =
-              botao.dataset.id;
-
-
-            const perfil =
-              perfisCache.get(
-                perfilId
-              );
-
-
-            if (
-              !perfil
-            ) {
-
-              return;
-
-            }
-
-
-            perfilEmEdicaoId =
-              perfilId;
-
-
-            tituloFormPerfil.textContent =
-              "Editar perfil";
-
-
-            btnSalvarPerfil.textContent =
-              "Salvar alterações";
-
-
-            mensagemPerfil.textContent =
-              "";
-
-
-            perfilNome.value =
-              perfil.nome ||
-              "";
-
-
-            perfilDescricao.value =
-              perfil.descricao ||
-              "";
-
-
-            preencherPermissoesFormulario(
-
-              perfil.permissoes ||
-              {}
-
-            );
-
-
-            formPerfilContainer
-              .classList.remove(
-                "hidden"
-              );
-
-
-            perfilNome.focus();
-
-          }
-        );
-
-      }
-    );
-
-
-
-  document
-    .querySelectorAll(
-      ".btn-status-perfil"
-    )
-    .forEach(
-      (botao) => {
-
-        botao.addEventListener(
-          "click",
-          async () => {
-
-            const perfilId =
-              botao.dataset.id;
-
-
-            const estaAtivo =
-
-              botao.dataset.ativo ===
-              "true";
-
-
-            const novoStatus =
-              !estaAtivo;
-
-
-            if (
-              !novoStatus
-            ) {
-
-              const emUso =
-
-                await perfilPossuiUsuariosAtivos(
-                  perfilId
-                );
-
-
-              if (
-                emUso
-              ) {
-
-                alert(
-
-                  "Este perfil está vinculado a usuário(s) ativo(s). Altere o perfil desses usuários antes de inativá-lo."
-
-                );
-
-
-                return;
-
-              }
-
-            }
-
-
-            const confirmar =
-              window.confirm(
-
-                novoStatus
-
-                  ? "Deseja reativar este perfil?"
-
-                  : "Deseja inativar este perfil?"
-
-              );
-
-
-            if (
-              !confirmar
-            ) {
-
-              return;
-
-            }
-
-
-            try {
-
-              await updateDoc(
-
-                doc(
-                  db,
-                  "perfisAcesso",
-                  perfilId
-                ),
-
-                {
-
-                  ativo:
-                    novoStatus,
-
-                  atualizadoEm:
-                    serverTimestamp()
-
-                }
-
-              );
-
-
-              await carregarPerfisAcesso();
-
-
-            } catch (erro) {
-
-              console.error(
-                "Erro ao alterar perfil:",
-                erro
-              );
-
-
-              alert(
-                "Não foi possível alterar o perfil."
-              );
-
-            }
-
-          }
-        );
-
-      }
-    );
-
-}
+  try {
+    marcarMensagem(mensagemGrupo, "Salvando...");
+
+    await updateDoc(doc(db, "gruposEmpresariais", grupoAtual.id), {
+      nome,
+      atualizadoEm: serverTimestamp()
+    });
+
+    await carregarGrupoAtual();
+    subtituloContexto.textContent = grupoAtual?.nome || "Sistema Integrado de Gestão";
+    await carregarGrupo();
+    marcarMensagem(mensagemGrupo, "Grupo atualizado com sucesso.", true);
+  } catch (erro) {
+    console.error("Erro ao salvar grupo:", erro);
+    marcarMensagem(mensagemGrupo, "Não foi possível salvar o grupo.");
+  }
+});
