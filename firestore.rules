@@ -60,41 +60,85 @@ service cloud.firestore {
         usuario().data.grupoId == grupoId;
     }
 
+    function acessoGlobal() {
+      return usuarioAtivo() &&
+        'acessoGlobal' in usuario().data &&
+        usuario().data.acessoGlobal == true;
+    }
+
     function acessoEmpresa(empresaId) {
       return usuarioAtivo() && (
         administrador() ||
-        usuario().data.acessoGlobal == true ||
+        acessoGlobal() ||
         usuario().data.empresaId == empresaId ||
         (
+          'empresasAcesso' in usuario().data &&
           usuario().data.empresasAcesso is list &&
           empresaId in usuario().data.empresasAcesso
         )
       );
     }
 
+    function podeAtribuirPerfil(perfilId) {
+      return perfilId != 'administrador' || administrador();
+    }
+
     match /usuarios/{usuarioId} {
-      // O próprio usuário precisa ler o documento para concluir o login,
+      // O próprio usuário precisa ler seu cadastro para concluir o login,
       // inclusive quando estiver inativo, para receber a mensagem correta.
       allow read: if logado() && (
         request.auth.uid == usuarioId ||
-        permissao('usuarios', 'visualizar')
+        (
+          permissao('usuarios', 'visualizar') &&
+          resource.data.grupoId == usuario().data.grupoId
+        )
       );
 
       allow create: if permissao('usuarios', 'cadastrar') &&
-        request.resource.data.grupoId == usuario().data.grupoId;
+        request.resource.data.grupoId == usuario().data.grupoId &&
+        podeAtribuirPerfil(request.resource.data.perfilId);
 
-      allow update: if permissao('usuarios', 'editar') &&
-        resource.data.grupoId == usuario().data.grupoId &&
-        request.resource.data.grupoId == resource.data.grupoId;
+      // Edição cadastral e troca de acesso.
+      allow update: if resource.data.grupoId == usuario().data.grupoId &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        podeAtribuirPerfil(request.resource.data.perfilId) &&
+        (
+          (
+            permissao('usuarios', 'editar') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'nome',
+              'perfilId',
+              'empresaId',
+              'acessoGlobal',
+              'empresasAcesso',
+              'atualizadoEm'
+            ])
+          ) ||
+          (
+            permissao('usuarios', 'inativar') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'ativo',
+              'atualizadoEm'
+            ])
+          )
+        );
 
       allow delete: if false;
     }
 
     match /perfisAcesso/{perfilId} {
-      // Todo usuário precisa ler o próprio perfil para concluir a autorização.
+      // Todo usuário precisa ler o perfil que está atribuído a ele.
       allow read: if usuarioAtivo() && (
         usuario().data.perfilId == perfilId ||
-        permissao('perfisAcesso', 'visualizar')
+        administrador() ||
+        (
+          permissao('perfisAcesso', 'visualizar') &&
+          (
+            resource.data.acessoTotal == true ||
+            !('grupoId' in resource.data) ||
+            resource.data.grupoId == usuario().data.grupoId
+          )
+        )
       );
 
       allow create: if permissao('perfisAcesso', 'cadastrar') &&
@@ -103,10 +147,27 @@ service cloud.firestore {
 
       allow update: if perfilId != 'administrador' &&
         resource.data.acessoTotal != true &&
-        permissao('perfisAcesso', 'editar') &&
+        request.resource.data.acessoTotal == false &&
         resource.data.grupoId == usuario().data.grupoId &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.acessoTotal == false;
+        (
+          (
+            permissao('perfisAcesso', 'editar') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'nome',
+              'descricao',
+              'permissoes',
+              'atualizadoEm'
+            ])
+          ) ||
+          (
+            permissao('perfisAcesso', 'inativar') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'ativo',
+              'atualizadoEm'
+            ])
+          )
+        );
 
       allow delete: if false;
     }
@@ -119,7 +180,11 @@ service cloud.firestore {
         request.resource.data.ativo == true;
 
       allow update: if mesmoGrupo(grupoId) &&
-        permissao('grupoEmpresarial', 'editar');
+        permissao('grupoEmpresarial', 'editar') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nome',
+          'atualizadoEm'
+        ]);
 
       allow delete: if false;
     }
@@ -134,8 +199,23 @@ service cloud.firestore {
       allow update: if mesmoGrupo(resource.data.grupoId) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         (
-          permissao('empresas', 'editar') ||
-          permissao('empresas', 'inativar')
+          (
+            permissao('empresas', 'editar') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'razaoSocial',
+              'nomeFantasia',
+              'cnpj',
+              'cnpjNumeros',
+              'atualizadoEm'
+            ])
+          ) ||
+          (
+            permissao('empresas', 'inativar') &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'ativo',
+              'atualizadoEm'
+            ])
+          )
         );
 
       allow delete: if mesmoGrupo(resource.data.grupoId) &&
