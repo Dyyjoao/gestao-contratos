@@ -16,8 +16,6 @@ import {
 // ========================================
 
 const firebaseConfig = {
-
-  const firebaseConfig = {
   apiKey: "AIzaSyDhFhXmyg44MqDkMHxgwVJ4DxEW-qqiDkU",
   authDomain: "gestao-de-contratos-b266b.firebaseapp.com",
   projectId: "gestao-de-contratos-b266b",
