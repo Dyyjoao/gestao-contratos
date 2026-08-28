@@ -15,11 +15,13 @@
     content="Sistema Integrado de Gestão Empresarial"
   >
 
-  <title>Sistema Integrado de Gestão</title>
+  <title>
+    Sistema Integrado de Gestão
+  </title>
 
   <link
     rel="stylesheet"
-    href="style.css"
+    href="style.css?v=5"
   >
 
   <link
@@ -58,6 +60,7 @@
 
 
       <form id="formLogin">
+
 
         <div class="campo">
 
@@ -100,6 +103,7 @@
           Entrar
         </button>
 
+
       </form>
 
 
@@ -107,6 +111,7 @@
         id="mensagemLogin"
         class="mensagem"
       ></p>
+
 
     </section>
 
@@ -132,6 +137,7 @@
 
       <aside class="sidebar">
 
+
         <div class="sidebar-brand">
 
           <div class="brand-icon">
@@ -154,6 +160,7 @@
 
 
         <nav class="sidebar-menu">
+
 
           <button
             class="menu-item ativo"
@@ -185,6 +192,7 @@
             Administração
           </button>
 
+
         </nav>
 
       </aside>
@@ -203,6 +211,7 @@
         ========================================= -->
 
         <header class="app-topbar">
+
 
           <div>
 
@@ -239,6 +248,7 @@
 
           </div>
 
+
         </header>
 
 
@@ -248,6 +258,7 @@
         ========================================= -->
 
         <main class="conteudo">
+
 
 
           <!-- ========================================
@@ -273,6 +284,7 @@
 
 
             <div class="cards">
+
 
               <div class="card">
 
@@ -324,6 +336,7 @@
                 </strong>
 
               </div>
+
 
             </div>
 
@@ -394,8 +407,6 @@
             <div class="admin-grid">
 
 
-              <!-- EMPRESAS -->
-
               <button
                 id="cardEmpresas"
                 class="admin-card admin-card-button"
@@ -412,9 +423,6 @@
 
               </button>
 
-
-
-              <!-- USUÁRIOS -->
 
               <button
                 id="cardUsuarios"
@@ -433,9 +441,6 @@
               </button>
 
 
-
-              <!-- PERFIS DE ACESSO -->
-
               <div class="admin-card">
 
                 <h3>
@@ -449,9 +454,6 @@
               </div>
 
 
-
-              <!-- GRUPO EMPRESARIAL -->
-
               <div class="admin-card">
 
                 <h3>
@@ -463,6 +465,7 @@
                 </p>
 
               </div>
+
 
             </div>
 
@@ -480,6 +483,7 @@
           >
 
             <div class="pagina-cabecalho">
+
 
               <div>
 
@@ -512,11 +516,14 @@
                 + Nova empresa
               </button>
 
+
             </div>
 
 
 
-            <!-- NOVA EMPRESA -->
+            <!-- ========================================
+                 NOVA EMPRESA
+            ========================================= -->
 
             <section
               id="formNovaEmpresaContainer"
@@ -529,6 +536,7 @@
 
 
               <form id="formNovaEmpresa">
+
 
                 <div class="form-grid">
 
@@ -548,7 +556,6 @@
                   </div>
 
 
-
                   <div class="campo">
 
                     <label for="empresaNomeFantasia">
@@ -562,7 +569,6 @@
                     >
 
                   </div>
-
 
 
                   <div class="campo">
@@ -582,10 +588,12 @@
 
                   </div>
 
+
                 </div>
 
 
                 <div class="form-acoes">
+
 
                   <button
                     id="btnCancelarEmpresa"
@@ -603,6 +611,7 @@
                     Salvar empresa
                   </button>
 
+
                 </div>
 
 
@@ -611,15 +620,19 @@
                   class="mensagem-form"
                 ></p>
 
+
               </form>
 
             </section>
 
 
 
-            <!-- LISTAGEM DE EMPRESAS -->
+            <!-- ========================================
+                 LISTAGEM DE EMPRESAS
+            ========================================= -->
 
             <section class="lista-card">
+
 
               <div class="lista-cabecalho">
 
@@ -640,7 +653,9 @@
 
               <div class="tabela-container">
 
+
                 <table class="tabela">
+
 
                   <thead>
 
@@ -662,6 +677,10 @@
                         Status
                       </th>
 
+                      <th>
+                        Ações
+                      </th>
+
                     </tr>
 
                   </thead>
@@ -671,7 +690,7 @@
 
                     <tr>
 
-                      <td colspan="4">
+                      <td colspan="5">
                         Carregando empresas...
                       </td>
 
@@ -679,9 +698,12 @@
 
                   </tbody>
 
+
                 </table>
 
+
               </div>
+
 
             </section>
 
@@ -699,6 +721,7 @@
           >
 
             <div class="pagina-cabecalho">
+
 
               <div>
 
@@ -731,11 +754,9 @@
                 + Novo usuário
               </button>
 
+
             </div>
 
-
-
-            <!-- AVISO TEMPORÁRIO -->
 
             <div
               id="avisoNovoUsuario"
@@ -748,10 +769,8 @@
             </div>
 
 
-
-            <!-- LISTAGEM DE USUÁRIOS -->
-
             <section class="lista-card">
+
 
               <div class="lista-cabecalho">
 
@@ -772,7 +791,9 @@
 
               <div class="tabela-container">
 
+
                 <table class="tabela">
+
 
                   <thead>
 
@@ -819,9 +840,12 @@
 
                   </tbody>
 
+
                 </table>
 
+
               </div>
+
 
             </section>
 
@@ -839,12 +863,110 @@
 
 
   <!-- ========================================
-       JAVASCRIPT
+       MODAL DE EXCLUSÃO DE EMPRESA
   ========================================= -->
+
+  <div
+    id="modalExcluirEmpresa"
+    class="modal-overlay hidden"
+  >
+
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+    >
+
+
+      <div class="modal-cabecalho">
+
+        <h2>
+          Excluir empresa
+        </h2>
+
+      </div>
+
+
+      <p class="modal-alerta">
+
+        Esta ação é permanente e só é permitida
+        para empresas sem informações vinculadas.
+
+      </p>
+
+
+      <p>
+
+        Empresa:
+
+        <strong id="nomeEmpresaExcluir"></strong>
+
+      </p>
+
+
+      <form id="formConfirmarExclusaoEmpresa">
+
+
+        <div class="campo campo-modal">
+
+          <label for="senhaExclusaoEmpresa">
+
+            Confirme sua senha de administrador
+
+          </label>
+
+
+          <input
+            id="senhaExclusaoEmpresa"
+            type="password"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+
+        <p
+          id="mensagemExclusaoEmpresa"
+          class="mensagem-form"
+        ></p>
+
+
+        <div class="form-acoes">
+
+
+          <button
+            id="btnCancelarExclusaoEmpresa"
+            class="btn-secundario"
+            type="button"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            class="btn-perigo"
+            type="submit"
+          >
+            Excluir permanentemente
+          </button>
+
+
+        </div>
+
+
+      </form>
+
+
+    </section>
+
+  </div>
+
+
 
   <script
     type="module"
-    src="app.js"
+    src="app.js?v=5"
   ></script>
 
 

@@ -758,3 +758,187 @@ body {
 .admin-card-button {
   font-family: inherit;
 }
+/* ========================================
+   AÇÕES DE EMPRESAS
+======================================== */
+
+.acoes-tabela {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  flex-wrap: wrap;
+}
+
+
+.btn-acao-empresa {
+  border:
+    1px solid #d1d5db;
+
+  background:
+    white;
+
+  color:
+    #374151;
+
+  padding:
+    7px 11px;
+
+  border-radius:
+    7px;
+
+  font-size:
+    12px;
+
+  cursor:
+    pointer;
+}
+
+
+.btn-acao-empresa:hover {
+  background:
+    #f3f4f6;
+}
+
+
+.btn-excluir-empresa {
+  border-color:
+    #fecaca;
+
+  color:
+    #b91c1c;
+}
+
+
+.btn-excluir-empresa:hover {
+  background:
+    #fef2f2;
+}
+
+
+
+/* ========================================
+   MODAL
+======================================== */
+
+.modal-overlay {
+  position:
+    fixed;
+
+  inset:
+    0;
+
+  z-index:
+    9999;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    20px;
+
+  background:
+    rgba(17, 24, 39, 0.55);
+}
+
+
+.modal-card {
+  width:
+    100%;
+
+  max-width:
+    480px;
+
+  background:
+    white;
+
+  border-radius:
+    14px;
+
+  padding:
+    26px;
+
+  box-shadow:
+    0 20px 50px
+    rgba(0, 0, 0, 0.18);
+}
+
+
+.modal-cabecalho {
+  margin-bottom:
+    16px;
+}
+
+
+.modal-cabecalho h2 {
+  font-size:
+    21px;
+}
+
+
+.modal-alerta {
+  background:
+    #fef2f2;
+
+  border:
+    1px solid #fecaca;
+
+  color:
+    #991b1b;
+
+  padding:
+    12px 14px;
+
+  border-radius:
+    9px;
+
+  margin-bottom:
+    18px;
+
+  font-size:
+    14px;
+}
+
+
+.campo-modal {
+  margin-top:
+    20px;
+}
+
+
+.btn-perigo {
+  border:
+    none;
+
+  background:
+    #b91c1c;
+
+  color:
+    white;
+
+  padding:
+    11px 16px;
+
+  border-radius:
+    8px;
+
+  font-weight:
+    600;
+
+  cursor:
+    pointer;
+}
+
+
+.btn-perigo:hover {
+  background:
+    #991b1b;
+}
