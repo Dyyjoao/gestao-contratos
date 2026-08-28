@@ -112,6 +112,13 @@ service cloud.firestore {
       allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
     }
 
+    match /manutencoesFrota/{id} {
+      allow read: if permissao('frota','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('frota','editar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('frota','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
+    }
+
     match /itensAlmoxarifado/{id} {
       allow read: if permissao('almoxarifado','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('almoxarifado','cadastrar') && documentoAcessivel(request.resource.data);
