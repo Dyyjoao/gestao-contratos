@@ -9,6 +9,13 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 
+  import {
+  getFirestore,
+  doc,
+  getDoc
+} from
+  "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
 
 // ========================================
 // FIREBASE
@@ -27,7 +34,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
-
+const db = getFirestore(app);
 
 // ========================================
 // ELEMENTOS
@@ -124,24 +131,89 @@ btnSair.addEventListener(
 
 onAuthStateChanged(
   auth,
-  (usuario) => {
+  async (usuario) => {
 
-    if (usuario) {
-
-      telaLogin.classList.add("hidden");
-
-      sistema.classList.remove("hidden");
-
-      nomeUsuario.textContent =
-        usuario.email;
-
-    } else {
+    if (!usuario) {
 
       sistema.classList.add("hidden");
 
       telaLogin.classList.remove("hidden");
 
       nomeUsuario.textContent = "";
+
+      return;
+    }
+
+
+    try {
+
+      const usuarioRef = doc(
+        db,
+        "usuarios",
+        usuario.uid
+      );
+
+
+      const usuarioSnap =
+        await getDoc(usuarioRef);
+
+
+      // Usuário autenticou,
+      // mas não existe no cadastro interno
+
+      if (!usuarioSnap.exists()) {
+
+        await signOut(auth);
+
+        mensagemLogin.textContent =
+          "Usuário não autorizado a acessar o sistema.";
+
+        return;
+      }
+
+
+      const dadosUsuario =
+        usuarioSnap.data();
+
+
+      // Usuário cadastrado, porém bloqueado
+
+      if (dadosUsuario.ativo !== true) {
+
+        await signOut(auth);
+
+        mensagemLogin.textContent =
+          "Este usuário está desativado.";
+
+        return;
+      }
+
+
+      // USUÁRIO AUTORIZADO
+
+      telaLogin.classList.add("hidden");
+
+      sistema.classList.remove("hidden");
+
+
+      nomeUsuario.textContent =
+        dadosUsuario.nome ||
+        usuario.email;
+
+
+    } catch (erro) {
+
+      console.error(
+        "Erro ao verificar usuário:",
+        erro
+      );
+
+
+      await signOut(auth);
+
+
+      mensagemLogin.textContent =
+        "Não foi possível verificar sua autorização.";
 
     }
 
