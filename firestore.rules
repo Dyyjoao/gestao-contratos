@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function usuarioRef() {
+      return /databases/$(database)/documents/usuarios/$(request.auth.uid);
+    }
+
+    function usuarioExiste() {
+      return logado() && exists(usuarioRef());
+    }
+
+    function usuario() {
+      return get(usuarioRef());
+    }
+
+    function usuarioAtivo() {
+      return usuarioExiste() && usuario().data.ativo == true;
+    }
+
+    function perfilRef() {
+      return /databases/$(database)/documents/perfisAcesso/$(usuario().data.perfilId);
+    }
+
+    function perfilExiste() {
+      return usuarioAtivo() && exists(perfilRef());
+    }
+
+    function perfil() {
+      return get(perfilRef());
+    }
+
+    function perfilAtivo() {
+      return perfilExiste() && perfil().data.ativo == true;
+    }
+
+    function administrador() {
+      return perfilAtivo() && perfil().data.acessoTotal == true;
+    }
+
+    function permissao(modulo, acao) {
+      return perfilAtivo() && (
+        administrador() || (
+          perfil().data.permissoes is map &&
+          modulo in perfil().data.permissoes &&
+          perfil().data.permissoes[modulo] is map &&
+          acao in perfil().data.permissoes[modulo] &&
+          perfil().data.permissoes[modulo][acao] == true
+        )
+      );
+    }
+
+    function mesmoGrupo(grupoId) {
+      return usuarioAtivo() &&
+        usuario().data.grupoId == grupoId;
+    }
+
+    function acessoEmpresa(empresaId) {
+      return usuarioAtivo() && (
+        administrador() ||
+        usuario().data.acessoGlobal == true ||
+        usuario().data.empresaId == empresaId ||
+        (
+          usuario().data.empresasAcesso is list &&
+          empresaId in usuario().data.empresasAcesso
+        )
+      );
+    }
+
+    match /usuarios/{usuarioId} {
+      // O próprio usuário precisa ler o documento para concluir o login,
+      // inclusive quando estiver inativo, para receber a mensagem correta.
+      allow read: if logado() && (
+        request.auth.uid == usuarioId ||
+        permissao('usuarios', 'visualizar')
+      );
+
+      allow create: if permissao('usuarios', 'cadastrar') &&
+        request.resource.data.grupoId == usuario().data.grupoId;
+
+      allow update: if permissao('usuarios', 'editar') &&
+        resource.data.grupoId == usuario().data.grupoId &&
+        request.resource.data.grupoId == resource.data.grupoId;
+
+      allow delete: if false;
+    }
+
+    match /perfisAcesso/{perfilId} {
+      // Todo usuário precisa ler o próprio perfil para concluir a autorização.
+      allow read: if usuarioAtivo() && (
+        usuario().data.perfilId == perfilId ||
+        permissao('perfisAcesso', 'visualizar')
+      );
+
+      allow create: if permissao('perfisAcesso', 'cadastrar') &&
+        request.resource.data.acessoTotal == false &&
+        request.resource.data.grupoId == usuario().data.grupoId;
+
+      allow update: if perfilId != 'administrador' &&
+        resource.data.acessoTotal != true &&
+        permissao('perfisAcesso', 'editar') &&
+        resource.data.grupoId == usuario().data.grupoId &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.acessoTotal == false;
+
+      allow delete: if false;
+    }
+
+    match /gruposEmpresariais/{grupoId} {
+      // O grupo do usuário é lido durante o login.
+      allow read: if usuarioAtivo() && usuario().data.grupoId == grupoId;
+
+      allow create: if administrador() &&
+        request.resource.data.ativo == true;
+
+      allow update: if mesmoGrupo(grupoId) &&
+        permissao('grupoEmpresarial', 'editar');
+
+      allow delete: if false;
+    }
+
+    match /empresas/{empresaId} {
+      allow read: if acessoEmpresa(empresaId) &&
+        mesmoGrupo(resource.data.grupoId);
+
+      allow create: if permissao('empresas', 'cadastrar') &&
+        request.resource.data.grupoId == usuario().data.grupoId;
+
+      allow update: if mesmoGrupo(resource.data.grupoId) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        (
+          permissao('empresas', 'editar') ||
+          permissao('empresas', 'inativar')
+        );
+
+      allow delete: if mesmoGrupo(resource.data.grupoId) &&
+        permissao('empresas', 'excluir');
+    }
+  }
+}
