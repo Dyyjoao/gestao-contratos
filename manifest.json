@@ -1,1 +1,9 @@
-
+{
+  "name": "Gestão de Contratos",
+  "short_name": "Contratos",
+  "description": "Sistema de Gestão de Contratos",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#111827"
+}
