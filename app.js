@@ -21,7 +21,6 @@ const firebaseConfig = {
   storageBucket: "gestao-de-contratos-b266b.firebasestorage.app",
   messagingSenderId: "1090500586579",
   appId: "1:1090500586579:web:90419b7abe37540eeeeaa6"
-
 };
 
 
