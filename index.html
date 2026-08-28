@@ -2,8 +2,7 @@
 <html lang="pt-BR">
 
 <head>
-
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
 
   <meta
     name="viewport"
@@ -21,19 +20,21 @@
 
   <link
     rel="stylesheet"
+<<<<<<< HEAD
+    href="style.css?v=7"
+=======
     href="style.css?v=5"
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
   >
 
   <link
     rel="manifest"
     href="manifest.json"
   >
-
 </head>
 
 
 <body>
-
 
   <!-- ========================================
        LOGIN
@@ -163,6 +164,7 @@
 
 
           <button
+            id="menuDashboard"
             class="menu-item ativo"
             data-pagina="dashboard"
             type="button"
@@ -172,6 +174,7 @@
 
 
           <button
+            id="menuContratos"
             class="menu-item"
             data-pagina="contratos"
             type="button"
@@ -424,6 +427,10 @@
               </button>
 
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
               <button
                 id="cardUsuarios"
                 class="admin-card admin-card-button"
@@ -441,8 +448,18 @@
               </button>
 
 
+<<<<<<< HEAD
+
+              <button
+                id="cardPerfisAcesso"
+                class="admin-card admin-card-button"
+                type="button"
+              >
+
+=======
               <div class="admin-card">
 
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
                 <h3>
                   Perfis de Acesso
                 </h3>
@@ -451,11 +468,20 @@
                   Grupos e permissões por módulo.
                 </p>
 
-              </div>
+              </button>
 
 
+<<<<<<< HEAD
+
+              <div
+                id="cardGrupoEmpresarial"
+                class="admin-card"
+              >
+
+=======
               <div class="admin-card">
 
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
                 <h3>
                   Grupo Empresarial
                 </h3>
@@ -521,10 +547,13 @@
 
 
 
+<<<<<<< HEAD
+=======
             <!-- ========================================
                  NOVA EMPRESA
             ========================================= -->
 
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
             <section
               id="formNovaEmpresaContainer"
               class="form-card hidden"
@@ -627,10 +656,13 @@
 
 
 
+<<<<<<< HEAD
+=======
             <!-- ========================================
                  LISTAGEM DE EMPRESAS
             ========================================= -->
 
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
             <section class="lista-card">
 
 
@@ -763,8 +795,7 @@
               class="aviso-info hidden"
             >
 
-              A criação de usuários será habilitada na próxima etapa
-              através do backend seguro do SIG.
+              A criação de usuários será habilitada na próxima etapa do projeto.
 
             </div>
 
@@ -852,6 +883,237 @@
           </section>
 
 
+
+          <!-- ========================================
+               PERFIS DE ACESSO
+          ========================================= -->
+
+          <section
+            id="pagina-perfis"
+            class="pagina hidden"
+          >
+
+            <div class="pagina-cabecalho">
+
+              <div>
+
+                <button
+                  id="btnVoltarPerfis"
+                  class="btn-voltar"
+                  type="button"
+                >
+                  ← Administração
+                </button>
+
+
+                <h2>
+                  Perfis de Acesso
+                </h2>
+
+
+                <p>
+                  Defina quais módulos e ações cada grupo de usuários poderá utilizar.
+                </p>
+
+              </div>
+
+
+              <button
+                id="btnNovoPerfil"
+                class="btn-primario"
+                type="button"
+              >
+                + Novo perfil
+              </button>
+
+            </div>
+
+
+
+            <section
+              id="formPerfilContainer"
+              class="form-card hidden"
+            >
+
+              <h3 id="tituloFormPerfil">
+                Novo perfil
+              </h3>
+
+
+              <form id="formPerfil">
+
+                <div class="form-grid">
+
+
+                  <div class="campo">
+
+                    <label for="perfilNome">
+                      Nome do perfil
+                    </label>
+
+                    <input
+                      id="perfilNome"
+                      type="text"
+                      placeholder="Ex.: Gestor de Contratos"
+                      required
+                    >
+
+                  </div>
+
+
+
+                  <div class="campo">
+
+                    <label for="perfilDescricao">
+                      Descrição
+                    </label>
+
+                    <input
+                      id="perfilDescricao"
+                      type="text"
+                      placeholder="Ex.: Acesso ao módulo de contratos e aprovações"
+                    >
+
+                  </div>
+
+                </div>
+
+
+
+                <div class="permissoes-cabecalho">
+
+                  <div>
+
+                    <h4>
+                      Permissões
+                    </h4>
+
+                    <p>
+                      Marque apenas o que este perfil poderá visualizar ou executar.
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                <div
+                  id="gradePermissoesPerfil"
+                  class="permissoes-grid"
+                ></div>
+
+
+
+                <div class="form-acoes">
+
+                  <button
+                    id="btnCancelarPerfil"
+                    class="btn-secundario"
+                    type="button"
+                  >
+                    Cancelar
+                  </button>
+
+
+                  <button
+                    id="btnSalvarPerfil"
+                    class="btn-primario"
+                    type="submit"
+                  >
+                    Salvar perfil
+                  </button>
+
+                </div>
+
+
+                <p
+                  id="mensagemPerfil"
+                  class="mensagem-form"
+                ></p>
+
+              </form>
+
+            </section>
+
+
+
+            <section class="lista-card">
+
+              <div class="lista-cabecalho">
+
+                <div>
+
+                  <h3>
+                    Perfis cadastrados
+                  </h3>
+
+                  <p id="quantidadePerfis">
+                    Carregando...
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div class="tabela-container">
+
+                <table class="tabela">
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Perfil
+                      </th>
+
+                      <th>
+                        Descrição
+                      </th>
+
+                      <th>
+                        Tipo
+                      </th>
+
+                      <th>
+                        Permissões
+                      </th>
+
+                      <th>
+                        Status
+                      </th>
+
+                      <th>
+                        Ações
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+                  <tbody id="listaPerfis">
+
+                    <tr>
+
+                      <td colspan="6">
+                        Carregando perfis...
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </section>
+
+          </section>
+
+
         </main>
 
       </div>
@@ -863,9 +1125,107 @@
 
 
   <!-- ========================================
+<<<<<<< HEAD
+       MODAL EXCLUSÃO EMPRESA
+=======
        MODAL DE EXCLUSÃO DE EMPRESA
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
   ========================================= -->
 
+<<<<<<< HEAD
+  <div
+    id="modalExcluirEmpresa"
+    class="modal-overlay hidden"
+  >
+
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+    >
+
+      <div class="modal-cabecalho">
+
+        <h2>
+          Excluir empresa
+        </h2>
+
+      </div>
+
+
+      <p class="modal-alerta">
+
+        Esta ação é permanente e só é permitida
+        para empresas sem informações vinculadas.
+
+      </p>
+
+
+      <p>
+
+        Empresa:
+
+        <strong id="nomeEmpresaExcluir"></strong>
+
+      </p>
+
+
+      <form id="formConfirmarExclusaoEmpresa">
+
+        <div class="campo campo-modal">
+
+          <label for="senhaExclusaoEmpresa">
+
+            Confirme sua senha de administrador
+
+          </label>
+
+
+          <input
+            id="senhaExclusaoEmpresa"
+            type="password"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+
+        <p
+          id="mensagemExclusaoEmpresa"
+          class="mensagem-form"
+        ></p>
+
+
+        <div class="form-acoes">
+
+          <button
+            id="btnCancelarExclusaoEmpresa"
+            class="btn-secundario"
+            type="button"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            class="btn-perigo"
+            type="submit"
+          >
+            Excluir permanentemente
+          </button>
+
+        </div>
+
+      </form>
+
+    </section>
+
+  </div>
+
+
+
+=======
   <div
     id="modalExcluirEmpresa"
     class="modal-overlay hidden"
@@ -964,11 +1324,15 @@
 
 
 
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
   <script
     type="module"
+<<<<<<< HEAD
+    src="app.js?v=7"
+=======
     src="app.js?v=5"
+>>>>>>> 714fb232dcc2bfd6f2171712b5fa779748f911ee
   ></script>
-
 
 </body>
 
