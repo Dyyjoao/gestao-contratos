@@ -3,8 +3,7 @@ import { initializeApp } from
 
 import {
   getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
+  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged
 } from
@@ -12,7 +11,7 @@ import {
 
 
 // ========================================
-// CONFIGURAÇÃO DO FIREBASE
+// FIREBASE
 // ========================================
 
 const firebaseConfig = {
@@ -22,26 +21,17 @@ const firebaseConfig = {
   storageBucket: "gestao-de-contratos-b266b.firebasestorage.app",
   messagingSenderId: "1090500586579",
   appId: "1:1090500586579:web:90419b7abe37540eeeeaa6"
-};
-  
 
 };
 
-
-// ========================================
-// INICIALIZAÇÃO
-// ========================================
 
 const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
 
-const googleProvider =
-  new GoogleAuthProvider();
-
 
 // ========================================
-// ELEMENTOS DA TELA
+// ELEMENTOS
 // ========================================
 
 const telaLogin =
@@ -50,89 +40,111 @@ const telaLogin =
 const sistema =
   document.getElementById("sistema");
 
-const btnGoogle =
-  document.getElementById("btnGoogle");
+const formLogin =
+  document.getElementById("formLogin");
 
-const btnSair =
-  document.getElementById("btnSair");
+const email =
+  document.getElementById("email");
 
-const nomeUsuario =
-  document.getElementById("nomeUsuario");
+const senha =
+  document.getElementById("senha");
 
 const mensagemLogin =
   document.getElementById("mensagemLogin");
 
+const nomeUsuario =
+  document.getElementById("nomeUsuario");
+
+const btnSair =
+  document.getElementById("btnSair");
+
 
 // ========================================
-// LOGIN GOOGLE
+// LOGIN
 // ========================================
 
-btnGoogle.addEventListener("click", async () => {
+formLogin.addEventListener(
+  "submit",
+  async (evento) => {
 
-  try {
-
-    mensagemLogin.textContent =
-      "Abrindo login do Google...";
-
-    await signInWithPopup(
-      auth,
-      googleProvider
-    );
-
-  } catch (erro) {
-
-    console.error(erro);
+    evento.preventDefault();
 
     mensagemLogin.textContent =
-      "Não foi possível realizar o login.";
+      "Entrando...";
+
+    try {
+
+      await signInWithEmailAndPassword(
+        auth,
+        email.value.trim(),
+        senha.value
+      );
+
+      mensagemLogin.textContent = "";
+
+      formLogin.reset();
+
+    } catch (erro) {
+
+      console.error(erro);
+
+      mensagemLogin.textContent =
+        "E-mail ou senha inválidos.";
+
+    }
 
   }
-
-});
+);
 
 
 // ========================================
 // LOGOUT
 // ========================================
 
-btnSair.addEventListener("click", async () => {
+btnSair.addEventListener(
+  "click",
+  async () => {
 
-  try {
+    try {
 
-    await signOut(auth);
+      await signOut(auth);
 
-  } catch (erro) {
+    } catch (erro) {
 
-    console.error(erro);
+      console.error(erro);
+
+    }
 
   }
-
-});
+);
 
 
 // ========================================
-// OBSERVA O USUÁRIO
+// ESTADO DA AUTENTICAÇÃO
 // ========================================
 
-onAuthStateChanged(auth, (usuario) => {
+onAuthStateChanged(
+  auth,
+  (usuario) => {
 
-  if (usuario) {
+    if (usuario) {
 
-    telaLogin.classList.add("hidden");
+      telaLogin.classList.add("hidden");
 
-    sistema.classList.remove("hidden");
+      sistema.classList.remove("hidden");
 
-    nomeUsuario.textContent =
-      usuario.displayName || usuario.email;
+      nomeUsuario.textContent =
+        usuario.email;
 
-  } else {
+    } else {
 
-    sistema.classList.add("hidden");
+      sistema.classList.add("hidden");
 
-    telaLogin.classList.remove("hidden");
+      telaLogin.classList.remove("hidden");
 
-    nomeUsuario.textContent = "";
+      nomeUsuario.textContent = "";
+
+    }
 
   }
-
-});
+);

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
 
@@ -16,7 +17,7 @@
 
 <body>
 
-  <!-- TELA DE LOGIN -->
+  <!-- LOGIN -->
   <main id="telaLogin" class="login-page">
 
     <section class="login-card">
@@ -27,15 +28,57 @@
 
       <h1>Sistema Integrado de Gestão</h1>
 
-      <p>
-        Acesse sua conta para continuar.
+      <p class="login-subtitulo">
+        Informe suas credenciais para acessar.
       </p>
 
-      <button id="btnGoogle" class="btn-google">
-        Entrar com Google
-      </button>
+      <form id="formLogin">
 
-      <p id="mensagemLogin" class="mensagem"></p>
+        <div class="campo">
+
+          <label for="email">
+            E-mail
+          </label>
+
+          <input
+            type="email"
+            id="email"
+            placeholder="seuemail@empresa.com.br"
+            required
+            autocomplete="email"
+          >
+
+        </div>
+
+        <div class="campo">
+
+          <label for="senha">
+            Senha
+          </label>
+
+          <input
+            type="password"
+            id="senha"
+            placeholder="Digite sua senha"
+            required
+            autocomplete="current-password"
+          >
+
+        </div>
+
+        <button
+          type="submit"
+          class="btn-login"
+        >
+          Entrar
+        </button>
+
+      </form>
+
+      <p
+        id="mensagemLogin"
+        class="mensagem"
+      ></p>
 
     </section>
 
@@ -48,9 +91,17 @@
     <header class="topbar">
 
       <div>
-        <h1>Sistema Integrado de Gestão</h1>
-        <p>Gestão empresarial e operacional</p>
+
+        <h1>
+          Sistema Integrado de Gestão
+        </h1>
+
+        <p>
+          Gestão empresarial e operacional
+        </p>
+
       </div>
+
 
       <div class="usuario">
 
@@ -81,23 +132,54 @@
       <section class="cards">
 
         <div class="card">
-          <span>Contratos ativos</span>
-          <strong>0</strong>
+
+          <span>
+            Contratos ativos
+          </span>
+
+          <strong>
+            0
+          </strong>
+
         </div>
 
-        <div class="card">
-          <span>A vencer</span>
-          <strong>0</strong>
-        </div>
 
         <div class="card">
-          <span>Vencidos</span>
-          <strong>0</strong>
+
+          <span>
+            A vencer
+          </span>
+
+          <strong>
+            0
+          </strong>
+
         </div>
 
+
         <div class="card">
-          <span>Valor mensal</span>
-          <strong>R$ 0,00</strong>
+
+          <span>
+            Vencidos
+          </span>
+
+          <strong>
+            0
+          </strong>
+
+        </div>
+
+
+        <div class="card">
+
+          <span>
+            Valor mensal
+          </span>
+
+          <strong>
+            R$ 0,00
+          </strong>
+
         </div>
 
       </section>
@@ -107,7 +189,11 @@
   </div>
 
 
-  <script type="module" src="app.js"></script>
+  <script
+    type="module"
+    src="app.js"
+  ></script>
 
 </body>
+
 </html>
