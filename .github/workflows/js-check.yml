@@ -1,4 +1,4 @@
-name: JS Syntax Check
+name: SIG Quality Check
 
 on:
   pull_request:
@@ -17,3 +17,25 @@ jobs:
             echo "Checking $file"
             node --check "$file"
           done
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/tmp/sig-server.log 2>&1 &
+          echo $! > /tmp/sig-server.pid
+          sleep 2
+      - name: Open SIG in headless Chrome
+        run: |
+          set -e
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=4000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dom.html
+          grep -q 'id="pagina-frota"' /tmp/sig-dom.html
+          grep -q 'id="pagina-almoxarifado"' /tmp/sig-dom.html
+          grep -q 'id="pagina-cotacoes"' /tmp/sig-dom.html
+          grep -q 'id="pagina-controladoria"' /tmp/sig-dom.html
+          grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
+          grep -q 'id="btnEntrar"' /tmp/sig-dom.html
