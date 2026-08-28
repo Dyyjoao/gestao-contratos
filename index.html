@@ -2,11 +2,13 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Sistema Integrado de Gestão Empresarial">
+  <meta name="theme-color" content="#0b1f33">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>SIG - Sistema Integrado de Gestão</title>
-  <link rel="stylesheet" href="style.css?v=10">
-  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="manifest" href="manifest.json?v=11">
 </head>
 <body>
   <main id="telaLogin" class="login-page">
@@ -23,9 +25,9 @@
           <label for="senha">Senha</label>
           <input type="password" id="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
         </div>
-        <button type="submit" class="btn-primario btn-largo">Entrar</button>
+        <button id="btnEntrar" type="submit" class="btn-primario btn-largo">Entrar</button>
       </form>
-      <p id="mensagemLogin" class="mensagem"></p>
+      <p id="mensagemLogin" class="mensagem" aria-live="polite"></p>
     </section>
   </main>
 
@@ -166,7 +168,7 @@
                   <button id="btnCancelarEmpresa" class="btn-secundario" type="button">Cancelar</button>
                   <button class="btn-primario" type="submit">Salvar empresa</button>
                 </div>
-                <p id="mensagemEmpresa" class="mensagem-form"></p>
+                <p id="mensagemEmpresa" class="mensagem-form" aria-live="polite"></p>
               </form>
             </section>
 
@@ -251,7 +253,7 @@
                   <button id="btnCancelarUsuario" class="btn-secundario" type="button">Cancelar</button>
                   <button class="btn-primario" type="submit">Salvar usuário</button>
                 </div>
-                <p id="mensagemUsuario" class="mensagem-form"></p>
+                <p id="mensagemUsuario" class="mensagem-form" aria-live="polite"></p>
               </form>
             </section>
 
@@ -311,7 +313,7 @@
                   <button id="btnCancelarPerfil" class="btn-secundario" type="button">Cancelar</button>
                   <button class="btn-primario" type="submit">Salvar perfil</button>
                 </div>
-                <p id="mensagemPerfil" class="mensagem-form"></p>
+                <p id="mensagemPerfil" class="mensagem-form" aria-live="polite"></p>
               </form>
             </section>
 
@@ -361,7 +363,7 @@
                   <div class="form-acoes">
                     <button class="btn-primario" type="submit">Salvar alterações</button>
                   </div>
-                  <p id="mensagemGrupo" class="mensagem-form"></p>
+                  <p id="mensagemGrupo" class="mensagem-form" aria-live="polite"></p>
                 </form>
               </section>
 
@@ -396,7 +398,7 @@
           <label for="senhaExclusaoEmpresa">Confirme sua senha de administrador</label>
           <input id="senhaExclusaoEmpresa" type="password" autocomplete="current-password" required>
         </div>
-        <p id="mensagemExclusaoEmpresa" class="mensagem-form"></p>
+        <p id="mensagemExclusaoEmpresa" class="mensagem-form" aria-live="polite"></p>
         <div class="form-acoes">
           <button id="btnCancelarExclusaoEmpresa" class="btn-secundario" type="button">Cancelar</button>
           <button class="btn-perigo" type="submit">Excluir permanentemente</button>
@@ -405,6 +407,6 @@
     </section>
   </div>
 
-  <script type="module" src="app.js?v=10"></script>
+  <script type="module" src="app.js?v=11"></script>
 </body>
 </html>
