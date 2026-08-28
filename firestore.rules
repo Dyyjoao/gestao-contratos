@@ -47,6 +47,9 @@ service cloud.firestore {
     function escritaControladoria() {
       return permissao('controladoria','editar') || permissao('controladoria','budget') || permissao('controladoria','forecast') || permissao('controladoria','importar');
     }
+    function gerenciaUsuarios() {
+      return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar');
+    }
 
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
@@ -63,8 +66,10 @@ service cloud.firestore {
 
     match /perfisAcesso/{perfilId} {
       allow read: if usuarioAtivo() && (
-        usuario().data.perfilId == perfilId || administrador() ||
-        (permissao('perfisAcesso','visualizar') && (resource.data.acessoTotal == true || !('grupoId' in resource.data) || resource.data.grupoId == usuario().data.grupoId))
+        usuario().data.perfilId == perfilId ||
+        administrador() ||
+        (permissao('perfisAcesso','visualizar') && (resource.data.acessoTotal == true || !('grupoId' in resource.data) || resource.data.grupoId == usuario().data.grupoId)) ||
+        (gerenciaUsuarios() && resource.data.acessoTotal != true && resource.data.grupoId == usuario().data.grupoId)
       );
       allow create: if permissao('perfisAcesso','cadastrar') && request.resource.data.acessoTotal == false && request.resource.data.grupoId == usuario().data.grupoId;
       allow update: if perfilId != 'administrador' && resource.data.acessoTotal != true && request.resource.data.acessoTotal == false && resource.data.grupoId == usuario().data.grupoId && request.resource.data.grupoId == resource.data.grupoId && (
