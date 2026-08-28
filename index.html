@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -9,16 +10,37 @@
     content="width=device-width, initial-scale=1.0"
   >
 
+  <meta
+    name="description"
+    content="Sistema Integrado de Gestão Empresarial"
+  >
+
   <title>Sistema Integrado de Gestão</title>
 
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
+  <link
+    rel="manifest"
+    href="manifest.json"
+  >
+
 </head>
+
 
 <body>
 
-  <!-- LOGIN -->
-  <main id="telaLogin" class="login-page">
+
+  <!-- ========================================
+       LOGIN
+  ========================================= -->
+
+  <main
+    id="telaLogin"
+    class="login-page"
+  >
 
     <section class="login-card">
 
@@ -26,13 +48,17 @@
         SIG
       </div>
 
-      <h1>Sistema Integrado de Gestão</h1>
+      <h1>
+        Sistema Integrado de Gestão
+      </h1>
 
       <p class="login-subtitulo">
         Informe suas credenciais para acessar.
       </p>
 
+
       <form id="formLogin">
+
 
         <div class="campo">
 
@@ -50,6 +76,7 @@
 
         </div>
 
+
         <div class="campo">
 
           <label for="senha">
@@ -66,6 +93,7 @@
 
         </div>
 
+
         <button
           type="submit"
           class="btn-login"
@@ -73,400 +101,661 @@
           Entrar
         </button>
 
+
       </form>
+
 
       <p
         id="mensagemLogin"
         class="mensagem"
       ></p>
 
+
     </section>
 
   </main>
 
 
-  
-  <!-- SISTEMA -->
-<div id="sistema" class="hidden">
 
-  <div class="app-shell">
+  <!-- ========================================
+       SISTEMA
+  ========================================= -->
 
-    <!-- MENU LATERAL -->
-    <aside class="sidebar">
-
-      <div class="sidebar-brand">
-        <div class="brand-icon">SIG</div>
-
-        <div>
-          <strong>Sistema Integrado</strong>
-          <small>Gestão Empresarial</small>
-        </div>
-      </div>
-
-      <nav class="sidebar-menu">
-
-        <button
-          class="menu-item ativo"
-          data-pagina="dashboard"
-        >
-          Dashboard
-        </button>
-
-        <button
-          class="menu-item"
-          data-pagina="contratos"
-        >
-          Contratos
-        </button>
-
-        <div class="menu-separador"></div>
-
-        <button
-          id="menuAdministracao"
-          class="menu-item hidden"
-          data-pagina="administracao"
-        >
-          Administração
-        </button>
-
-      </nav>
-
-    </aside>
-
-
-    <!-- ÁREA PRINCIPAL -->
-    <div class="main-area">
-
-      <header class="app-topbar">
-
-        <div>
-          <h1 id="tituloPagina">
-            Dashboard
-          </h1>
-
-          <p>
-            Sistema Integrado de Gestão
-          </p>
-        </div>
-
-        <div class="usuario">
-
-          <span id="nomeUsuario"></span>
-
-          <button id="btnSair">
-            Sair
-          </button>
-
-        </div>
-
-      </header>
-
-
-      <main class="conteudo">
-
-        <!-- DASHBOARD -->
-        <section
-          id="pagina-dashboard"
-          class="pagina"
-        >
-
-          <div class="welcome">
-            <h2>Visão Geral</h2>
-            <p>
-              Acompanhe os principais dados da operação.
-            </p>
-          </div>
-
-          <div class="cards">
-
-            <div class="card">
-              <span>Contratos ativos</span>
-              <strong>0</strong>
-            </div>
-
-            <div class="card">
-              <span>A vencer</span>
-              <strong>0</strong>
-            </div>
-
-            <div class="card">
-              <span>Vencidos</span>
-              <strong>0</strong>
-            </div>
-
-            <div class="card">
-              <span>Valor mensal</span>
-              <strong>R$ 0,00</strong>
-            </div>
-
-          </div>
-
-        </section>
-
-
-        <!-- CONTRATOS -->
-        <section
-          id="pagina-contratos"
-          class="pagina hidden"
-        >
-
-          <div class="welcome">
-            <h2>Gestão de Contratos</h2>
-
-            <p>
-              Cadastro, acompanhamento e controle contratual.
-            </p>
-          </div>
-
-          <div class="painel-vazio">
-            <h3>Módulo de Contratos</h3>
-
-            <p>
-              Esta será nossa próxima área de desenvolvimento.
-            </p>
-          </div>
-
-        </section>
-
-
-        <!-- ADMINISTRAÇÃO -->
-        <section
-          id="pagina-administracao"
-          class="pagina hidden"
-        >
-
-          <div class="welcome">
-            <h2>Administração</h2>
-
-            <p>
-              Configurações e cadastros estruturais do sistema.
-            </p>
-          </div>
-
-
-          <div class="admin-grid">
-
-            <button
-  id="cardEmpresas"
-  class="admin-card admin-card-button"
-  type="button"
->
-  <h3>Empresas</h3>
-
-  <p>
-    Cadastro e gestão das empresas.
-  </p>
-</button>
-
-            <div class="admin-card">
-              <h3>Usuários</h3>
-              <p>
-                Usuários, bloqueios e acessos.
-              </p>
-            </div>
-
-            <div class="admin-card">
-              <h3>Perfis de Acesso</h3>
-              <p>
-                Grupos e permissões por módulo.
-              </p>
-            </div>
-
-            <div class="admin-card">
-              <h3>Grupo Empresarial</h3>
-              <p>
-                Estrutura e consolidação das empresas.
-              </p>
-            </div>
-
-          </div>
-
-        </section>
-
-      </main>
-
-    </div>
-
-  </div>
-
-</div>
-<!-- EMPRESAS -->
-<section
-  id="pagina-empresas"
-  class="pagina hidden"
->
-
-  <div class="pagina-cabecalho">
-
-    <div>
-
-      <button
-        id="btnVoltarAdministracao"
-        class="btn-voltar"
-        type="button"
-      >
-        ← Administração
-      </button>
-
-      <h2>Empresas</h2>
-
-      <p>
-        Cadastro das empresas pertencentes ao grupo empresarial.
-      </p>
-
-    </div>
-
-    <button
-      id="btnMostrarNovaEmpresa"
-      class="btn-primario"
-      type="button"
-    >
-      + Nova empresa
-    </button>
-
-  </div>
-
-
-  <!-- FORMULÁRIO -->
-  <section
-    id="formNovaEmpresaContainer"
-    class="form-card hidden"
+  <div
+    id="sistema"
+    class="hidden"
   >
 
-    <h3>Nova empresa</h3>
 
-    <form id="formNovaEmpresa">
-
-      <div class="form-grid">
-
-        <div class="campo">
-
-          <label for="empresaRazaoSocial">
-            Razão social
-          </label>
-
-          <input
-            id="empresaRazaoSocial"
-            type="text"
-            required
-          >
-
-        </div>
+    <div class="app-shell">
 
 
-        <div class="campo">
+      <!-- ========================================
+           MENU LATERAL
+      ========================================= -->
 
-          <label for="empresaNomeFantasia">
-            Nome fantasia
-          </label>
+      <aside class="sidebar">
 
-          <input
-            id="empresaNomeFantasia"
-            type="text"
-            required
-          >
+
+        <div class="sidebar-brand">
+
+          <div class="brand-icon">
+            SIG
+          </div>
+
+          <div>
+
+            <strong>
+              Sistema Integrado
+            </strong>
+
+            <small>
+              Gestão Empresarial
+            </small>
+
+          </div>
 
         </div>
 
 
-        <div class="campo">
 
-          <label for="empresaCnpj">
-            CNPJ
-          </label>
+        <nav class="sidebar-menu">
 
-          <input
-            id="empresaCnpj"
-            type="text"
-            maxlength="18"
-            required
+
+          <button
+            class="menu-item ativo"
+            data-pagina="dashboard"
+            type="button"
+          >
+            Dashboard
+          </button>
+
+
+          <button
+            class="menu-item"
+            data-pagina="contratos"
+            type="button"
+          >
+            Contratos
+          </button>
+
+
+          <div class="menu-separador"></div>
+
+
+          <button
+            id="menuAdministracao"
+            class="menu-item hidden"
+            data-pagina="administracao"
+            type="button"
+          >
+            Administração
+          </button>
+
+
+        </nav>
+
+
+      </aside>
+
+
+
+      <!-- ========================================
+           ÁREA PRINCIPAL
+      ========================================= -->
+
+      <div class="main-area">
+
+
+        <!-- ========================================
+             CABEÇALHO
+        ========================================= -->
+
+        <header class="app-topbar">
+
+
+          <div>
+
+            <h1 id="tituloPagina">
+              Dashboard
+            </h1>
+
+            <p>
+              Sistema Integrado de Gestão
+            </p>
+
+          </div>
+
+
+          <!--
+            FUTURAMENTE ENTRARÃO AQUI:
+
+            Grupo:   [ Grupo Empresarial ▼ ]
+            Empresa: [ Empresa selecionada ▼ ]
+
+            permitindo troca de empresa
+            e visão consolidada.
+          -->
+
+
+          <div class="usuario">
+
+            <span id="nomeUsuario"></span>
+
+            <button
+              id="btnSair"
+              type="button"
+            >
+              Sair
+            </button>
+
+          </div>
+
+
+        </header>
+
+
+
+        <!-- ========================================
+             CONTEÚDO DAS PÁGINAS
+        ========================================= -->
+
+        <main class="conteudo">
+
+
+
+          <!-- ========================================
+               DASHBOARD
+          ========================================= -->
+
+          <section
+            id="pagina-dashboard"
+            class="pagina"
           >
 
-        </div>
 
-      </div>
+            <div class="welcome">
 
+              <h2>
+                Visão Geral
+              </h2>
 
-      <div class="form-acoes">
+              <p>
+                Acompanhe os principais dados da operação.
+              </p>
 
-        <button
-          id="btnCancelarEmpresa"
-          class="btn-secundario"
-          type="button"
-        >
-          Cancelar
-        </button>
-
-        <button
-          class="btn-primario"
-          type="submit"
-        >
-          Salvar empresa
-        </button>
-
-      </div>
-
-      <p
-        id="mensagemEmpresa"
-        class="mensagem-form"
-      ></p>
-
-    </form>
-
-  </section>
+            </div>
 
 
-  <!-- LISTAGEM -->
-  <section class="lista-card">
 
-    <div class="lista-cabecalho">
+            <div class="cards">
 
-      <div>
-        <h3>Empresas cadastradas</h3>
-        <p id="quantidadeEmpresas">
-          Carregando...
-        </p>
+
+              <div class="card">
+
+                <span>
+                  Contratos ativos
+                </span>
+
+                <strong>
+                  0
+                </strong>
+
+              </div>
+
+
+              <div class="card">
+
+                <span>
+                  A vencer
+                </span>
+
+                <strong>
+                  0
+                </strong>
+
+              </div>
+
+
+              <div class="card">
+
+                <span>
+                  Vencidos
+                </span>
+
+                <strong>
+                  0
+                </strong>
+
+              </div>
+
+
+              <div class="card">
+
+                <span>
+                  Valor mensal
+                </span>
+
+                <strong>
+                  R$ 0,00
+                </strong>
+
+              </div>
+
+
+            </div>
+
+
+          </section>
+
+
+
+          <!-- ========================================
+               CONTRATOS
+          ========================================= -->
+
+          <section
+            id="pagina-contratos"
+            class="pagina hidden"
+          >
+
+
+            <div class="welcome">
+
+              <h2>
+                Gestão de Contratos
+              </h2>
+
+              <p>
+                Cadastro, acompanhamento e controle contratual.
+              </p>
+
+            </div>
+
+
+            <div class="painel-vazio">
+
+              <h3>
+                Módulo de Contratos
+              </h3>
+
+              <p>
+                Esta será nossa próxima área de desenvolvimento.
+              </p>
+
+            </div>
+
+
+          </section>
+
+
+
+          <!-- ========================================
+               ADMINISTRAÇÃO
+          ========================================= -->
+
+          <section
+            id="pagina-administracao"
+            class="pagina hidden"
+          >
+
+
+            <div class="welcome">
+
+              <h2>
+                Administração
+              </h2>
+
+              <p>
+                Configurações e cadastros estruturais do sistema.
+              </p>
+
+            </div>
+
+
+
+            <div class="admin-grid">
+
+
+              <!-- EMPRESAS -->
+
+              <button
+                id="cardEmpresas"
+                class="admin-card admin-card-button"
+                type="button"
+              >
+
+                <h3>
+                  Empresas
+                </h3>
+
+                <p>
+                  Cadastro e gestão das empresas.
+                </p>
+
+              </button>
+
+
+
+              <!-- USUÁRIOS -->
+
+              <div class="admin-card">
+
+                <h3>
+                  Usuários
+                </h3>
+
+                <p>
+                  Usuários, bloqueios e acessos.
+                </p>
+
+              </div>
+
+
+
+              <!-- PERFIS -->
+
+              <div class="admin-card">
+
+                <h3>
+                  Perfis de Acesso
+                </h3>
+
+                <p>
+                  Grupos e permissões por módulo.
+                </p>
+
+              </div>
+
+
+
+              <!-- GRUPO EMPRESARIAL -->
+
+              <div class="admin-card">
+
+                <h3>
+                  Grupo Empresarial
+                </h3>
+
+                <p>
+                  Estrutura e consolidação das empresas.
+                </p>
+
+              </div>
+
+
+            </div>
+
+
+          </section>
+
+
+
+          <!-- ========================================
+               EMPRESAS
+          ========================================= -->
+
+          <section
+            id="pagina-empresas"
+            class="pagina hidden"
+          >
+
+
+            <!-- CABEÇALHO DA PÁGINA -->
+
+            <div class="pagina-cabecalho">
+
+
+              <div>
+
+                <button
+                  id="btnVoltarAdministracao"
+                  class="btn-voltar"
+                  type="button"
+                >
+                  ← Administração
+                </button>
+
+
+                <h2>
+                  Empresas
+                </h2>
+
+
+                <p>
+                  Cadastro das empresas pertencentes ao grupo empresarial.
+                </p>
+
+              </div>
+
+
+
+              <button
+                id="btnMostrarNovaEmpresa"
+                class="btn-primario"
+                type="button"
+              >
+                + Nova empresa
+              </button>
+
+
+            </div>
+
+
+
+            <!-- ========================================
+                 FORMULÁRIO NOVA EMPRESA
+            ========================================= -->
+
+            <section
+              id="formNovaEmpresaContainer"
+              class="form-card hidden"
+            >
+
+
+              <h3>
+                Nova empresa
+              </h3>
+
+
+              <form id="formNovaEmpresa">
+
+
+                <div class="form-grid">
+
+
+                  <div class="campo">
+
+                    <label for="empresaRazaoSocial">
+                      Razão social
+                    </label>
+
+                    <input
+                      id="empresaRazaoSocial"
+                      type="text"
+                      required
+                    >
+
+                  </div>
+
+
+
+                  <div class="campo">
+
+                    <label for="empresaNomeFantasia">
+                      Nome fantasia
+                    </label>
+
+                    <input
+                      id="empresaNomeFantasia"
+                      type="text"
+                      required
+                    >
+
+                  </div>
+
+
+
+                  <div class="campo">
+
+                    <label for="empresaCnpj">
+                      CNPJ
+                    </label>
+
+                    <input
+                      id="empresaCnpj"
+                      type="text"
+                      maxlength="18"
+                      placeholder="00.000.000/0000-00"
+                      required
+                    >
+
+                  </div>
+
+
+                </div>
+
+
+
+                <div class="form-acoes">
+
+
+                  <button
+                    id="btnCancelarEmpresa"
+                    class="btn-secundario"
+                    type="button"
+                  >
+                    Cancelar
+                  </button>
+
+
+                  <button
+                    class="btn-primario"
+                    type="submit"
+                  >
+                    Salvar empresa
+                  </button>
+
+
+                </div>
+
+
+
+                <p
+                  id="mensagemEmpresa"
+                  class="mensagem-form"
+                ></p>
+
+
+              </form>
+
+
+            </section>
+
+
+
+            <!-- ========================================
+                 LISTAGEM DAS EMPRESAS
+            ========================================= -->
+
+            <section class="lista-card">
+
+
+              <div class="lista-cabecalho">
+
+                <div>
+
+                  <h3>
+                    Empresas cadastradas
+                  </h3>
+
+                  <p id="quantidadeEmpresas">
+                    Carregando...
+                  </p>
+
+                </div>
+
+              </div>
+
+
+
+              <div class="tabela-container">
+
+
+                <table class="tabela">
+
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Razão social
+                      </th>
+
+                      <th>
+                        Nome fantasia
+                      </th>
+
+                      <th>
+                        CNPJ
+                      </th>
+
+                      <th>
+                        Status
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+
+                  <tbody id="listaEmpresas">
+
+                    <tr>
+
+                      <td colspan="4">
+                        Carregando empresas...
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+
+                </table>
+
+
+              </div>
+
+
+            </section>
+
+
+          </section>
+
+
+
+        </main>
+
       </div>
 
     </div>
 
+  </div>
 
-    <div class="tabela-container">
 
-      <table class="tabela">
 
-        <thead>
+  <!-- ========================================
+       JAVASCRIPT
+  ========================================= -->
 
-          <tr>
-            <th>Razão social</th>
-            <th>Nome fantasia</th>
-            <th>CNPJ</th>
-            <th>Status</th>
-          </tr>
-
-        </thead>
-
-        <tbody id="listaEmpresas">
-
-          <tr>
-            <td colspan="4">
-              Carregando empresas...
-            </td>
-          </tr>
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  </section>
-
-</section>
   <script
     type="module"
     src="app.js"
   ></script>
+
 
 </body>
 
