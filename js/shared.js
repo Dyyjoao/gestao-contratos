@@ -58,8 +58,8 @@ export async function listarDocumentos(nomeColecao){
     s.forEach(r=>saida.push({id:r.id,...r.data()}));
   }else{
     for(const empresaId of idsEmpresasPermitidas()){
-      const s=await getDocs(query(collection(db,nomeColecao),where("empresaId","==",empresaId)));
-      s.forEach(r=>{const d=r.data();if(d.grupoId===state.usuario.grupoId)saida.push({id:r.id,...d})});
+      const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",state.usuario.grupoId),where("empresaId","==",empresaId)));
+      s.forEach(r=>saida.push({id:r.id,...r.data()}));
     }
   }
   return saida;
@@ -75,7 +75,6 @@ export async function excluirDocumento(nomeColecao,id){await deleteDoc(doc(db,no
 export function abrirBox(box,focus){box?.classList.remove("hidden");setTimeout(()=>focus?.focus(),20)}
 export function fecharBox(box,form,mensagem){form?.reset();box?.classList.add("hidden");msg(mensagem,"")}
 export function scrollForm(box){box?.scrollIntoView({behavior:"smooth",block:"start"})}
-
 export function setBotaoPermissao(botao,permitido){botao?.classList.toggle("hidden",!permitido)}
 export function confirmar(texto){return window.confirm(texto)}
 
