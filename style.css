@@ -256,3 +256,239 @@ body {
 
   color: #b91c1c;
 }
+/* ========================================
+   ESTRUTURA DO SISTEMA
+======================================== */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+}
+
+
+/* MENU LATERAL */
+
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: #111827;
+  color: white;
+  padding: 22px 16px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 8px 30px;
+}
+
+.brand-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: white;
+  color: #111827;
+
+  border-radius: 10px;
+
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.sidebar-brand strong {
+  display: block;
+  font-size: 14px;
+}
+
+.sidebar-brand small {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-item {
+  width: 100%;
+
+  background: transparent;
+  color: #d1d5db;
+
+  border: none;
+  border-radius: 8px;
+
+  padding: 12px 14px;
+
+  text-align: left;
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: #1f2937;
+  color: white;
+}
+
+.menu-item.ativo {
+  background: #374151;
+  color: white;
+}
+
+.menu-separador {
+  height: 1px;
+  background: #374151;
+  margin: 12px 0;
+}
+
+
+/* ÁREA PRINCIPAL */
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+  background: #f4f6f8;
+}
+
+.app-topbar {
+  min-height: 80px;
+
+  background: white;
+
+  padding: 18px 28px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-topbar h1 {
+  font-size: 22px;
+  margin-bottom: 3px;
+}
+
+.app-topbar p {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.conteudo {
+  padding: 28px;
+}
+
+.pagina {
+  max-width: 1300px;
+  margin: auto;
+}
+
+
+/* ADMINISTRAÇÃO */
+
+.admin-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 18px;
+}
+
+.admin-card,
+.painel-vazio {
+  background: white;
+
+  padding: 24px;
+
+  border-radius: 12px;
+
+  border: 1px solid #e5e7eb;
+
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.04);
+}
+
+.admin-card h3,
+.painel-vazio h3 {
+  margin-bottom: 8px;
+}
+
+.admin-card p,
+.painel-vazio p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+
+/* RESPONSIVIDADE */
+
+@media (max-width: 700px) {
+
+  .sidebar {
+    width: 190px;
+  }
+
+  .sidebar-brand div:last-child {
+    display: none;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .conteudo {
+    padding: 18px;
+  }
+
+}
+
+
+@media (max-width: 500px) {
+
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+
+    padding: 12px;
+  }
+
+  .sidebar-brand {
+    padding-bottom: 12px;
+  }
+
+  .sidebar-menu {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .menu-item {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .menu-separador {
+    display: none;
+  }
+
+  .app-topbar {
+    padding: 15px;
+
+    align-items: flex-start;
+
+    gap: 12px;
+  }
+
+}

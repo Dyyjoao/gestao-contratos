@@ -35,6 +35,11 @@ const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const menuAdministracao =
+  document.getElementById("menuAdministracao");
+
+const tituloPagina =
+  document.getElementById("tituloPagina");
 
 // ========================================
 // ELEMENTOS
@@ -128,7 +133,6 @@ btnSair.addEventListener(
 // ========================================
 // ESTADO DA AUTENTICAÇÃO
 // ========================================
-
 onAuthStateChanged(
   auth,
   async (usuario) => {
@@ -141,11 +145,17 @@ onAuthStateChanged(
 
       nomeUsuario.textContent = "";
 
+      menuAdministracao.classList.add("hidden");
+
       return;
     }
 
 
     try {
+
+      // ========================================
+      // BUSCA O USUÁRIO
+      // ========================================
 
       const usuarioRef = doc(
         db,
@@ -153,20 +163,16 @@ onAuthStateChanged(
         usuario.uid
       );
 
-
       const usuarioSnap =
         await getDoc(usuarioRef);
 
-
-      // Usuário autenticou,
-      // mas não existe no cadastro interno
 
       if (!usuarioSnap.exists()) {
 
         await signOut(auth);
 
         mensagemLogin.textContent =
-          "Usuário não autorizado a acessar o sistema.";
+          "Usuário não autorizado.";
 
         return;
       }
@@ -175,8 +181,6 @@ onAuthStateChanged(
       const dadosUsuario =
         usuarioSnap.data();
 
-
-      // Usuário cadastrado, porém bloqueado
 
       if (dadosUsuario.ativo !== true) {
 
@@ -189,33 +193,161 @@ onAuthStateChanged(
       }
 
 
-      // USUÁRIO AUTORIZADO
+      // ========================================
+      // BUSCA O PERFIL DE ACESSO
+      // ========================================
+
+      const perfilRef = doc(
+        db,
+        "perfisAcesso",
+        dadosUsuario.perfilId
+      );
+
+      const perfilSnap =
+        await getDoc(perfilRef);
+
+
+      if (!perfilSnap.exists()) {
+
+        await signOut(auth);
+
+        mensagemLogin.textContent =
+          "Perfil de acesso não encontrado.";
+
+        return;
+      }
+
+
+      const dadosPerfil =
+        perfilSnap.data();
+
+
+      if (dadosPerfil.ativo !== true) {
+
+        await signOut(auth);
+
+        mensagemLogin.textContent =
+          "Perfil de acesso desativado.";
+
+        return;
+      }
+
+
+      // ========================================
+      // LIBERA O SISTEMA
+      // ========================================
 
       telaLogin.classList.add("hidden");
 
       sistema.classList.remove("hidden");
-
 
       nomeUsuario.textContent =
         dadosUsuario.nome ||
         usuario.email;
 
 
+      // ========================================
+      // PERMISSÃO ADMINISTRATIVA
+      // ========================================
+
+      if (dadosPerfil.acessoTotal === true) {
+
+        menuAdministracao
+          .classList.remove("hidden");
+
+      } else {
+
+        menuAdministracao
+          .classList.add("hidden");
+
+      }
+
+
     } catch (erro) {
 
       console.error(
-        "Erro ao verificar usuário:",
+        "Erro de autorização:",
         erro
       );
 
-
       await signOut(auth);
 
-
       mensagemLogin.textContent =
-        "Não foi possível verificar sua autorização.";
+        "Erro ao verificar as permissões.";
 
     }
 
   }
 );
+
+// ========================================
+// NAVEGAÇÃO DO SISTEMA
+// ========================================
+
+const itensMenu =
+  document.querySelectorAll(".menu-item");
+
+const paginas =
+  document.querySelectorAll(".pagina");
+
+
+itensMenu.forEach((item) => {
+
+  item.addEventListener(
+    "click",
+    () => {
+
+      const paginaSelecionada =
+        item.dataset.pagina;
+
+
+      paginas.forEach((pagina) => {
+
+        pagina.classList.add("hidden");
+
+      });
+
+
+      itensMenu.forEach((botao) => {
+
+        botao.classList.remove("ativo");
+
+      });
+
+
+      const pagina =
+        document.getElementById(
+          `pagina-${paginaSelecionada}`
+        );
+
+
+      if (pagina) {
+
+        pagina.classList.remove("hidden");
+
+      }
+
+
+      item.classList.add("ativo");
+
+
+      const titulos = {
+
+        dashboard: "Dashboard",
+
+        contratos: "Contratos",
+
+        administracao: "Administração"
+
+      };
+
+
+      tituloPagina.textContent =
+        titulos[paginaSelecionada] ||
+        "Sistema Integrado";
+
+    }
+
+  );
+
+});

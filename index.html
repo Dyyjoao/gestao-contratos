@@ -86,109 +86,205 @@
 
 
   <!-- SISTEMA -->
-  <div id="sistema" class="hidden">
+  <!-- SISTEMA -->
+<div id="sistema" class="hidden">
 
-    <header class="topbar">
+  <div class="app-shell">
 
-      <div>
+    <!-- MENU LATERAL -->
+    <aside class="sidebar">
 
-        <h1>
-          Sistema Integrado de Gestão
-        </h1>
+      <div class="sidebar-brand">
+        <div class="brand-icon">SIG</div>
 
-        <p>
-          Gestão empresarial e operacional
-        </p>
-
+        <div>
+          <strong>Sistema Integrado</strong>
+          <small>Gestão Empresarial</small>
+        </div>
       </div>
 
+      <nav class="sidebar-menu">
 
-      <div class="usuario">
-
-        <span id="nomeUsuario"></span>
-
-        <button id="btnSair">
-          Sair
+        <button
+          class="menu-item ativo"
+          data-pagina="dashboard"
+        >
+          Dashboard
         </button>
 
-      </div>
+        <button
+          class="menu-item"
+          data-pagina="contratos"
+        >
+          Contratos
+        </button>
 
-    </header>
+        <div class="menu-separador"></div>
+
+        <button
+          id="menuAdministracao"
+          class="menu-item hidden"
+          data-pagina="administracao"
+        >
+          Administração
+        </button>
+
+      </nav>
+
+    </aside>
 
 
-    <main class="container">
+    <!-- ÁREA PRINCIPAL -->
+    <div class="main-area">
 
-      <section class="welcome">
+      <header class="app-topbar">
 
-        <h2>Dashboard</h2>
+        <div>
+          <h1 id="tituloPagina">
+            Dashboard
+          </h1>
 
-        <p>
-          Bem-vindo ao sistema.
-        </p>
+          <p>
+            Sistema Integrado de Gestão
+          </p>
+        </div>
 
-      </section>
+        <div class="usuario">
 
+          <span id="nomeUsuario"></span>
 
-      <section class="cards">
-
-        <div class="card">
-
-          <span>
-            Contratos ativos
-          </span>
-
-          <strong>
-            0
-          </strong>
+          <button id="btnSair">
+            Sair
+          </button>
 
         </div>
 
-
-        <div class="card">
-
-          <span>
-            A vencer
-          </span>
-
-          <strong>
-            0
-          </strong>
-
-        </div>
+      </header>
 
 
-        <div class="card">
+      <main class="conteudo">
 
-          <span>
-            Vencidos
-          </span>
+        <!-- DASHBOARD -->
+        <section
+          id="pagina-dashboard"
+          class="pagina"
+        >
 
-          <strong>
-            0
-          </strong>
+          <div class="welcome">
+            <h2>Visão Geral</h2>
+            <p>
+              Acompanhe os principais dados da operação.
+            </p>
+          </div>
 
-        </div>
+          <div class="cards">
+
+            <div class="card">
+              <span>Contratos ativos</span>
+              <strong>0</strong>
+            </div>
+
+            <div class="card">
+              <span>A vencer</span>
+              <strong>0</strong>
+            </div>
+
+            <div class="card">
+              <span>Vencidos</span>
+              <strong>0</strong>
+            </div>
+
+            <div class="card">
+              <span>Valor mensal</span>
+              <strong>R$ 0,00</strong>
+            </div>
+
+          </div>
+
+        </section>
 
 
-        <div class="card">
+        <!-- CONTRATOS -->
+        <section
+          id="pagina-contratos"
+          class="pagina hidden"
+        >
 
-          <span>
-            Valor mensal
-          </span>
+          <div class="welcome">
+            <h2>Gestão de Contratos</h2>
 
-          <strong>
-            R$ 0,00
-          </strong>
+            <p>
+              Cadastro, acompanhamento e controle contratual.
+            </p>
+          </div>
 
-        </div>
+          <div class="painel-vazio">
+            <h3>Módulo de Contratos</h3>
 
-      </section>
+            <p>
+              Esta será nossa próxima área de desenvolvimento.
+            </p>
+          </div>
 
-    </main>
+        </section>
+
+
+        <!-- ADMINISTRAÇÃO -->
+        <section
+          id="pagina-administracao"
+          class="pagina hidden"
+        >
+
+          <div class="welcome">
+            <h2>Administração</h2>
+
+            <p>
+              Configurações e cadastros estruturais do sistema.
+            </p>
+          </div>
+
+
+          <div class="admin-grid">
+
+            <div class="admin-card">
+              <h3>Empresas</h3>
+              <p>
+                Cadastro e gestão das empresas.
+              </p>
+            </div>
+
+            <div class="admin-card">
+              <h3>Usuários</h3>
+              <p>
+                Usuários, bloqueios e acessos.
+              </p>
+            </div>
+
+            <div class="admin-card">
+              <h3>Perfis de Acesso</h3>
+              <p>
+                Grupos e permissões por módulo.
+              </p>
+            </div>
+
+            <div class="admin-card">
+              <h3>Grupo Empresarial</h3>
+              <p>
+                Estrutura e consolidação das empresas.
+              </p>
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+
+    </div>
 
   </div>
 
-
+</div>
   <script
     type="module"
     src="app.js"
