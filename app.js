@@ -10,4 +10,5 @@ import "./js/inventory.js";
 import "./js/quotes.js";
 import "./js/controllership.js";
 import "./js/dashboard.js";
+import "./js/permission-ui.js";
 import "./js/polish.js";
