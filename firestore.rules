@@ -2,46 +2,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function logado() {
-      return request.auth != null;
-    }
-
-    function usuarioRef() {
-      return /databases/$(database)/documents/usuarios/$(request.auth.uid);
-    }
-
-    function usuarioExiste() {
-      return logado() && exists(usuarioRef());
-    }
-
-    function usuario() {
-      return get(usuarioRef());
-    }
-
-    function usuarioAtivo() {
-      return usuarioExiste() && usuario().data.ativo == true;
-    }
-
-    function perfilRef() {
-      return /databases/$(database)/documents/perfisAcesso/$(usuario().data.perfilId);
-    }
-
-    function perfilExiste() {
-      return usuarioAtivo() && exists(perfilRef());
-    }
-
-    function perfil() {
-      return get(perfilRef());
-    }
-
-    function perfilAtivo() {
-      return perfilExiste() && perfil().data.ativo == true;
-    }
-
-    function administrador() {
-      return perfilAtivo() && perfil().data.acessoTotal == true;
-    }
+    function logado() { return request.auth != null; }
+    function usuarioRef() { return /databases/$(database)/documents/usuarios/$(request.auth.uid); }
+    function usuarioExiste() { return logado() && exists(usuarioRef()); }
+    function usuario() { return get(usuarioRef()); }
+    function usuarioAtivo() { return usuarioExiste() && usuario().data.ativo == true; }
+    function perfilRef() { return /databases/$(database)/documents/perfisAcesso/$(usuario().data.perfilId); }
+    function perfilExiste() { return usuarioAtivo() && exists(perfilRef()); }
+    function perfil() { return get(perfilRef()); }
+    function perfilAtivo() { return perfilExiste() && perfil().data.ativo == true; }
+    function administrador() { return perfilAtivo() && perfil().data.acessoTotal == true; }
 
     function permissao(modulo, acao) {
       return perfilAtivo() && (
@@ -55,171 +25,122 @@ service cloud.firestore {
       );
     }
 
-    function mesmoGrupo(grupoId) {
-      return usuarioAtivo() &&
-        usuario().data.grupoId == grupoId;
-    }
-
-    function acessoGlobal() {
-      return usuarioAtivo() &&
-        'acessoGlobal' in usuario().data &&
-        usuario().data.acessoGlobal == true;
-    }
-
+    function mesmoGrupo(grupoId) { return usuarioAtivo() && usuario().data.grupoId == grupoId; }
+    function acessoGlobal() { return usuarioAtivo() && ('acessoGlobal' in usuario().data) && usuario().data.acessoGlobal == true; }
     function acessoEmpresa(empresaId) {
       return usuarioAtivo() && (
-        administrador() ||
-        acessoGlobal() ||
+        administrador() || acessoGlobal() ||
         usuario().data.empresaId == empresaId ||
-        (
-          'empresasAcesso' in usuario().data &&
-          usuario().data.empresasAcesso is list &&
-          empresaId in usuario().data.empresasAcesso
-        )
+        (('empresasAcesso' in usuario().data) && usuario().data.empresasAcesso is list && empresaId in usuario().data.empresasAcesso)
       );
     }
-
+    function documentoAcessivel(dados) {
+      return mesmoGrupo(dados.grupoId) && acessoEmpresa(dados.empresaId);
+    }
     function podeAtribuirPerfil(perfilId) {
-      return perfilId != 'administrador' || administrador();
+      return administrador() || (
+        perfilId != 'administrador' &&
+        exists(/databases/$(database)/documents/perfisAcesso/$(perfilId)) &&
+        get(/databases/$(database)/documents/perfisAcesso/$(perfilId)).data.acessoTotal != true
+      );
+    }
+    function escritaControladoria() {
+      return permissao('controladoria','editar') || permissao('controladoria','budget') || permissao('controladoria','forecast') || permissao('controladoria','importar');
     }
 
     match /usuarios/{usuarioId} {
-      // O próprio usuário precisa ler seu cadastro para concluir o login,
-      // inclusive quando estiver inativo, para receber a mensagem correta.
       allow read: if logado() && (
         request.auth.uid == usuarioId ||
-        (
-          permissao('usuarios', 'visualizar') &&
-          resource.data.grupoId == usuario().data.grupoId
-        )
+        (permissao('usuarios','visualizar') && resource.data.grupoId == usuario().data.grupoId)
       );
-
-      allow create: if permissao('usuarios', 'cadastrar') &&
-        request.resource.data.grupoId == usuario().data.grupoId &&
-        podeAtribuirPerfil(request.resource.data.perfilId);
-
-      // Edição cadastral e troca de acesso.
-      allow update: if resource.data.grupoId == usuario().data.grupoId &&
-        request.resource.data.grupoId == resource.data.grupoId &&
-        podeAtribuirPerfil(request.resource.data.perfilId) &&
-        (
-          (
-            permissao('usuarios', 'editar') &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'nome',
-              'perfilId',
-              'empresaId',
-              'acessoGlobal',
-              'empresasAcesso',
-              'atualizadoEm'
-            ])
-          ) ||
-          (
-            permissao('usuarios', 'inativar') &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'ativo',
-              'atualizadoEm'
-            ])
-          )
-        );
-
+      allow create: if permissao('usuarios','cadastrar') && request.resource.data.grupoId == usuario().data.grupoId && podeAtribuirPerfil(request.resource.data.perfilId);
+      allow update: if resource.data.grupoId == usuario().data.grupoId && request.resource.data.grupoId == resource.data.grupoId && podeAtribuirPerfil(request.resource.data.perfilId) && (
+        (permissao('usuarios','editar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','perfilId','empresaId','acessoGlobal','empresasAcesso','atualizadoEm'])) ||
+        (permissao('usuarios','inativar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']))
+      );
       allow delete: if false;
     }
 
     match /perfisAcesso/{perfilId} {
-      // Todo usuário precisa ler o perfil que está atribuído a ele.
       allow read: if usuarioAtivo() && (
-        usuario().data.perfilId == perfilId ||
-        administrador() ||
-        (
-          permissao('perfisAcesso', 'visualizar') &&
-          (
-            resource.data.acessoTotal == true ||
-            !('grupoId' in resource.data) ||
-            resource.data.grupoId == usuario().data.grupoId
-          )
-        )
+        usuario().data.perfilId == perfilId || administrador() ||
+        (permissao('perfisAcesso','visualizar') && (resource.data.acessoTotal == true || !('grupoId' in resource.data) || resource.data.grupoId == usuario().data.grupoId))
       );
-
-      allow create: if permissao('perfisAcesso', 'cadastrar') &&
-        request.resource.data.acessoTotal == false &&
-        request.resource.data.grupoId == usuario().data.grupoId;
-
-      allow update: if perfilId != 'administrador' &&
-        resource.data.acessoTotal != true &&
-        request.resource.data.acessoTotal == false &&
-        resource.data.grupoId == usuario().data.grupoId &&
-        request.resource.data.grupoId == resource.data.grupoId &&
-        (
-          (
-            permissao('perfisAcesso', 'editar') &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'nome',
-              'descricao',
-              'permissoes',
-              'atualizadoEm'
-            ])
-          ) ||
-          (
-            permissao('perfisAcesso', 'inativar') &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'ativo',
-              'atualizadoEm'
-            ])
-          )
-        );
-
+      allow create: if permissao('perfisAcesso','cadastrar') && request.resource.data.acessoTotal == false && request.resource.data.grupoId == usuario().data.grupoId;
+      allow update: if perfilId != 'administrador' && resource.data.acessoTotal != true && request.resource.data.acessoTotal == false && resource.data.grupoId == usuario().data.grupoId && request.resource.data.grupoId == resource.data.grupoId && (
+        (permissao('perfisAcesso','editar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','descricao','permissoes','atualizadoEm'])) ||
+        (permissao('perfisAcesso','inativar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']))
+      );
       allow delete: if false;
     }
 
     match /gruposEmpresariais/{grupoId} {
-      // O grupo do usuário é lido durante o login.
       allow read: if usuarioAtivo() && usuario().data.grupoId == grupoId;
-
-      allow create: if administrador() &&
-        request.resource.data.ativo == true;
-
-      allow update: if mesmoGrupo(grupoId) &&
-        permissao('grupoEmpresarial', 'editar') &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'nome',
-          'atualizadoEm'
-        ]);
-
+      allow create: if administrador() && request.resource.data.ativo == true;
+      allow update: if mesmoGrupo(grupoId) && permissao('grupoEmpresarial','editar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','atualizadoEm']);
       allow delete: if false;
     }
 
     match /empresas/{empresaId} {
-      allow read: if acessoEmpresa(empresaId) &&
-        mesmoGrupo(resource.data.grupoId);
+      allow read: if acessoEmpresa(empresaId) && mesmoGrupo(resource.data.grupoId);
+      allow create: if permissao('empresas','cadastrar') && request.resource.data.grupoId == usuario().data.grupoId;
+      allow update: if mesmoGrupo(resource.data.grupoId) && request.resource.data.grupoId == resource.data.grupoId && (
+        (permissao('empresas','editar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['razaoSocial','nomeFantasia','cnpj','cnpjNumeros','atualizadoEm'])) ||
+        (permissao('empresas','inativar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']))
+      );
+      allow delete: if mesmoGrupo(resource.data.grupoId) && permissao('empresas','excluir');
+    }
 
-      allow create: if permissao('empresas', 'cadastrar') &&
-        request.resource.data.grupoId == usuario().data.grupoId;
+    match /contratos/{id} {
+      allow read: if permissao('contratos','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('contratos','cadastrar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('contratos','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if permissao('contratos','excluir') && documentoAcessivel(resource.data);
+    }
 
-      allow update: if mesmoGrupo(resource.data.grupoId) &&
-        request.resource.data.grupoId == resource.data.grupoId &&
-        (
-          (
-            permissao('empresas', 'editar') &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'razaoSocial',
-              'nomeFantasia',
-              'cnpj',
-              'cnpjNumeros',
-              'atualizadoEm'
-            ])
-          ) ||
-          (
-            permissao('empresas', 'inativar') &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'ativo',
-              'atualizadoEm'
-            ])
-          )
-        );
+    match /prestadores/{id} {
+      allow read: if permissao('prestadores','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('prestadores','cadastrar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('prestadores','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if permissao('prestadores','excluir') && documentoAcessivel(resource.data);
+    }
 
-      allow delete: if mesmoGrupo(resource.data.grupoId) &&
-        permissao('empresas', 'excluir');
+    match /veiculos/{id} {
+      allow read: if permissao('frota','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('frota','cadastrar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('frota','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
+    }
+
+    match /itensAlmoxarifado/{id} {
+      allow read: if permissao('almoxarifado','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('almoxarifado','cadastrar') && documentoAcessivel(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
+        permissao('almoxarifado','editar') || permissao('almoxarifado','ajustar') || permissao('almoxarifado','movimentar')
+      );
+      allow delete: if permissao('almoxarifado','excluir') && documentoAcessivel(resource.data);
+    }
+
+    match /movimentacoesEstoque/{id} {
+      allow read: if permissao('almoxarifado','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('almoxarifado','movimentar') && documentoAcessivel(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /cotacoes/{id} {
+      allow read: if permissao('cotacoes','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('cotacoes','solicitar') && documentoAcessivel(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
+        permissao('cotacoes','editar') || permissao('cotacoes','cotacao') || permissao('cotacoes','aprovar')
+      );
+      allow delete: if false;
+    }
+
+    match /planejamentoMensal/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
+      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
     }
   }
 }
