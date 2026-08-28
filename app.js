@@ -6,6 +6,7 @@ import "./js/group.js";
 import "./js/contracts.js";
 import "./js/providers.js";
 import "./js/fleet.js";
+import "./js/fleet-maintenance.js";
 import "./js/inventory.js";
 import "./js/quotes.js";
 import "./js/controllership.js";
