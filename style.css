@@ -699,3 +699,62 @@ body {
   }
 
 }
+/* ========================================
+   USUÁRIOS
+======================================== */
+
+.aviso-info {
+  background: #eff6ff;
+
+  border:
+    1px solid #bfdbfe;
+
+  color: #1e40af;
+
+  padding: 14px 16px;
+
+  border-radius: 10px;
+
+  margin-bottom: 20px;
+
+  font-size: 14px;
+}
+
+
+.btn-status-usuario {
+  border:
+    1px solid #d1d5db;
+
+  background: white;
+
+  color: #374151;
+
+  padding: 7px 11px;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+
+  cursor: pointer;
+}
+
+
+.btn-status-usuario:hover {
+  background: #f3f4f6;
+}
+
+
+.acao-propria {
+  color: #6b7280;
+
+  font-size: 12px;
+
+  font-style: italic;
+}
+
+
+/* Ajuste para cards que também são botões */
+
+.admin-card-button {
+  font-family: inherit;
+}

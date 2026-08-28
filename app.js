@@ -1,5 +1,10 @@
+// ========================================
+// FIREBASE - IMPORTAÇÕES
+// ========================================
+
 import { initializeApp } from
   "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+
 
 import {
   getAuth,
@@ -9,103 +14,261 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 
-  import {
+
+import {
   getFirestore,
   doc,
   getDoc,
   collection,
   getDocs,
   addDoc,
+  updateDoc,
   serverTimestamp
 } from
   "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
+
+
 // ========================================
-// FIREBASE
+// CONFIGURAÇÃO FIREBASE
 // ========================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDhFhXmyg44MqDkMHxgwVJ4DxEW-qqiDkU",
-  authDomain: "gestao-de-contratos-b266b.firebaseapp.com",
-  projectId: "gestao-de-contratos-b266b",
-  storageBucket: "gestao-de-contratos-b266b.firebasestorage.app",
-  messagingSenderId: "1090500586579",
-  appId: "1:1090500586579:web:90419b7abe37540eeeeaa6"
+
+  apiKey:
+    "AIzaSyDhFhXmyg44MqDkMHxgwVJ4DxEW-qqiDkU",
+
+  authDomain:
+    "gestao-de-contratos-b266b.firebaseapp.com",
+
+  projectId:
+    "gestao-de-contratos-b266b",
+
+  storageBucket:
+    "gestao-de-contratos-b266b.firebasestorage.app",
+
+  messagingSenderId:
+    "1090500586579",
+
+  appId:
+    "1:1090500586579:web:90419b7abe37540eeeeaa6"
+
 };
 
 
-const app = initializeApp(firebaseConfig);
-
-const auth = getAuth(app);
-const db = getFirestore(app);
-const menuAdministracao =
-  document.getElementById("menuAdministracao");
-
-const tituloPagina =
-  document.getElementById("tituloPagina");
 
 // ========================================
-// ELEMENTOS
+// INICIALIZAÇÃO
+// ========================================
+
+const app =
+  initializeApp(firebaseConfig);
+
+
+const auth =
+  getAuth(app);
+
+
+const db =
+  getFirestore(app);
+
+
+
+// ========================================
+// DADOS DO USUÁRIO ATUAL
+// ========================================
+
+let dadosUsuarioAtual = null;
+
+let dadosPerfilAtual = null;
+
+
+
+// ========================================
+// ELEMENTOS GERAIS
 // ========================================
 
 const telaLogin =
   document.getElementById("telaLogin");
 
+
 const sistema =
   document.getElementById("sistema");
+
 
 const formLogin =
   document.getElementById("formLogin");
 
+
 const email =
   document.getElementById("email");
+
 
 const senha =
   document.getElementById("senha");
 
+
 const mensagemLogin =
   document.getElementById("mensagemLogin");
+
 
 const nomeUsuario =
   document.getElementById("nomeUsuario");
 
+
 const btnSair =
   document.getElementById("btnSair");
+
+
+const menuAdministracao =
+  document.getElementById("menuAdministracao");
+
+
+const tituloPagina =
+  document.getElementById("tituloPagina");
+
+
+
+// ========================================
+// ELEMENTOS - EMPRESAS
+// ========================================
+
 const cardEmpresas =
   document.getElementById("cardEmpresas");
 
+
 const btnVoltarAdministracao =
-  document.getElementById("btnVoltarAdministracao");
+  document.getElementById(
+    "btnVoltarAdministracao"
+  );
+
 
 const btnMostrarNovaEmpresa =
-  document.getElementById("btnMostrarNovaEmpresa");
+  document.getElementById(
+    "btnMostrarNovaEmpresa"
+  );
+
 
 const formNovaEmpresaContainer =
-  document.getElementById("formNovaEmpresaContainer");
+  document.getElementById(
+    "formNovaEmpresaContainer"
+  );
+
 
 const formNovaEmpresa =
-  document.getElementById("formNovaEmpresa");
+  document.getElementById(
+    "formNovaEmpresa"
+  );
+
 
 const btnCancelarEmpresa =
-  document.getElementById("btnCancelarEmpresa");
+  document.getElementById(
+    "btnCancelarEmpresa"
+  );
+
 
 const empresaRazaoSocial =
-  document.getElementById("empresaRazaoSocial");
+  document.getElementById(
+    "empresaRazaoSocial"
+  );
+
 
 const empresaNomeFantasia =
-  document.getElementById("empresaNomeFantasia");
+  document.getElementById(
+    "empresaNomeFantasia"
+  );
+
 
 const empresaCnpj =
-  document.getElementById("empresaCnpj");
+  document.getElementById(
+    "empresaCnpj"
+  );
+
 
 const listaEmpresas =
-  document.getElementById("listaEmpresas");
+  document.getElementById(
+    "listaEmpresas"
+  );
+
 
 const quantidadeEmpresas =
-  document.getElementById("quantidadeEmpresas");
+  document.getElementById(
+    "quantidadeEmpresas"
+  );
+
 
 const mensagemEmpresa =
-  document.getElementById("mensagemEmpresa");
+  document.getElementById(
+    "mensagemEmpresa"
+  );
+
+
+
+// ========================================
+// ELEMENTOS - USUÁRIOS
+// ========================================
+
+const cardUsuarios =
+  document.getElementById(
+    "cardUsuarios"
+  );
+
+
+const btnVoltarUsuarios =
+  document.getElementById(
+    "btnVoltarUsuarios"
+  );
+
+
+const btnNovoUsuario =
+  document.getElementById(
+    "btnNovoUsuario"
+  );
+
+
+const avisoNovoUsuario =
+  document.getElementById(
+    "avisoNovoUsuario"
+  );
+
+
+const listaUsuarios =
+  document.getElementById(
+    "listaUsuarios"
+  );
+
+
+const quantidadeUsuarios =
+  document.getElementById(
+    "quantidadeUsuarios"
+  );
+
+
+
+// ========================================
+// FUNÇÃO DE SEGURANÇA PARA TEXTOS
+// ========================================
+
+function escaparHtml(valor) {
+
+  if (
+    valor === null ||
+    valor === undefined
+  ) {
+    return "-";
+  }
+
+
+  return String(valor)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
 
 // ========================================
 // LOGIN
@@ -117,8 +280,10 @@ formLogin.addEventListener(
 
     evento.preventDefault();
 
+
     mensagemLogin.textContent =
       "Entrando...";
+
 
     try {
 
@@ -128,13 +293,19 @@ formLogin.addEventListener(
         senha.value
       );
 
+
       mensagemLogin.textContent = "";
 
       formLogin.reset();
 
+
     } catch (erro) {
 
-      console.error(erro);
+      console.error(
+        "Erro no login:",
+        erro
+      );
+
 
       mensagemLogin.textContent =
         "E-mail ou senha inválidos.";
@@ -143,6 +314,7 @@ formLogin.addEventListener(
 
   }
 );
+
 
 
 // ========================================
@@ -159,7 +331,10 @@ btnSair.addEventListener(
 
     } catch (erro) {
 
-      console.error(erro);
+      console.error(
+        "Erro ao sair:",
+        erro
+      );
 
     }
 
@@ -167,38 +342,57 @@ btnSair.addEventListener(
 );
 
 
+
 // ========================================
 // ESTADO DA AUTENTICAÇÃO
 // ========================================
+
 onAuthStateChanged(
   auth,
   async (usuario) => {
 
     if (!usuario) {
 
-      sistema.classList.add("hidden");
+      dadosUsuarioAtual = null;
+      dadosPerfilAtual = null;
 
-      telaLogin.classList.remove("hidden");
+
+      sistema.classList.add(
+        "hidden"
+      );
+
+
+      telaLogin.classList.remove(
+        "hidden"
+      );
+
+
+      menuAdministracao.classList.add(
+        "hidden"
+      );
+
 
       nomeUsuario.textContent = "";
 
-      menuAdministracao.classList.add("hidden");
 
       return;
+
     }
 
 
     try {
 
       // ========================================
-      // BUSCA O USUÁRIO
+      // USUÁRIO INTERNO
       // ========================================
 
-      const usuarioRef = doc(
-        db,
-        "usuarios",
-        usuario.uid
-      );
+      const usuarioRef =
+        doc(
+          db,
+          "usuarios",
+          usuario.uid
+        );
+
 
       const usuarioSnap =
         await getDoc(usuarioRef);
@@ -208,10 +402,13 @@ onAuthStateChanged(
 
         await signOut(auth);
 
+
         mensagemLogin.textContent =
           "Usuário não autorizado.";
 
+
         return;
+
       }
 
 
@@ -223,22 +420,27 @@ onAuthStateChanged(
 
         await signOut(auth);
 
+
         mensagemLogin.textContent =
           "Este usuário está desativado.";
 
+
         return;
+
       }
 
 
       // ========================================
-      // BUSCA O PERFIL DE ACESSO
+      // PERFIL DE ACESSO
       // ========================================
 
-      const perfilRef = doc(
-        db,
-        "perfisAcesso",
-        dadosUsuario.perfilId
-      );
+      const perfilRef =
+        doc(
+          db,
+          "perfisAcesso",
+          dadosUsuario.perfilId
+        );
+
 
       const perfilSnap =
         await getDoc(perfilRef);
@@ -248,10 +450,13 @@ onAuthStateChanged(
 
         await signOut(auth);
 
+
         mensagemLogin.textContent =
           "Perfil de acesso não encontrado.";
 
+
         return;
+
       }
 
 
@@ -263,20 +468,41 @@ onAuthStateChanged(
 
         await signOut(auth);
 
+
         mensagemLogin.textContent =
           "Perfil de acesso desativado.";
 
+
         return;
+
       }
 
 
       // ========================================
-      // LIBERA O SISTEMA
+      // GUARDA CONTEXTO
       // ========================================
 
-      telaLogin.classList.add("hidden");
+      dadosUsuarioAtual =
+        dadosUsuario;
 
-      sistema.classList.remove("hidden");
+
+      dadosPerfilAtual =
+        dadosPerfil;
+
+
+      // ========================================
+      // LIBERA SISTEMA
+      // ========================================
+
+      telaLogin.classList.add(
+        "hidden"
+      );
+
+
+      sistema.classList.remove(
+        "hidden"
+      );
+
 
       nomeUsuario.textContent =
         dadosUsuario.nome ||
@@ -284,20 +510,31 @@ onAuthStateChanged(
 
 
       // ========================================
-      // PERMISSÃO ADMINISTRATIVA
+      // ADMINISTRAÇÃO
       // ========================================
 
-      if (dadosPerfil.acessoTotal === true) {
+      if (
+        dadosPerfil.acessoTotal === true
+      ) {
 
         menuAdministracao
-          .classList.remove("hidden");
+          .classList.remove(
+            "hidden"
+          );
 
       } else {
 
         menuAdministracao
-          .classList.add("hidden");
+          .classList.add(
+            "hidden"
+          );
 
       }
+
+
+      abrirPagina(
+        "dashboard"
+      );
 
 
     } catch (erro) {
@@ -307,7 +544,9 @@ onAuthStateChanged(
         erro
       );
 
+
       await signOut(auth);
+
 
       mensagemLogin.textContent =
         "Erro ao verificar as permissões.";
@@ -317,84 +556,36 @@ onAuthStateChanged(
   }
 );
 
+
+
 // ========================================
-// NAVEGAÇÃO DO SISTEMA
+// NAVEGAÇÃO
 // ========================================
 
 const itensMenu =
-  document.querySelectorAll(".menu-item");
-
-const paginas =
-  document.querySelectorAll(".pagina");
-
-
-itensMenu.forEach((item) => {
-
-  item.addEventListener(
-    "click",
-    () => {
-
-      const paginaSelecionada =
-        item.dataset.pagina;
-
-
-      paginas.forEach((pagina) => {
-
-        pagina.classList.add("hidden");
-
-      });
-
-
-      itensMenu.forEach((botao) => {
-
-        botao.classList.remove("ativo");
-
-      });
-
-
-      const pagina =
-        document.getElementById(
-          `pagina-${paginaSelecionada}`
-        );
-
-
-      if (pagina) {
-
-        pagina.classList.remove("hidden");
-
-      }
-
-
-      item.classList.add("ativo");
-
-
-      const titulos = {
-
-        dashboard: "Dashboard",
-
-        contratos: "Contratos",
-
-        administracao: "Administração"
-
-      };
-
-
-      tituloPagina.textContent =
-        titulos[paginaSelecionada] ||
-        "Sistema Integrado";
-
-    }
-
+  document.querySelectorAll(
+    ".menu-item"
   );
 
-});
+
+const paginas =
+  document.querySelectorAll(
+    ".pagina"
+  );
+
+
+
 function abrirPagina(nomePagina) {
 
-  paginas.forEach((pagina) => {
+  paginas.forEach(
+    (pagina) => {
 
-    pagina.classList.add("hidden");
+      pagina.classList.add(
+        "hidden"
+      );
 
-  });
+    }
+  );
 
 
   const pagina =
@@ -405,20 +596,73 @@ function abrirPagina(nomePagina) {
 
   if (pagina) {
 
-    pagina.classList.remove("hidden");
+    pagina.classList.remove(
+      "hidden"
+    );
+
+  }
+
+
+  itensMenu.forEach(
+    (item) => {
+
+      item.classList.remove(
+        "ativo"
+      );
+
+    }
+  );
+
+
+  const paginaAdministrativa =
+    nomePagina === "administracao" ||
+    nomePagina === "empresas" ||
+    nomePagina === "usuarios";
+
+
+  let itemMenuAtivo;
+
+
+  if (paginaAdministrativa) {
+
+    itemMenuAtivo =
+      menuAdministracao;
+
+  } else {
+
+    itemMenuAtivo =
+      document.querySelector(
+        `.menu-item[data-pagina="${nomePagina}"]`
+      );
+
+  }
+
+
+  if (itemMenuAtivo) {
+
+    itemMenuAtivo.classList.add(
+      "ativo"
+    );
 
   }
 
 
   const titulos = {
 
-    dashboard: "Dashboard",
+    dashboard:
+      "Dashboard",
 
-    contratos: "Contratos",
+    contratos:
+      "Contratos",
 
-    administracao: "Administração",
+    administracao:
+      "Administração",
 
-    empresas: "Empresas"
+    empresas:
+      "Empresas",
+
+    usuarios:
+      "Usuários"
 
   };
 
@@ -428,48 +672,174 @@ function abrirPagina(nomePagina) {
     "Sistema Integrado";
 
 }
+
+
+
+itensMenu.forEach(
+  (item) => {
+
+    item.addEventListener(
+      "click",
+      () => {
+
+        const paginaSelecionada =
+          item.dataset.pagina;
+
+
+        abrirPagina(
+          paginaSelecionada
+        );
+
+      }
+    );
+
+  }
+);
+
+
+
+// ========================================
+// EMPRESAS - NAVEGAÇÃO
+// ========================================
+
 cardEmpresas.addEventListener(
   "click",
   async () => {
 
-    abrirPagina("empresas");
+    abrirPagina(
+      "empresas"
+    );
+
 
     await carregarEmpresas();
 
   }
 );
+
+
+
 btnVoltarAdministracao.addEventListener(
   "click",
   () => {
 
-    abrirPagina("administracao");
+    abrirPagina(
+      "administracao"
+    );
 
   }
 );
+
+
+
 btnMostrarNovaEmpresa.addEventListener(
   "click",
   () => {
 
+    mensagemEmpresa.textContent = "";
+
+
     formNovaEmpresaContainer
-      .classList.remove("hidden");
+      .classList.remove(
+        "hidden"
+      );
+
 
     empresaRazaoSocial.focus();
 
   }
 );
+
+
+
 btnCancelarEmpresa.addEventListener(
   "click",
   () => {
 
     formNovaEmpresa.reset();
 
+
     mensagemEmpresa.textContent = "";
 
+
     formNovaEmpresaContainer
-      .classList.add("hidden");
+      .classList.add(
+        "hidden"
+      );
 
   }
 );
+
+
+
+// ========================================
+// EMPRESAS - MÁSCARA CNPJ
+// ========================================
+
+empresaCnpj.addEventListener(
+  "input",
+  () => {
+
+    let valor =
+      empresaCnpj.value.replace(
+        /\D/g,
+        ""
+      );
+
+
+    valor =
+      valor.substring(
+        0,
+        14
+      );
+
+
+    if (valor.length > 12) {
+
+      valor =
+        valor.replace(
+          /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2}).*/,
+          "$1.$2.$3/$4-$5"
+        );
+
+    } else if (valor.length > 8) {
+
+      valor =
+        valor.replace(
+          /^(\d{2})(\d{3})(\d{3})(\d{0,4}).*/,
+          "$1.$2.$3/$4"
+        );
+
+    } else if (valor.length > 5) {
+
+      valor =
+        valor.replace(
+          /^(\d{2})(\d{3})(\d{0,3}).*/,
+          "$1.$2.$3"
+        );
+
+    } else if (valor.length > 2) {
+
+      valor =
+        valor.replace(
+          /^(\d{2})(\d{0,3}).*/,
+          "$1.$2"
+        );
+
+    }
+
+
+    empresaCnpj.value =
+      valor;
+
+  }
+);
+
+
+
+// ========================================
+// EMPRESAS - LISTAGEM
+// ========================================
+
 async function carregarEmpresas() {
 
   listaEmpresas.innerHTML = `
@@ -483,12 +853,13 @@ async function carregarEmpresas() {
 
   try {
 
-    const empresasRef =
-      collection(db, "empresas");
-
-
     const empresasSnap =
-      await getDocs(empresasRef);
+      await getDocs(
+        collection(
+          db,
+          "empresas"
+        )
+      );
 
 
     listaEmpresas.innerHTML = "";
@@ -497,53 +868,91 @@ async function carregarEmpresas() {
     let quantidade = 0;
 
 
-    empresasSnap.forEach((documento) => {
+    empresasSnap.forEach(
+      (documento) => {
 
-      quantidade++;
-
-
-      const empresa =
-        documento.data();
+        const empresa =
+          documento.data();
 
 
-      const linha =
-        document.createElement("tr");
+        // Mostra apenas empresas
+        // pertencentes ao grupo atual.
+
+        if (
+          dadosUsuarioAtual?.grupoId &&
+          empresa.grupoId !==
+            dadosUsuarioAtual.grupoId
+        ) {
+
+          return;
+
+        }
 
 
-      linha.innerHTML = `
-        <td>
-          ${empresa.razaoSocial || "-"}
-        </td>
+        quantidade++;
 
-        <td>
-          ${empresa.nomeFantasia || "-"}
-        </td>
 
-        <td>
-          ${empresa.cnpj || "-"}
-        </td>
+        const linha =
+          document.createElement(
+            "tr"
+          );
 
-        <td>
-          <span
-            class="${
-              empresa.ativo === true
-                ? "status-ativo"
-                : "status-inativo"
-            }"
-          >
+
+        linha.innerHTML = `
+
+          <td>
             ${
-              empresa.ativo === true
-                ? "Ativa"
-                : "Inativa"
+              escaparHtml(
+                empresa.razaoSocial
+              )
             }
-          </span>
-        </td>
-      `;
+          </td>
+
+          <td>
+            ${
+              escaparHtml(
+                empresa.nomeFantasia
+              )
+            }
+          </td>
+
+          <td>
+            ${
+              escaparHtml(
+                empresa.cnpj
+              )
+            }
+          </td>
+
+          <td>
+
+            <span
+              class="${
+                empresa.ativo === true
+                  ? "status-ativo"
+                  : "status-inativo"
+              }"
+            >
+
+              ${
+                empresa.ativo === true
+                  ? "Ativa"
+                  : "Inativa"
+              }
+
+            </span>
+
+          </td>
+
+        `;
 
 
-      listaEmpresas.appendChild(linha);
+        listaEmpresas.appendChild(
+          linha
+        );
 
-    });
+      }
+    );
 
 
     quantidadeEmpresas.textContent =
@@ -553,11 +962,15 @@ async function carregarEmpresas() {
     if (quantidade === 0) {
 
       listaEmpresas.innerHTML = `
+
         <tr>
+
           <td colspan="4">
             Nenhuma empresa cadastrada.
           </td>
+
         </tr>
+
       `;
 
     }
@@ -572,21 +985,71 @@ async function carregarEmpresas() {
 
 
     listaEmpresas.innerHTML = `
+
       <tr>
+
         <td colspan="4">
           Não foi possível carregar as empresas.
         </td>
+
       </tr>
+
     `;
 
   }
 
 }
+
+
+
+// ========================================
+// EMPRESAS - CADASTRO
+// ========================================
+
 formNovaEmpresa.addEventListener(
   "submit",
   async (evento) => {
 
     evento.preventDefault();
+
+
+    mensagemEmpresa.textContent = "";
+
+
+    const cnpjSomenteNumeros =
+      empresaCnpj.value.replace(
+        /\D/g,
+        ""
+      );
+
+
+    if (
+      cnpjSomenteNumeros.length !== 14
+    ) {
+
+      mensagemEmpresa.textContent =
+        "Informe um CNPJ com 14 dígitos.";
+
+
+      empresaCnpj.focus();
+
+
+      return;
+
+    }
+
+
+    if (
+      !dadosUsuarioAtual?.grupoId
+    ) {
+
+      mensagemEmpresa.textContent =
+        "O usuário não está vinculado a um grupo empresarial.";
+
+
+      return;
+
+    }
 
 
     mensagemEmpresa.textContent =
@@ -595,21 +1058,92 @@ formNovaEmpresa.addEventListener(
 
     try {
 
+      // ========================================
+      // VERIFICA CNPJ DUPLICADO
+      // ========================================
+
+      const empresasSnap =
+        await getDocs(
+          collection(
+            db,
+            "empresas"
+          )
+        );
+
+
+      let cnpjDuplicado =
+        false;
+
+
+      empresasSnap.forEach(
+        (documento) => {
+
+          const empresa =
+            documento.data();
+
+
+          const cnpjExistente =
+            String(
+              empresa.cnpj || ""
+            ).replace(
+              /\D/g,
+              ""
+            );
+
+
+          if (
+            cnpjExistente ===
+              cnpjSomenteNumeros
+          ) {
+
+            cnpjDuplicado =
+              true;
+
+          }
+
+        }
+      );
+
+
+      if (cnpjDuplicado) {
+
+        mensagemEmpresa.textContent =
+          "Já existe uma empresa cadastrada com este CNPJ.";
+
+
+        return;
+
+      }
+
+
+      // ========================================
+      // SALVA EMPRESA
+      // ========================================
+
       await addDoc(
-        collection(db, "empresas"),
+        collection(
+          db,
+          "empresas"
+        ),
         {
 
           razaoSocial:
-            empresaRazaoSocial.value.trim(),
+            empresaRazaoSocial
+              .value
+              .trim(),
 
           nomeFantasia:
-            empresaNomeFantasia.value.trim(),
+            empresaNomeFantasia
+              .value
+              .trim(),
 
           cnpj:
-            empresaCnpj.value.trim(),
+            empresaCnpj
+              .value
+              .trim(),
 
           grupoId:
-            "grupo_001",
+            dadosUsuarioAtual.grupoId,
 
           ativo:
             true,
@@ -631,14 +1165,21 @@ formNovaEmpresa.addEventListener(
       await carregarEmpresas();
 
 
-      setTimeout(() => {
+      setTimeout(
+        () => {
 
-        formNovaEmpresaContainer
-          .classList.add("hidden");
+          formNovaEmpresaContainer
+            .classList.add(
+              "hidden"
+            );
 
-        mensagemEmpresa.textContent = "";
 
-      }, 1000);
+          mensagemEmpresa.textContent =
+            "";
+
+        },
+        1000
+      );
 
 
     } catch (erro) {
@@ -656,3 +1197,449 @@ formNovaEmpresa.addEventListener(
 
   }
 );
+
+
+
+// ========================================
+// USUÁRIOS - NAVEGAÇÃO
+// ========================================
+
+cardUsuarios.addEventListener(
+  "click",
+  async () => {
+
+    abrirPagina(
+      "usuarios"
+    );
+
+
+    await carregarUsuarios();
+
+  }
+);
+
+
+
+btnVoltarUsuarios.addEventListener(
+  "click",
+  () => {
+
+    abrirPagina(
+      "administracao"
+    );
+
+  }
+);
+
+
+
+btnNovoUsuario.addEventListener(
+  "click",
+  () => {
+
+    avisoNovoUsuario
+      .classList.toggle(
+        "hidden"
+      );
+
+  }
+);
+
+
+
+// ========================================
+// USUÁRIOS - LISTAGEM
+// ========================================
+
+async function carregarUsuarios() {
+
+  listaUsuarios.innerHTML = `
+
+    <tr>
+
+      <td colspan="6">
+        Carregando usuários...
+      </td>
+
+    </tr>
+
+  `;
+
+
+  quantidadeUsuarios.textContent =
+    "Carregando...";
+
+
+  try {
+
+    // ========================================
+    // EMPRESAS
+    // ========================================
+
+    const empresasSnap =
+      await getDocs(
+        collection(
+          db,
+          "empresas"
+        )
+      );
+
+
+    const empresas = {};
+
+
+    empresasSnap.forEach(
+      (documento) => {
+
+        const dados =
+          documento.data();
+
+
+        empresas[documento.id] =
+          dados.nomeFantasia ||
+          dados.razaoSocial ||
+          documento.id;
+
+      }
+    );
+
+
+    // ========================================
+    // PERFIS
+    // ========================================
+
+    const perfisSnap =
+      await getDocs(
+        collection(
+          db,
+          "perfisAcesso"
+        )
+      );
+
+
+    const perfis = {};
+
+
+    perfisSnap.forEach(
+      (documento) => {
+
+        const dados =
+          documento.data();
+
+
+        perfis[documento.id] =
+          dados.nome ||
+          documento.id;
+
+      }
+    );
+
+
+    // ========================================
+    // USUÁRIOS
+    // ========================================
+
+    const usuariosSnap =
+      await getDocs(
+        collection(
+          db,
+          "usuarios"
+        )
+      );
+
+
+    listaUsuarios.innerHTML = "";
+
+
+    let quantidade = 0;
+
+
+    usuariosSnap.forEach(
+      (documento) => {
+
+        const usuario =
+          documento.data();
+
+
+        // Filtra pelo grupo empresarial.
+
+        if (
+          dadosUsuarioAtual?.grupoId &&
+          usuario.grupoId &&
+          usuario.grupoId !==
+            dadosUsuarioAtual.grupoId
+        ) {
+
+          return;
+
+        }
+
+
+        quantidade++;
+
+
+        const uid =
+          documento.id;
+
+
+        const proprioUsuario =
+          auth.currentUser &&
+          auth.currentUser.uid === uid;
+
+
+        const linha =
+          document.createElement(
+            "tr"
+          );
+
+
+        linha.innerHTML = `
+
+          <td>
+            ${
+              escaparHtml(
+                usuario.nome
+              )
+            }
+          </td>
+
+          <td>
+            ${
+              escaparHtml(
+                usuario.email
+              )
+            }
+          </td>
+
+          <td>
+            ${
+              escaparHtml(
+                empresas[
+                  usuario.empresaId
+                ] || "-"
+              )
+            }
+          </td>
+
+          <td>
+            ${
+              escaparHtml(
+                perfis[
+                  usuario.perfilId
+                ] ||
+                usuario.perfilId ||
+                "-"
+              )
+            }
+          </td>
+
+          <td>
+
+            <span
+              class="${
+                usuario.ativo === true
+                  ? "status-ativo"
+                  : "status-inativo"
+              }"
+            >
+
+              ${
+                usuario.ativo === true
+                  ? "Ativo"
+                  : "Inativo"
+              }
+
+            </span>
+
+          </td>
+
+          <td>
+
+            ${
+              proprioUsuario
+
+                ? `
+                  <span class="acao-propria">
+                    Usuário atual
+                  </span>
+                `
+
+                : `
+                  <button
+                    class="btn-status-usuario"
+                    data-uid="${uid}"
+                    data-ativo="${
+                      usuario.ativo === true
+                    }"
+                    type="button"
+                  >
+
+                    ${
+                      usuario.ativo === true
+                        ? "Desativar"
+                        : "Ativar"
+                    }
+
+                  </button>
+                `
+            }
+
+          </td>
+
+        `;
+
+
+        listaUsuarios.appendChild(
+          linha
+        );
+
+      }
+    );
+
+
+    quantidadeUsuarios.textContent =
+      `${quantidade} usuário(s) cadastrado(s)`;
+
+
+    if (quantidade === 0) {
+
+      listaUsuarios.innerHTML = `
+
+        <tr>
+
+          <td colspan="6">
+            Nenhum usuário cadastrado.
+          </td>
+
+        </tr>
+
+      `;
+
+    }
+
+
+    configurarBotoesUsuarios();
+
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao carregar usuários:",
+      erro
+    );
+
+
+    listaUsuarios.innerHTML = `
+
+      <tr>
+
+        <td colspan="6">
+          Não foi possível carregar os usuários.
+        </td>
+
+      </tr>
+
+    `;
+
+  }
+
+}
+
+
+
+// ========================================
+// USUÁRIOS - ATIVAR / DESATIVAR
+// ========================================
+
+function configurarBotoesUsuarios() {
+
+  const botoes =
+    document.querySelectorAll(
+      ".btn-status-usuario"
+    );
+
+
+  botoes.forEach(
+    (botao) => {
+
+      botao.addEventListener(
+        "click",
+        async () => {
+
+          const uid =
+            botao.dataset.uid;
+
+
+          const estaAtivo =
+            botao.dataset.ativo ===
+            "true";
+
+
+          const novoStatus =
+            !estaAtivo;
+
+
+          const mensagemConfirmacao =
+            novoStatus
+
+              ? "Deseja ativar este usuário?"
+
+              : "Deseja desativar este usuário?";
+
+
+          const confirmar =
+            window.confirm(
+              mensagemConfirmacao
+            );
+
+
+          if (!confirmar) {
+
+            return;
+
+          }
+
+
+          try {
+
+            const usuarioRef =
+              doc(
+                db,
+                "usuarios",
+                uid
+              );
+
+
+            await updateDoc(
+              usuarioRef,
+              {
+                ativo:
+                  novoStatus
+              }
+            );
+
+
+            await carregarUsuarios();
+
+
+          } catch (erro) {
+
+            console.error(
+              "Erro ao alterar usuário:",
+              erro
+            );
+
+
+            alert(
+              "Não foi possível alterar o usuário."
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+}

@@ -59,7 +59,6 @@
 
       <form id="formLogin">
 
-
         <div class="campo">
 
           <label for="email">
@@ -101,7 +100,6 @@
           Entrar
         </button>
 
-
       </form>
 
 
@@ -109,7 +107,6 @@
         id="mensagemLogin"
         class="mensagem"
       ></p>
-
 
     </section>
 
@@ -126,7 +123,6 @@
     class="hidden"
   >
 
-
     <div class="app-shell">
 
 
@@ -135,7 +131,6 @@
       ========================================= -->
 
       <aside class="sidebar">
-
 
         <div class="sidebar-brand">
 
@@ -158,9 +153,7 @@
         </div>
 
 
-
         <nav class="sidebar-menu">
-
 
           <button
             class="menu-item ativo"
@@ -192,9 +185,7 @@
             Administração
           </button>
 
-
         </nav>
-
 
       </aside>
 
@@ -213,7 +204,6 @@
 
         <header class="app-topbar">
 
-
           <div>
 
             <h1 id="tituloPagina">
@@ -228,13 +218,11 @@
 
 
           <!--
-            FUTURAMENTE ENTRARÃO AQUI:
+            FUTURAMENTE:
 
-            Grupo:   [ Grupo Empresarial ▼ ]
-            Empresa: [ Empresa selecionada ▼ ]
-
-            permitindo troca de empresa
-            e visão consolidada.
+            [ Grupo Empresarial ▼ ]
+            [ Empresa ▼ ]
+            [ Consolidado ▼ ]
           -->
 
 
@@ -251,17 +239,15 @@
 
           </div>
 
-
         </header>
 
 
 
         <!-- ========================================
-             CONTEÚDO DAS PÁGINAS
+             CONTEÚDO
         ========================================= -->
 
         <main class="conteudo">
-
 
 
           <!-- ========================================
@@ -272,7 +258,6 @@
             id="pagina-dashboard"
             class="pagina"
           >
-
 
             <div class="welcome">
 
@@ -287,9 +272,7 @@
             </div>
 
 
-
             <div class="cards">
-
 
               <div class="card">
 
@@ -342,9 +325,7 @@
 
               </div>
 
-
             </div>
-
 
           </section>
 
@@ -358,7 +339,6 @@
             id="pagina-contratos"
             class="pagina hidden"
           >
-
 
             <div class="welcome">
 
@@ -385,7 +365,6 @@
 
             </div>
 
-
           </section>
 
 
@@ -399,7 +378,6 @@
             class="pagina hidden"
           >
 
-
             <div class="welcome">
 
               <h2>
@@ -411,7 +389,6 @@
               </p>
 
             </div>
-
 
 
             <div class="admin-grid">
@@ -439,7 +416,11 @@
 
               <!-- USUÁRIOS -->
 
-              <div class="admin-card">
+              <button
+                id="cardUsuarios"
+                class="admin-card admin-card-button"
+                type="button"
+              >
 
                 <h3>
                   Usuários
@@ -449,11 +430,11 @@
                   Usuários, bloqueios e acessos.
                 </p>
 
-              </div>
+              </button>
 
 
 
-              <!-- PERFIS -->
+              <!-- PERFIS DE ACESSO -->
 
               <div class="admin-card">
 
@@ -483,9 +464,7 @@
 
               </div>
 
-
             </div>
-
 
           </section>
 
@@ -500,11 +479,7 @@
             class="pagina hidden"
           >
 
-
-            <!-- CABEÇALHO DA PÁGINA -->
-
             <div class="pagina-cabecalho">
-
 
               <div>
 
@@ -529,7 +504,6 @@
               </div>
 
 
-
               <button
                 id="btnMostrarNovaEmpresa"
                 class="btn-primario"
@@ -538,20 +512,16 @@
                 + Nova empresa
               </button>
 
-
             </div>
 
 
 
-            <!-- ========================================
-                 FORMULÁRIO NOVA EMPRESA
-            ========================================= -->
+            <!-- NOVA EMPRESA -->
 
             <section
               id="formNovaEmpresaContainer"
               class="form-card hidden"
             >
-
 
               <h3>
                 Nova empresa
@@ -559,7 +529,6 @@
 
 
               <form id="formNovaEmpresa">
-
 
                 <div class="form-grid">
 
@@ -607,18 +576,16 @@
                       type="text"
                       maxlength="18"
                       placeholder="00.000.000/0000-00"
+                      inputmode="numeric"
                       required
                     >
 
                   </div>
 
-
                 </div>
 
 
-
                 <div class="form-acoes">
-
 
                   <button
                     id="btnCancelarEmpresa"
@@ -636,9 +603,7 @@
                     Salvar empresa
                   </button>
 
-
                 </div>
-
 
 
                 <p
@@ -646,20 +611,15 @@
                   class="mensagem-form"
                 ></p>
 
-
               </form>
-
 
             </section>
 
 
 
-            <!-- ========================================
-                 LISTAGEM DAS EMPRESAS
-            ========================================= -->
+            <!-- LISTAGEM DE EMPRESAS -->
 
             <section class="lista-card">
-
 
               <div class="lista-cabecalho">
 
@@ -678,12 +638,9 @@
               </div>
 
 
-
               <div class="tabela-container">
 
-
                 <table class="tabela">
-
 
                   <thead>
 
@@ -710,7 +667,6 @@
                   </thead>
 
 
-
                   <tbody id="listaEmpresas">
 
                     <tr>
@@ -723,18 +679,153 @@
 
                   </tbody>
 
-
                 </table>
 
+              </div>
+
+            </section>
+
+          </section>
+
+
+
+          <!-- ========================================
+               USUÁRIOS
+          ========================================= -->
+
+          <section
+            id="pagina-usuarios"
+            class="pagina hidden"
+          >
+
+            <div class="pagina-cabecalho">
+
+              <div>
+
+                <button
+                  id="btnVoltarUsuarios"
+                  class="btn-voltar"
+                  type="button"
+                >
+                  ← Administração
+                </button>
+
+
+                <h2>
+                  Usuários
+                </h2>
+
+
+                <p>
+                  Controle de usuários e acessos ao sistema.
+                </p>
 
               </div>
 
 
+              <button
+                id="btnNovoUsuario"
+                class="btn-primario"
+                type="button"
+              >
+                + Novo usuário
+              </button>
+
+            </div>
+
+
+
+            <!-- AVISO TEMPORÁRIO -->
+
+            <div
+              id="avisoNovoUsuario"
+              class="aviso-info hidden"
+            >
+
+              A criação de usuários será habilitada na próxima etapa
+              através do backend seguro do SIG.
+
+            </div>
+
+
+
+            <!-- LISTAGEM DE USUÁRIOS -->
+
+            <section class="lista-card">
+
+              <div class="lista-cabecalho">
+
+                <div>
+
+                  <h3>
+                    Usuários cadastrados
+                  </h3>
+
+                  <p id="quantidadeUsuarios">
+                    Carregando...
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div class="tabela-container">
+
+                <table class="tabela">
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Nome
+                      </th>
+
+                      <th>
+                        E-mail
+                      </th>
+
+                      <th>
+                        Empresa
+                      </th>
+
+                      <th>
+                        Perfil
+                      </th>
+
+                      <th>
+                        Status
+                      </th>
+
+                      <th>
+                        Ação
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+                  <tbody id="listaUsuarios">
+
+                    <tr>
+
+                      <td colspan="6">
+                        Carregando usuários...
+                      </td>
+
+                    </tr>
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
             </section>
 
-
           </section>
-
 
 
         </main>
