@@ -166,7 +166,7 @@
                   <button id="btnCancelarEmpresa" class="btn-secundario" type="button">Cancelar</button>
                   <button class="btn-primario" type="submit">Salvar empresa</button>
                 </div>
-                <p  id="mensageEmpresa" class="mensagem-form"></p>
+                <p id="mensagemEmpresa" class="mensagem-form"></p>
               </form>
             </section>
 
@@ -176,12 +176,12 @@
                   <h3>Empresas cadastradas</h3>
                   <p id="quantidadeEmpresas">Carregando...</p>
                 </div>
-                <input id="buscaEmpresa" class="campo-busca" type="search" placeholder="Buscar empresa">
+                <input id="buscaEmpresa" class="campo-busca" type="search" placeholder="Buscar empresa ou CNPJ">
               </div>
               <div class="tabela-container">
                 <table class="tabela">
-                  <thead><tr><th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Status</th><th>Ações</th></tr></thead>
-                  <tbody id="listaEmpresas"><tr><td colspan="5">Carregando empresas...</td></tr></tbody>
+                  <thead><tr><th>Empresa</th><th>CNPJ</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody id="listaEmpresas"><tr><td colspan="4">Carregando empresas...</td></tr></tbody>
                 </table>
               </div>
             </section>
@@ -192,52 +192,57 @@
               <div>
                 <button class="btn-voltar" data-voltar-admin type="button">← Administração</button>
                 <h2>Usuários</h2>
-                  <p>Cadastro, edicção e controle de acessos ao SIG.</p>
+                <p>Cadastre pessoas e defina onde e como cada uma acessará o SIG.</p>
               </div>
               <button id="btnNovoUsuario" class="btn-primario" type="button">+ Novo usuário</button>
             </div>
+
             <section id="formUsuarioContainer" class="form-card hidden">
               <div class="form-card-titulo">
                 <div>
                   <h3 id="tituloFormUsuario">Novo usuário</h3>
-                  <p>Defina empresa, perfil e alcance de acesso.</p>
+                  <p id="descricaoFormUsuario">Crie o acesso e vincule perfil e empresas.</p>
+                </div>
               </div>
-            </div>
+
               <form id="formUsuario">
-                <div class="form-grid form-grid-3">
+                <div class="form-grid form-grid-2">
                   <div class="campo">
                     <label for="usuarioNome">Nome</label>
                     <input id="usuarioNome" type="text" required>
                   </div>
                   <div class="campo">
                     <label for="usuarioEmail">E-mail</label>
-                    <input id="usuarioEmail" type="email" required>
+                    <input id="usuarioEmail" type="email" autocomplete="off" required>
                   </div>
-                  <div class="campo">
+                  <div id="campoSenhaNovoUsuario" class="campo">
                     <label for="usuarioSenha">Senha inicial</label>
                     <input id="usuarioSenha" type="password" minlength="6" autocomplete="new-password">
-                    <small id="ajudaSenhaUsuario">Obrigatória no novo usuário. Em edição, deixe em branco para manter a senha.</small>
-                  </div>
-                  <div class="campo">
-                    <label for="usuarioEmpresa">Empresa principal</label>
-                    <select id="usuarioEmpresa" required><option value="">Selecione...</option></select>
+                    <small>Mínimo de 6 caracteres. O usuário poderá redefinir depois.</small>
                   </div>
                   <div class="campo">
                     <label for="usuarioPerfil">Perfil de acesso</label>
-                    <select id="usuarioPerfil" required><option value="">Selecione...</option></select>
+                    <select id="usuarioPerfil" required></select>
+                  </div>
+                  <div class="campo">
+                    <label for="usuarioEmpresaPrincipal">Empresa principal</label>
+                    <select id="usuarioEmpresaPrincipal" required></select>
                   </div>
                   <div class="campo campo-toggle">
                     <label class="toggle-linha">
                       <input id="usuarioAcessoGlobal" type="checkbox">
-                      <span><strong>Acesso global</strong><small>Permite acesso a todas as empresas atuais e futuras.</small></span>
+                      <span>
+                        <strong>Acesso global ao grupo</strong>
+                        <small>Permite visualizar todas as empresas do grupo.</small>
+                      </span>
                     </label>
                   </div>
                 </div>
 
-                <div id="blocoEmpresasAcesso" class="bloco-acessos">
+                <div class="bloco-acessos">
                   <div class="bloco-acessos-titulo">
-                    <h4>Empresas com acesso</h4>
-                    <p>A principal é marcada automaticamente. Adicione outras se necessário.</p>
+                    <h4>Empresas liberadas</h4>
+                    <p>Quando o acesso global estiver desmarcado, selecione as empresas permitidas.</p>
                   </div>
                   <div id="listaEmpresasAcesso" class="checkbox-grid"></div>
                 </div>
@@ -260,7 +265,7 @@
               </div>
               <div class="tabela-container">
                 <table class="tabela">
-                  <thead><tr><th>Usuário</th><th>Empresa principal</th><th>Perfil</th><ka>Acesso</ka><th>Status</th><th>Ações</th></tr></thead>
+                  <thead><tr><th>Usuário</th><th>Empresa principal</th><th>Perfil</th><th>Acesso</th><th>Status</th><th>Ações</th></tr></thead>
                   <tbody id="listaUsuarios"><tr><td colspan="6">Carregando usuários...</td></tr></tbody>
                 </table>
               </div>
