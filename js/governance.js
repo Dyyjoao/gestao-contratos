@@ -41,11 +41,12 @@ function montarPagina(){
       <div class="kpi-card"><span>Planos de ação vencidos</span><strong>—</strong><small>responsáveis e prazos</small></div>
     </div>
     <section class="lista-card">
-      <div class="lista-cabecalho"><div><h3>Programas de auditoria</h3><p>Modelo previsto para checklists, notas, evidências, indicadores e planos de ação.</p></div></div>
+      <div class="lista-cabecalho"><div><h3>Programas de auditoria</h3><p>Modelo previsto para checklists, notas, pesos, evidências, indicadores percentuais e planos de ação.</p></div></div>
       <div class="quick-grid governanca-grid">
-        <button type="button" class="quick-card" disabled><span>Manutenção & Frota</span><small>preventiva, corretiva, documentação, segurança e disponibilidade</small></button>
-        <button type="button" class="quick-card" disabled><span>Controladoria & Financeiro</span><small>fechamento, caixa, contratos, reconciliações, budget e controles</small></button>
-        <button type="button" class="quick-card" disabled><span>RH & Pessoas</span><small>documentação, treinamentos, jornada, indicadores e conformidade</small></button>
+        <button type="button" class="quick-card" disabled><span>Manutenção & Frota</span><small>preventiva, corretiva, documentação, disponibilidade e controles operacionais</small></button>
+        <button type="button" class="quick-card" disabled><span>Controladoria & Financeiro</span><small>fechamento, caixa, contratos, reconciliações, budget, forecast e controles</small></button>
+        <button type="button" class="quick-card" disabled><span>RH & Departamento Pessoal</span><small>admissão, documentação, jornada, folha, benefícios, treinamentos administrativos e conformidade trabalhista</small></button>
+        <button type="button" class="quick-card" disabled><span>SST</span><small>PGR, PCMSO, ASO, EPIs, treinamentos obrigatórios, acidentes, inspeções e documentação de segurança</small></button>
         <button type="button" class="quick-card" disabled><span>Almoxarifado & Compras</span><small>estoque, ferramentas, solicitações, cotações e rastreabilidade</small></button>
         <button type="button" class="quick-card" disabled><span>Contratos & Fornecedores</span><small>vigência, SLA, reajustes, documentação e homologação</small></button>
         <button type="button" class="quick-card" disabled><span>Qualidade & Processos</span><small>procedimentos, evidências, aderência, riscos e melhoria contínua</small></button>
