@@ -17,6 +17,8 @@ import "./js/fpa-number-fix.js";
 import "./js/fpa-advanced.js";
 import "./js/planning-details.js";
 import "./js/cashflow.js";
+import "./js/governance.js";
 import "./js/dashboard.js";
+import "./js/dashboard-financial.js";
 import "./js/permission-ui.js";
 import "./js/polish.js";
