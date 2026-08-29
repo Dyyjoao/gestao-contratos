@@ -34,25 +34,31 @@ service cloud.firestore {
         (('empresasAcesso' in usuario().data) && usuario().data.empresasAcesso is list && empresaId in usuario().data.empresasAcesso)
       );
     }
-    function documentoAcessivel(dados) {
-      return mesmoGrupo(dados.grupoId) && acessoEmpresa(dados.empresaId);
-    }
+    function documentoAcessivel(dados) { return mesmoGrupo(dados.grupoId) && acessoEmpresa(dados.empresaId); }
+
     function podeAtribuirPerfil(perfilId) {
       return administrador() || (
         perfilId != 'administrador' &&
         exists(/databases/$(database)/documents/perfisAcesso/$(perfilId)) &&
-        get(/databases/$(database)/documents/perfisAcesso/$(perfilId)).data.acessoTotal != true
+        get(/databases/$(database)/documents/perfisAcesso/$(perfilId)).data.acessoTotal != true &&
+        get(/databases/$(database)/documents/perfisAcesso/$(perfilId)).data.grupoId == usuario().data.grupoId
       );
     }
-    function escritaControladoria() {
-      return permissao('controladoria','editar') || permissao('controladoria','budget') || permissao('controladoria','forecast') || permissao('controladoria','importar');
-    }
-    function gerenciaUsuarios() {
-      return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar');
-    }
-    function usaCentroCusto() {
-      return permissao('controladoria','visualizar') || permissao('contratos','visualizar') || permissao('almoxarifado','visualizar') || permissao('cotacoes','visualizar') || permissao('frota','visualizar');
-    }
+
+    function fpaEditar() { return permissao('controladoria','editar'); }
+    function fpaRealizado() { return fpaEditar() || permissao('controladoria','realizado') || permissao('controladoria','importar'); }
+    function fpaBudget() { return fpaEditar() || permissao('controladoria','budget'); }
+    function fpaForecast() { return fpaEditar() || permissao('controladoria','forecast'); }
+    function fpaPremissas() { return fpaEditar() || permissao('controladoria','premissas'); }
+    function fpaPlano() { return fpaEditar() || permissao('controladoria','planoContas'); }
+    function fpaCentros() { return fpaEditar() || permissao('controladoria','centrosCusto'); }
+    function caixaVisualizar() { return permissao('controladoria','visualizar') || permissao('controladoria','caixaVisualizar'); }
+    function caixaLancar() { return fpaEditar() || permissao('controladoria','caixaLancar'); }
+    function caixaContas() { return fpaEditar() || permissao('controladoria','caixaContas'); }
+    function caixaFixos() { return fpaEditar() || permissao('controladoria','caixaFixos'); }
+    function prestacaoComentar() { return fpaEditar() || permissao('controladoria','prestacaoComentar'); }
+    function gerenciaUsuarios() { return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar'); }
+    function usaCentroCusto() { return permissao('controladoria','visualizar') || permissao('contratos','visualizar') || permissao('almoxarifado','visualizar') || permissao('cotacoes','visualizar') || permissao('frota','visualizar'); }
 
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
@@ -101,28 +107,31 @@ service cloud.firestore {
     match /contratos/{id} {
       allow read: if permissao('contratos','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('contratos','cadastrar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('contratos','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
+        permissao('contratos','editar') ||
+        (permissao('contratos','anexar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['arquivoPrincipal','documentos','atualizadoEm']))
+      );
       allow delete: if permissao('contratos','excluir') && documentoAcessivel(resource.data);
     }
 
     match /prestadores/{id} {
       allow read: if permissao('prestadores','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('prestadores','cadastrar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('prestadores','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow update: if (permissao('prestadores','editar') || permissao('prestadores','avaliar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if permissao('prestadores','excluir') && documentoAcessivel(resource.data);
     }
 
     match /veiculos/{id} {
       allow read: if permissao('frota','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('frota','cadastrar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('frota','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow update: if (permissao('frota','editar') || permissao('frota','obrigacoes') || permissao('frota','manutencao')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
     }
 
     match /manutencoesFrota/{id} {
       allow read: if permissao('frota','visualizar') && documentoAcessivel(resource.data);
-      allow create: if permissao('frota','editar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('frota','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if (permissao('frota','manutencao') || permissao('frota','editar')) && documentoAcessivel(request.resource.data);
+      allow update: if (permissao('frota','manutencao') || permissao('frota','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
     }
 
@@ -130,7 +139,7 @@ service cloud.firestore {
       allow read: if permissao('almoxarifado','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('almoxarifado','cadastrar') && documentoAcessivel(request.resource.data);
       allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
-        permissao('almoxarifado','editar') || permissao('almoxarifado','ajustar') || permissao('almoxarifado','movimentar')
+        permissao('almoxarifado','editar') || permissao('almoxarifado','ajustar') || permissao('almoxarifado','movimentar') || permissao('almoxarifado','prorrogar')
       );
       allow delete: if permissao('almoxarifado','excluir') && documentoAcessivel(resource.data);
     }
@@ -145,85 +154,106 @@ service cloud.firestore {
       allow read: if permissao('cotacoes','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('cotacoes','solicitar') && documentoAcessivel(request.resource.data);
       allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
-        permissao('cotacoes','editar') || permissao('cotacoes','cotacao') || permissao('cotacoes','aprovar')
+        permissao('cotacoes','editar') || permissao('cotacoes','cotacao') || permissao('cotacoes','aprovar') || permissao('cotacoes','anexar')
       );
       allow delete: if false;
     }
 
     match /planejamentoMensal/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
-      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /centrosCusto/{id} {
       allow read: if usaCentroCusto() && documentoAcessivel(resource.data);
-      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
-      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaCentros() && documentoAcessivel(request.resource.data);
+      allow update: if fpaCentros() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /planoContasGerencial/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
-      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
+      allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /premissasPlanejamento/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
-      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaPremissas() && documentoAcessivel(request.resource.data);
+      allow update: if fpaPremissas() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /realizadoMensal/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if (permissao('controladoria','editar') || permissao('controladoria','importar')) && documentoAcessivel(request.resource.data);
-      allow update: if (permissao('controladoria','editar') || permissao('controladoria','importar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaRealizado() && documentoAcessivel(request.resource.data);
+      allow update: if fpaRealizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /budgetLinhas/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if (permissao('controladoria','budget') || permissao('controladoria','editar')) && documentoAcessivel(request.resource.data);
-      allow update: if (permissao('controladoria','budget') || permissao('controladoria','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaBudget() && documentoAcessivel(request.resource.data);
+      allow update: if fpaBudget() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /forecastLinhas/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if (permissao('controladoria','forecast') || permissao('controladoria','editar')) && documentoAcessivel(request.resource.data);
-      allow update: if (permissao('controladoria','forecast') || permissao('controladoria','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if fpaForecast() && documentoAcessivel(request.resource.data);
+      allow update: if fpaForecast() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /classificacoesContas/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
-      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if (fpaPlano() || fpaBudget()) && documentoAcessivel(request.resource.data);
+      allow update: if (fpaPlano() || fpaBudget()) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /planejamentoDetalhes/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if ((request.resource.data.cenario == 'budget' && fpaBudget()) || (request.resource.data.cenario == 'forecast' && fpaForecast()) || fpaEditar()) && documentoAcessivel(request.resource.data);
+      allow update: if ((resource.data.cenario == 'budget' && fpaBudget()) || (resource.data.cenario == 'forecast' && fpaForecast()) || fpaEditar()) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /contasBancarias/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if permissao('controladoria','editar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('controladoria','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if caixaContas() && documentoAcessivel(request.resource.data);
+      allow update: if caixaContas() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /fluxoCaixaLancamentos/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if permissao('controladoria','editar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('controladoria','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if caixaLancar() && documentoAcessivel(request.resource.data);
+      allow update: if caixaLancar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
     match /fluxoCaixaFixos/{id} {
+      allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if caixaFixos() && documentoAcessivel(request.resource.data);
+      allow update: if caixaFixos() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /prestacaoContas/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if permissao('controladoria','editar') && documentoAcessivel(request.resource.data);
-      allow update: if permissao('controladoria','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow create: if prestacaoComentar() && documentoAcessivel(request.resource.data);
+      allow update: if prestacaoComentar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /prestacaoComentarios/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if prestacaoComentar() && documentoAcessivel(request.resource.data);
+      allow update: if prestacaoComentar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
   }
