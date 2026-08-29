@@ -198,5 +198,33 @@ service cloud.firestore {
       allow update: if (permissao('controladoria','forecast') || permissao('controladoria','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
+
+    match /classificacoesContas/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
+      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /contasBancarias/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('controladoria','editar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('controladoria','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /fluxoCaixaLancamentos/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('controladoria','editar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('controladoria','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /fluxoCaixaFixos/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if permissao('controladoria','editar') && documentoAcessivel(request.resource.data);
+      allow update: if permissao('controladoria','editar') && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
   }
 }
