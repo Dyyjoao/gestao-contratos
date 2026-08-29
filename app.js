@@ -1,5 +1,6 @@
 import "./js/core.js";
 import "./js/company-context.js";
+import "./js/fpa-style.js";
 import "./js/companies.js";
 import "./js/users.js";
 import "./js/profiles.js";
