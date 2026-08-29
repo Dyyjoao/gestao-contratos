@@ -50,6 +50,9 @@ service cloud.firestore {
     function gerenciaUsuarios() {
       return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar');
     }
+    function usaCentroCusto() {
+      return permissao('controladoria','visualizar') || permissao('contratos','visualizar') || permissao('almoxarifado','visualizar') || permissao('cotacoes','visualizar') || permissao('frota','visualizar');
+    }
 
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
@@ -66,8 +69,7 @@ service cloud.firestore {
 
     match /perfisAcesso/{perfilId} {
       allow read: if usuarioAtivo() && (
-        usuario().data.perfilId == perfilId ||
-        administrador() ||
+        usuario().data.perfilId == perfilId || administrador() ||
         (permissao('perfisAcesso','visualizar') && (resource.data.acessoTotal == true || !('grupoId' in resource.data) || resource.data.grupoId == usuario().data.grupoId)) ||
         (gerenciaUsuarios() && resource.data.acessoTotal != true && resource.data.grupoId == usuario().data.grupoId)
       );
@@ -152,6 +154,48 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
       allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /centrosCusto/{id} {
+      allow read: if usaCentroCusto() && documentoAcessivel(resource.data);
+      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
+      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /planoContasGerencial/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
+      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /premissasPlanejamento/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if escritaControladoria() && documentoAcessivel(request.resource.data);
+      allow update: if escritaControladoria() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /realizadoMensal/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if (permissao('controladoria','editar') || permissao('controladoria','importar')) && documentoAcessivel(request.resource.data);
+      allow update: if (permissao('controladoria','editar') || permissao('controladoria','importar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /budgetLinhas/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if (permissao('controladoria','budget') || permissao('controladoria','editar')) && documentoAcessivel(request.resource.data);
+      allow update: if (permissao('controladoria','budget') || permissao('controladoria','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /forecastLinhas/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if (permissao('controladoria','forecast') || permissao('controladoria','editar')) && documentoAcessivel(request.resource.data);
+      allow update: if (permissao('controladoria','forecast') || permissao('controladoria','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
   }
