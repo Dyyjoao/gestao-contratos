@@ -12,6 +12,7 @@ export const numero=(v)=>Number(v||0).toLocaleString("pt-BR",{maximumFractionDig
 export const valor=(v)=>{const n=Number(String(v??"").replace(",","."));return Number.isFinite(n)?n:0};
 export const hojeIso=()=>new Date().toISOString().slice(0,10);
 export const competenciaAtual=()=>new Date().toISOString().slice(0,7);
+export const empresaAtualId=()=>state.empresaAtualId||state.usuario?.empresaId||"";
 export function dataBr(v){if(!v)return"-";const [a,m,d]=String(v).slice(0,10).split("-");return a&&m&&d?`${d}/${m}/${a}`:v}
 export function diasAte(v){if(!v)return null;const alvo=new Date(`${v}T12:00:00`),hoje=new Date();hoje.setHours(12,0,0,0);return Math.ceil((alvo-hoje)/86400000)}
 export function statusHtml(texto,classe="status-ativo"){return `<span class="${classe}">${esc(texto)}</span>`}
@@ -43,6 +44,13 @@ export async function carregarEmpresasModulo(){
 export async function preencherEmpresaSelect(select,{todas=false,valorAtual=""}={}){
   if(!select)return;
   const mapa=await carregarEmpresasModulo();
+  const contexto=empresaAtualId();
+  if(contexto&&mapa.has(contexto)){
+    const e=mapa.get(contexto);
+    select.innerHTML=`<option value="${esc(e.id)}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`;
+    select.value=contexto;
+    return;
+  }
   const arr=[...mapa.values()].sort((a,b)=>String(a.nomeFantasia||a.razaoSocial||"").localeCompare(String(b.nomeFantasia||b.razaoSocial||""),"pt-BR"));
   select.innerHTML=(todas?'<option value="">Todas as empresas</option>':'<option value="">Selecione...</option>')+arr.map(e=>`<option value="${e.id}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`).join("");
   if(valorAtual&&[...select.options].some(o=>o.value===valorAtual))select.value=valorAtual;
@@ -53,6 +61,12 @@ export function nomeEmpresa(id){const e=state.empresas.get(id);return e?.nomeFan
 export async function listarDocumentos(nomeColecao){
   if(!state.usuario?.grupoId)return[];
   const saida=[];
+  const contexto=empresaAtualId();
+  if(contexto){
+    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",state.usuario.grupoId),where("empresaId","==",contexto)));
+    s.forEach(r=>saida.push({id:r.id,...r.data()}));
+    return saida;
+  }
   if(admin()||state.usuario.acessoGlobal===true){
     const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",state.usuario.grupoId)));
     s.forEach(r=>saida.push({id:r.id,...r.data()}));
@@ -66,7 +80,9 @@ export async function listarDocumentos(nomeColecao){
 }
 
 export async function criarDocumento(nomeColecao,dados){
-  const ref=await addDoc(collection(db,nomeColecao),{...dados,grupoId:state.usuario.grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+  const empresaId=dados.empresaId||empresaAtualId();
+  if(!empresaId)throw new Error("empresa-nao-selecionada");
+  const ref=await addDoc(collection(db,nomeColecao),{...dados,empresaId,grupoId:state.usuario.grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
   return ref.id;
 }
 export async function atualizarDocumento(nomeColecao,id,dados){await updateDoc(doc(db,nomeColecao,id),{...dados,atualizadoEm:serverTimestamp()})}
@@ -85,7 +101,7 @@ export async function movimentarSaldoItem({itemId,tipo,quantidade,observacao}){
   await runTransaction(db,async tx=>{
     const snap=await tx.get(itemRef);if(!snap.exists())throw new Error("item-nao-encontrado");
     const item=snap.data();
-    if(item.grupoId!==state.usuario.grupoId||!podeEmpresa(item.empresaId))throw new Error("sem-acesso");
+    if(item.grupoId!==state.usuario.grupoId||!podeEmpresa(item.empresaId)||item.empresaId!==empresaAtualId())throw new Error("sem-acesso");
     const atual=valor(item.estoqueAtual);const novo=tipo==="entrada"?atual+qtd:atual-qtd;
     if(novo<0)throw new Error("saldo-insuficiente");
     tx.update(itemRef,{estoqueAtual:novo,atualizadoEm:serverTimestamp()});
