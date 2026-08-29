@@ -1,4 +1,5 @@
 import "./js/core.js";
+import "./js/company-context.js";
 import "./js/companies.js";
 import "./js/users.js";
 import "./js/profiles.js";
@@ -10,8 +11,7 @@ import "./js/fleet-maintenance.js";
 import "./js/inventory.js";
 import "./js/inventory-history.js";
 import "./js/quotes.js";
-import "./js/controllership.js";
-import "./js/controllership-export.js";
+import "./js/fpa.js";
 import "./js/dashboard.js";
 import "./js/permission-ui.js";
 import "./js/polish.js";
