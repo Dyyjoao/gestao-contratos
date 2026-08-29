@@ -13,6 +13,7 @@ import "./js/inventory.js";
 import "./js/inventory-history.js";
 import "./js/quotes.js";
 import "./js/fpa.js";
+import "./js/fpa-number-fix.js";
 import "./js/dashboard.js";
 import "./js/permission-ui.js";
 import "./js/polish.js";
