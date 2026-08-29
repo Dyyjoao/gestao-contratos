@@ -62,13 +62,15 @@ service cloud.firestore {
     function caixaContas() { return fpaEditar() || permissao('controladoria','caixaContas'); }
     function caixaFixos() { return fpaEditar() || permissao('controladoria','caixaFixos'); }
     function prestacaoComentar() { return fpaEditar() || permissao('controladoria','prestacaoComentar'); }
+    function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
+    function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
     function gerenciaUsuarios() { return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar'); }
     function usaCentroCusto() { return permissao('controladoria','visualizar') || permissao('contratos','visualizar') || permissao('almoxarifado','visualizar') || permissao('cotacoes','visualizar') || permissao('frota','visualizar'); }
 
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
         request.auth.uid == usuarioId ||
-        ((permissao('usuarios','visualizar') || permissao('planosAcao','reatribuir')) && resource.data.grupoId == usuario().data.grupoId)
+        ((permissao('usuarios','visualizar') || permissao('planosAcao','reatribuir') || permissao('controladoria','fechamento')) && resource.data.grupoId == usuario().data.grupoId)
       );
       allow create: if permissao('usuarios','cadastrar') && request.resource.data.grupoId == usuario().data.grupoId && podeAtribuirPerfil(request.resource.data.perfilId);
       allow update: if resource.data.grupoId == usuario().data.grupoId && request.resource.data.grupoId == resource.data.grupoId && podeAtribuirPerfil(request.resource.data.perfilId) && (
@@ -259,6 +261,29 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if prestacaoComentar() && documentoAcessivel(request.resource.data);
       allow update: if prestacaoComentar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /fechamentoTarefas/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if fechamentoGerir() && documentoAcessivel(request.resource.data) && responsavelValido(request.resource.data.responsavelId);
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.competencia == resource.data.competencia &&
+        responsavelValido(request.resource.data.responsavelId) && (
+          fechamentoGerir() ||
+          ((resource.data.responsavelId == request.auth.uid || fechamentoFechar()) &&
+            request.resource.data.responsavelId == resource.data.responsavelId &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','observacao','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+
+    match /fechamentosMensais/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if (fechamentoGerir() || fechamentoFechar()) && documentoAcessivel(request.resource.data);
+      allow update: if fechamentoFechar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && request.resource.data.competencia == resource.data.competencia;
       allow delete: if false;
     }
 
