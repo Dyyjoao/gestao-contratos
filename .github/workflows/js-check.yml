@@ -32,10 +32,14 @@ jobs:
           set -e
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=4000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=5000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dom.html
           grep -q 'id="pagina-frota"' /tmp/sig-dom.html
           grep -q 'id="pagina-almoxarifado"' /tmp/sig-dom.html
           grep -q 'id="pagina-cotacoes"' /tmp/sig-dom.html
           grep -q 'id="pagina-controladoria"' /tmp/sig-dom.html
           grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
           grep -q 'id="btnEntrar"' /tmp/sig-dom.html
+          grep -q 'id="tabelaBudget"' /tmp/sig-dom.html
+          grep -q 'id="tabelaDre"' /tmp/sig-dom.html
+          grep -q 'id="tabFluxoCaixa"' /tmp/sig-dom.html
+          grep -q 'id="tabelaFluxoCaixa"' /tmp/sig-dom.html
