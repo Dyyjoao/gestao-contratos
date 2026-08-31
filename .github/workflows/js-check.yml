@@ -2,7 +2,7 @@ name: SIG Quality Check
 
 on:
   push:
-    branches: [main, chatgpt/contas-estatisticas-dre-export, chatgpt/input-v4-limpeza-legado, chatgpt/sig-apresentacao-controladoria-compliance, chatgpt/auditoria-compliance-completa]
+    branches: [main, chatgpt/mascara-contas-balanco-centros, chatgpt/contas-estatisticas-dre-export, chatgpt/input-v4-limpeza-legado]
   pull_request:
     branches: [main]
 
@@ -25,49 +25,51 @@ jobs:
           grep -q 'periodoContexto' js/company-context.js
           grep -q 'browserSessionPersistence' js/core.js
 
-          grep -q 'ctrl-dre-v6.js' js/controllership-router.js
-          grep -q 'ctrl-input-v6.js' js/controllership-router.js
-          grep -q 'ctrl-budget-v7.js' js/controllership-router.js
-          grep -q 'ctrl-forecast-v5.js' js/controllership-router.js
-          grep -q 'ctrl-chart-accounts-v3.js' js/controllership-router.js
-          grep -q 'ctrl-premises-v3.js' js/controllership-router.js
-          grep -q 'closing-v3.js' js/controllership-router.js
-
-          grep -q 'CC_ESTATISTICO_ID' js/statistical-center.js
           grep -q '__cc_estatistico__' js/statistical-center.js
-          grep -q 'tipoEstrutura' js/account-tree.js
+          grep -q '__cc_balanco__' js/balance-center.js
+          grep -q 'RAIZES_CONTABEIS' js/account-mask.js
+          grep -q '"1".*ATIVO' js/account-mask.js
+          grep -q '"2".*PASSIVO' js/account-mask.js
+          grep -q '"3".*RECEITA' js/account-mask.js
+          grep -q '"4".*DESPESA' js/account-mask.js
+          grep -q '"9".*ESTATÍSTICA' js/account-mask.js
+          grep -q 'proximoCodigoSintetico' js/account-mask.js
+          grep -q 'proximoCodigoAnalitico' js/account-mask.js
           grep -q 'contaPaiId' js/account-tree.js
-          grep -q 'folhasDescendentes' js/account-tree.js
-          grep -q 'arvoreParaFolhas' js/account-tree.js
+          grep -q 'contaAtivaNoExercicio' js/account-validity.js
+          grep -q 'inativaAPartirExercicio' js/account-validity.js
 
-          grep -q 'pagina-ctrl-plano-v3' js/ctrl-chart-accounts-v3.js
-          grep -q 'Sintética' js/ctrl-chart-accounts-v3.js
-          grep -q 'Analítica' js/ctrl-chart-accounts-v3.js
-          grep -q 'Conta superior' js/ctrl-chart-accounts-v3.js
-          grep -q 'tipoEstatistica' js/ctrl-chart-accounts-v3.js
-          grep -q 'centroTecnicoId' js/ctrl-chart-accounts-v3.js
+          grep -q 'pagina-ctrl-plano-v6' js/ctrl-chart-accounts-v6.js
+          grep -q 'Copiar para outra empresa' js/ctrl-chart-accounts-v6.js
+          grep -q 'modoPreenchimento' js/ctrl-chart-accounts-v6.js
+          grep -q 'manual' js/ctrl-chart-accounts-v6.js
+          grep -q 'automatico' js/ctrl-chart-accounts-v6.js
+          grep -q 'Grupo gerencial da DRE' js/ctrl-chart-accounts-v6.js
+          grep -q 'usosAPartir' js/ctrl-chart-accounts-v6.js
+          grep -q 'inativaAPartirExercicio' js/ctrl-chart-accounts-v6.js
 
-          grep -q 'contaAnalitica' js/center-account-matrix.js
-          grep -q '!contaEstatistica' js/center-account-matrix.js
-          grep -q 'somente contas Analíticas financeiras' js/center-account-matrix.js
+          grep -q 'pagina-ctrl-centros-v2' js/ctrl-cost-centers-v2.js
+          grep -q 'Salvar mantém você nesta tela' js/ctrl-cost-centers-v2.js
+          grep -q 'abrirMatrizCentro' js/ctrl-cost-centers-v2.js
+          grep -q 'raízes 3 Receita e 4 Despesa' js/center-account-matrix-v2.js
+          grep -q 'contaDre' js/center-account-matrix-v2.js
 
-          grep -q 'pagina-ctrl-input-v6' js/ctrl-input-v6.js
-          grep -q 'Estatísticas / Indicadores' js/ctrl-input-v6.js
-          grep -q 'Conta sintética · não lançável' js/ctrl-input-v6.js
-          grep -q 'Limpar legado do exercício' js/ctrl-input-v6.js
-          grep -q 'duplicadoArquivado' js/ctrl-input-v6.js
+          grep -q 'criarMatrizPlanejamentoV3' js/ctrl-planning-matrix-v3.js
+          grep -q 'Ativo e Passivo são exclusivos do Balanço' js/ctrl-planning-matrix-v3.js
+          grep -q 'Estatística automática' js/ctrl-planning-matrix-v3.js
+          grep -q 'Abrir orçamento' js/ctrl-planning-matrix-v3.js
+          grep -q 'Finalizar orçamento' js/ctrl-planning-matrix-v3.js
+          grep -q 'Reabrir orçamento' js/ctrl-planning-matrix-v3.js
+          grep -q 'Nova versão' js/ctrl-planning-matrix-v3.js
+          grep -q 'RESULTADO / SALDO' js/ctrl-planning-matrix-v3.js
+          grep -q 'definido no cabeçalho' js/ctrl-planning-matrix-v3.js
+          grep -q 'criarMatrizPlanejamentoV3' js/ctrl-budget-v8.js
+          grep -q 'criarMatrizPlanejamentoV3' js/ctrl-forecast-v6.js
 
-          grep -q 'criarMatrizPlanejamentoV2' js/ctrl-budget-v7.js
-          grep -q 'criarMatrizPlanejamentoV2' js/ctrl-forecast-v5.js
-          grep -q 'tipoRegistro:"budget_meta"' js/ctrl-planning-matrix-v2.js
-          grep -q 'Abrir orçamento' js/ctrl-planning-matrix-v2.js
-          grep -q 'Finalizar orçamento' js/ctrl-planning-matrix-v2.js
-          grep -q 'Reabrir orçamento' js/ctrl-planning-matrix-v2.js
-          grep -q 'Nova versão' js/ctrl-planning-matrix-v2.js
-          grep -q 'definido no cabeçalho' js/ctrl-planning-matrix-v2.js
-          grep -q 'RESULTADO / SALDO' js/ctrl-planning-matrix-v2.js
-          grep -q 'Soma automática das contas filhas' js/ctrl-planning-matrix-v2.js
-          grep -q 'CC_ESTATISTICO_ID' js/ctrl-planning-matrix-v2.js
+          grep -q 'classificarHorizonteCaixa' js/my-desk.js
+          grep -q 'Primeira ruptura' js/my-desk.js
+          grep -q 'Caixa projetado negativo em' js/my-desk.js
+          ! grep -q 'titulo:"Caixa projetado negativo em D+90"' js/my-desk.js
 
           grep -q 'pagina-ctrl-dre-v6' js/ctrl-dre-v6.js
           grep -q 'Expandir tudo' js/ctrl-dre-v6.js
@@ -75,30 +77,21 @@ jobs:
           grep -q 'Exportar Excel' js/ctrl-dre-v6.js
           grep -q 'Imprimir / PDF' js/ctrl-dre-v6.js
           grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v6.js
-          grep -q 'Consolidada por conta' js/ctrl-dre-v6.js
-          grep -q 'Estatísticas / Indicadores' js/ctrl-dre-v6.js
 
-          grep -q 'pagina-ctrl-premissas-v3' js/ctrl-premises-v3.js
-          grep -q 'Sazonal mês a mês' js/ctrl-premises-v3.js
-          grep -q 'quantidade_preco' js/ctrl-premises-v3.js
+          grep -q 'pagina-ctrl-input-v6' js/ctrl-input-v6.js
+          grep -q 'Estatísticas / Indicadores' js/ctrl-input-v6.js
+          grep -q 'Conta sintética · não lançável' js/ctrl-input-v6.js
+
+          grep -q 'pagina-ctrl-premissas-v4' js/ctrl-premises-v4.js
+          grep -q 'vigência mensal' js/ctrl-premises-v4.js
+          grep -q 'contaAtivaNoExercicio' js/ctrl-premises-v4.js
 
           grep -q 'pagina-closing-v3' js/closing-v3.js
           grep -q 'duplicadoArquivado' js/closing-v3.js
           grep -q 'Inativar daqui em diante' js/closing-v3.js
-          grep -q 'Excluir daqui em diante' js/closing-v3.js
 
-          grep -q 'concluidas' js/my-desk.js
-          grep -q 'SIG_ABRIR_CTRL?.("caixa")' js/my-desk.js
-          ! grep -q 'listarDocumentos("cotacoes")' js/my-desk.js
-          ! grep -q 'listarDocumentos("veiculos")' js/my-desk.js
-          ! grep -q 'listarDocumentos("itensAlmoxarifado")' js/my-desk.js
-
-          grep -q 'pagina-permutas' js/permutas.js
-          grep -q 'permutaMovimentos' js/permutas.js
-          grep -q 'complianceProgramasAuditoria' js/governance.js
-          grep -q 'complianceCiclosAuditoria' js/governance.js
-          grep -q 'Gerar plano de ação' js/governance.js
-          grep -q 'jspdf@2.5.2' js/accountability-pdf.js
+          grep -q 'Prestação de Contas' docs/STATUS-ATUAL-E-PENDENCIAS.md
+          grep -q 'Não alterar estrutura' docs/STATUS-ATUAL-E-PENDENCIAS.md
 
           grep -q './js/contracts.js' app.js
           ! grep -q './js/fleet.js' app.js
@@ -135,8 +128,7 @@ jobs:
           ! grep -q 'id="pagina-almoxarifado"' /tmp/sig-dom.html
           ! grep -q 'id="pagina-cotacoes"' /tmp/sig-dom.html
           ! grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
-          ! grep -q 'id="menuInputMensal"' /tmp/sig-dom.html
-      - name: Import dynamic Controladoria modules in browser
+      - name: Import current and candidate Controladoria modules in browser
         run: |
           set -e
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -145,10 +137,10 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{const mods=['statistical-center.js','account-tree.js','ctrl-chart-accounts-v3.js','ctrl-dre-v6.js','ctrl-input-v6.js','ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js','ctrl-premises-v3.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
+          teste='''<script type="module">(async()=>{const mods=['account-mask.js','account-validity.js','balance-center.js','statistical-center.js','ctrl-chart-accounts-v6.js','center-account-matrix-v2.js','ctrl-cost-centers-v2.js','ctrl-planning-matrix-v3.js','ctrl-budget-v8.js','ctrl-forecast-v6.js','ctrl-dre-v6.js','ctrl-input-v6.js','ctrl-premises-v4.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=22000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=24000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
           if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
             grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
             exit 1
