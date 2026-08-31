@@ -1,78 +1,45 @@
 # SIG — Guia Operacional de Continuidade
 
-**Sistema Integrado de Gestão (SIG)**  
-**Finalidade:** permitir retomada segura do desenvolvimento em outro chat, outra IA, outro desenvolvedor, outro computador, outro repositório ou outra hospedagem sem depender de memória informal.  
-**Data-base deste guia:** 31/08/2026.
+**Finalidade:** retomar o SIG em outra conversa, IA, equipe, computador, repositório ou hospedagem sem depender de memória informal.  
+**Data-base:** 31/08/2026.
 
 ---
 
-## 1. Regra de ouro
+## 1. Comece sempre daqui
 
-O SIG não pode depender da memória de uma conversa.
+Leia nesta ordem:
 
-A fonte de verdade deve ser lida nesta ordem:
+1. `AGENTS.md`;
+2. `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`;
+3. `docs/SIG-MANUAL-MESTRE.md`;
+4. este Guia;
+5. `SECURITY.md`;
+6. `app.js`;
+7. `js/controllership-router.js` para descobrir módulos ativos da Controladoria;
+8. `firestore.rules` / `storage.rules` quando houver dados ou permissões;
+9. `.github/workflows/js-check.yml` antes de alterar arquitetura/testes.
 
-1. código da branch/commit que será alterado;
-2. `AGENTS.md`;
-3. `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`;
-4. `docs/SIG-MANUAL-MESTRE.md`;
-5. este `docs/SIG-GUIA-DE-CONTINUIDADE.md`;
-6. `SECURITY.md`, `firestore.rules` e `storage.rules` quando houver dados, permissões ou publicação;
-7. histórico Git apenas para entender evolução e recuperar decisões anteriores.
-
-Conversa, memória de IA e anotações externas são apoio, nunca fonte única de verdade.
+Não assuma que o maior número `vN` é a rota vigente. Confira o roteador.
 
 ---
 
-## 2. Checkpoint de recuperação preservado
+## 2. Estado de recuperação preservado
 
-Antes da consolidação iniciada em 31/08/2026, o estado cumulativo mais avançado estava em:
-
-```text
-chatgpt/mascara-contas-balanco-centros
-commit db2c1835505aea7477503911108069234d6ffda7
-```
-
-Esse estado foi congelado em:
+Antes da consolidação de 31/08/2026, o estado cumulativo foi preservado em:
 
 ```text
 archive/sig-pre-consolidacao-2026-08-31
 ```
 
-Esse snapshot existe para recuperação. Não desenvolver diretamente nele e não reescrever seu histórico.
+Esse snapshot é ponto de recuperação histórico. Não desenvolver diretamente nele e não reescrever seu histórico.
 
-Na conferência de branches feita antes da consolidação, as principais branches anteriores de Administração, contexto global, DRE, Input, Estatísticas, Compliance, apresentação, mobile e fluxos operacionais estavam contidas na linha cumulativa acima. A única divergência encontrada em `chatgpt/input-v4-limpeza-legado` era um commit `noop`, sem alteração de arquivos.
-
----
-
-## 3. Como retomar o projeto com segurança
-
-Antes de qualquer nova alteração estrutural:
-
-1. identificar a `main` atual e o último commit de produção;
-2. identificar a branch de desenvolvimento mais recente;
-3. comparar a branch de desenvolvimento com a `main`;
-4. conferir se existem branches divergentes com commits funcionais exclusivos;
-5. ler `AGENTS.md`, Dossiê, Manual Mestre e este guia;
-6. conferir a rota realmente ativa em `js/controllership-router.js` — arquivos com versão maior podem existir sem estar ativos;
-7. conferir `firestore.rules` antes de criar nova coleção ou alterar persistência;
-8. criar um checkpoint/branch de recuperação antes de uma consolidação grande;
-9. trabalhar em branch própria;
-10. só promover para `main` após QA.
-
-Nunca assumir que "arquivo mais novo" significa "módulo publicado". A rota ativa é a fonte de verdade de execução.
+O desenvolvimento normal deve partir da `main` atual ou de branch explicitamente criada a partir dela.
 
 ---
 
-## 4. Estado funcional consolidado até o checkpoint
+## 3. Invariantes que precisam ser lembradas em qualquer retomada
 
-### 4.1 Contexto global
-
-O cabeçalho controla Grupo, Empresa(s), Exercício e Período. Telas de lançamento normalmente exigem uma empresa; relatórios podem consolidar empresas.
-
-### 4.2 Plano de Contas
-
-Máscara estrutural:
+### Plano de Contas
 
 ```text
 1 Ativo
@@ -81,192 +48,207 @@ Máscara estrutural:
 4 Despesa
 9 Estatística
 
-#.##       = Sintética
-#.##.####  = Analítica
+#.##       Sintética
+#.##.####  Analítica
 ```
 
 Sintética nunca recebe lançamento. Analítica é folha lançável.
 
-O Plano v5 já introduziu:
+### Natureza
 
-- vigência por exercício;
-- inativação temporal sem apagar histórico;
-- cópia de estrutura entre empresas sem copiar saldos/planejamento;
-- preservação de códigos existentes no destino.
+- Ativo: Devedora;
+- Passivo: Credora;
+- Receita: Credora;
+- Despesa: Devedora;
+- Estatística: Neutra.
 
-### 4.3 Natureza contábil e multiplicadores
+Conta redutora usa natureza oposta à raiz.
 
-A regra central está em `js/account-mask.js`.
+**Multiplicadores são de apresentação/cálculo e nunca regravam o saldo bruto.**
 
-| Raiz | Natureza padrão | Apresentação normal | Resultado |
-|---|---|---:|---:|
-| 1 Ativo | Devedora | +1 | não compõe DRE |
-| 2 Passivo | Credora | +1 | não compõe DRE |
-| 3 Receita | Credora | +1 | +1 |
-| 4 Despesa | Devedora | +1 de apresentação | -1 no resultado |
-| 9 Estatística | Neutra | valor informativo | 0 no resultado |
-
-Conta redutora é identificada pela natureza oposta à natureza padrão da raiz. O texto `(-)` no nome pode ajudar o usuário, mas não define a regra.
-
-Exemplo:
-
-```text
-1.01.0001 Máquinas e Equipamentos       Devedora  => +1
-1.01.0002 Depreciação Acumulada         Credora   => -1
-```
-
-Se os saldos brutos forem 1.000.000 e 300.000:
-
-```text
-Imobilizado líquido = 1.000.000 + (300.000 × -1) = 700.000
-```
-
-**Invariante crítica:** multiplicadores são de apresentação/cálculo gerencial. Não modificar o saldo bruto armazenado para "corrigir" sinal de relatório.
-
-### 4.4 Centros técnicos
-
-Estatística:
+### Centros técnicos
 
 ```text
 __cc_estatistico__
-```
-
-Balanço:
-
-```text
 __cc_balanco__
 ```
 
-Centros técnicos existem para manter chaves consistentes e não devem aparecer como Centros de Custo operacionais normais.
+Eles não são Centros operacionais.
 
-### 4.5 Budget e Forecast
+### Balanço
 
-Budget é anual, possui ciclo e versões. Forecast combina Realizado fechado com projeção futura.
+- posição de fechamento;
+- meses não são somados;
+- consolidação multiempresa por código;
+- Ativo/Passivo não entram na DRE/OPEX.
 
-CAPEX não deve ser tratado como despesa operacional apenas para caber na DRE. Investimento é controlado separadamente; depreciação/amortização é que chega à DRE conforme a conta configurada.
+### Budget / Forecast
 
-### 4.6 Imobilizado / depreciação
+- Budget anual e versionado;
+- A-1 é o exercício anterior ao selecionado;
+- Forecast = Realizado fechado + futuro;
+- premissas respeitam vigência mês a mês.
 
-O motor mensal de depreciação está centralizado em `js/asset-depreciation.js` e já contempla:
+### Imobilizado
 
-- valor de aquisição;
-- valor residual;
-- vida útil/taxa;
-- data disponível para uso/início de depreciação;
-- baixa;
-- depreciação mensal;
-- depreciação acumulada;
-- valor contábil líquido;
-- mapeamento para conta de despesa de depreciação;
-- mapeamento para ativo bruto e depreciação acumulada no Balanço.
+- CAPEX é investimento;
+- depreciação começa quando o bem está disponível para uso;
+- Depreciação Acumulada é redutora do Ativo;
+- automação substitui manual equivalente para não duplicar.
 
-Regra contábil: bem em implantação não começa a depreciar antes de estar disponível para uso.
+### Telas monoempresa
 
----
+- Input Mensal;
+- Fluxo de Caixa;
+- Prestação de Contas;
+- demais cadastros/gravações quando a identidade pertence a uma empresa.
 
-## 5. Dados: o que uma atualização nunca pode fazer
-
-Uma atualização de frontend não pode:
-
-- apagar documentos existentes;
-- trocar `grupoId` ou `empresaId` silenciosamente;
-- converter saldo bruto em saldo apresentado e sobrescrever o original;
-- somar duplicidades silenciosamente;
-- reutilizar código de conta automaticamente;
-- transformar Sintética em lançável;
-- remover histórico por causa de inativação;
-- apagar Budget/Forecast anterior ao criar nova versão;
-- misturar CC técnico com CC operacional;
-- incluir Estatística no resultado financeiro;
-- iniciar depreciação de ativo antes da entrada em operação.
-
-Quando um modelo de dados evoluir, usar default compatível, migração idempotente e possibilidade de rollback.
+Nunca usar a primeira empresa silenciosamente em contexto múltiplo.
 
 ---
 
-## 6. Hospedagem, domínio e banco
+## 4. Como iniciar uma mudança
 
-O frontend e o banco são independentes.
-
-Hoje o frontend pode estar no GitHub Pages, mas o banco está no Firebase/Firestore. Migrar o frontend para Vercel, Netlify, Firebase Hosting, Cloudflare Pages ou hospedagem paga não apaga a base desde que a aplicação continue apontando para o mesmo projeto Firebase.
-
-Para troca de hospedagem:
-
-1. congelar release estável;
-2. guardar tag/commit de rollback;
-3. configurar o novo host com o mesmo frontend aprovado;
-4. configurar domínio e HTTPS;
-5. revisar domínios autorizados no Firebase Authentication;
-6. revisar restrições aplicáveis às chaves públicas;
-7. testar login, leitura e escrita por perfil;
-8. testar uma empresa isolada e consolidação;
-9. somente depois alterar DNS definitivo.
-
-Migração de hospedagem não deve ser confundida com migração de banco.
+1. confirmar `main` e último commit estável;
+2. conferir branches de desenvolvimento existentes;
+3. comparar a branch candidata com `main`;
+4. ler documentação oficial;
+5. conferir rota ativa;
+6. criar branch de trabalho/checkpoint quando necessário;
+7. implementar com compatibilidade de dados;
+8. atualizar QA e documentação junto com o código.
 
 ---
 
-## 7. Processo obrigatório de release
+## 5. Quando mexer em dados
+
+Antes de alterar coleção, documento ou padrão de escrita:
+
+- ler `firestore.rules`;
+- confirmar `grupoId` e `empresaId`;
+- decidir identidade canônica do documento;
+- considerar dados legados e duplicidades;
+- não fazer migração destrutiva sem rollback;
+- não transformar saldo bruto em saldo apresentado;
+- não apagar histórico por causa de vigência/inativação.
+
+---
+
+## 6. Política de código antigo
+
+Há versões antigas de módulos no repositório.
+
+Procedimento:
+
+1. confira o roteador/import atual;
+2. procure referências dinâmicas;
+3. confirme se migração/compatibilidade ainda depende do arquivo;
+4. somente depois remova.
+
+Arquivo antigo sem rota é dívida técnica/histórico, não autorização para reutilização.
+
+---
+
+## 7. QA mínimo antes de merge
+
+Automático:
+
+- `node --check`;
+- contratos arquiteturais;
+- importação de módulos dinâmicos;
+- Chrome headless/smoke test;
+- Rules quando aplicável.
+
+Funcional/contábil:
+
+- Ativo normal e redutor;
+- Passivo normal e redutor;
+- Receita e Despesa;
+- Estatística neutra;
+- saldo bruto preservado;
+- Balanço fechado e posição mensal;
+- consolidação por código;
+- vigência de contas;
+- vigência de premissas Jan–Jun / Jul–Dez;
+- Budget A-1;
+- Forecast fechado + futuro;
+- Imobilizado/depreciação automática;
+- Dashboard e Prestação sem Balanço/Estatística como OPEX;
+- Fluxo de Caixa bloqueado em multiempresa;
+- Prestação bloqueada em multiempresa.
+
+---
+
+## 8. Publicação
 
 Antes de promover para `main`:
 
-- `node --check` em todos os módulos;
-- validar contratos arquiteturais do workflow;
-- smoke test em Chrome headless;
-- importar módulos dinâmicos da Controladoria;
-- validar regras do Firestore para coleções alteradas;
-- testar conta normal e redutora;
-- testar Ativo, Passivo, Receita e Despesa;
-- testar Estatística Manual e Automática;
-- testar uma competência fechada;
-- testar vigência de conta em exercício anterior/atual/posterior;
-- testar Budget e Forecast sem modificar histórico;
-- testar Balanço como posição de fechamento, nunca soma de meses;
-- testar Imobilizado com entrada em operação e depreciação acumulada;
-- atualizar Dossiê, Manual Mestre e este guia quando houver decisão estrutural;
-- conferir diff final contra `main`;
-- promover preferencialmente por fast-forward;
-- acompanhar QA da `main` e deploy.
+1. todos os arquivos da entrega estão completos;
+2. QA automático está verde;
+3. não há referência ativa conhecida a versões antigas;
+4. documentação descreve o código atual;
+5. `firestore.rules` está compatível;
+6. diff final contra `main` foi revisado;
+7. existe rollback de frontend.
+
+Depois do merge:
+
+- acompanhar Quality Check da `main`;
+- acompanhar deploy;
+- testar login/contexto;
+- testar Controladoria crítica;
+- forçar atualização de cache quando necessário.
 
 ---
 
-## 8. Procedimento de recuperação
+## 9. Hospedagem e domínio
 
-Se uma versão nova quebrar o SIG:
+Frontend e Firestore são independentes.
 
-1. não corrigir dados no Firestore para compensar bug visual antes de entender a causa;
-2. identificar último commit estável;
-3. comparar código, não apenas interface;
-4. verificar se o problema é cache, frontend, regra Firestore ou dado;
-5. usar o checkpoint/tag estável para rollback do frontend quando necessário;
-6. preservar dados criados após a versão anterior;
-7. corrigir por migração compatível se o formato de dados tiver mudado.
+Para trocar host/domínio sem perder dados:
 
-O snapshot `archive/sig-pre-consolidacao-2026-08-31` preserva o estado anterior à consolidação de Balanço/Natureza/Segurança iniciada em 31/08/2026.
+1. preservar release estável;
+2. manter o mesmo Firebase inicialmente;
+3. configurar novo host e HTTPS;
+4. adicionar/revisar domínio autorizado no Firebase Authentication;
+5. testar perfis/Rules;
+6. testar empresa única e consolidação;
+7. alterar DNS somente após aceite.
 
----
-
-## 9. Texto de handoff para uma nova conversa/IA
-
-Quando for necessário continuar em outro ambiente, usar como ponto de partida:
-
-> Este é o SIG — Sistema Integrado de Gestão. Antes de alterar qualquer código, leia `AGENTS.md`, `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`, `docs/SIG-MANUAL-MESTRE.md`, `docs/SIG-GUIA-DE-CONTINUIDADE.md` e `SECURITY.md`. Confira a `main` atual, a branch de desenvolvimento mais recente, o roteador de Controladoria e `firestore.rules`. Não dependa de memória de conversa. Preserve Grupo/Empresa, dados existentes, vigências, contas Sintéticas/Analíticas, CCs técnicos, ciclos de Budget/Forecast e natureza contábil. Multiplicadores são de apresentação e nunca devem regravar o saldo bruto. Não publique mudança estrutural sem QA e documentação.
+Nunca colocar segredo de backend/IA no JavaScript cliente.
 
 ---
 
-## 10. Quando este guia deve ser atualizado
+## 10. Recuperação de incidente
 
-Atualizar este arquivo sempre que mudar qualquer uma destas áreas:
+Se uma versão quebrar:
 
-- arquitetura de hospedagem/backend;
-- branch/processo de release;
-- modelo de dados relevante;
-- estrutura do Plano de Contas;
-- natureza/multiplicadores;
-- Balanço;
-- Budget/Forecast;
-- Imobilizado/CAPEX;
-- segurança/permissões;
-- procedimento de migração ou rollback.
+1. não “conserte” o Firestore para compensar bug visual;
+2. identifique o último commit estável;
+3. compare código e Rules;
+4. diferencie cache, frontend, Rule e dado;
+5. faça rollback do frontend quando apropriado;
+6. preserve dados criados depois da versão anterior;
+7. migre dados apenas quando necessário e de forma controlada.
 
-A entrega estrutural está incompleta se o código mudar e este material continuar descrevendo uma arquitetura antiga.
+---
+
+## 11. Texto curto de handoff
+
+> Este é o SIG — Sistema Integrado de Gestão. Leia `AGENTS.md`, o Dossiê, o Manual Mestre, este Guia e `SECURITY.md` antes de alterar código. Confira `app.js`, `js/controllership-router.js`, `firestore.rules` e o Quality Check. Preserve Grupo/Empresa, dados existentes, vigências, máscara `#.##.####`, natureza contábil, CCs técnicos, ciclos de Budget/Forecast e integração de Imobilizado. Multiplicadores nunca regravam saldo bruto. Não use contexto multiempresa em tela monoempresa. Não publique mudança estrutural sem QA e documentação.
+
+---
+
+## 12. Quando atualizar este Guia
+
+Atualize quando mudar:
+
+- processo de release/rollback;
+- arquitetura de hospedagem;
+- fonte de verdade/documentação;
+- modelo de dados importante;
+- regras de contexto multiempresa;
+- Plano/Natureza/Balanço;
+- Budget/Forecast/Premissas;
+- Imobilizado;
+- segurança.
