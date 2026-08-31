@@ -1,0 +1,1 @@
+Checklist: submenu expansível; DRE T1 sem consultas ocultas do Dashboard; Input Mensal separado; Permutas; Configurações; imports sob demanda.
