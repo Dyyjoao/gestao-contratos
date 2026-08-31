@@ -287,6 +287,27 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /configuracoesControladoria/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /permutas/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /permutaMovimentos/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
     match /planosAcao/{id} {
       allow read: if documentoAcessivel(resource.data) && (
         resource.data.responsavelId == request.auth.uid ||
