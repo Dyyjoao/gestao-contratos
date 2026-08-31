@@ -1,1 +1,0 @@
-Release pronta para abrir PR e rodar validação.
