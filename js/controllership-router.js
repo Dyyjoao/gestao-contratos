@@ -1,21 +1,23 @@
 import { $, abrirPagina, permite, admin } from "./core.js";
 
-let legadoPromise=null;const modulos=new Map();
+let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831c";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function marcarAtivo(chave){document.querySelectorAll(".ctrl-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.ctrl===chave));$("menuControladoria")?.classList.add("ativo")}
-async function importar(chave,arquivo){if(!modulos.has(chave))modulos.set(chave,import(arquivo));return modulos.get(chave)}
-async function carregarLegado(){if(!legadoPromise)legadoPromise=Promise.all([import("./fpa.js"),import("./fpa-number-fix.js"),import("./center-account-matrix.js"),import("./planning-details.js")]);return legadoPromise}
-export async function abrirLegado(chave){marcarAtivo(chave);await carregarLegado();abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>document.querySelector(`[data-fpa-tab="${chave}"]`)?.click())}
-async function abrirModuloLegado(chave,arquivo,tabId){marcarAtivo(chave);await carregarLegado();await importar(chave,arquivo);abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>$(tabId)?.click())}
-async function abrirTela(chave,arquivo){marcarAtivo(chave);const m=await importar(chave,arquivo);m.abrir?.()}
+function nomeModulo(chave){return({dre:"DRE Gerencial",input:"Input Mensal",budget:"Budget",forecast:"Forecast",caixa:"Fluxo de Caixa",prestacao:"Prestação de Contas",fechamento:"Cockpit de Fechamento",permutas:"Permutas",premissas:"Premissas",plano:"Plano de Contas",centros:"Centros de Custo",config:"Configurações"})[chave]||"módulo"}
+function erroModulo(chave,e){console.error(`Falha ao abrir ${chave}:`,e);const texto=`Não foi possível abrir ${nomeModulo(chave)}. Atualize a página e tente novamente. Se persistir, o erro foi registrado no console.`;const atual=document.querySelector(".pagina:not(.hidden) .modulo-aviso");if(atual)atual.textContent=texto;else alert(texto)}
+async function importar(chave,arquivo){if(!modulos.has(chave)){const p=import(`${arquivo}?v=${MODULO_VERSAO}`).catch(e=>{modulos.delete(chave);throw e});modulos.set(chave,p)}return modulos.get(chave)}
+async function carregarLegado(){if(!legadoPromise)legadoPromise=Promise.all([import(`./fpa.js?v=${MODULO_VERSAO}`),import(`./fpa-number-fix.js?v=${MODULO_VERSAO}`),import(`./center-account-matrix.js?v=${MODULO_VERSAO}`),import(`./planning-details.js?v=${MODULO_VERSAO}`)]).catch(e=>{legadoPromise=null;throw e});return legadoPromise}
+export async function abrirLegado(chave){try{marcarAtivo(chave);await carregarLegado();abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>document.querySelector(`[data-fpa-tab="${chave}"]`)?.click())}catch(e){erroModulo(chave,e)}}
+async function abrirModuloLegado(chave,arquivo,tabId){try{marcarAtivo(chave);await carregarLegado();await importar(chave,arquivo);abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>$(tabId)?.click())}catch(e){erroModulo(chave,e)}}
+async function abrirTela(chave,arquivo){try{marcarAtivo(chave);const m=await importar(chave,arquivo);if(typeof m.abrir!=="function")throw new Error("modulo-sem-funcao-abrir");m.abrir()}catch(e){erroModulo(chave,e)}}
 async function abrirPermutas(){await abrirTela("permutas","./permutas.js");const editar=admin()||permite("controladoria","editar");["btnNovaPermuta","btnNovoMovPermuta"].forEach(id=>$(id)?.classList.toggle("hidden",!editar))}
 
 const ACOES={
   dre:()=>abrirTela("dre","./ctrl-dre.js"),
   input:()=>abrirTela("input","./ctrl-input.js"),
   budget:()=>abrirTela("budget","./ctrl-budget.js"),
-  forecast:()=>abrirLegado("forecast"),
+  forecast:()=>abrirTela("forecast","./ctrl-forecast.js"),
   caixa:()=>abrirModuloLegado("caixa","./cashflow.js","tabFluxoCaixa"),
   prestacao:()=>abrirModuloLegado("prestacao","./accountability.js","tabPrestacaoContas"),
   fechamento:()=>abrirTela("fechamento","./closing-v2.js"),
