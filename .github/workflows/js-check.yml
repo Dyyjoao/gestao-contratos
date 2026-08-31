@@ -1,6 +1,8 @@
 name: SIG Quality Check
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -41,5 +43,4 @@ jobs:
           grep -q 'id="btnEntrar"' /tmp/sig-dom.html
           grep -q 'id="tabelaBudget"' /tmp/sig-dom.html
           grep -q 'id="tabelaDre"' /tmp/sig-dom.html
-          grep -q 'id="tabFluxoCaixa"' /tmp/sig-dom.html
-          grep -q 'id="tabelaFluxoCaixa"' /tmp/sig-dom.html
+          grep -q 'id="drePeriodo"' /tmp/sig-dom.html
