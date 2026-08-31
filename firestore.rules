@@ -64,6 +64,16 @@ service cloud.firestore {
     function prestacaoComentar() { return fpaEditar() || permissao('controladoria','prestacaoComentar'); }
     function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
     function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
+    function governancaVisualizar() {
+      return permissao('governanca','visualizar') ||
+        permissao('governanca','auditar') ||
+        permissao('governanca','planoAcao') ||
+        permissao('governanca','validar') ||
+        permissao('governanca','configurar');
+    }
+    function governancaConfigurar() { return permissao('governanca','configurar'); }
+    function governancaAuditar() { return governancaConfigurar() || permissao('governanca','auditar') || permissao('governanca','validar'); }
+    function governancaPlanoAcao() { return governancaAuditar() || permissao('governanca','planoAcao'); }
     function gerenciaUsuarios() { return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar'); }
     function usaCentroCusto() { return permissao('controladoria','visualizar') || permissao('contratos','visualizar') || permissao('almoxarifado','visualizar') || permissao('cotacoes','visualizar') || permissao('frota','visualizar'); }
 
@@ -288,9 +298,28 @@ service cloud.firestore {
     }
 
     match /configuracoesControladoria/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
-      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow read: if (permissao('controladoria','visualizar') || governancaVisualizar()) && documentoAcessivel(resource.data);
+
+      allow create: if documentoAcessivel(request.resource.data) && (
+        fpaEditar() ||
+        (governancaConfigurar() && request.resource.data.keys().hasOnly([
+          'grupoId','empresaId','criadoPor','criadoEm','atualizadoEm',
+          'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria'
+        ]))
+      );
+
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          fpaEditar() ||
+          (governancaConfigurar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria','atualizadoEm'
+          ])) ||
+          (governancaPlanoAcao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'complianceCiclosAuditoria','atualizadoEm'
+          ]))
+        );
+
       allow delete: if false;
     }
 
