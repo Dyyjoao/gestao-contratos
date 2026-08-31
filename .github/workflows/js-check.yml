@@ -93,12 +93,12 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">Promise.all([import('./js/ctrl-budget.js'),import('./js/ctrl-forecast.js'),import('./js/ctrl-input-v3.js')]).then(()=>document.documentElement.setAttribute('data-module-smoke','ok')).catch(e=>{document.documentElement.setAttribute('data-module-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+String(e.stack||e)+'</pre>')})</script>'''
+          teste='''<script type="module">(async()=>{const mods=['ctrl-budget.js','ctrl-forecast.js','ctrl-input-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
           if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
-            cat /tmp/module-dom.html
+            grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
             exit 1
           fi
           rm -f module-smoke.html
