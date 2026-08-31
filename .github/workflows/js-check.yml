@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'chatgpt/**'
+      - 'hotfix/**'
   pull_request:
     branches: [main]
 
@@ -82,6 +83,10 @@ jobs:
           # Budget / Forecast / Premissas / Imobilizado
           grep -q 'criarMatrizPlanejamentoV2' js/ctrl-budget-v7.js
           grep -q 'criarMatrizPlanejamentoV2' js/ctrl-forecast-v5.js
+          grep -q 'abrirPagina(PAGINA)' js/ctrl-budget-v7.js
+          grep -q 'abrirPagina(PAGINA)' js/ctrl-forecast-v5.js
+          ! grep -q 'export const abrir=mod.abrir' js/ctrl-budget-v7.js
+          ! grep -q 'export const abrir=mod.abrir' js/ctrl-forecast-v5.js
           grep -q 'tipoRegistro:"budget_meta"' js/ctrl-planning-matrix-v2.js
           grep -q 'premissaParaCompetencia' js/ctrl-planning-matrix-v2.js
           grep -q 'competenciaDoMes' js/ctrl-planning-matrix-v2.js
@@ -175,7 +180,7 @@ jobs:
           ! grep -q 'id="pagina-cotacoes"' /tmp/sig-dom.html
           ! grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
           ! grep -q 'id="menuInputMensal"' /tmp/sig-dom.html
-      - name: Import current Controladoria modules in browser
+      - name: Import and open current Controladoria modules in browser
         run: |
           set -e
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -193,7 +198,24 @@ jobs:
             'ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js',
             'ctrl-dre-v6.js','closing-v3.js','cashflow.js','accountability.js'
           ]
-          teste="<script type=\"module\">(async()=>{const mods="+repr(mods)+";for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>"
+          teste="""<script type=\"module\">(async()=>{
+          const mods=%s;
+          for(const m of mods){
+            try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}
+            catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">'+m+' :: '+String(e.stack||e)+'</pre>');return}
+          }
+          try{
+            const budget=await import('./js/ctrl-budget-v7.js');
+            budget.abrir();
+            const pb=document.getElementById('pagina-ctrl-budget-v7');
+            if(!pb||pb.classList.contains('hidden'))throw new Error('Budget abrir() não exibiu pagina-ctrl-budget-v7');
+            const forecast=await import('./js/ctrl-forecast-v5.js');
+            forecast.abrir();
+            const pf=document.getElementById('pagina-ctrl-forecast-v5');
+            if(!pf||pf.classList.contains('hidden'))throw new Error('Forecast abrir() não exibiu pagina-ctrl-forecast-v5');
+          }catch(e){document.documentElement.setAttribute('data-module-smoke','fail-open');document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">OPEN :: '+String(e.stack||e)+'</pre>');return}
+          document.documentElement.setAttribute('data-module-smoke','ok')
+          })()</script>""" % repr(mods)
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=25000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
