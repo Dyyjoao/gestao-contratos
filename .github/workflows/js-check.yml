@@ -23,6 +23,11 @@ jobs:
           grep -q 'empresasContexto' js/company-context.js
           grep -q 'periodoContexto' js/company-context.js
           grep -q 'concluidas' js/my-desk.js
+          grep -q 'SIG_ABRIR_CTRL?.("caixa")' js/my-desk.js
+          grep -q 'Exceções críticas' js/my-desk.js
+          ! grep -q 'listarDocumentos("cotacoes")' js/my-desk.js
+          ! grep -q 'listarDocumentos("veiculos")' js/my-desk.js
+          ! grep -q 'listarDocumentos("itensAlmoxarifado")' js/my-desk.js
           grep -q 'browserSessionPersistence' js/core.js
           grep -q 'ctrlSubmenu' js/controllership-router.js
           grep -q 'ctrl-input-v4.js' js/controllership-router.js
