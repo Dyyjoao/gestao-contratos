@@ -26,14 +26,15 @@ jobs:
           grep -q 'browserSessionPersistence' js/core.js
           grep -q 'ctrlSubmenu' js/controllership-router.js
           grep -q 'ctrl-input-v3.js' js/controllership-router.js
+          grep -q 'ctrl-budget-v3.js' js/controllership-router.js
           grep -q 'ctrl-forecast.js' js/controllership-router.js
           grep -q 'pagina-ctrl-dre' js/ctrl-dre.js
           grep -q 'Total' js/ctrl-dre.js
           grep -q 'pagina-ctrl-input-v3' js/ctrl-input-v3.js
           grep -q 'Sem centro / lançamentos legados' js/ctrl-input-v3.js
-          grep -q 'pagina-ctrl-budget' js/ctrl-budget.js
-          grep -q 'data-budget-expand' js/ctrl-budget.js
-          grep -q 'contasPermitidas' js/ctrl-budget.js
+          grep -q 'pagina-ctrl-budget-v3' js/ctrl-budget-v3.js
+          grep -q 'data-budget-expand' js/ctrl-budget-v3.js
+          grep -q 'contasPermitidas' js/ctrl-budget-v3.js
           grep -q 'pagina-ctrl-forecast' js/ctrl-forecast.js
           grep -q 'data-forecast-detail' js/ctrl-forecast.js
           grep -q 'soma automática' js/ctrl-forecast.js
@@ -93,7 +94,7 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{const mods=['ctrl-budget.js','ctrl-forecast.js','ctrl-input-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
+          teste='''<script type="module">(async()=>{const mods=['ctrl-budget-v3.js','ctrl-forecast.js','ctrl-input-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
