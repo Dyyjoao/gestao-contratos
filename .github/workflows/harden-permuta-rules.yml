@@ -1,0 +1,45 @@
+name: Harden Permuta Rules
+
+on:
+  push:
+    branches: [chatgpt/corrige-t1-dre]
+    paths: [.github/workflows/harden-permuta-rules.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/corrige-t1-dre
+      - name: Make permuta movements append-only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('firestore.rules')
+          s=p.read_text()
+          old="""    match /permutaMovimentos/{id} {
+              allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+              allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
+              allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+              allow delete: if false;
+            }"""
+          new="""    match /permutaMovimentos/{id} {
+              allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+              allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
+              allow update, delete: if false;
+            }"""
+          if old not in s:
+              raise SystemExit('Bloco de permutaMovimentos não encontrado exatamente; nenhuma alteração aplicada.')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Commit hardened rules
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add firestore.rules
+          git commit -m "Torna movimentos de permuta imutáveis"
+          git push origin HEAD:chatgpt/corrige-t1-dre
