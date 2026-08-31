@@ -1,6 +1,6 @@
 import { $, abrirPagina, permite, admin } from "./core.js";
 
-let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831c";
+let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831d";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function marcarAtivo(chave){document.querySelectorAll(".ctrl-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.ctrl===chave));$("menuControladoria")?.classList.add("ativo")}
@@ -15,7 +15,7 @@ async function abrirPermutas(){await abrirTela("permutas","./permutas.js");const
 
 const ACOES={
   dre:()=>abrirTela("dre","./ctrl-dre.js"),
-  input:()=>abrirTela("input","./ctrl-input.js"),
+  input:()=>abrirTela("input","./ctrl-input-v3.js"),
   budget:()=>abrirTela("budget","./ctrl-budget.js"),
   forecast:()=>abrirTela("forecast","./ctrl-forecast.js"),
   caixa:()=>abrirModuloLegado("caixa","./cashflow.js","tabFluxoCaixa"),
