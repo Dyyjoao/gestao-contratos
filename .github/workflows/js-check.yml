@@ -39,6 +39,8 @@ jobs:
           grep -q 'ctrl-cost-centers-v2.js' js/controllership-router.js
           grep -q 'ctrl-assets-v1.js' js/controllership-router.js
           grep -q 'closing-v3.js' js/controllership-router.js
+          grep -q 'chave==="caixa"||chave==="prestacao"' js/controllership-router.js
+          test ! -e js/ctrl-chart-accounts-v4.js
 
           # Atalhos de Configurações não podem reabrir cadastros legados
           grep -q 'SIG_ABRIR_CTRL?.(chave)' js/ctrl-settings.js
@@ -90,12 +92,23 @@ jobs:
           grep -q 'integrarPlanejamento' js/ctrl-assets-v1.js
           grep -q 'depreciacaoCompetencia' js/asset-depreciation.js
 
-          # DRE
+          # DRE e núcleo financeiro compartilhado
           grep -q 'pagina-ctrl-dre-v6' js/ctrl-dre-v6.js
           grep -q 'Expandir tudo' js/ctrl-dre-v6.js
           grep -q 'Exportar Excel' js/ctrl-dre-v6.js
           grep -q 'multiplicadorResultado' js/ctrl-dre-v6.js
           grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v6.js
+          test -s js/financial-reporting.js
+          grep -q 'financial-reporting.js' js/dashboard-financial.js
+          grep -q 'financial-reporting.js' js/dashboard-executive.js
+          grep -q 'financial-reporting.js' js/accountability.js
+
+          # Telas monoempresa: proteção também quando contexto muda com tela aberta
+          grep -q 'contextoUnico' js/cashflow.js
+          grep -q 'empresaUnicaSelecionadaId' js/cashflow.js
+          grep -q 'Fluxo de Caixa é monoempresa' js/cashflow.js
+          grep -q 'contextoUnico' js/accountability.js
+          grep -q 'Prestação de Contas é monoempresa' js/accountability.js
 
           # Fechamento, mesa, governança e PDF
           grep -q 'pagina-closing-v3' js/closing-v3.js
@@ -127,6 +140,11 @@ jobs:
           test -s docs/SIG-GUIA-DE-CONTINUIDADE.md
           test -s docs/SIG-DOSSIE-DE-CONTINUIDADE.md
           test -s docs/SIG-MANUAL-MESTRE.md
+          test -s docs/qa-controladoria-modular.md
+          test -s docs/release-controladoria-modular.md
+
+          # Documentação não pode voltar a apontar para arquivos oficiais inexistentes
+          ! grep -R -E 'CONTEXTO-PARA-IA|MODELO-DE-DADOS-E-MIGRACOES|VERSIONAMENTO-E-RELEASE|HOSPEDAGEM-DOMINIO-E-PRIVACIDADE|DECISOES-ARQUITETURAIS' docs README.md AGENTS.md
 
   browser-smoke:
     runs-on: ubuntu-latest
@@ -165,7 +183,7 @@ jobs:
           mods=[
             'account-mask.js','account-validity.js','premise-validity.js',
             'statistical-center.js','balance-center.js','account-tree.js',
-            'asset-depreciation.js','asset-planning.js',
+            'asset-depreciation.js','asset-planning.js','financial-reporting.js',
             'ctrl-chart-accounts-v5.js','ctrl-cost-centers-v2.js','ctrl-premises-v4.js',
             'ctrl-input-v6.js','ctrl-balance-sheet-v1.js','ctrl-assets-v1.js',
             'ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js',
