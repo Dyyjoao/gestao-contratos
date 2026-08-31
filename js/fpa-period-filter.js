@@ -3,10 +3,10 @@ import { periodoAno, periodoChave } from "./shared.js";
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const PERIODOS={
   total:{label:"Total do exercício",indices:[0,1,2,3,4,5,6,7,8,9,10,11]},
-  t1:{label:"T1 · Jan–Mar",indices:[0,1,2]},
-  t2:{label:"T2 · Abr–Jun",indices:[3,4,5]},
-  t3:{label:"T3 · Jul–Set",indices:[6,7,8]},
-  t4:{label:"T4 · Out–Dez",indices:[9,10,11]}
+  t1:{label:"Total T1",indices:[0,1,2]},
+  t2:{label:"Total T2",indices:[3,4,5]},
+  t3:{label:"Total T3",indices:[6,7,8]},
+  t4:{label:"Total T4",indices:[9,10,11]}
 };
 MESES.forEach((nome,i)=>PERIODOS[`m${String(i+1).padStart(2,"0")}`]={label:nome,indices:[i]});
 let observadorTabela=null,observadorTela=null,sincronizando=false;
@@ -43,21 +43,31 @@ function sincronizarCompetenciasMensais(){
 
 function aplicarTabelaDre(){
   const tabela=document.getElementById("tabelaDre");if(!tabela)return;
-  const p=PERIODOS[periodoChave()]||PERIODOS.total;
+  const chave=periodoChave(),p=PERIODOS[chave]||PERIODOS.total,mostrarConsolidado=p.indices.length>1;
   const head=tabela.querySelector("thead tr");
   if(head){
-    const ths=[...head.children];ths.slice(1).forEach(th=>{if(!th.dataset.sigPeriodoResumo)th.style.display="none"});
+    const originais=[...head.children].filter(th=>!th.dataset.sigPeriodoResumo);
+    const meses=originais.slice(1,13),totalOriginal=originais[13];
+    meses.forEach(th=>th.style.display="none");if(totalOriginal)totalOriginal.style.display="none";
+    p.indices.forEach(i=>{if(meses[i])meses[i].style.display=""});
     let resumo=head.querySelector("[data-sig-periodo-resumo]");
-    if(!resumo){resumo=document.createElement("th");resumo.dataset.sigPeriodoResumo="1";head.appendChild(resumo)}
-    resumo.style.display="";resumo.textContent=`${p.label} · ${periodoAno()}`;
+    if(mostrarConsolidado){
+      if(!resumo){resumo=document.createElement("th");resumo.dataset.sigPeriodoResumo="1";head.appendChild(resumo)}
+      resumo.style.display="";resumo.textContent=`${p.label} · ${periodoAno()}`;
+    }else if(resumo)resumo.style.display="none";
   }
+
   tabela.querySelectorAll("tbody tr").forEach(tr=>{
-    const tds=[...tr.children].filter(x=>x.tagName==="TD");if(tds.length<13)return;
-    const meses=tds.slice(1,13),originais=tds.slice(1).filter(td=>!td.dataset.sigPeriodoResumo);originais.forEach(td=>td.style.display="none");
-    const valor=p.indices.reduce((s,i)=>s+numeroMoeda(meses[i]?.textContent),0);
+    const originais=[...tr.children].filter(td=>td.tagName==="TD"&&!td.dataset.sigPeriodoResumo);if(originais.length<13)return;
+    const meses=originais.slice(1,13),totalOriginal=originais[13];
+    meses.forEach(td=>td.style.display="none");if(totalOriginal)totalOriginal.style.display="none";
+    p.indices.forEach(i=>{if(meses[i])meses[i].style.display=""});
     let resumo=tr.querySelector("[data-sig-periodo-resumo]");
-    if(!resumo){resumo=document.createElement("td");resumo.dataset.sigPeriodoResumo="1";resumo.className="fpa-total numero";tr.appendChild(resumo)}
-    resumo.style.display="";resumo.textContent=moeda(valor);
+    if(mostrarConsolidado){
+      const valor=p.indices.reduce((s,i)=>s+numeroMoeda(meses[i]?.textContent),0);
+      if(!resumo){resumo=document.createElement("td");resumo.dataset.sigPeriodoResumo="1";resumo.className="fpa-total numero";tr.appendChild(resumo)}
+      resumo.style.display="";resumo.textContent=moeda(valor);
+    }else if(resumo)resumo.style.display="none";
   });
 }
 
