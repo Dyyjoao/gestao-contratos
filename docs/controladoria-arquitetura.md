@@ -1,30 +1,96 @@
-# Controladoria & FP&A — arquitetura modular
+# Controladoria & FP&A — Arquitetura Modular Vigente
 
-A Controladoria deixa de ser uma tela monolítica e passa a ser acessada por submenu expansível.
+Este arquivo é um mapa operacional curto. Para regras completas, ler `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`.
 
-## Regra de carregamento
+## Rotas atuais
 
-- DRE Gerencial: tela isolada; consulta somente ao abrir ou clicar em Atualizar.
-- Input Mensal: tela isolada; uma empresa e um mês por lançamento.
-- Fluxo de Caixa: importação sob demanda.
-- Prestação de Contas: importação sob demanda.
-- Fechamento: importação sob demanda.
-- Permutas: tela isolada; consulta somente ao abrir ou clicar em Atualizar.
-- Configurações: tela isolada e restrita a administrador/edição da Controladoria.
-- Budget, Forecast, Plano de Contas, Centros de Custo e Premissas: permanecem temporariamente no núcleo FP&A compartilhado, porém esse núcleo só é importado quando uma dessas telas é acessada.
+O roteador `js/controllership-router.js` é a fonte de verdade das telas ativas:
 
-## Contexto global
+- DRE — `ctrl-dre-v6.js`;
+- Balanço — `ctrl-balance-sheet-v1.js`;
+- Input Mensal — `ctrl-input-v6.js`;
+- Budget — `ctrl-budget-v7.js`;
+- Forecast — `ctrl-forecast-v5.js`;
+- Fluxo de Caixa — `cashflow.js` sob demanda;
+- Prestação — `accountability.js` sob demanda;
+- Fechamento — `closing-v3.js`;
+- Permutas — `permutas.js`;
+- Premissas — `ctrl-premises-v4.js`;
+- Imobilizado/CAPEX — `ctrl-assets-v1.js`;
+- Plano de Contas — `ctrl-chart-accounts-v5.js`;
+- Centros de Custo — `ctrl-cost-centers-v2.js`;
+- Configurações — `ctrl-settings.js`.
 
-O cabeçalho continua definindo grupo, empresas, exercício e período. Telas pesadas não consultam o Firestore automaticamente quando o período muda: elas marcam o contexto como alterado e aguardam Atualizar.
+Arquivos antigos podem permanecer no repositório, mas não devem ser considerados ativos sem rota/import atual.
 
-## Permutas
+## Carregamento
 
-Coleções:
-- `permutas`: cadastro do acordo/conta-corrente.
-- `permutaMovimentos`: razão da permuta.
+- módulos pesados são carregados sob demanda;
+- telas de consulta evitam recarregar base a cada alteração pequena de contexto;
+- DRE/Balanço podem consolidar empresas;
+- Input, Fluxo de Caixa e Prestação exigem empresa única conforme sua função;
+- Budget/Forecast compartilham motor de planejamento;
+- Dashboard/Prestação devem usar o núcleo comum `financial-reporting.js` para interpretação financeira.
 
-Saldo contratual = créditos gerados por entregas - consumos/recebimentos.
+## Plano de Contas
 
-Resultado econômico = valor de mercado recebido - custo interno do que foi entregue.
+Máscara fixa:
 
-Permutas entre empresas do grupo criam cadastros e movimentos espelhados vinculados por identificadores comuns.
+```text
+#          raiz
+#.##       Sintética
+#.##.####  Analítica
+```
+
+Raízes:
+
+```text
+1 Ativo
+2 Passivo
+3 Receita
+4 Despesa
+9 Estatística
+```
+
+Sintética nunca recebe lançamento. Analítica é folha lançável.
+
+## Natureza
+
+`js/account-mask.js` centraliza natureza contábil e multiplicadores.
+
+- apresentação nunca regrava saldo bruto;
+- redutora = natureza oposta à raiz;
+- Balanço/Estatística não compõem Resultado;
+- DRE/Dashboard/Prestação não devem inventar regra própria de sinal.
+
+## Centros técnicos
+
+```text
+__cc_estatistico__
+__cc_balanco__
+```
+
+Não aparecem como Centros operacionais normais.
+
+## Balanço
+
+- posição de fechamento;
+- meses não são somados;
+- consolidação multiempresa por código;
+- Imobilizado pode alimentar contas automaticamente;
+- diferença Ativo − Passivo/PL fica explícita.
+
+## Budget / Forecast / Premissas
+
+- Budget anual e versionado;
+- Forecast = Realizado fechado + futuro;
+- premissas respeitam vigência mês a mês;
+- depreciação automática do Imobilizado substitui projeção manual equivalente.
+
+## Contexto monoempresa
+
+Fluxo de Caixa e Prestação devem bloquear imediatamente se o contexto mudar para várias empresas enquanto a tela estiver aberta.
+
+## Segurança
+
+Qualquer nova coleção/padrão de escrita exige revisão de `firestore.rules`. A política completa está em `SECURITY.md`.
