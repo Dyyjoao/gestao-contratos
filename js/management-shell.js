@@ -5,8 +5,8 @@ function css(){
   const l=document.createElement("link");l.rel="stylesheet";l.href="modules.css?v=20";document.head.appendChild(l);
 }
 function removerOperacao(){
-  ["menuContratos","menuPrestadores","menuFrota","menuAlmoxarifado","menuCotacoes"].forEach(id=>$(id)?.remove());
-  ["pagina-contratos","pagina-prestadores","pagina-frota","pagina-almoxarifado","pagina-cotacoes"].forEach(id=>$(id)?.remove());
+  ["menuPrestadores","menuFrota","menuAlmoxarifado","menuCotacoes"].forEach(id=>$(id)?.remove());
+  ["pagina-prestadores","pagina-frota","pagina-almoxarifado","pagina-cotacoes"].forEach(id=>$(id)?.remove());
 }
 function garantirControladoria(){
   const sep=document.querySelector(".sidebar-menu .menu-separador");
@@ -15,7 +15,7 @@ function garantirControladoria(){
 }
 function montarDashboardBase(){
   const p=$("pagina-dashboard");if(!p||p.dataset.gerencial==="1")return;p.dataset.gerencial="1";
-  p.innerHTML=`<div class="welcome modulo-hero"><div><span class="eyebrow">VISÃO EXECUTIVA</span><h2>SIG Gerencial</h2><p>Controladoria, FP&A, fechamento, governança e compliance em uma visão integrada.</p></div><span class="hero-meta">Base gerencial</span></div>
+  p.innerHTML=`<div class="welcome modulo-hero"><div><span class="eyebrow">VISÃO EXECUTIVA</span><h2>SIG Gerencial</h2><p>Controladoria, FP&A, contratos, fechamento, governança e compliance em uma visão integrada.</p></div><span class="hero-meta">Base gerencial</span></div>
   <section class="lista-card"><div class="lista-cabecalho"><div><h3>Atalhos de gestão</h3><p>As rotinas pesadas são carregadas somente quando abertas.</p></div></div><div class="quick-grid">
     <button id="dashAbrirDre" class="quick-card" type="button"><span>DRE Gerencial</span><small>Realizado, Budget e Forecast</small></button>
     <button id="dashAbrirBudget" class="quick-card" type="button"><span>Budget</span><small>Planejamento e premissas</small></button>
