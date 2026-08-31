@@ -57,6 +57,7 @@ service cloud.firestore {
     function fpaPremissas() { return fpaEditar() || permissao('controladoria','premissas'); }
     function fpaPlano() { return fpaEditar() || permissao('controladoria','planoContas'); }
     function fpaCentros() { return fpaEditar() || permissao('controladoria','centrosCusto'); }
+    function fpaImobilizado() { return fpaEditar() || permissao('controladoria','imobilizado'); }
     function caixaVisualizar() { return permissao('controladoria','visualizar') || permissao('controladoria','caixaVisualizar'); }
     function caixaLancar() { return fpaEditar() || permissao('controladoria','caixaLancar'); }
     function caixaContas() { return fpaEditar() || permissao('controladoria','caixaContas'); }
@@ -194,6 +195,13 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
       allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /imobilizados/{id} {
+      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow create: if fpaImobilizado() && documentoAcessivel(request.resource.data);
+      allow update: if fpaImobilizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
