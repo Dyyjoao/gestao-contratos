@@ -1,0 +1,29 @@
+name: Budget Chrome Debug
+
+on:
+  push:
+    branches: [chatgpt/auditoria-compliance-completa]
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start server
+        run: |
+          python3 -m http.server 8000 >/tmp/server.log 2>&1 &
+          sleep 2
+      - name: Parse Budget in Chrome
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          cat > budget-debug.html <<'HTML'
+          <!doctype html><html><head><meta charset="utf-8"><script>
+          window.addEventListener('error',e=>{document.documentElement.setAttribute('data-js-error',[e.filename,e.lineno,e.colno,e.message].join(' | '))});
+          </script></head><body><main class="conteudo"></main><script type="module" src="./js/ctrl-budget-v3.js"></script></body></html>
+          HTML
+          "$CHROME" --headless --no-sandbox --disable-gpu --enable-logging=stderr --virtual-time-budget=10000 --dump-dom http://127.0.0.1:8000/budget-debug.html > /tmp/budget-dom.html 2>/tmp/chrome.log || true
+          echo '--- ERROR ATTR ---'
+          grep -o 'data-js-error="[^"]*"' /tmp/budget-dom.html || true
+          echo '--- CHROME SYNTAX ---'
+          grep -Ei 'SyntaxError|ctrl-budget|missing|unexpected' /tmp/chrome.log || true
+          test -s /tmp/budget-dom.html
