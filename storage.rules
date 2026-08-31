@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function logado() {
+      return request.auth != null;
+    }
+
+    function usuarioPath() {
+      return /databases/(default)/documents/usuarios/$(request.auth.uid);
+    }
+
+    function usuarioExiste() {
+      return logado() && firestore.exists(usuarioPath());
+    }
+
+    function usuario() {
+      return firestore.get(usuarioPath());
+    }
+
+    function usuarioAtivo() {
+      return usuarioExiste() && usuario().data.ativo == true;
+    }
+
+    function perfilPath() {
+      return /databases/(default)/documents/perfisAcesso/$(usuario().data.perfilId);
+    }
+
+    function perfilExiste() {
+      return usuarioAtivo() && firestore.exists(perfilPath());
+    }
+
+    function perfil() {
+      return firestore.get(perfilPath());
+    }
+
+    function perfilAtivo() {
+      return perfilExiste() && perfil().data.ativo == true;
+    }
+
+    function administrador() {
+      return perfilAtivo() && perfil().data.acessoTotal == true;
+    }
+
+    function permissao(modulo, acao) {
+      return perfilAtivo() && (
+        administrador() || (
+          perfil().data.permissoes is map &&
+          modulo in perfil().data.permissoes &&
+          perfil().data.permissoes[modulo] is map &&
+          acao in perfil().data.permissoes[modulo] &&
+          perfil().data.permissoes[modulo][acao] == true
+        )
+      );
+    }
+
+    function acessoEmpresa(empresaId) {
+      return usuarioAtivo() && (
+        administrador() ||
+        (('acessoGlobal' in usuario().data) && usuario().data.acessoGlobal == true) ||
+        usuario().data.empresaId == empresaId ||
+        (('empresasAcesso' in usuario().data) && usuario().data.empresasAcesso is list && empresaId in usuario().data.empresasAcesso)
+      );
+    }
+
+    function contextoValido(grupoId, empresaId) {
+      return usuarioAtivo() &&
+        usuario().data.grupoId == grupoId &&
+        acessoEmpresa(empresaId);
+    }
+
+    function arquivoPermitido() {
+      return request.resource == null || (
+        request.resource.size <= 20 * 1024 * 1024 &&
+        request.resource.contentType != null &&
+        (
+          request.resource.contentType.matches('application/pdf') ||
+          request.resource.contentType.matches('application/msword') ||
+          request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*') ||
+          request.resource.contentType.matches('application/vnd.ms-excel') ||
+          request.resource.contentType.matches('application/vnd.ms-excel.*') ||
+          request.resource.contentType.matches('image/jpeg') ||
+          request.resource.contentType.matches('image/png')
+        )
+      );
+    }
+
+    function podeLerModulo(modulo) {
+      return administrador() ||
+        (modulo == 'contratos' && permissao('contratos','visualizar')) ||
+        (modulo == 'cotacoes' && permissao('cotacoes','visualizar')) ||
+        (modulo == 'governanca' && permissao('governanca','visualizar')) ||
+        (modulo == 'frota' && permissao('frota','visualizar')) ||
+        (modulo == 'almoxarifado' && permissao('almoxarifado','visualizar')) ||
+        (modulo == 'prestadores' && permissao('prestadores','visualizar')) ||
+        (modulo == 'controladoria' && permissao('controladoria','visualizar'));
+    }
+
+    function podeGravarModulo(modulo) {
+      return administrador() ||
+        (modulo == 'contratos' && (permissao('contratos','anexar') || permissao('contratos','editar'))) ||
+        (modulo == 'cotacoes' && (permissao('cotacoes','anexar') || permissao('cotacoes','cotacao') || permissao('cotacoes','editar'))) ||
+        (modulo == 'governanca' && (permissao('governanca','evidencias') || permissao('governanca','auditar'))) ||
+        (modulo == 'frota' && (permissao('frota','obrigacoes') || permissao('frota','manutencao') || permissao('frota','editar'))) ||
+        (modulo == 'almoxarifado' && (permissao('almoxarifado','movimentar') || permissao('almoxarifado','editar'))) ||
+        (modulo == 'prestadores' && permissao('prestadores','editar')) ||
+        (modulo == 'controladoria' && permissao('controladoria','editar'));
+    }
+
+    match /grupos/{grupoId}/empresas/{empresaId}/{modulo}/{registroId}/{pasta}/{arquivo} {
+      allow read: if contextoValido(grupoId, empresaId) && podeLerModulo(modulo);
+      allow create, update: if contextoValido(grupoId, empresaId) && podeGravarModulo(modulo) && arquivoPermitido();
+      allow delete: if contextoValido(grupoId, empresaId) && podeGravarModulo(modulo);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
