@@ -1,8 +1,9 @@
 import { $, esc, msg, permite, state, abrirPagina, db } from "./core.js";
 import {
   listarDocumentos, empresaUnicaSelecionadaId, empresasSelecionadasIds,
-  grupoAtualId, periodoAtual, periodoAno, nomeEmpresa
+  grupoAtualId, periodoAno, nomeEmpresa
 } from "./shared.js";
+import { periodoAtual } from "./company-context.js";
 import {
   writeBatch, doc, collection, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
@@ -19,7 +20,6 @@ function podeEditar(){return permite("controladoria","editar")||permite("control
 function pagina(){return $("pagina-input-mensal")}
 function visivel(){return pagina()&&!pagina().classList.contains("hidden")}
 function n(v){const x=Number(v||0);return Number.isFinite(x)?x:0}
-function moeda(v){return n(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
 function vazioMeses(){return Object.fromEntries(MESES.map(([m])=>[m,0]))}
 function competenciaMensal(){const p=periodoAtual();if(!/^m\d{2}$/.test(p.chave))return null;const idx=Number(p.chave.slice(1))-1;return idx>=0&&idx<12?{...p,indice:idx,mes:MESES[idx][0],nome:MESES[idx][1]}:null}
 function docRealizado(contaId,centroId,ano){return realizados.find(x=>x.contaId===contaId&&x.centroCustoId===centroId&&Number(x.exercicio)===Number(ano))}
