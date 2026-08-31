@@ -21,7 +21,6 @@ import "./js/planning-details.js";
 import "./js/cashflow.js";
 import "./js/closing.js";
 import "./js/accountability.js";
-import "./js/period-navigation.js";
 import "./js/fpa-period-filter.js";
 import "./js/governance.js";
 import "./js/dashboard.js";
