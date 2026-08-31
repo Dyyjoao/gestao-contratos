@@ -14,7 +14,7 @@ async function abrirModuloTab(chave,arquivo,tabId){marcarAtivo(chave);await impo
 async function abrirDre(){marcarAtivo("dre");const m=await importarUma("dre","./ctrl-dre.js");m.abrir?.()}
 async function abrirPermutas(){marcarAtivo("permutas");const m=await importarUma("permutas","./permutas.js");m.abrir?.()}
 async function abrirConfig(){marcarAtivo("config");const m=await importarUma("config","./ctrl-settings.js");m.abrir?.()}
-function abrirInput(){marcarAtivo("input");abrirPagina("input-mensal");const t=$("tituloPagina");if(t)t.textContent="Input Mensal";window.dispatchEvent(new CustomEvent("sig:page",{detail:{pagina:"input-mensal"}}))}
+function abrirInput(){marcarAtivo("input");abrirPagina("input-mensal");const t=$("tituloPagina");if(t)t.textContent="Input Mensal"}
 
 const itens=[
   ["dre","DRE Gerencial",abrirDre],["input","Input Mensal",abrirInput],["budget","Budget",()=>abrirLegado("budget")],["forecast","Forecast",()=>abrirLegado("forecast")],
