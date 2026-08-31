@@ -28,7 +28,7 @@ function criarPagina(){
     </div></section>`;
   main.appendChild(s);
   $("formCtrlConfig")?.addEventListener("submit",salvar);
-  [["cfgAbrirPlano","plano"],["cfgAbrirCentros","centros"],["cfgAbrirPremissas","premissas"]].forEach(([id,chave])=>$(id)?.addEventListener("click",()=>window.SIG_ABRIR_CTRL_LEGADO?.(chave)));
+  [["cfgAbrirPlano","plano"],["cfgAbrirCentros","centros"],["cfgAbrirPremissas","premissas"]].forEach(([id,chave])=>$(id)?.addEventListener("click",()=>window.SIG_ABRIR_CTRL?.(chave)));
 }
 
 function aplicar(d={}){
