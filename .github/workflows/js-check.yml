@@ -48,8 +48,8 @@ jobs:
           grep -q 'centroTecnicoId' js/ctrl-chart-accounts-v3.js
 
           grep -q 'contaAnalitica' js/center-account-matrix.js
-          grep -q 'contaSintetica' js/center-account-matrix.js
           grep -q '!contaEstatistica' js/center-account-matrix.js
+          grep -q 'somente contas Analíticas financeiras' js/center-account-matrix.js
 
           grep -q 'pagina-ctrl-input-v6' js/ctrl-input-v6.js
           grep -q 'Estatísticas / Indicadores' js/ctrl-input-v6.js
