@@ -12,7 +12,10 @@ export async function abrirLegado(chave){
 }
 async function abrirModuloTab(chave,arquivo,tabId){marcarAtivo(chave);await importarUma(chave,arquivo);abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>$(tabId)?.click())}
 async function abrirDre(){marcarAtivo("dre");const m=await importarUma("dre","./ctrl-dre.js");m.abrir?.()}
-async function abrirPermutas(){marcarAtivo("permutas");const m=await importarUma("permutas","./permutas.js");m.abrir?.()}
+async function abrirPermutas(){
+  marcarAtivo("permutas");const m=await importarUma("permutas","./permutas.js");m.abrir?.();
+  const editar=admin()||permite("controladoria","editar");["btnNovaPermuta","btnNovoMovPermuta"].forEach(id=>$(id)?.classList.toggle("hidden",!editar));
+}
 async function abrirConfig(){marcarAtivo("config");const m=await importarUma("config","./ctrl-settings.js");m.abrir?.()}
 function abrirInput(){marcarAtivo("input");abrirPagina("input-mensal");const t=$("tituloPagina");if(t)t.textContent="Input Mensal"}
 
