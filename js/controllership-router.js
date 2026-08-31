@@ -1,6 +1,6 @@
 import { $, abrirPagina, permite, admin } from "./core.js";
 
-let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831i";
+let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831j";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function marcarAtivo(chave){document.querySelectorAll(".ctrl-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.ctrl===chave));$("menuControladoria")?.classList.add("ativo")}
