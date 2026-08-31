@@ -43,4 +43,6 @@ jobs:
           grep -q 'id="btnEntrar"' /tmp/sig-dom.html
           grep -q 'id="tabelaBudget"' /tmp/sig-dom.html
           grep -q 'id="tabelaDre"' /tmp/sig-dom.html
-          grep -q 'id="drePeriodo"' /tmp/sig-dom.html
+          grep -q 'id="grupoContexto"' /tmp/sig-dom.html
+          grep -q 'id="empresasContexto"' /tmp/sig-dom.html
+          grep -q 'id="periodoContexto"' /tmp/sig-dom.html
