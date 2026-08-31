@@ -55,6 +55,25 @@ async function carregarPlanos(){
 }
 
 function addExc(arr,x){arr.push({criticidade:"media",...x})}
+function classificarHorizonteCaixa(dataRuptura){
+  const h=hoje(),d30=addDias(h,30),d60=addDias(h,60);
+  if(dataRuptura<=h)return{rotulo:"Hoje",criticidade:"critica"};
+  if(dataRuptura<=d30)return{rotulo:"D+30",criticidade:"critica"};
+  if(dataRuptura<=d60)return{rotulo:"D+60",criticidade:"alta"};
+  return{rotulo:"D+90",criticidade:"media"};
+}
+function analisarRiscoCaixa(contas,lancamentos){
+  const h=hoje(),limite=addDias(h,90),base=(contas||[]).filter(x=>x.status!=="inativo").reduce((s,x)=>s+n(x.saldoAbertura),0),mov=(lancamentos||[]).filter(x=>x.status!=="cancelado"&&x.data<=limite).sort((a,b)=>String(a.data||"").localeCompare(String(b.data||"")));
+  let saldo=base,min=base,dataMin=h,dataRuptura=base<0?h:"";
+  for(const x of mov){
+    saldo+=(x.natureza==="entrada"?1:-1)*n(x.valor);
+    if(!dataRuptura&&saldo<0)dataRuptura=x.data||h;
+    if(saldo<min){min=saldo;dataMin=x.data||h}
+  }
+  if(!dataRuptura)return null;
+  const faixa=classificarHorizonteCaixa(dataRuptura);
+  return{...faixa,dataRuptura,min,dataMin};
+}
 async function montarExcecoes(){
   const arr=[],tarefas=[];
   if(permite("contratos"))tarefas.push(["contratos",listarDocumentos("contratos")]);
@@ -62,7 +81,10 @@ async function montarExcecoes(){
   const res=await Promise.all(tarefas.map(x=>x[1].catch(()=>[]))),d={};tarefas.forEach((x,i)=>d[x[0]]=res[i]);
   (d.contratos||[]).forEach(c=>{if(c.status!=="ativo")return;const dias=diasAte(c.fim);if(dias===null)return;if(dias<0)addExc(arr,{id:`ctr-${c.id}`,origem:"contratos",origemId:c.id,criticidade:"critica",titulo:`Contrato vencido · ${c.numero||c.fornecedor}`,sub:`${c.fornecedor||"Fornecedor"} · vencido há ${Math.abs(dias)} dia(s)`,prazo:c.fim});else if(dias<=30)addExc(arr,{id:`ctr-${c.id}`,origem:"contratos",origemId:c.id,criticidade:"alta",titulo:`Contrato vence em ${dias} dia(s)`,sub:`${c.numero||"Contrato"} · ${c.fornecedor||"Fornecedor"}`,prazo:c.fim});else if(dias<=60)addExc(arr,{id:`ctr-${c.id}`,origem:"contratos",origemId:c.id,criticidade:"media",titulo:`Contrato próximo do vencimento`,sub:`${c.numero||"Contrato"} · ${dias} dias restantes`,prazo:c.fim})});
   (d.caixa||[]).forEach(l=>{if(l.status!=="liquidado"&&l.status!=="cancelado"&&l.data<hoje())addExc(arr,{id:`cx-venc-${l.id}`,origem:"controladoria",origemId:l.id,criticidade:"alta",titulo:"Lançamento financeiro vencido",sub:`${l.descricao||"Lançamento"} · ${moeda(l.valor)}`,prazo:l.data})});
-  if((d.contas||[]).length){const base=d.contas.filter(x=>x.status!=="inativo").reduce((s,x)=>s+n(x.saldoAbertura),0),limite=addDias(hoje(),90),mov=(d.caixa||[]).filter(x=>x.status!=="cancelado"&&x.data<=limite).sort((a,b)=>String(a.data).localeCompare(String(b.data)));let saldo=base,min=base,dataMin=hoje();mov.forEach(x=>{saldo+=(x.natureza==="entrada"?1:-1)*n(x.valor);if(saldo<min){min=saldo;dataMin=x.data}});if(min<0)addExc(arr,{id:"cx-negativo",origem:"controladoria",criticidade:"critica",titulo:"Caixa projetado negativo em D+90",sub:`Menor posição ${moeda(min)} em ${dataBr(dataMin)}`,prazo:dataMin})}
+  if((d.contas||[]).length){
+    const risco=analisarRiscoCaixa(d.contas||[],d.caixa||[]);
+    if(risco)addExc(arr,{id:"cx-negativo",origem:"controladoria",criticidade:risco.criticidade,titulo:`Caixa projetado negativo em ${risco.rotulo}`,sub:`Primeira ruptura em ${dataBr(risco.dataRuptura)} · menor posição ${moeda(risco.min)} em ${dataBr(risco.dataMin)}`,prazo:risco.dataRuptura});
+  }
   planos.filter(p=>!["concluido","cancelado"].includes(p.status)&&p.prazo&&p.prazo<hoje()).forEach(p=>addExc(arr,{id:`acao-${p.id}`,origem:"planosAcao",origemId:p.id,criticidade:p.criticidade==="critica"?"critica":"alta",titulo:`Plano de ação vencido · ${p.titulo}`,sub:`Responsável: ${p.responsavelNome||"não informado"}`,prazo:p.prazo}));
   excecoes=arr.sort((a,b)=>(critPeso[b.criticidade]||0)-(critPeso[a.criticidade]||0)||String(a.prazo||"9999").localeCompare(String(b.prazo||"9999")));
 }
