@@ -1,23 +1,34 @@
-import { $, on, esc, permite, moeda, competenciaAtual, listarDocumentos } from "./shared.js";
+import { $, on, esc, permite, moeda, listarDocumentos } from "./shared.js";
 
 const MESES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const NOMES_MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const PERIODOS={
+  total:{label:"Total",indices:[0,1,2,3,4,5,6,7,8,9,10,11]},
+  t1:{label:"T1 · Jan–Mar",indices:[0,1,2]},
+  t2:{label:"T2 · Abr–Jun",indices:[3,4,5]},
+  t3:{label:"T3 · Jul–Set",indices:[6,7,8]},
+  t4:{label:"T4 · Out–Dez",indices:[9,10,11]}
+};
+NOMES_MESES.forEach((nome,i)=>PERIODOS[`m${String(i+1).padStart(2,"0")}`]={label:nome,indices:[i]});
 let carregando=false;
 
 function garantirCss(){
   if(document.getElementById("sig-dashboard-finance-css"))return;
-  const l=document.createElement("link");l.id="sig-dashboard-finance-css";l.rel="stylesheet";l.href="dashboard-finance.css?v=14";document.head.appendChild(l);
+  const l=document.createElement("link");l.id="sig-dashboard-finance-css";l.rel="stylesheet";l.href="dashboard-finance.css?v=15";document.head.appendChild(l);
 }
-
+function opcoesPeriodo(){
+  return `<optgroup label="Períodos"><option value="total">Total</option><option value="t1">T1 · Jan–Mar</option><option value="t2">T2 · Abr–Jun</option><option value="t3">T3 · Jul–Set</option><option value="t4">T4 · Out–Dez</option></optgroup><optgroup label="Meses">${NOMES_MESES.map((m,i)=>`<option value="m${String(i+1).padStart(2,"0")}">${m}</option>`).join("")}</optgroup>`;
+}
 function montar(){
   const pagina=$("pagina-dashboard");if(!pagina||$("dashFinanceiro"))return;
-  const grade=pagina.querySelector(".dashboard-grid");
+  const grade=pagina.querySelector(".dashboard-grid"),agora=new Date(),ano=agora.getFullYear(),periodoAtual=`m${String(agora.getMonth()+1).padStart(2,"0")}`;
   const s=document.createElement("section");s.id="dashFinanceiro";s.className="lista-card dashboard-financeiro";
   s.innerHTML=`
     <div class="lista-cabecalho">
       <div><h3>Visão financeira</h3><p>Realizado, Budget, Forecast e caixa da empresa ativa no período selecionado.</p></div>
       <div class="dash-finance-filtros">
-        <div class="campo"><label for="dashFinanceCompetencia">Competência</label><input id="dashFinanceCompetencia" type="month" value="${competenciaAtual()}"></div>
-        <div class="campo"><label for="dashFinanceVisao">Visão</label><select id="dashFinanceVisao"><option value="mes">Mês</option><option value="ytd">Acumulado no ano</option></select></div>
+        <div class="campo"><label for="dashFinanceAno">Exercício</label><input id="dashFinanceAno" type="number" min="2020" max="2100" value="${ano}"></div>
+        <div class="campo"><label for="dashFinancePeriodo">Competência</label><select id="dashFinancePeriodo">${opcoesPeriodo()}</select></div>
       </div>
     </div>
     <div class="kpi-grid kpi-grid-6 dash-finance-kpis">
@@ -45,8 +56,9 @@ function montar(){
       </div>
     </div>`;
   if(grade)pagina.insertBefore(s,grade);else pagina.appendChild(s);
-  on($("dashFinanceCompetencia"),"change",carregar);
-  on($("dashFinanceVisao"),"change",carregar);
+  $("dashFinancePeriodo").value=periodoAtual;
+  on($("dashFinanceAno"),"change",carregar);
+  on($("dashFinancePeriodo"),"change",carregar);
 }
 
 const num=v=>{const n=Number(v||0);return Number.isFinite(n)?n:0};
@@ -56,21 +68,19 @@ function versaoMaisRecente(arr,ano){
   const mapa=new Map();docs.forEach(x=>mapa.set(x.versao,Math.max(mapa.get(x.versao)||0,stamp(x))));
   return [...mapa.entries()].sort((a,b)=>b[1]-a[1]||String(b[0]).localeCompare(String(a[0]),"pt-BR"))[0]?.[0]||"";
 }
-function valorPeriodo(valores,mesIdx,visao){
-  if(visao==="ytd")return MESES.slice(0,mesIdx+1).reduce((s,m)=>s+num(valores?.[m]),0);
-  return num(valores?.[MESES[mesIdx]]);
-}
-function somaCenario({docs,plano,classes,ano,mesIdx,visao,versao=""}){
+function indicesPeriodo(periodo){return (PERIODOS[periodo]||PERIODOS.total).indices}
+function valorPeriodo(valores,periodo){return indicesPeriodo(periodo).reduce((s,i)=>s+num(valores?.[MESES[i]]),0)}
+function somaCenario({docs,plano,classes,ano,periodo,versao=""}){
   const pmap=new Map(plano.map(x=>[x.id,x])),cmap=new Map(classes.map(x=>[x.contaId,x.classificacao||"opex"]));
   const out={receita:0,opex:0,capex:0,resultado:0};
   docs.filter(x=>Number(x.exercicio)===Number(ano)&&(!versao||x.versao===versao)).forEach(x=>{
-    const conta=pmap.get(x.contaId);if(!conta)return;const v=valorPeriodo(x.valores,mesIdx,visao),classe=cmap.get(x.contaId)||"opex";
+    const conta=pmap.get(x.contaId);if(!conta)return;const v=valorPeriodo(x.valores,periodo),classe=cmap.get(x.contaId)||"opex";
     if(classe==="capex"){out.capex+=Math.abs(v);return}
     if(conta.natureza==="receita")out.receita+=v;else out.opex+=Math.abs(v);
   });
   out.resultado=out.receita-out.opex;return out;
 }
-function somaForecast({forecasts,realizados,plano,classes,ano,mesIdx,visao,versao}){
+function somaForecast({forecasts,realizados,plano,classes,ano,periodo,versao}){
   const pmap=new Map(plano.map(x=>[x.id,x])),cmap=new Map(classes.map(x=>[x.contaId,x.classificacao||"opex"]));
   const fdocs=forecasts.filter(x=>Number(x.exercicio)===Number(ano)&&(!versao||x.versao===versao));
   const chaves=new Map();
@@ -81,9 +91,9 @@ function somaForecast({forecasts,realizados,plano,classes,ano,mesIdx,visao,versa
     const conta=pmap.get(k.contaId);if(!conta)return;
     const r=realizados.find(x=>Number(x.exercicio)===Number(ano)&&x.contaId===k.contaId&&(x.centroCustoId||"")===k.cc);
     const f=fdocs.find(x=>x.contaId===k.contaId&&(x.centroCustoId||"")===k.cc);
-    const fechado=num(f?.realizadoFechadoAte);
-    const vals={};MESES.forEach((m,i)=>vals[m]=i<fechado?num(r?.valores?.[m]):num(f?.valores?.[m]));
-    const v=valorPeriodo(vals,mesIdx,visao),classe=cmap.get(k.contaId)||"opex";
+    const fechado=num(f?.realizadoFechadoAte),vals={};
+    MESES.forEach((m,i)=>vals[m]=i<fechado?num(r?.valores?.[m]):num(f?.valores?.[m]));
+    const v=valorPeriodo(vals,periodo),classe=cmap.get(k.contaId)||"opex";
     if(classe==="capex")out.capex+=Math.abs(v);else if(conta.natureza==="receita")out.receita+=v;else out.opex+=Math.abs(v);
   });
   out.resultado=out.receita-out.opex;return out;
@@ -114,14 +124,14 @@ function renderCaixa(contas,lancamentos){
 export async function carregar(){
   montar();if(carregando||!permite("controladoria")){const s=$("dashFinanceiro");if(s)s.classList.toggle("hidden",!permite("controladoria"));return}
   const s=$("dashFinanceiro");if(s)s.classList.remove("hidden");
-  const comp=$("dashFinanceCompetencia")?.value||competenciaAtual(),[anoStr,mesStr]=comp.split("-"),ano=Number(anoStr),mesIdx=Math.max(0,Math.min(11,Number(mesStr)-1)),visao=$("dashFinanceVisao")?.value||"mes";
+  const ano=Number($("dashFinanceAno")?.value||new Date().getFullYear()),periodo=$("dashFinancePeriodo")?.value||"total",rotulo=(PERIODOS[periodo]||PERIODOS.total).label;
   carregando=true;
   try{
     const [plano,classes,realizados,budgets,forecasts,contas,lancamentos]=await Promise.all([
       listarDocumentos("planoContasGerencial"),listarDocumentos("classificacoesContas"),listarDocumentos("realizadoMensal"),listarDocumentos("budgetLinhas"),listarDocumentos("forecastLinhas"),listarDocumentos("contasBancarias"),listarDocumentos("fluxoCaixaLancamentos")
     ]);
     const bv=versaoMaisRecente(budgets,ano),fv=versaoMaisRecente(forecasts,ano);
-    const real=somaCenario({docs:realizados,plano,classes,ano,mesIdx,visao}),budget=somaCenario({docs:budgets,plano,classes,ano,mesIdx,visao,versao:bv}),forecast=somaForecast({forecasts,realizados,plano,classes,ano,mesIdx,visao,versao:fv});
+    const real=somaCenario({docs:realizados,plano,classes,ano,periodo}),budget=somaCenario({docs:budgets,plano,classes,ano,periodo,versao:bv}),forecast=somaForecast({forecasts,realizados,plano,classes,ano,periodo,versao:fv});
     const margem=real.receita?(real.resultado/Math.abs(real.receita))*100:0;
     set("dashFinReceita",moeda(real.receita));set("dashFinReceitaSub",`${pctTxt(real.receita,budget.receita)} vs Budget`);
     set("dashFinOpex",moeda(real.opex));set("dashFinOpexSub",`${pctTxt(real.opex,budget.opex)} vs Budget`);
@@ -129,10 +139,10 @@ export async function carregar(){
     set("dashFinMargem",`${margem.toLocaleString("pt-BR",{maximumFractionDigits:1})}%`);set("dashFinMargemSub","Resultado ÷ Receita");
     set("dashFinCapex",moeda(real.capex));set("dashFinCapexSub",`${pctTxt(real.capex,budget.capex)} vs Budget`);
     set("dashFinForecast",moeda(forecast.resultado));set("dashFinForecastSub",fv?`Versão ${fv}`:"Sem Forecast salvo");
-    set("dashFinLegenda",`${visao==="ytd"?"Acumulado até":"Competência"} ${String(mesIdx+1).padStart(2,"0")}/${ano} · Budget ${bv||"não identificado"} · Forecast ${fv||"não identificado"}`);
+    set("dashFinLegenda",`${rotulo} · ${ano} · Budget ${bv||"não identificado"} · Forecast ${fv||"não identificado"}`);
     set("dashResultadoGerencial",moeda(real.resultado));set("dashVariacaoBudget",`${pctTxt(real.resultado,budget.resultado)} vs. budget`);
     renderTabela(real,budget,forecast);renderCaixa(contas,lancamentos);
-  }catch(e){console.error("Dashboard financeiro:",e);const tb=$("dashFinTabela");if(tb)tb.innerHTML='<tr><td colspan="5" class="dash-finance-empty">Não foi possível carregar a visão financeira. Verifique as novas regras do Firebase.</td></tr>'}
+  }catch(e){console.error("Dashboard financeiro:",e);const tb=$("dashFinTabela");if(tb)tb.innerHTML='<tr><td colspan="5" class="dash-finance-empty">Não foi possível carregar a visão financeira. Verifique as permissões do Firebase.</td></tr>'}
   finally{carregando=false}
 }
 
