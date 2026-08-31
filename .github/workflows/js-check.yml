@@ -2,7 +2,7 @@ name: SIG Quality Check
 
 on:
   push:
-    branches: [main]
+    branches: [main, chatgpt/sig-apresentacao-controladoria-compliance]
   pull_request:
     branches: [main]
 
