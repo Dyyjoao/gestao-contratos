@@ -39,6 +39,15 @@ jobs:
           grep -q 'contaAtivaNoExercicio' js/account-validity.js
           grep -q 'inativaAPartirExercicio' js/account-validity.js
 
+          grep -q 'ctrl-dre-v7.js' js/controllership-router.js
+          grep -q 'ctrl-input-v7.js' js/controllership-router.js
+          grep -q 'ctrl-budget-v8.js' js/controllership-router.js
+          grep -q 'ctrl-forecast-v6.js' js/controllership-router.js
+          grep -q 'ctrl-premises-v4.js' js/controllership-router.js
+          grep -q 'ctrl-chart-accounts-v6.js' js/controllership-router.js
+          grep -q 'ctrl-cost-centers-v2.js' js/controllership-router.js
+          ! grep -q 'centros:()=>abrirLegado' js/controllership-router.js
+
           grep -q 'pagina-ctrl-plano-v6' js/ctrl-chart-accounts-v6.js
           grep -q 'Copiar para outra empresa' js/ctrl-chart-accounts-v6.js
           grep -q 'modoPreenchimento' js/ctrl-chart-accounts-v6.js
@@ -74,19 +83,23 @@ jobs:
           grep -q 'Caixa projetado negativo em' js/my-desk.js
           ! grep -q 'titulo:"Caixa projetado negativo em D+90"' js/my-desk.js
 
-          grep -q 'pagina-ctrl-dre-v6' js/ctrl-dre-v6.js
-          grep -q 'Expandir tudo' js/ctrl-dre-v6.js
-          grep -q 'Recolher tudo' js/ctrl-dre-v6.js
-          grep -q 'Exportar Excel' js/ctrl-dre-v6.js
-          grep -q 'Imprimir / PDF' js/ctrl-dre-v6.js
-          grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v6.js
+          grep -q 'pagina-ctrl-dre-v7' js/ctrl-dre-v7.js
+          grep -q 'Expandir tudo' js/ctrl-dre-v7.js
+          grep -q 'Recolher tudo' js/ctrl-dre-v7.js
+          grep -q 'Exportar Excel' js/ctrl-dre-v7.js
+          grep -q 'Imprimir / PDF' js/ctrl-dre-v7.js
+          grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v7.js
+          grep -q 'contaAtivaNoExercicio' js/ctrl-dre-v7.js
 
-          grep -q 'pagina-ctrl-input-v6' js/ctrl-input-v6.js
-          grep -q 'Estatísticas / Indicadores' js/ctrl-input-v6.js
-          grep -q 'Conta sintética · não lançável' js/ctrl-input-v6.js
+          grep -q 'pagina-ctrl-input-v7' js/ctrl-input-v7.js
+          grep -q 'Estatísticas / Indicadores' js/ctrl-input-v7.js
+          grep -q 'Conta Sintética · não lançável' js/ctrl-input-v7.js
+          grep -q 'Automática · valor pela regra' js/ctrl-input-v7.js
+          grep -q 'contaAtivaNoExercicio' js/ctrl-input-v7.js
 
           grep -q 'pagina-ctrl-premissas-v4' js/ctrl-premises-v4.js
           grep -q 'vigência mensal' js/ctrl-premises-v4.js
+          grep -q 'Estatísticas Automáticas' js/ctrl-premises-v4.js
           grep -q 'contaAtivaNoExercicio' js/ctrl-premises-v4.js
 
           grep -q 'pagina-closing-v3' js/closing-v3.js
@@ -131,7 +144,7 @@ jobs:
           ! grep -q 'id="pagina-almoxarifado"' /tmp/sig-dom.html
           ! grep -q 'id="pagina-cotacoes"' /tmp/sig-dom.html
           ! grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
-      - name: Import current and candidate Controladoria modules in browser
+      - name: Import routed Controladoria modules in browser
         run: |
           set -e
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -140,12 +153,13 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{const mods=['account-mask.js','account-validity.js','premise-validity.js','balance-center.js','statistical-center.js','ctrl-chart-accounts-v6.js','center-account-matrix-v2.js','ctrl-cost-centers-v2.js','ctrl-planning-matrix-v4.js','ctrl-budget-v8.js','ctrl-forecast-v6.js','ctrl-dre-v6.js','ctrl-input-v6.js','ctrl-premises-v4.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
+          teste='''<script type="module">(async()=>{const mods=['account-mask.js','account-validity.js','premise-validity.js','balance-center.js','statistical-center.js','ctrl-chart-accounts-v6.js','center-account-matrix-v2.js','ctrl-cost-centers-v2.js','ctrl-planning-matrix-v4.js','ctrl-budget-v8.js','ctrl-forecast-v6.js','ctrl-dre-v7.js','ctrl-input-v7.js','ctrl-premises-v4.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}await import('./js/controllership-router.js?v=smoke');const ids=['pagina-ctrl-plano-v6','pagina-ctrl-centros-v2','pagina-ctrl-input-v7','pagina-ctrl-budget-v8','pagina-ctrl-forecast-v6','pagina-ctrl-dre-v7','pagina-ctrl-premissas-v4'];for(const id of ids){if(!document.getElementById(id)){document.documentElement.setAttribute('data-module-smoke','missing-'+id);return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=26000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=28000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
           if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
             grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
+            grep -o 'data-module-smoke="[^"]*"' /tmp/module-dom.html | tail -1 || true
             exit 1
           fi
           rm -f module-smoke.html
