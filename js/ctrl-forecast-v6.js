@@ -1,6 +1,6 @@
-import { criarMatrizPlanejamentoV3 } from "./ctrl-planning-matrix-v3.js";
+import { criarMatrizPlanejamentoV4 } from "./ctrl-planning-matrix-v4.js";
 
-const mod=criarMatrizPlanejamentoV3({
+const mod=criarMatrizPlanejamentoV4({
   cenario:"forecast",
   paginaId:"pagina-ctrl-forecast-v6",
   titulo:"Forecast",
