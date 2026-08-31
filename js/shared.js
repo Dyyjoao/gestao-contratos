@@ -12,7 +12,17 @@ export const numero=(v)=>Number(v||0).toLocaleString("pt-BR",{maximumFractionDig
 export const valor=(v)=>{const n=Number(String(v??"").replace(",","."));return Number.isFinite(n)?n:0};
 export const hojeIso=()=>new Date().toISOString().slice(0,10);
 export const competenciaAtual=()=>new Date().toISOString().slice(0,7);
-export const empresaAtualId=()=>state.empresaAtualId||state.usuario?.empresaId||"";
+export const grupoAtualId=()=>state.grupoAtualId||state.grupo?.id||state.usuario?.grupoId||"";
+export const empresasSelecionadasIds=()=>{
+  const ids=Array.isArray(state.empresasSelecionadasIds)?state.empresasSelecionadasIds.filter(Boolean):[];
+  if(ids.length)return [...new Set(ids)];
+  const fallback=state.empresaAtualId||state.usuario?.empresaId;return fallback?[fallback]:[];
+};
+export const empresaAtualId=()=>empresasSelecionadasIds()[0]||"";
+export const empresaUnicaSelecionadaId=()=>{const ids=empresasSelecionadasIds();return ids.length===1?ids[0]:""};
+export const multiEmpresaAtiva=()=>empresasSelecionadasIds().length>1;
+export const periodoAno=()=>Number(state.periodoAno)||new Date().getFullYear();
+export const periodoChave=()=>state.periodoChave||`m${String(new Date().getMonth()+1).padStart(2,"0")}`;
 export function dataBr(v){if(!v)return"-";const [a,m,d]=String(v).slice(0,10).split("-");return a&&m&&d?`${d}/${m}/${a}`:v}
 export function diasAte(v){if(!v)return null;const alvo=new Date(`${v}T12:00:00`),hoje=new Date();hoje.setHours(12,0,0,0);return Math.ceil((alvo-hoje)/86400000)}
 export function statusHtml(texto,classe="status-ativo"){return `<span class="${classe}">${esc(texto)}</span>`}
@@ -21,20 +31,24 @@ export function emitirAlteracao(modulo){window.dispatchEvent(new CustomEvent("si
 
 export function idsEmpresasPermitidas(){
   if(!state.usuario)return[];
+  if(admin()||state.usuario?.acessoGlobal===true){
+    const grupo=grupoAtualId();
+    return [...state.empresas.values()].filter(e=>e.ativo!==false&&(!grupo||e.grupoId===grupo)).map(e=>e.id);
+  }
   return [...new Set([state.usuario.empresaId,...(Array.isArray(state.usuario.empresasAcesso)?state.usuario.empresasAcesso:[])].filter(Boolean))];
 }
 export function podeEmpresa(id){return admin()||state.usuario?.acessoGlobal===true||idsEmpresasPermitidas().includes(id)}
 
 export async function carregarEmpresasModulo(){
-  const mapa=new Map();
-  if(!state.usuario?.grupoId)return mapa;
-  if(admin()||state.usuario.acessoGlobal===true){
-    const s=await getDocs(query(collection(db,"empresas"),where("grupoId","==",state.usuario.grupoId)));
+  const mapa=new Map(),grupo=grupoAtualId();
+  if(!grupo)return mapa;
+  if(admin()||state.usuario?.acessoGlobal===true){
+    const s=await getDocs(query(collection(db,"empresas"),where("grupoId","==",grupo)));
     s.forEach(r=>{const d=r.data();if(d.ativo!==false)mapa.set(r.id,{id:r.id,...d})});
   }else{
     for(const id of idsEmpresasPermitidas()){
       const s=await getDoc(doc(db,"empresas",id));
-      if(s.exists()){const d=s.data();if(d.ativo!==false&&d.grupoId===state.usuario.grupoId)mapa.set(s.id,{id:s.id,...d})}
+      if(s.exists()){const d=s.data();if(d.ativo!==false&&d.grupoId===grupo)mapa.set(s.id,{id:s.id,...d})}
     }
   }
   state.empresas=new Map([...state.empresas,...mapa]);
@@ -43,46 +57,50 @@ export async function carregarEmpresasModulo(){
 
 export async function preencherEmpresaSelect(select,{todas=false,valorAtual=""}={}){
   if(!select)return;
-  const mapa=await carregarEmpresasModulo();
-  const contexto=empresaAtualId();
-  if(contexto&&mapa.has(contexto)){
-    const e=mapa.get(contexto);
+  const mapa=await carregarEmpresasModulo(),selecionadas=empresasSelecionadasIds().filter(id=>mapa.has(id));
+  if(selecionadas.length===1){
+    const e=mapa.get(selecionadas[0]);
     select.innerHTML=`<option value="${esc(e.id)}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`;
-    select.value=contexto;
-    return;
+    select.value=e.id;return;
   }
-  const arr=[...mapa.values()].sort((a,b)=>String(a.nomeFantasia||a.razaoSocial||"").localeCompare(String(b.nomeFantasia||b.razaoSocial||""),"pt-BR"));
-  select.innerHTML=(todas?'<option value="">Todas as empresas</option>':'<option value="">Selecione...</option>')+arr.map(e=>`<option value="${e.id}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`).join("");
+  const arr=[...mapa.values()].filter(e=>!selecionadas.length||selecionadas.includes(e.id)).sort((a,b)=>String(a.nomeFantasia||a.razaoSocial||"").localeCompare(String(b.nomeFantasia||b.razaoSocial||""),"pt-BR"));
+  select.innerHTML=(todas?'<option value="">Todas as empresas selecionadas</option>':'<option value="">Selecione a empresa...</option>')+arr.map(e=>`<option value="${e.id}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`).join("");
   if(valorAtual&&[...select.options].some(o=>o.value===valorAtual))select.value=valorAtual;
   else if(!todas&&arr.length===1)select.value=arr[0].id;
 }
 export function nomeEmpresa(id){const e=state.empresas.get(id);return e?.nomeFantasia||e?.razaoSocial||"-"}
 
+async function consultarEmpresa(nomeColecao,empresaId){
+  const grupo=grupoAtualId();if(!grupo||!empresaId)return[];
+  const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo),where("empresaId","==",empresaId))),arr=[];
+  s.forEach(r=>arr.push({id:r.id,...r.data()}));return arr;
+}
+
 export async function listarDocumentos(nomeColecao){
-  if(!state.usuario?.grupoId)return[];
-  const saida=[];
-  const contexto=empresaAtualId();
-  if(contexto){
-    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",state.usuario.grupoId),where("empresaId","==",contexto)));
-    s.forEach(r=>saida.push({id:r.id,...r.data()}));
-    return saida;
+  const grupo=grupoAtualId();if(!grupo)return[];
+  let ids=empresasSelecionadasIds();
+  if(!ids.length)ids=idsEmpresasPermitidas();
+  ids=[...new Set(ids.filter(id=>podeEmpresa(id)))];if(!ids.length)return[];
+  if((admin()||state.usuario?.acessoGlobal===true)&&state.todasEmpresasSelecionadas===true){
+    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo))),permitidos=new Set(ids),saida=[];
+    s.forEach(r=>{const d=r.data();if(permitidos.has(d.empresaId))saida.push({id:r.id,...d})});return saida;
   }
-  if(admin()||state.usuario.acessoGlobal===true){
-    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",state.usuario.grupoId)));
-    s.forEach(r=>saida.push({id:r.id,...r.data()}));
-  }else{
-    for(const empresaId of idsEmpresasPermitidas()){
-      const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",state.usuario.grupoId),where("empresaId","==",empresaId)));
-      s.forEach(r=>saida.push({id:r.id,...r.data()}));
-    }
-  }
-  return saida;
+  const blocos=await Promise.all(ids.map(id=>consultarEmpresa(nomeColecao,id))),saida=[];
+  blocos.forEach(arr=>arr.forEach(x=>saida.push(x)));return saida;
+}
+
+function empresaParaGravacao(dados={}){
+  if(dados.empresaId){if(!podeEmpresa(dados.empresaId))throw new Error("sem-acesso-empresa");return dados.empresaId}
+  const id=empresaUnicaSelecionadaId();
+  if(id)return id;
+  if(typeof window!=="undefined")window.alert("Para cadastrar ou alterar um registro que pertence a uma empresa, selecione apenas uma empresa no cabeçalho do SIG.");
+  throw new Error("selecione-uma-empresa");
 }
 
 export async function criarDocumento(nomeColecao,dados){
-  const empresaId=dados.empresaId||empresaAtualId();
-  if(!empresaId)throw new Error("empresa-nao-selecionada");
-  const ref=await addDoc(collection(db,nomeColecao),{...dados,empresaId,grupoId:state.usuario.grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+  const empresaId=empresaParaGravacao(dados),grupoId=grupoAtualId();
+  if(!grupoId)throw new Error("grupo-nao-selecionado");
+  const ref=await addDoc(collection(db,nomeColecao),{...dados,empresaId,grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
   return ref.id;
 }
 export async function atualizarDocumento(nomeColecao,id,dados){await updateDoc(doc(db,nomeColecao,id),{...dados,atualizadoEm:serverTimestamp()})}
@@ -95,17 +113,15 @@ export function setBotaoPermissao(botao,permitido){botao?.classList.toggle("hidd
 export function confirmar(texto){return window.confirm(texto)}
 
 export async function movimentarSaldoItem({itemId,tipo,quantidade,observacao}){
-  const qtd=Math.abs(valor(quantidade));
-  if(!qtd)throw new Error("quantidade-invalida");
+  const qtd=Math.abs(valor(quantidade));if(!qtd)throw new Error("quantidade-invalida");
   const itemRef=doc(db,"itensAlmoxarifado",itemId);
   await runTransaction(db,async tx=>{
     const snap=await tx.get(itemRef);if(!snap.exists())throw new Error("item-nao-encontrado");
-    const item=snap.data();
-    if(item.grupoId!==state.usuario.grupoId||!podeEmpresa(item.empresaId)||item.empresaId!==empresaAtualId())throw new Error("sem-acesso");
-    const atual=valor(item.estoqueAtual);const novo=tipo==="entrada"?atual+qtd:atual-qtd;
-    if(novo<0)throw new Error("saldo-insuficiente");
+    const item=snap.data(),selecionadas=empresasSelecionadasIds();
+    if(item.grupoId!==grupoAtualId()||!podeEmpresa(item.empresaId)||!selecionadas.includes(item.empresaId))throw new Error("sem-acesso");
+    const atual=valor(item.estoqueAtual),novo=tipo==="entrada"?atual+qtd:atual-qtd;if(novo<0)throw new Error("saldo-insuficiente");
     tx.update(itemRef,{estoqueAtual:novo,atualizadoEm:serverTimestamp()});
     const movRef=doc(collection(db,"movimentacoesEstoque"));
-    tx.set(movRef,{grupoId:state.usuario.grupoId,empresaId:item.empresaId,itemId,itemCodigo:item.codigo||"",itemDescricao:item.descricao||"",tipo,quantidade:qtd,saldoAnterior:atual,saldoPosterior:novo,observacao:observacao||"",criadoPor:state.usuario.id,criadoEm:serverTimestamp()});
+    tx.set(movRef,{grupoId:grupoAtualId(),empresaId:item.empresaId,itemId,itemCodigo:item.codigo||"",itemDescricao:item.descricao||"",tipo,quantidade:qtd,saldoAnterior:atual,saldoPosterior:novo,observacao:observacao||"",criadoPor:state.usuario.id,criadoEm:serverTimestamp()});
   });
 }
