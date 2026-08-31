@@ -1,6 +1,6 @@
 import "./shell.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 const firebaseConfig={
@@ -26,6 +26,7 @@ export function admin(){return state.perfil?.acessoTotal===true}
 export function permite(modulo,acao="visualizar"){return admin()||state.perfil?.permissoes?.[modulo]?.[acao]===true}
 export function podeAdministrar(){return admin()||permite("administracao")||["empresas","usuarios","perfisAcesso","grupoEmpresarial"].some(m=>permite(m))}
 
+const SESSION_KEY="sig_login_confirmado";
 const telaLogin=$("telaLogin"),sistema=$("sistema"),formLogin=$("formLogin"),email=$("email"),senha=$("senha"),mensagemLogin=$("mensagemLogin"),nomeUsuario=$("nomeUsuario"),btnSair=$("btnSair"),tituloPagina=$("tituloPagina"),subtitulo=$("subtituloContexto"),btnEntrar=formLogin?.querySelector('button[type="submit"]');
 const MENUS={
   dashboard:["menuDashboard","dashboard"],contratos:["menuContratos","contratos"],prestadores:["menuPrestadores","prestadores"],frota:["menuFrota","frota"],almoxarifado:["menuAlmoxarifado","almoxarifado"],cotacoes:["menuCotacoes","cotacoes"],controladoria:["menuControladoria","controladoria"]
@@ -102,11 +103,27 @@ export async function atualizarResumo(){
   }catch(e){console.error(e);["resumoEmpresas","resumoUsuarios","resumoPerfis"].forEach(id=>{if($(id))$(id).textContent="—"})}
 }
 
-on(formLogin,"submit",async ev=>{ev.preventDefault();if(loginBusy)return;const em=email?.value.trim(),pw=senha?.value;if(!em||!pw)return;setBusy(true);try{await signInWithEmailAndPassword(auth,em,pw);msg(mensagemLogin,"Credenciais validadas. Carregando seu acesso...")}catch(e){console.error(e);msg(mensagemLogin,erroLogin(e));setBusy(false)}});
-on(btnSair,"click",()=>signOut(auth));
+on(formLogin,"submit",async ev=>{
+  ev.preventDefault();if(loginBusy)return;
+  const em=email?.value.trim(),pw=senha?.value;if(!em||!pw)return;
+  setBusy(true);sessionStorage.setItem(SESSION_KEY,"1");
+  try{
+    await setPersistence(auth,browserSessionPersistence);
+    await signInWithEmailAndPassword(auth,em,pw);
+    msg(mensagemLogin,"Credenciais validadas. Carregando seu acesso...");
+  }catch(e){
+    sessionStorage.removeItem(SESSION_KEY);console.error(e);msg(mensagemLogin,erroLogin(e));setBusy(false);
+  }
+});
+on(btnSair,"click",()=>{sessionStorage.removeItem(SESSION_KEY);signOut(auth)});
 
 onAuthStateChanged(auth,async user=>{
   if(!user){state.usuario=state.perfil=state.grupo=null;state.empresas=new Map();state.usuarios=new Map();state.perfis=new Map();sistema?.classList.add("hidden");telaLogin?.classList.remove("hidden");if(nomeUsuario)nomeUsuario.textContent="";setBusy(false);return}
+  if(sessionStorage.getItem(SESSION_KEY)!=="1"){
+    try{await signOut(auth)}catch{}
+    msg(mensagemLogin,"Confirme suas credenciais para iniciar uma nova sessão.");
+    setBusy(false);return;
+  }
   try{
     setBusy(true,"Validando seu acesso...");
     const us=await getDoc(doc(db,"usuarios",user.uid));if(!us.exists())throw new Error("usuario-nao-autorizado");
@@ -118,6 +135,7 @@ onAuthStateChanged(auth,async user=>{
     configurarMenus();abrirPagina(primeira());if(podeAdministrar())atualizarResumo();
     window.dispatchEvent(new Event("sig:ready"));
   }catch(e){
+    sessionStorage.removeItem(SESSION_KEY);
     console.error(e);const m={"usuario-nao-autorizado":"Usuário autenticado, mas sem cadastro no SIG.","usuario-inativo":"Este usuário está desativado.","perfil-indisponivel":"Seu perfil de acesso está indisponível.","grupo-inativo":"O grupo empresarial está inativo."};msg(mensagemLogin,m[e.message]||"Não foi possível validar seu acesso.");try{await signOut(auth)}catch{}setBusy(false)
   }
 });
