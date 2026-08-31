@@ -1,0 +1,1 @@
+Release modular da Controladoria: correção de travas por troca de período, submenu expansível, DRE isolada, Permutas e Configurações da Controladoria.
