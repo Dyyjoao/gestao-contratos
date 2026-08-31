@@ -8,6 +8,7 @@ const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const pct=(a,b)=>b?((a-b)/Math.abs(b))*100:null;
 const pctFmt=v=>v===null?"—":`${v>0?"+":""}${v.toLocaleString("pt-BR",{maximumFractionDigits:1})}%`;
 const stamp=x=>n(x?.atualizadoEm?.seconds||x?.criadoEm?.seconds||0);
+function dashboardVisivel(){const p=$("pagina-dashboard");return !!p&&!p.classList.contains("hidden")}
 function versao(arr,ano){const docs=arr.filter(x=>Number(x.exercicio)===ano&&x.versao),m=new Map();docs.forEach(x=>m.set(x.versao,Math.max(m.get(x.versao)||0,stamp(x))));return [...m.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||""}
 function valorPeriodo(valores,chave){return (PERIODOS[chave]||PERIODOS.total).reduce((s,i)=>s+n(valores?.[MESES[i]]),0)}
 function classe(id,empresaId,classes){return classes.find(x=>x.contaId===id&&(!empresaId||!x.empresaId||x.empresaId===empresaId))?.classificacao||"opex"}
@@ -19,7 +20,7 @@ function forecastConta({contaId,cc,empresaId,ano,chave,realizados,forecasts,fv})
 function caixaMinimo(contas,lanc){const hoje=new Date().toISOString().slice(0,10),fim=addDias(hoje,90),base=contas.filter(x=>x.status!=="inativo").reduce((s,x)=>s+n(x.saldoAbertura),0),validos=lanc.filter(x=>x.status!=="cancelado"),anteriores=validos.filter(x=>x.data<=hoje).reduce((s,x)=>s+(x.natureza==="entrada"?1:-1)*n(x.valor),0),futuros=validos.filter(x=>x.data>hoje&&x.data<=fim).sort((a,b)=>String(a.data).localeCompare(String(b.data)));let saldo=base+anteriores,min=saldo,data=hoje;futuros.forEach(x=>{saldo+=(x.natureza==="entrada"?1:-1)*n(x.valor);if(saldo<min){min=saldo;data=x.data}});return{min,data}}
 
 async function carregar(){
-  montar();if(busy||!permite("controladoria")||!$("dashExecutivoSinais"))return;
+  montar();if(!dashboardVisivel())return;if(busy||!permite("controladoria")||!$("dashExecutivoSinais"))return;
   const ano=periodoAno(),chave=periodoChave();busy=true;
   try{
     const[plano,classes,realizados,budgets,forecasts,contas,lanc]=await Promise.all([listarDocumentos("planoContasGerencial"),listarDocumentos("classificacoesContas"),listarDocumentos("realizadoMensal"),listarDocumentos("budgetLinhas"),listarDocumentos("forecastLinhas"),listarDocumentos("contasBancarias"),listarDocumentos("fluxoCaixaLancamentos")]),bv=versao(budgets,ano),fv=versao(forecasts,ano),linhas=[];let receita=0,opex=0,capex=0,capexBud=0,resBud=0,resFore=0;
