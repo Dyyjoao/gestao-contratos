@@ -1,0 +1,5 @@
+export function exercicioInativacao(conta){const x=Number(conta?.inativaAPartirExercicio||0);return Number.isFinite(x)&&x>0?x:0}
+export function contaAtivaNoExercicio(conta,ano){if(!conta||conta.status==="inativo")return false;const ini=Number(conta.ativaAPartirExercicio||0),fim=exercicioInativacao(conta),a=Number(ano||0);if(ini&&a<ini)return false;if(fim&&a>=fim)return false;return true}
+export function contaAtivaNaCompetencia(conta,competencia){const ano=Number(String(competencia||"").slice(0,4));return contaAtivaNoExercicio(conta,ano)}
+export function descricaoVigenciaConta(conta){const ini=Number(conta?.ativaAPartirExercicio||0),fim=exercicioInativacao(conta);if(ini&&fim)return`Ativa de ${ini} até ${fim-1}`;if(ini)return`Ativa a partir de ${ini}`;if(fim)return`Ativa até ${fim-1}`;return conta?.status==="inativo"?"Inativa estruturalmente":"Sem limite de vigência"}
+export function podeProgramarInativacao(conta,ano){const atual=exercicioInativacao(conta);return !atual||Number(ano)<atual}
