@@ -84,16 +84,19 @@ function montarCompetencia(input){
 }
 
 function aplicar(){
-  ["dreAno","realizadoAno","budgetAno","forecastAno"].forEach(id=>montarAno(document.getElementById(id)));
+  ["dreAno","realizadoAno","budgetAno","forecastAno","dashFinanceAno"].forEach(id=>montarAno(document.getElementById(id)));
   ["prestacaoCompetencia","fechamentoCompetencia"].forEach(id=>montarCompetencia(document.getElementById(id)));
+}
+
+function observar(id){
+  const alvo=document.getElementById(id);if(!alvo)return;
+  let timer;
+  new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(aplicar,20)}).observe(alvo,{childList:true,subtree:true});
 }
 
 garantirCss();
 aplicar();
-const alvo=document.getElementById("pagina-controladoria");
-if(alvo){
-  let timer;
-  new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(aplicar,20)}).observe(alvo,{childList:true,subtree:true});
-}
+observar("pagina-controladoria");
+observar("pagina-dashboard");
 window.addEventListener("sig:ready",aplicar);
 window.addEventListener("sig:page",aplicar);
