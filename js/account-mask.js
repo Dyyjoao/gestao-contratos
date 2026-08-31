@@ -13,11 +13,15 @@ const PADRAO_SINTETICA=/^[12349]\.\d{2}$/;
 const PADRAO_ANALITICA=/^[12349]\.\d{2}\.\d{4}$/;
 
 export function raizCodigo(codigo=""){const r=String(codigo||"").trim().charAt(0);return RAIZES_CONTABEIS[r]?r:""}
-export function raizConta(conta){return String(conta?.grupoRaiz||raizCodigo(conta?.codigo)||inferirRaizLegada(conta)||"")}
-export function definicaoRaiz(valor){const r=typeof valor==="object"?raizConta(valor):raizCodigo(valor)||String(valor||"");return RAIZES_CONTABEIS[r]||null}
 export function codigoSinteticoValido(codigo=""){return PADRAO_SINTETICA.test(String(codigo||""))}
 export function codigoAnaliticoValido(codigo=""){return PADRAO_ANALITICA.test(String(codigo||""))}
 export function nivelMascara(codigo=""){const c=String(codigo||"");if(RAIZES_CONTABEIS[c])return 0;if(codigoSinteticoValido(c))return 1;if(codigoAnaliticoValido(c))return 2;return -1}
+export function raizConta(conta){
+  const declarada=String(conta?.grupoRaiz||"");if(RAIZES_CONTABEIS[declarada])return declarada;
+  const codigo=String(conta?.codigo||"");if(codigoSinteticoValido(codigo)||codigoAnaliticoValido(codigo))return raizCodigo(codigo);
+  return inferirRaizLegada(conta);
+}
+export function definicaoRaiz(valor){const r=typeof valor==="object"?raizConta(valor):raizCodigo(valor)||String(valor||"");return RAIZES_CONTABEIS[r]||null}
 export function codigoPaiMascara(codigo=""){const c=String(codigo||"");const n=nivelMascara(c);if(n===2)return c.split(".").slice(0,2).join(".");if(n===1)return c.charAt(0);return""}
 export function tipoEstruturaMascara(codigo=""){const n=nivelMascara(codigo);return n===0||n===1?"sintetica":n===2?"analitica":""}
 export function demonstracaoConta(conta){return definicaoRaiz(conta)?.tipo||"dre"}
