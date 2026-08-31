@@ -2,11 +2,11 @@ import { CC_ESTATISTICO_ID } from "./statistical-center.js";
 import { CC_BALANCO_ID } from "./balance-center.js";
 
 export const RAIZES_CONTABEIS={
-  "1":{codigo:"1",nome:"ATIVO",tipo:"balanco",natureza:"ativo",ccTecnicoId:CC_BALANCO_ID},
-  "2":{codigo:"2",nome:"PASSIVO",tipo:"balanco",natureza:"passivo",ccTecnicoId:CC_BALANCO_ID},
-  "3":{codigo:"3",nome:"RECEITA",tipo:"dre",natureza:"receita",ccTecnicoId:""},
-  "4":{codigo:"4",nome:"DESPESA",tipo:"dre",natureza:"despesa",ccTecnicoId:""},
-  "9":{codigo:"9",nome:"ESTATÍSTICA",tipo:"estatistica",natureza:"estatistica",ccTecnicoId:CC_ESTATISTICO_ID}
+  "1":{codigo:"1",nome:"ATIVO",tipo:"balanco",natureza:"ativo",naturezaContabilPadrao:"devedora",ccTecnicoId:CC_BALANCO_ID},
+  "2":{codigo:"2",nome:"PASSIVO",tipo:"balanco",natureza:"passivo",naturezaContabilPadrao:"credora",ccTecnicoId:CC_BALANCO_ID},
+  "3":{codigo:"3",nome:"RECEITA",tipo:"dre",natureza:"receita",naturezaContabilPadrao:"credora",ccTecnicoId:""},
+  "4":{codigo:"4",nome:"DESPESA",tipo:"dre",natureza:"despesa",naturezaContabilPadrao:"devedora",ccTecnicoId:""},
+  "9":{codigo:"9",nome:"ESTATÍSTICA",tipo:"estatistica",natureza:"estatistica",naturezaContabilPadrao:"neutra",ccTecnicoId:CC_ESTATISTICO_ID}
 };
 
 const PADRAO_SINTETICA=/^[12349]\.\d{2}$/;
@@ -30,6 +30,28 @@ export function contaBalancoMascara(conta){return demonstracaoConta(conta)==="ba
 export function contaEstatisticaMascara(conta){return demonstracaoConta(conta)==="estatistica"}
 export function centroTecnicoDaConta(conta){return definicaoRaiz(conta)?.ccTecnicoId||""}
 
+export function naturezaContabilPadrao(valor){return definicaoRaiz(valor)?.naturezaContabilPadrao||"neutra"}
+export function naturezaContabilConta(conta){
+  const n=String(conta?.naturezaContabil||conta?.naturezaSaldo||"").toLowerCase();
+  if(n==="devedora"||n==="devedor")return"devedora";
+  if(n==="credora"||n==="credor")return"credora";
+  if(n==="neutra")return"neutra";
+  return naturezaContabilPadrao(conta);
+}
+export function multiplicadorApresentacao(conta){
+  const raiz=raizConta(conta),natureza=naturezaContabilConta(conta),padrao=naturezaContabilPadrao(conta);
+  if(raiz==="9"||natureza==="neutra")return 1;
+  return natureza===padrao?1:-1;
+}
+export function multiplicadorResultado(conta){
+  const raiz=raizConta(conta),mult=multiplicadorApresentacao(conta);
+  if(raiz==="3")return 1*mult;
+  if(raiz==="4")return -1*mult;
+  return 0;
+}
+export function contaRedutora(conta){return raizConta(conta)!=="9"&&multiplicadorApresentacao(conta)===-1}
+export function descricaoNatureza(conta){const n=naturezaContabilConta(conta),m=multiplicadorApresentacao(conta);return`${n==="devedora"?"Devedora":n==="credora"?"Credora":"Neutra"} · ${m>0?"+1":"-1"}`}
+
 export function inferirRaizLegada(conta){
   if(!conta)return"";
   if(conta.natureza==="estatistica"||conta.tipoConta==="estatistica"||conta.grupoDre==="estatisticas")return"9";
@@ -45,4 +67,4 @@ export function proximoCodigoAnalitico(contas,paiCodigo){const pai=String(paiCod
 
 export function grupoDreCompatibilidade(raiz){return({"1":"ativo","2":"passivo","3":"receita","4":"despesas","9":"estatisticas"})[String(raiz)]||"despesas"}
 export function naturezaCompatibilidade(raiz){return RAIZES_CONTABEIS[String(raiz)]?.natureza||"despesa"}
-export function raizVirtual(raiz){const d=RAIZES_CONTABEIS[String(raiz)];return d?{id:`__raiz_${d.codigo}__`,codigo:d.codigo,nome:d.nome,grupoRaiz:d.codigo,tipoEstrutura:"sintetica",raizSistema:true,status:"ativo",demonstracao:d.tipo,natureza:d.natureza,centroTecnicoId:d.ccTecnicoId}:null}
+export function raizVirtual(raiz){const d=RAIZES_CONTABEIS[String(raiz)];return d?{id:`__raiz_${d.codigo}__`,codigo:d.codigo,nome:d.nome,grupoRaiz:d.codigo,tipoEstrutura:"sintetica",raizSistema:true,status:"ativo",demonstracao:d.tipo,natureza:d.natureza,naturezaContabil:d.naturezaContabilPadrao,centroTecnicoId:d.ccTecnicoId}:null}
