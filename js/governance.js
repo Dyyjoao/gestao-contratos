@@ -1,68 +1,27 @@
-import { $, on, permite, abrirPagina } from "./core.js";
+import { $, esc, msg, permite, abrirPagina, admin } from "./core.js";
+import { listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, nomeEmpresa } from "./shared.js";
 
-function montarMenu(){
-  if($("menuGovernanca"))return;
-  const separador=document.querySelector(".sidebar-menu .menu-separador");
-  if(!separador)return;
-  const b=document.createElement("button");
-  b.id="menuGovernanca";
-  b.className="menu-item hidden";
-  b.dataset.pagina="governanca";
-  b.type="button";
-  b.textContent="Governança & Compliance";
-  separador.before(b);
-  on(b,"click",()=>{
-    if(!permite("governanca"))return;
-    abrirPagina("governanca");
-    if($("tituloPagina"))$("tituloPagina").textContent="Governança & Compliance";
-  });
+let configs=[],planos=[],busy=false;
+const pagina=()=>$("pagina-governanca");const podeConfig=()=>admin()||permite("governanca","configurar");const hoje=()=>new Date().toISOString().slice(0,10);const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
+const AREAS=["Controladoria & Financeiro","Fiscal & Tributário","Contábil","RH & Trabalhista","SST","LGPD & Privacidade","Societário","Qualidade & Processos"];
+function config(){return configs.find(x=>x.empresaId===empresaUnicaSelecionadaId())||null}function obrigacoes(){return Array.isArray(config()?.complianceObrigacoes)?config().complianceObrigacoes:[]}function riscos(){return Array.isArray(config()?.complianceRiscos)?config().complianceRiscos:[]}
+function montarMenu(){if($("menuGovernanca"))return;const sep=document.querySelector(".sidebar-menu .menu-separador");if(!sep)return;const b=document.createElement("button");b.id="menuGovernanca";b.className="menu-item hidden";b.dataset.pagina="governanca";b.type="button";b.textContent="Governança & Compliance";sep.before(b);b.addEventListener("click",()=>{if(!permite("governanca"))return;abrirPagina("governanca");if($("tituloPagina"))$("tituloPagina").textContent="Governança & Compliance";carregar()})}
+function montarPagina(){if(pagina())return;const main=document.querySelector("main.conteudo");if(!main)return;const s=document.createElement("section");s.id="pagina-governanca";s.className="pagina hidden";s.innerHTML=`
+<div class="pagina-cabecalho"><div><span class="eyebrow">GOVERNANÇA & COMPLIANCE</span><h2>Governança & Compliance</h2><p>Obrigações, riscos, controles e planos de ação no mesmo ambiente.</p></div><button id="btnAtualizarGovernanca" class="btn-secundario" type="button">Atualizar</button></div>
+<div id="governancaAviso" class="modulo-aviso">Selecione uma empresa para visualizar e parametrizar a matriz de compliance.</div>
+<div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Índice de conformidade</span><strong id="govConformidade">—</strong><small>obrigações em dia</small></div><div class="kpi-card"><span>Obrigações vencidas</span><strong id="govVencidas">—</strong><small>ação imediata</small></div><div class="kpi-card"><span>Riscos críticos</span><strong id="govRiscosCriticos">—</strong><small>probabilidade × impacto</small></div><div class="kpi-card"><span>Planos vencidos</span><strong id="govPlanosVencidos">—</strong><small>Minha Mesa / Planos de Ação</small></div></div>
+<nav class="fpa-tabs gov-tabs"><button class="fpa-tab ativo" data-gov-tab="obrigacoes" type="button">Obrigações</button><button class="fpa-tab" data-gov-tab="riscos" type="button">Riscos & Controles</button><button class="fpa-tab" data-gov-tab="acoes" type="button">Planos de Ação</button><button class="fpa-tab" data-gov-tab="auditoria" type="button">Programas de Auditoria</button></nav>
+<section class="gov-view" data-gov-view="obrigacoes"><div class="pagina-cabecalho interno"><div><h3>Calendário de Obrigações</h3><p>Controle de vencimento, responsável e evidência de cumprimento.</p></div><button id="btnNovaObrigacao" class="btn-primario" type="button">+ Nova obrigação</button></div><section id="formObrigacaoBox" class="form-card hidden"><form id="formObrigacao"><div class="form-grid form-grid-3"><div class="campo"><label for="govObrigTitulo">Obrigação</label><input id="govObrigTitulo" required></div><div class="campo"><label for="govObrigArea">Área</label><select id="govObrigArea">${AREAS.map(a=>`<option>${a}</option>`).join("")}</select></div><div class="campo"><label for="govObrigVenc">Próximo vencimento</label><input id="govObrigVenc" type="date" required></div><div class="campo"><label for="govObrigPeriodicidade">Periodicidade</label><select id="govObrigPeriodicidade"><option>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option><option>Eventual</option></select></div><div class="campo"><label for="govObrigResp">Responsável / área</label><input id="govObrigResp"></div><div class="campo"><label for="govObrigStatus">Status</label><select id="govObrigStatus"><option value="pendente">Pendente</option><option value="concluido">Concluído</option><option value="dispensado">Dispensado</option></select></div></div><div class="form-acoes"><button id="btnCancelarObrigacao" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar obrigação</button></div></form></section><section class="lista-card"><div class="tabela-container"><table class="tabela"><thead><tr><th>Obrigação</th><th>Área</th><th>Vencimento</th><th>Periodicidade</th><th>Responsável</th><th>Status</th></tr></thead><tbody id="listaGovObrigacoes"></tbody></table></div></section></section>
+<section class="gov-view hidden" data-gov-view="riscos"><div class="pagina-cabecalho interno"><div><h3>Matriz de Riscos & Controles</h3><p>Risco inerente, controle existente e acompanhamento de criticidade.</p></div><button id="btnNovoRisco" class="btn-primario" type="button">+ Novo risco</button></div><section id="formRiscoBox" class="form-card hidden"><form id="formRisco"><div class="form-grid form-grid-3"><div class="campo"><label for="govRiscoTitulo">Risco</label><input id="govRiscoTitulo" required></div><div class="campo"><label for="govRiscoArea">Área</label><select id="govRiscoArea">${AREAS.map(a=>`<option>${a}</option>`).join("")}</select></div><div class="campo"><label for="govRiscoResp">Responsável</label><input id="govRiscoResp"></div><div class="campo"><label for="govRiscoProb">Probabilidade (1–5)</label><input id="govRiscoProb" type="number" min="1" max="5" value="3"></div><div class="campo"><label for="govRiscoImpacto">Impacto (1–5)</label><input id="govRiscoImpacto" type="number" min="1" max="5" value="3"></div><div class="campo"><label for="govRiscoStatus">Status</label><select id="govRiscoStatus"><option value="aberto">Aberto</option><option value="monitorado">Monitorado</option><option value="mitigado">Mitigado</option></select></div><div class="campo campo-span-3"><label for="govRiscoControle">Controle / resposta</label><input id="govRiscoControle" placeholder="Controle existente ou ação de mitigação"></div></div><div class="form-acoes"><button id="btnCancelarRisco" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar risco</button></div></form></section><section class="lista-card"><div class="tabela-container"><table class="tabela"><thead><tr><th>Risco</th><th>Área</th><th>P</th><th>I</th><th>Score</th><th>Controle</th><th>Status</th></tr></thead><tbody id="listaGovRiscos"></tbody></table></div></section></section>
+<section class="gov-view hidden" data-gov-view="acoes"><section class="lista-card"><div class="lista-cabecalho"><div><h3>Planos de Ação</h3><p>Ações da empresa conectadas à Minha Mesa.</p></div></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Plano</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Origem</th></tr></thead><tbody id="listaGovAcoes"></tbody></table></div></section></section>
+<section class="gov-view hidden" data-gov-view="auditoria"><section class="lista-card"><div class="lista-cabecalho"><div><h3>Programas de Auditoria</h3><p>Estrutura-base para ciclos de auditoria e testes de aderência.</p></div></div><div class="quick-grid">${AREAS.map(a=>`<button type="button" class="quick-card" disabled><span>${a}</span><small>Checklist, evidências, não conformidades e plano de ação</small></button>`).join("")}</div></section></section>`;main.appendChild(s);
+  s.querySelectorAll("[data-gov-tab]").forEach(b=>b.addEventListener("click",()=>{s.querySelectorAll("[data-gov-tab]").forEach(x=>x.classList.toggle("ativo",x===b));s.querySelectorAll("[data-gov-view]").forEach(v=>v.classList.toggle("hidden",v.dataset.govView!==b.dataset.govTab))}));$("btnAtualizarGovernanca")?.addEventListener("click",carregar);$("btnNovaObrigacao")?.addEventListener("click",()=>$("formObrigacaoBox")?.classList.remove("hidden"));$("btnCancelarObrigacao")?.addEventListener("click",()=>$("formObrigacaoBox")?.classList.add("hidden"));$("btnNovoRisco")?.addEventListener("click",()=>$("formRiscoBox")?.classList.remove("hidden"));$("btnCancelarRisco")?.addEventListener("click",()=>$("formRiscoBox")?.classList.add("hidden"));$("formObrigacao")?.addEventListener("submit",salvarObrigacao);$("formRisco")?.addEventListener("submit",salvarRisco)
 }
-
-function montarPagina(){
-  if($("pagina-governanca"))return;
-  const conteudo=document.querySelector("main.conteudo");
-  if(!conteudo)return;
-  const s=document.createElement("section");
-  s.id="pagina-governanca";
-  s.className="pagina hidden";
-  s.innerHTML=`
-    <div class="pagina-cabecalho">
-      <div>
-        <span class="eyebrow">GOVERNANÇA</span>
-        <h2>Governança & Compliance</h2>
-        <p>Auditorias internas, conformidade, indicadores, evidências e planos de ação.</p>
-      </div>
-    </div>
-    <div class="modulo-aviso"><strong>Módulo reservado para a próxima etapa.</strong> A estrutura foi incluída agora para que Governança nasça integrada aos demais módulos, sem criar um sistema paralelo.</div>
-    <div class="kpi-grid kpi-grid-4">
-      <div class="kpi-card"><span>Índice geral de conformidade</span><strong>—</strong><small>será calculado pelas auditorias</small></div>
-      <div class="kpi-card"><span>Auditorias em aberto</span><strong>—</strong><small>por área e ciclo</small></div>
-      <div class="kpi-card"><span>Não conformidades</span><strong>—</strong><small>com criticidade e reincidência</small></div>
-      <div class="kpi-card"><span>Planos de ação vencidos</span><strong>—</strong><small>responsáveis e prazos</small></div>
-    </div>
-    <section class="lista-card">
-      <div class="lista-cabecalho"><div><h3>Programas de auditoria</h3><p>Modelo previsto para checklists, notas, pesos, evidências, indicadores percentuais e planos de ação.</p></div></div>
-      <div class="quick-grid governanca-grid">
-        <button type="button" class="quick-card" disabled><span>Manutenção & Frota</span><small>preventiva, corretiva, documentação, disponibilidade e controles operacionais</small></button>
-        <button type="button" class="quick-card" disabled><span>Controladoria & Financeiro</span><small>fechamento, caixa, contratos, reconciliações, budget, forecast e controles</small></button>
-        <button type="button" class="quick-card" disabled><span>RH & Departamento Pessoal</span><small>admissão, documentação, jornada, folha, benefícios, treinamentos administrativos e conformidade trabalhista</small></button>
-        <button type="button" class="quick-card" disabled><span>SST</span><small>PGR, PCMSO, ASO, EPIs, treinamentos obrigatórios, acidentes, inspeções e documentação de segurança</small></button>
-        <button type="button" class="quick-card" disabled><span>Almoxarifado & Compras</span><small>estoque, ferramentas, solicitações, cotações e rastreabilidade</small></button>
-        <button type="button" class="quick-card" disabled><span>Contratos & Fornecedores</span><small>vigência, SLA, reajustes, documentação e homologação</small></button>
-        <button type="button" class="quick-card" disabled><span>Qualidade & Processos</span><small>procedimentos, evidências, aderência, riscos e melhoria contínua</small></button>
-      </div>
-    </section>`;
-  conteudo.appendChild(s);
-}
-
-function atualizarAcesso(){
-  const b=$("menuGovernanca");
-  if(b)b.classList.toggle("hidden",!permite("governanca"));
-}
-
-montarMenu();
-montarPagina();
-window.addEventListener("sig:ready",atualizarAcesso);
-window.addEventListener("sig:page",e=>{
-  if(e.detail?.pagina==="governanca"&&$("tituloPagina"))$("tituloPagina").textContent="Governança & Compliance";
-});
+function fmtData(d){return d?d.split("-").reverse().join("/"):"—"}function score(r){return n(r.probabilidade)*n(r.impacto)}function classeScore(s){return s>=16?"status-inativo":s>=9?"status-atencao":"status-ativo"}
+function render(){const obs=obrigacoes(),rs=riscos(),venc=obs.filter(x=>x.status!=="concluido"&&x.status!=="dispensado"&&x.vencimento&&x.vencimento<hoje()).length,validas=obs.filter(x=>x.status!=="dispensado"),ok=validas.filter(x=>x.status==="concluido"||!x.vencimento||x.vencimento>=hoje()).length,conf=validas.length?Math.round(ok/validas.length*100):100,crit=rs.filter(x=>x.status!=="mitigado"&&score(x)>=16).length,pv=planos.filter(x=>x.status!=="concluido"&&x.prazo&&x.prazo<hoje()).length;$("govConformidade").textContent=`${conf}%`;$("govVencidas").textContent=venc;$("govRiscosCriticos").textContent=crit;$("govPlanosVencidos").textContent=pv;$("governancaAviso").innerHTML=`<strong>${esc(nomeEmpresa(empresaUnicaSelecionadaId()||""))}</strong> · ${obs.length} obrigação(ões) · ${rs.length} risco(s) · ${planos.length} plano(s) de ação`;$("btnNovaObrigacao").classList.toggle("hidden",!podeConfig());$("btnNovoRisco").classList.toggle("hidden",!podeConfig());const to=$("listaGovObrigacoes");to.innerHTML=obs.length?obs.sort((a,b)=>String(a.vencimento||"").localeCompare(String(b.vencimento||""))).map(o=>`<tr><td><strong>${esc(o.titulo)}</strong></td><td>${esc(o.area||"-")}</td><td>${fmtData(o.vencimento)}</td><td>${esc(o.periodicidade||"-")}</td><td>${esc(o.responsavel||"-")}</td><td><span class="${o.status==="concluido"?"status-ativo":o.vencimento<hoje()?"status-inativo":"status-atencao"}">${o.status==="concluido"?"Concluído":o.status==="dispensado"?"Dispensado":o.vencimento<hoje()?"Vencido":"Pendente"}</span></td></tr>`).join(""):'<tr><td colspan="6">Nenhuma obrigação parametrizada.</td></tr>';const tr=$("listaGovRiscos");tr.innerHTML=rs.length?rs.sort((a,b)=>score(b)-score(a)).map(r=>`<tr><td><strong>${esc(r.titulo)}</strong><small>${esc(r.responsavel||"")}</small></td><td>${esc(r.area||"-")}</td><td>${r.probabilidade}</td><td>${r.impacto}</td><td><span class="${classeScore(score(r))}">${score(r)}</span></td><td>${esc(r.controle||"-")}</td><td>${esc(r.status||"aberto")}</td></tr>`).join(""):'<tr><td colspan="7">Nenhum risco cadastrado.</td></tr>';const ta=$("listaGovAcoes");ta.innerHTML=planos.length?planos.sort((a,b)=>String(a.prazo||"").localeCompare(String(b.prazo||""))).map(p=>`<tr><td><strong>${esc(p.titulo||p.descricao||"Plano de ação")}</strong></td><td>${esc(p.responsavelNome||"-")}</td><td>${fmtData(p.prazo)}</td><td>${esc(p.status||"aberto")}</td><td>${esc(p.origem||p.moduloOrigem||"SIG")}</td></tr>`).join(""):'<tr><td colspan="5">Nenhum plano de ação.</td></tr>'}
+async function carregar(){if(busy||!empresaUnicaSelecionadaId())return;busy=true;msg($("governancaAviso"),"Carregando governança...");try{[configs,planos]=await Promise.all([listarDocumentos("configuracoesControladoria"),listarDocumentos("planosAcao")]);render()}catch(e){console.error("Governança:",e);$("governancaAviso").textContent="Não foi possível carregar Governança & Compliance."}finally{busy=false}}
+async function salvarConfig(campo,arr){const c=config();if(c)await atualizarDocumento("configuracoesControladoria",c.id,{[campo]:arr});else await criarDocumento("configuracoesControladoria",{[campo]:arr});await carregar()}
+async function salvarObrigacao(e){e.preventDefault();if(!podeConfig())return;const arr=[...obrigacoes(),{id:`ob_${Date.now()}`,titulo:$("govObrigTitulo").value.trim(),area:$("govObrigArea").value,vencimento:$("govObrigVenc").value,periodicidade:$("govObrigPeriodicidade").value,responsavel:$("govObrigResp").value.trim(),status:$("govObrigStatus").value}];await salvarConfig("complianceObrigacoes",arr);$("formObrigacao")?.reset();$("formObrigacaoBox")?.classList.add("hidden")}
+async function salvarRisco(e){e.preventDefault();if(!podeConfig())return;const arr=[...riscos(),{id:`ri_${Date.now()}`,titulo:$("govRiscoTitulo").value.trim(),area:$("govRiscoArea").value,responsavel:$("govRiscoResp").value.trim(),probabilidade:n($("govRiscoProb").value),impacto:n($("govRiscoImpacto").value),controle:$("govRiscoControle").value.trim(),status:$("govRiscoStatus").value}];await salvarConfig("complianceRiscos",arr);$("formRisco")?.reset();$("formRiscoBox")?.classList.add("hidden")}
+function acesso(){const b=$("menuGovernanca");if(b)b.classList.toggle("hidden",!permite("governanca"))}
+montarMenu();montarPagina();window.addEventListener("sig:ready",acesso);window.addEventListener("sig:empresa-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
