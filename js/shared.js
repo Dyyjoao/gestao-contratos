@@ -75,6 +75,10 @@ async function consultarEmpresa(nomeColecao,empresaId){
   const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo),where("empresaId","==",empresaId))),arr=[];
   s.forEach(r=>arr.push({id:r.id,...r.data()}));return arr;
 }
+export async function listarDocumentosEmpresa(nomeColecao,empresaId){
+  if(!empresaId||!podeEmpresa(empresaId))return[];
+  return consultarEmpresa(nomeColecao,empresaId);
+}
 
 export async function listarDocumentos(nomeColecao){
   const grupo=grupoAtualId();if(!grupo)return[];
