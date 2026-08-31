@@ -1,274 +1,358 @@
 # SIG — Manual Mestre de Arquitetura e Regras
 
-> Documento de continuidade do Sistema Integrado de Gestão (SIG).
+> Documento de invariantes do Sistema Integrado de Gestão (SIG).  
 > Atualizado em: 31/08/2026.
->
-> Objetivo: permitir que o SIG continue evoluindo com coerência mesmo em outra conversa, outro desenvolvedor, outra IA, outro repositório ou outra hospedagem.
+
+Este Manual não tenta listar cada detalhe de implementação. O estado funcional completo está em `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`. Aqui ficam as regras que uma evolução não pode quebrar silenciosamente.
+
+---
 
 ## 1. Princípio central
 
-A lógica do SIG não deve depender de memória de conversa. Ela deve existir em três lugares versionados:
+A lógica do SIG deve existir em fontes versionadas:
 
-1. **Código-fonte** — comportamento executável.
-2. **Regras de segurança e modelo de dados** — Firestore/Storage.
-3. **Documentação em `/docs`** — intenção, invariantes, decisões e processo de evolução.
+1. código-fonte;
+2. `firestore.rules` / `storage.rules`;
+3. `SECURITY.md`;
+4. documentação em `/docs`;
+5. QA automatizado.
 
-Se código e documentação divergirem, deve-se inspecionar o comportamento atual, corrigir a divergência e atualizar a documentação na mesma versão.
+Conversa e memória de IA são apoio, não fonte única de verdade.
+
+Quando código e documentação divergirem, investigar o comportamento atual, corrigir a divergência e atualizar ambos na mesma entrega.
+
+---
 
 ## 2. Filosofia do produto
 
-O SIG não é uma coleção de telas isoladas. Ele deve funcionar como um sistema integrado em cinco camadas:
+O SIG trabalha em cinco camadas:
 
-- **Operação:** Contratos, Prestadores, Frota, Almoxarifado, Solicitações/Cotações.
-- **Gestão:** Controladoria & FP&A.
-- **Controle:** Governança & Compliance.
-- **Execução:** Minha Mesa, exceções, planos de ação e aprovações.
-- **Direção:** Dashboard, Prestação de Contas e futuro Board Mode.
+- **Operação:** fontes de eventos/compromissos;
+- **Gestão:** Controladoria & FP&A;
+- **Controle:** Governança & Compliance;
+- **Execução:** Minha Mesa e planos de ação;
+- **Direção:** Dashboard, Prestação de Contas e futuros pacotes executivos.
 
-O sistema deve reduzir esquecimento, retrabalho e dependência de controles paralelos. A tela deve orientar o usuário sobre o que requer ação ou decisão.
+Escopo ativo deve ser confirmado no código. Módulo antigo existente no repositório não é automaticamente parte do produto.
 
-## 3. Arquitetura técnica atual
+---
 
-### Frontend
+## 3. Arquitetura técnica
 
-- Aplicação web estática em HTML/CSS/JavaScript ES Modules.
-- Entrada principal: `index.html` + `app.js`.
-- Módulos em `/js`.
-- Carregamento pesado preferencialmente sob demanda.
-- Hospedagem atual: GitHub Pages.
+- frontend estático HTML/CSS/JavaScript ES Modules;
+- módulos em `/js`;
+- PWA;
+- Firebase Authentication;
+- Cloud Firestore;
+- regras de segurança em `firestore.rules`;
+- hospedagem do frontend independente do banco.
 
-### Backend gerenciado
+Trocar de host ou domínio não deve exigir zerar/migrar o Firestore quando o mesmo projeto Firebase continuar sendo usado.
 
-- Firebase Authentication.
-- Cloud Firestore.
-- Regras de segurança em `firestore.rules`.
-- `storage.rules` mantido como preparação futura para Firebase Storage.
-- Não existe servidor de aplicação próprio neste momento.
+---
 
-### Regra estrutural importante
+## 4. Contexto global e multiempresa
 
-**Hospedagem do frontend e banco de dados são independentes.**
-
-Mover o site do GitHub Pages para outro host não move nem apaga o Firestore. Mantendo o mesmo projeto Firebase e a mesma configuração de conexão, o novo frontend utiliza a mesma base de dados.
-
-## 4. Contexto global
-
-O cabeçalho do SIG define o contexto operacional global:
-
-- Grupo empresarial.
-- Empresa(s) selecionada(s).
-- Exercício.
-- Competência/período.
-
-Módulos devem reutilizar esse contexto e evitar pedir novamente empresa/período sem necessidade.
-
-Algumas telas de lançamento exigem exatamente uma empresa e uma competência mensal; telas gerenciais podem aceitar consolidação de empresas, trimestre ou exercício completo.
-
-## 5. Multiempresa e segregação
-
-Os documentos operacionais devem possuir, quando aplicável:
-
-- `grupoId`
-- `empresaId`
-
-A segurança real é garantida pelas regras do Firestore, não por ocultação visual.
-
-A interface de permissões controla experiência de uso, mas não substitui `firestore.rules`.
-
-## 6. Controladoria & FP&A — invariantes
-
-### Plano de Contas Gerencial
-
-A estrutura é multinível:
-
-`Grupo DRE → Conta Sintética → Conta Sintética ... → Conta Analítica`
+O cabeçalho define Grupo, Empresa(s), Exercício e Período.
 
 Regras:
 
-- **Sintética:** agrupadora; nunca recebe lançamento manual.
-- **Analítica:** folha lançável.
-- `contaPaiId` define a hierarquia.
-- `tipoEstrutura` diferencia `sintetica` e `analitica`.
-- Não permitir ciclos hierárquicos.
-- Conta com filhas não pode virar Analítica sem reorganização prévia das filhas.
+- relatórios podem aceitar várias empresas;
+- telas de lançamento devem exigir uma única empresa quando a identidade do documento pertence a uma empresa;
+- nenhuma tela pode escolher silenciosamente a primeira empresa de um contexto múltiplo;
+- mudança de contexto em tela aberta deve invalidar/recarregar/bloquear a visão conforme o módulo.
 
-### Centro de Custo × Conta
+Fluxo de Caixa e Prestação de Contas são monoempresa.
 
-- Centros de custo recebem autorização somente para contas **Analíticas financeiras**.
-- Contas Sintéticas são calculadas automaticamente pelas descendentes.
-- Contas Estatísticas não entram na matriz normal de Centros.
+---
 
-### Estatísticas / Indicadores
+## 5. Segurança
 
-Existe um Centro de Custo técnico interno:
+A segurança real está em `firestore.rules`, não na interface.
 
-`__cc_estatistico__`
+Nunca:
 
-Ele serve apenas para persistência e agregação técnica.
+- depender de botão oculto;
+- expor segredo administrativo no navegador/repositório;
+- permitir troca silenciosa de `grupoId`/`empresaId` para escapar de escopo;
+- publicar nova coleção ou padrão de escrita sem revisar Rules.
 
-Na experiência do usuário, Estatísticas/Indicadores aparecem como bloco próprio e não como um centro operacional comum.
+A política detalhada está em `SECURITY.md`.
 
-### Input Mensal
+---
 
-- Uma empresa por lançamento.
-- Uma competência mensal por lançamento.
-- Somente Analíticas são digitáveis.
-- Sintéticas aparecem como subtotal automático.
-- Indicadores calculados não são digitáveis.
-- Duplicidades devem ser ignoradas/canonicalizadas; nunca somadas silenciosamente.
-- Competência fechada/bloqueada não pode ser alterada sem reabertura apropriada.
+## 6. Plano de Contas
+
+Máscara vigente:
+
+```text
+1 Ativo
+2 Passivo
+3 Receita
+4 Despesa
+9 Estatística
+
+#.##       Sintética
+#.##.####  Analítica
+```
+
+Regras:
+
+- raiz é estrutural;
+- Sintética agrupa e nunca recebe lançamento;
+- Analítica é folha lançável;
+- não criar níveis Sintéticos arbitrários fora da máscara;
+- não reutilizar código automaticamente;
+- preservar legado até migração controlada;
+- vigência por exercício não apaga histórico.
+
+---
+
+## 7. Natureza contábil
+
+A regra central pertence a `js/account-mask.js`.
+
+Padrões:
+
+| Raiz | Natureza | Apresentação | Resultado |
+|---|---|---:|---:|
+| Ativo | Devedora | +1 | 0 |
+| Passivo | Credora | +1 | 0 |
+| Receita | Credora | +1 | +1 |
+| Despesa | Devedora | +1 | -1 |
+| Estatística | Neutra | informativa | 0 |
+
+Conta redutora usa natureza oposta à raiz.
+
+**Invariante absoluta:** multiplicador de apresentação/resultado nunca altera o saldo bruto armazenado.
+
+Não usar `(-)` no nome como fonte de verdade da redução.
+
+---
+
+## 8. Centros técnicos
+
+Reservados:
+
+```text
+__cc_estatistico__
+__cc_balanco__
+```
+
+Eles não são Centros de Custo operacionais.
+
+- Estatística usa o primeiro;
+- Balanço usa o segundo.
+
+---
+
+## 9. Input Mensal
+
+- uma empresa;
+- uma competência mensal;
+- Sintética bloqueada;
+- Analítica financeira depende da matriz CC × Conta;
+- Estatística Manual pode ser digitada;
+- Estatística Automática/Calculada é bloqueada;
+- Balanço recebe saldo bruto de fechamento;
+- fechamento impede alteração;
+- documento canônico prevalece;
+- duplicidade nunca é somada silenciosamente.
+
+Conta patrimonial automática do Imobilizado fica bloqueada para edição manual e deve sinalizar qualquer saldo manual antigo ignorado.
+
+---
+
+## 10. Balanço Patrimonial
+
+Balanço é posição de fechamento.
+
+- meses não são somados para formar saldo;
+- Ativo/Passivo usam natureza/multiplicador central;
+- redutoras reduzem subtotais;
+- multiempresa consolida por código contábil;
+- diferença Ativo − Passivo/PL deve ficar visível;
+- divergência de natureza do mesmo código entre empresas deve ser tratada como inconsistência;
+- Imobilizado pode alimentar automaticamente as contas mapeadas.
+
+---
+
+## 11. Budget, Forecast e Premissas
 
 ### Budget
 
-O Budget é anual e acompanha o exercício global, independentemente da competência mensal selecionada no cabeçalho.
-
-Ciclo:
-
-`NÃO ABERTO → EM ELABORAÇÃO → FINALIZADO`
-
-Pode ser reaberto quando autorizado.
-
-O Budget possui versões por exercício e permite criação de nova versão.
-
-A matriz apresenta:
-
-- Realizado A-1.
-- Budget mês a mês.
-- Variações.
-- Total anual.
-- RESULTADO / SALDO.
-
-Sintéticas somam as Analíticas descendentes. Analíticas recebem sublinhas ou premissas.
+- anual;
+- exercício vem do cabeçalho;
+- ciclo: `NÃO ABERTO → EM ELABORAÇÃO → FINALIZADO`;
+- versões preservam histórico;
+- A-1 é o exercício anterior ao selecionado;
+- linha Analítica principal é calculada pelas sublinhas/memórias;
+- Sintética soma descendentes.
 
 ### Forecast
 
-- Mesmo plano e mesma hierarquia do Budget.
-- Meses fechados vêm do Realizado.
-- Meses futuros vêm da projeção.
-- Resultado final representa o FY Forecast.
-
-### DRE Gerencial
-
-- Saída gerencial, não tela de lançamento.
-- Pode ser vista por Centro de Custo ou consolidada por conta.
-- Pode mostrar Realizado, Budget ou Forecast.
-- Suporta mês, trimestre e exercício completo.
-- Sintéticas podem ser expandidas/recolhidas.
-- Exportações devem respeitar a estrutura exibida.
-- Estatísticas ficam em bloco separado da DRE financeira.
-- Deve existir linha final de `RESULTADO / SALDO DO PERÍODO`.
-
-## 7. Minha Mesa
-
-A Minha Mesa é a camada de execução e deve concentrar:
-
-- Exceções relevantes.
-- Pendências que exigem atenção.
-- Planos de ação.
-- Futuramente aprovações, SLA e notificações.
-
-A lógica desejada é: o usuário abre o SIG e entende o que precisa resolver antes de navegar por módulos.
-
-## 8. Governança & Compliance
-
-Governança é camada de controle e não deve ser confundida com operação.
-
-Direções previstas/implementadas incluem:
-
-- Obrigações.
-- Riscos.
-- Auditorias/programas/ciclos.
-- Planos de ação.
-- SST separado quando aplicável.
-
-## 9. Dados e anexos
-
-Estratégia atual de anexos:
-
-- Google Drive como solução temporária.
-- Firestore armazena metadados/referência do arquivo.
-- Futuro: Firebase Storage quando houver infraestrutura/plano adequado.
-
-Formato conceitual dos anexos:
-
 ```text
-provider
-nome
-mimeType
-tamanho
-url
-driveFileId ou storagePath
-categoria
-enviadoPor
-enviadoEm
+FY Forecast = Realizado fechado + projeção futura
 ```
 
-Nunca armazenar segredos, chaves privadas ou credenciais administrativas no frontend ou no repositório.
+Mês fechado não pode ser sobrescrito pelo Forecast.
 
-## 10. Coleções relevantes
+### Premissas
 
-Entre as coleções atualmente utilizadas/previstas no núcleo gerencial estão:
+- específica do CC vence corporativa;
+- vigência é respeitada mês a mês;
+- premissa ativa controla apenas competências dentro de sua vigência;
+- sublinha de premissa deve manter origem identificável.
 
-- `usuarios`
-- `perfisAcesso`
-- `gruposEmpresariais`
-- `empresas`
-- `contratos`
-- `prestadores`
-- `veiculos`
-- `manutencoesFrota`
-- `itensAlmoxarifado`
-- `movimentacoesEstoque`
-- `cotacoes`
-- `centrosCusto`
-- `planoContasGerencial`
-- `premissasPlanejamento`
-- `realizadoMensal`
-- `budgetLinhas`
-- `forecastLinhas`
-- `planejamentoDetalhes`
-- `contasBancarias`
-- `fluxoCaixaLancamentos`
-- `fluxoCaixaFixos`
-- `prestacaoContas`
-- `prestacaoComentarios`
-- `fechamentoTarefas`
-- `fechamentosMensais`
-- `planosAcao`
-- `permutas`
-- `permutaMovimentos`
+---
 
-A existência de uma coleção não autoriza automaticamente acesso: sempre conferir `firestore.rules`.
+## 12. Estatísticas
 
-## 11. Regra de evolução
+- raiz 9;
+- natureza neutra;
+- fora do resultado financeiro;
+- modos Manual e Automático;
+- conta legada sem modo explícito é Manual por compatibilidade;
+- consolidação precisa declarar Soma/Média/Último/Recalcular;
+- percentuais/índices não são somados indiscriminadamente.
 
-Uma mudança que altera comportamento estrutural deve atualizar, na mesma entrega:
+---
 
-1. Código.
-2. Testes/Quality Check.
-3. Rules/índices quando necessários.
-4. Documentação correspondente em `/docs`.
-5. Registro da decisão em `DECISOES-ARQUITETURAIS.md` quando a mudança modificar uma regra fundamental.
+## 13. Imobilizado & CAPEX
 
-## 12. O que nunca fazer
+CAPEX é investimento, não OPEX.
 
-- Não usar ocultação de botão como única segurança.
-- Não expor chave privada, service account ou token secreto no frontend.
-- Não editar produção sem histórico de versão.
-- Não apagar/migrar dados de forma destrutiva sem backup e plano de reversão.
-- Não duplicar módulos novos e antigos sem remover/arquivar a rota obsoleta.
-- Não somar documentos duplicados silenciosamente em demonstrativos.
-- Não lançar diretamente em conta Sintética.
-- Não acoplar a persistência do Firestore ao provedor de hospedagem.
+A DRE recebe depreciação/amortização quando configurada; o Balanço recebe ativo bruto e depreciação acumulada quando integrado.
 
-## 13. Ordem recomendada de leitura para manutenção
+Regras:
 
-1. `docs/CONTEXTO-PARA-IA.md`
-2. `docs/SIG-MANUAL-MESTRE.md`
-3. `docs/MODELO-DE-DADOS-E-MIGRACOES.md`
-4. `docs/VERSIONAMENTO-E-RELEASE.md`
-5. `docs/HOSPEDAGEM-DOMINIO-E-PRIVACIDADE.md`
-6. `docs/DECISOES-ARQUITETURAIS.md`
-7. Código atual e `firestore.rules`.
+- não depreciar antes da data disponível para uso;
+- Depreciação Acumulada deve ser redutora do Ativo;
+- conta de despesa deve ser compatível com resultado;
+- automação de depreciação substitui projeção manual equivalente para evitar duplicidade;
+- Budget/Forecast/DRE precisam enxergar a mesma automação.
 
-Este documento deve evoluir junto com o SIG.
+---
+
+## 14. DRE, Dashboard e Prestação
+
+Os relatórios devem compartilhar interpretação financeira.
+
+`js/financial-reporting.js` é o núcleo comum preferencial para relatórios gerenciais.
+
+Nunca recriar regra local do tipo “Receita = receita; todo o resto = OPEX”.
+
+Regras:
+
+- Balanço não entra em Resultado;
+- Estatística não entra em Resultado;
+- natureza/multiplicador vem do núcleo contábil;
+- consolidação multiempresa financeira deve ser semanticamente compatível por código;
+- versões de Budget/Forecast devem respeitar cada empresa;
+- depreciação automática não pode ser duplicada.
+
+Prestação de Contas é monoempresa.
+
+---
+
+## 15. Fluxo de Caixa
+
+Fluxo de Caixa é monoempresa.
+
+Ao entrar em contexto multiempresa:
+
+- limpar dados exibidos;
+- bloquear criar/editar/exportar;
+- fechar formulários;
+- informar claramente a restrição;
+- não gravar nada usando empresa implícita.
+
+Competência contábil e data financeira são conceitos diferentes.
+
+---
+
+## 16. Fechamentos
+
+- checklist idempotente;
+- duplicidades legadas não devem ser recriadas;
+- competência fechada/bloqueada protege telas de lançamento;
+- histórico anterior permanece intacto quando configuração muda temporalmente.
+
+---
+
+## 17. Compatibilidade e dados antigos
+
+Uma atualização deve assumir que existem dados legados.
+
+Usar:
+
+- defaults compatíveis;
+- campos novos sem destruir antigos;
+- canonicalização;
+- flags de legado/duplicidade quando apropriado;
+- migrações idempotentes;
+- rollback.
+
+Não corrigir banco para esconder bug visual antes de corrigir o código.
+
+---
+
+## 18. Código legado
+
+Versões antigas podem permanecer no repositório.
+
+Não:
+
+- importar versão antiga só porque ela existe;
+- reativar rota obsoleta por atalho;
+- apagar arquivo antigo sem provar que nenhuma rota/import/migração depende dele.
+
+Eliminar primeiro “duas verdades” de execução; remover arquivo físico apenas quando seguro.
+
+---
+
+## 19. Processo obrigatório de mudança estrutural
+
+1. ler `AGENTS.md` e Dossiê;
+2. inspecionar `main` e branch de trabalho;
+3. conferir rota ativa;
+4. implementar com compatibilidade;
+5. atualizar testes/workflow;
+6. validar sintaxe/imports/browser;
+7. validar Rules se houver persistência;
+8. atualizar Dossiê/Guia/documentação específica;
+9. comparar com `main`;
+10. só então promover;
+11. acompanhar QA da `main` e deploy.
+
+---
+
+## 20. O que nunca fazer
+
+- lançar em Sintética;
+- somar duplicidade silenciosamente;
+- misturar Ativo/Passivo/Estatística em OPEX;
+- somar posições mensais do Balanço;
+- regravar saldo bruto com multiplicador;
+- quebrar vigência histórica;
+- apagar versão anterior de Budget/Forecast;
+- usar contexto multiempresa em tela monoempresa;
+- expor segredo no frontend;
+- tratar privacidade do repositório como substituto de Firestore Rules;
+- publicar mudança estrutural sem QA e documentação.
+
+---
+
+## 21. Ordem oficial de leitura
+
+1. `AGENTS.md`;
+2. `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`;
+3. `docs/SIG-MANUAL-MESTRE.md`;
+4. `docs/SIG-GUIA-DE-CONTINUIDADE.md`;
+5. `SECURITY.md`;
+6. `app.js`;
+7. `js/controllership-router.js` quando aplicável;
+8. `firestore.rules` / `storage.rules`;
+9. `.github/workflows/js-check.yml`.
+
+Não há documentos obrigatórios ocultos ou nomes de arquivos inexistentes fora dessa lista.
