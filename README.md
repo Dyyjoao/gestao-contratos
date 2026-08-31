@@ -1,40 +1,89 @@
 # SIG — Sistema Integrado de Gestão
 
-WebApp/PWA empresarial construído com Firebase e frontend modular em JavaScript.
+WebApp/PWA empresarial com frontend modular em JavaScript e backend gerenciado por Firebase Authentication + Cloud Firestore.
 
 ## Escopo ativo
 
-- Minha Mesa
-- Dashboard gerencial
-- Contratos
-- Controladoria & FP&A
-- Governança & Compliance
-- Administração
-  - Empresas
-  - Usuários
-  - Perfis de acesso
-  - Grupo empresarial
+- Dashboard gerencial;
+- Minha Mesa;
+- Contratos;
+- Controladoria & FP&A;
+- Governança & Compliance;
+- Administração.
 
-Módulos operacionais antigos podem continuar no repositório para reaproveitamento futuro em um sistema separado de Gestão de Operações, mas não fazem parte do escopo ativo do SIG sem decisão arquitetural explícita.
+Módulos antigos podem continuar no repositório por histórico/compatibilidade, mas não são considerados ativos sem rota explícita.
 
-## Comece por aqui
+## Documentação oficial
 
-A documentação oficial de continuidade está em:
+Leia nesta ordem:
 
-- `AGENTS.md` — instruções automáticas para agentes/desenvolvedores que abrem o repositório;
-- `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` — handoff completo e portátil do projeto;
-- `docs/SIG-MANUAL-MESTRE.md` — princípios e regras estruturais.
+1. `AGENTS.md` — contrato para agentes/desenvolvedores;
+2. `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` — estado funcional e arquitetural completo;
+3. `docs/SIG-MANUAL-MESTRE.md` — invariantes que não podem ser quebradas;
+4. `docs/SIG-GUIA-DE-CONTINUIDADE.md` — retomada, release e rollback;
+5. `SECURITY.md` — política de segurança;
+6. `docs/qa-controladoria-modular.md` — QA funcional/contábil;
+7. `docs/release-controladoria-modular.md` — checklist de promoção.
+
+Não existem documentos obrigatórios ocultos fora dessa lista.
+
+## Controladoria & FP&A
+
+A rota ativa é definida em `js/controllership-router.js`.
+
+Núcleo atual inclui:
+
+- DRE Gerencial;
+- Balanço Patrimonial;
+- Input Mensal;
+- Budget;
+- Forecast;
+- Fluxo de Caixa;
+- Prestação de Contas;
+- Fechamento;
+- Premissas;
+- Imobilizado & CAPEX;
+- Plano de Contas;
+- Centros de Custo;
+- Configurações.
+
+O Plano vigente usa máscara fixa:
+
+```text
+1 Ativo
+2 Passivo
+3 Receita
+4 Despesa
+9 Estatística
+
+#.##       Sintética
+#.##.####  Analítica
+```
+
+Natureza e multiplicadores são centralizados em `js/account-mask.js`. Multiplicadores nunca regravam saldo bruto.
+
+`js/financial-reporting.js` centraliza a interpretação financeira compartilhada por relatórios gerenciais.
 
 ## Arquitetura
 
-O frontend é modularizado em `js/`, com autenticação e contexto global. A Controladoria usa carregamento sob demanda por submenu para reduzir custo de abertura e consultas desnecessárias.
+- `index.html` + `app.js`;
+- ES Modules em `js/`;
+- carregamento sob demanda para módulos pesados;
+- Firebase Authentication;
+- Cloud Firestore;
+- `firestore.rules` como barreira real de dados;
+- GitHub Pages como hospedagem atual do frontend.
 
-Firebase Authentication e Cloud Firestore são independentes do provedor que hospeda o frontend. Mover o site para outro host ou domínio não apaga a base, desde que a aplicação continue apontando para o mesmo projeto Firebase e as configurações de autenticação/domínio sejam atualizadas quando necessário.
+Frontend e banco são independentes: trocar de host/domínio não apaga o Firestore se o mesmo projeto Firebase continuar sendo usado.
 
-`firestore.rules` é a camada real de segurança do banco e deve evoluir junto com qualquer mudança de persistência/permissões.
+## Segurança
+
+`SECURITY.md` é obrigatório para qualquer alteração de autenticação, permissões, persistência, domínio ou armazenamento.
+
+Nunca colocar Service Account, chave privada, token administrativo ou outro segredo no frontend/repositório.
 
 ## Qualidade
 
-GitHub Actions executa validação de sintaxe JavaScript, contratos arquiteturais e smoke tests em navegador headless, incluindo importação dos módulos dinâmicos da Controladoria.
+GitHub Actions executa o `SIG Quality Check`, incluindo validações de sintaxe, contratos arquiteturais e smoke/import dos módulos da Controladoria.
 
-Mudanças estruturais devem atualizar também o Dossiê de Continuidade.
+Mudança estrutural só é considerada completa quando código, QA, Rules quando aplicável e documentação estão coerentes.
