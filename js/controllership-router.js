@@ -1,6 +1,6 @@
 import { $, abrirPagina, permite, admin } from "./core.js";
 
-let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831j";
+let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831hier1";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function marcarAtivo(chave){document.querySelectorAll(".ctrl-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.ctrl===chave));$("menuControladoria")?.classList.add("ativo")}
@@ -14,16 +14,16 @@ async function abrirTela(chave,arquivo){try{marcarAtivo(chave);const m=await imp
 async function abrirPermutas(){await abrirTela("permutas","./permutas.js");const editar=admin()||permite("controladoria","editar");["btnNovaPermuta","btnNovoMovPermuta"].forEach(id=>$(id)?.classList.toggle("hidden",!editar))}
 
 const ACOES={
-  dre:()=>abrirTela("dre","./ctrl-dre-v4.js"),
-  input:()=>abrirTela("input","./ctrl-input-v4.js"),
-  budget:()=>abrirTela("budget","./ctrl-budget-v5.js"),
-  forecast:()=>abrirTela("forecast","./ctrl-forecast-v4.js"),
+  dre:()=>abrirTela("dre","./ctrl-dre-v6.js"),
+  input:()=>abrirTela("input","./ctrl-input-v6.js"),
+  budget:()=>abrirTela("budget","./ctrl-budget-v7.js"),
+  forecast:()=>abrirTela("forecast","./ctrl-forecast-v5.js"),
   caixa:()=>abrirModuloLegado("caixa","./cashflow.js","tabFluxoCaixa"),
   prestacao:()=>abrirModuloLegado("prestacao","./accountability.js","tabPrestacaoContas"),
   fechamento:()=>abrirTela("fechamento","./closing-v3.js"),
   permutas:abrirPermutas,
   premissas:()=>abrirTela("premissas","./ctrl-premises-v3.js"),
-  plano:()=>abrirLegado("plano"),
+  plano:()=>abrirTela("plano","./ctrl-chart-accounts-v3.js"),
   centros:()=>abrirLegado("centros"),
   config:()=>abrirTela("config","./ctrl-settings.js")
 };
