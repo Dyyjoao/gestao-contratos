@@ -1,6 +1,6 @@
 import { $, abrirPagina, permite, admin } from "./core.js";
 
-let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831g";
+let legadoPromise=null;const modulos=new Map();const MODULO_VERSAO="20260831h";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function marcarAtivo(chave){document.querySelectorAll(".ctrl-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.ctrl===chave));$("menuControladoria")?.classList.add("ativo")}
@@ -20,7 +20,7 @@ const ACOES={
   forecast:()=>abrirTela("forecast","./ctrl-forecast-v3.js"),
   caixa:()=>abrirModuloLegado("caixa","./cashflow.js","tabFluxoCaixa"),
   prestacao:()=>abrirModuloLegado("prestacao","./accountability.js","tabPrestacaoContas"),
-  fechamento:()=>abrirTela("fechamento","./closing-v2.js"),
+  fechamento:()=>abrirTela("fechamento","./closing-v3.js"),
   permutas:abrirPermutas,
   premissas:()=>abrirTela("premissas","./ctrl-premises.js"),
   plano:()=>abrirLegado("plano"),
