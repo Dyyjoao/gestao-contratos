@@ -40,6 +40,10 @@ jobs:
           grep -q 'ctrl-assets-v1.js' js/controllership-router.js
           grep -q 'closing-v3.js' js/controllership-router.js
           grep -q 'chave==="caixa"||chave==="prestacao"' js/controllership-router.js
+          grep -q 'abrirModuloCompartilhado' js/controllership-router.js
+          ! grep -q './fpa.js' js/controllership-router.js
+          ! grep -q 'fpa-number-fix.js' js/controllership-router.js
+          ! grep -q 'planning-details.js' js/controllership-router.js
           test ! -e js/ctrl-chart-accounts-v4.js
 
           # Atalhos de Configurações não podem reabrir cadastros legados
@@ -187,7 +191,7 @@ jobs:
             'ctrl-chart-accounts-v5.js','ctrl-cost-centers-v2.js','ctrl-premises-v4.js',
             'ctrl-input-v6.js','ctrl-balance-sheet-v1.js','ctrl-assets-v1.js',
             'ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js',
-            'ctrl-dre-v6.js','closing-v3.js'
+            'ctrl-dre-v6.js','closing-v3.js','cashflow.js','accountability.js'
           ]
           teste="<script type=\"module\">(async()=>{const mods="+repr(mods)+";for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>"
           p.write_text(s.replace('</body>',teste+'</body>'))
