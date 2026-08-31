@@ -2,6 +2,7 @@ import { abrirPagina } from "./core.js";
 import { $, esc, moeda, listarDocumentos, periodoAno, periodoChave, empresasSelecionadasIds, nomeEmpresa } from "./shared.js";
 import { CC_ESTATISTICO_ID, CC_ESTATISTICO_NOME, contaEstatistica, centroEstatisticoSintetico } from "./statistical-center.js";
 import { contaSintetica, contaAnalitica, folhasDescendentes, arvoreParaFolhas, ordenaContas } from "./account-tree.js";
+import { multiplicadorResultado } from "./account-mask.js";
 import { exportarTabelaXls, exportarTabelaPdf } from "./export-utils.js";
 
 const MESES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -31,7 +32,7 @@ const ccFiltro=()=>$("dreV6Centro")?.value||"";
 const idSeguro=v=>String(v||"sem").replace(/[^a-zA-Z0-9_-]/g,"_");
 const vazio=()=>Array(12).fill(0);
 function somaVetores(vs){const out=vazio();for(const v of vs||[])for(let i=0;i<12;i++)out[i]+=n(v?.[i]);return out}
-function sinalConta(c){return contaEstatistica(c)?1:(c?.natureza==="receita"?1:-1)}
+function sinalConta(c){return contaEstatistica(c)?1:multiplicadorResultado(c)}
 function centroDoc(d,c){return contaEstatistica(c)?CC_ESTATISTICO_ID:(d.centroCustoId||"")}
 function chaveDoc(d,c){return`${d.empresaId}|${centroDoc(d,c)}|${d.contaId}`}
 function versaoMaisRecente(arr,ano){const m=new Map();arr.filter(x=>x.tipoRegistro!=="budget_meta"&&Number(x.exercicio)===Number(ano)&&x.versao).forEach(x=>m.set(x.versao,Math.max(m.get(x.versao)||0,stamp(x))));return[...m.entries()].sort((a,b)=>b[1]-a[1]||String(b[0]).localeCompare(String(a[0]),"pt-BR"))[0]?.[0]||""}
@@ -48,7 +49,7 @@ function criarPagina(){
   $("dreV6Cenario")?.addEventListener("change",()=>marcarSujo("Cenário alterado."));$("dreV6Visao")?.addEventListener("change",()=>{ajustarFiltros();render()});$("dreV6Conteudo")?.addEventListener("change",()=>{ajustarFiltros();render()});$("dreV6Centro")?.addEventListener("change",()=>{ajustarFiltros();render()});
 }
 function garantirCss(){if($("dre-v6-css"))return;const s=document.createElement("style");s.id="dre-v6-css";s.textContent=`
-.dre-v6-grid th:first-child,.dre-v6-grid td:first-child{width:285px;min-width:285px;max-width:285px;white-space:normal;overflow-wrap:anywhere}.dre-v6-grid th:not(:first-child),.dre-v6-grid td:not(:first-child){min-width:96px}.dre-v6-wrap{max-width:100%;overflow:auto}.dre-v6-tree{display:flex;align-items:center;gap:6px}.dre-v6-tree .indent{display:inline-block;flex:0 0 auto}.dre-v6-tree.sintetica{font-weight:850}.dre-tree-toggle{width:18px;height:18px;border:0;background:transparent;cursor:pointer;padding:0;position:relative;color:#475467}.dre-tree-toggle:before{content:'▸';font-size:11px}.dre-tree-toggle.aberta:before{content:'▾'}.dre-tree-spacer{display:inline-block;width:18px}.dre-v6-sint td{background:#f7f9fb}.dre-v6-cc td{background:#eef3f5;font-weight:850}.dre-v6-grupo td{background:#e7eef2;font-weight:900}.dre-v6-estat td{background:#eefaf8}.dre-v6-estat-bloco td{background:#dff5f1;font-weight:900}.dre-v6-resultado td{background:#0b1f33!important;color:#fff!important;font-weight:900}.dre-v6-grid small{display:block;color:#667085;font-size:8px;margin-top:2px}@media(max-width:900px){.dre-v6-grid th:first-child,.dre-v6-grid td:first-child{width:220px;min-width:220px;max-width:220px}}`;
+.dre-v6-grid th:first-child,.dre-v6-grid td:first-child{width:285px;min-width:285px;max-width:285px;white-space:normal;overflow-wrap:anywhere}.dre-v6-grid th:not(:first-child),.dre-v6-grid td:not(:first-child){min-width:96px}.dre-v6-wrap{max-width:100%;overflow:auto}.dre-v6-tree{display:flex;align-items:center;gap:6px}.dre-v6-tree .indent{display:inline-block;flex:0 0 auto}.dre-v6-tree.sintetica{font-weight:850}.dre-tree-toggle{width:18px;height:18px;border:0;background:transparent;cursor:pointer;padding:0;position:relative;color:#475467}.dre-tree-toggle:before{content:'▸';font-size:11px}.dre-tree-toggle.aberta:before{content:'▾';}.dre-tree-spacer{display:inline-block;width:18px}.dre-v6-sint td{background:#f7f9fb}.dre-v6-cc td{background:#eef3f5;font-weight:850}.dre-v6-grupo td{background:#e7eef2;font-weight:900}.dre-v6-estat td{background:#eefaf8}.dre-v6-estat-bloco td{background:#dff5f1;font-weight:900}.dre-v6-resultado td{background:#0b1f33!important;color:#fff!important;font-weight:900}.dre-v6-grid small{display:block;color:#667085;font-size:8px;margin-top:2px}@media(max-width:900px){.dre-v6-grid th:first-child,.dre-v6-grid td:first-child{width:220px;min-width:220px;max-width:220px}}`;
   document.head.appendChild(s)}
 function marcarSujo(texto="Contexto alterado."){sujo=true;if(!visivel())return;const a=$("dreV6Aviso");if(a){a.classList.remove("hidden");a.innerHTML=`<strong>${esc(texto)}</strong> Clique em Atualizar para consultar o novo contexto.`}if($("dreV6Contexto"))$("dreV6Contexto").textContent=contextoTexto()}
 function limparAviso(){sujo=false;$("dreV6Aviso")?.classList.add("hidden")}
