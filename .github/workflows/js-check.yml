@@ -57,5 +57,4 @@ jobs:
           grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
           grep -q 'id="pagina-input-mensal"' /tmp/sig-dom.html
           grep -q 'id="btnEntrar"' /tmp/sig-dom.html
-          grep -q 'id="tabelaBudget"' /tmp/sig-dom.html
-          grep -q 'id="tabelaDre"' /tmp/sig-dom.html
+          grep -q 'id="ctrlSubmenu"' /tmp/sig-dom.html
