@@ -3,7 +3,7 @@ import {
   preencherEmpresaSelect, listarDocumentos, criarDocumento, atualizarDocumento,
   excluirDocumento, emitirAlteracao, abrirBox, fecharBox, confirmar
 } from "./shared.js";
-import { uploadArquivo } from "./storage.js";
+import { SIG_DRIVE_EMPRESAS_URL, metaAnexoDrive, nomeProvider } from "./drive-attachments.js";
 
 let dados=[];
 let centros=[];
@@ -39,8 +39,22 @@ function montarCampos(){
   cc.innerHTML='<label for="contratoCentroCusto">Centro de custo</label><select id="contratoCentroCusto"><option value="">Sem centro específico</option></select>';
 
   const arq=document.createElement("div");
-  arq.className="campo campo-span-2";
-  arq.innerHTML='<label for="contratoArquivo">Arquivo do contrato</label><input id="contratoArquivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"><small id="contratoArquivoAtual" class="arquivo-atual"></small>';
+  arq.className="campo campo-span-3";
+  arq.innerHTML=`
+    <label>Anexo do contrato</label>
+    <div class="drive-anexo-card">
+      <div class="drive-anexo-head">
+        <div><strong>Google Drive</strong><small>Armazenamento temporário enquanto o Firebase Storage não estiver habilitado.</small></div>
+        <a class="btn-secundario" href="${SIG_DRIVE_EMPRESAS_URL}" target="_blank" rel="noopener">Abrir pasta do SIG no Drive</a>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="campo"><label for="contratoDriveUrl">Link do arquivo no Drive</label><input id="contratoDriveUrl" type="url" placeholder="Cole aqui o link do arquivo do Google Drive"></div>
+        <div class="campo"><label for="contratoDriveNome">Nome do arquivo</label><input id="contratoDriveNome" type="text" placeholder="Ex.: Contrato_Fornecedor_XYZ.pdf"></div>
+      </div>
+      <label class="driver-switch drive-remover"><input id="contratoRemoverArquivo" type="checkbox"><span>Remover vínculo do anexo atual</span></label>
+      <small id="contratoArquivoAtual" class="arquivo-atual"></small>
+      <small class="arquivo-atual">Fluxo: envie o arquivo ao Drive, use “Compartilhar → Copiar link” e cole acima. O SIG salva apenas a referência; futuramente migraremos o arquivo ao Firebase Storage.</small>
+    </div>`;
 
   const integracao=document.createElement("div");
   integracao.className="campo-span-3 contrato-driver-card";
@@ -70,6 +84,11 @@ function montarCampos(){
     grid.prepend(cc);
   }
 
+  const style=document.createElement("style");
+  style.id="sig-drive-anexo-css";
+  style.textContent=`.drive-anexo-card{border:1px solid #dbe4e8;border-radius:12px;padding:12px;background:#f8fbfb}.drive-anexo-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.drive-anexo-head strong,.drive-anexo-head small{display:block}.drive-anexo-head small,.arquivo-atual{color:#667085;margin-top:3px}.drive-remover{margin-top:8px}.arquivo-atual a{font-weight:800}@media(max-width:720px){.drive-anexo-head{align-items:flex-start;flex-direction:column}}`;
+  if(!document.getElementById(style.id))document.head.appendChild(style);
+
   const head=form.closest("section")?.nextElementSibling?.querySelector("thead tr");
   if(head)head.innerHTML="<th>Contrato</th><th>Centro de custo</th><th>Vigência</th><th>Valor mensal</th><th>Status</th><th>Ações</th>";
 }
@@ -77,7 +96,9 @@ function montarCampos(){
 montarCampos();
 
 const centro=()=>$("contratoCentroCusto");
-const arquivo=()=>$("contratoArquivo");
+const driveUrl=()=>$("contratoDriveUrl");
+const driveNome=()=>$("contratoDriveNome");
+const removerArquivo=()=>$("contratoRemoverArquivo");
 const arquivoAtual=()=>$("contratoArquivoAtual");
 const planejamentoAtivo=()=>$("contratoPlanejamentoAtivo");
 const caixaAtivo=()=>$("contratoCaixaAtivo");
@@ -119,6 +140,13 @@ function atualizarDriverCampos(){
   $("contratoDriverCampos")?.classList.toggle("driver-inativo",!ativo);
 }
 
+function mostrarArquivo(item){
+  if(!arquivoAtual())return;
+  const a=item?.arquivoPrincipal;
+  if(!a?.url){arquivoAtual().innerHTML="Nenhum arquivo vinculado.";return}
+  arquivoAtual().innerHTML=`Arquivo atual: <a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.nome||"Abrir arquivo")}</a> · ${esc(nomeProvider(a)||"Anexo")}`;
+}
+
 function limpar(){
   editId=null;
   form?.reset();
@@ -126,7 +154,10 @@ function limpar(){
   preencherPlano();
   if(periodicidade())periodicidade().value=12;
   if(titulo)titulo.textContent="Novo contrato";
-  if(arquivoAtual())arquivoAtual().innerHTML="";
+  if(driveUrl())driveUrl().value="";
+  if(driveNome())driveNome().value="";
+  if(removerArquivo())removerArquivo().checked=false;
+  mostrarArquivo(null);
   atualizarDriverCampos();
   msg(mensagem,"");
 }
@@ -158,7 +189,8 @@ async function abrir(item=null){
     if(percentualProjetado())percentualProjetado().value=Number(item.regraReajuste?.percentualProjetado||0)||"";
     if(periodicidade())periodicidade().value=Number(item.regraReajuste?.periodicidadeMeses||12);
     if(comentarioPlanejamento())comentarioPlanejamento().value=item.comentarioPlanejamento||"";
-    if(item.arquivoPrincipal?.url&&arquivoAtual())arquivoAtual().innerHTML=`Arquivo atual: <a href="${esc(item.arquivoPrincipal.url)}" target="_blank" rel="noopener">${esc(item.arquivoPrincipal.nome||"Abrir arquivo")}</a>`;
+    if(driveNome())driveNome().value=item.arquivoPrincipal?.nome||"";
+    mostrarArquivo(item);
   }
   atualizarDriverCampos();
   abrirBox(box,objeto);
@@ -189,7 +221,7 @@ function render(filtro=""){
   if(!lista)return;
   if(!arr.length){lista.innerHTML='<tr><td colspan="6">Nenhum contrato encontrado.</td></tr>';return}
   lista.innerHTML=arr.map(x=>`<tr>
-    <td class="celula-principal"><strong>${esc(x.numero||x.fornecedor||"Contrato")}</strong><span>${esc(x.objeto||"")}${x.planejamentoAtivo?" · FP&A":""}${x.fluxoCaixaAtivo?" · Caixa":""}</span></td>
+    <td class="celula-principal"><strong>${esc(x.numero||x.fornecedor||"Contrato")}</strong><span>${esc(x.objeto||"")}${x.planejamentoAtivo?" · FP&A":""}${x.fluxoCaixaAtivo?" · Caixa":""}${x.arquivoPrincipal?.provider==="google_drive"?" · Drive":""}</span></td>
     <td>${esc(centroNome(x.centroCustoId))}</td>
     <td>${dataBr(x.inicio)} → ${dataBr(x.fim)}</td>
     <td>${moeda(x.valorMensal)}</td>
@@ -241,6 +273,16 @@ on(caixaAtivo(),"change",atualizarDriverCampos);
 
 on(form,"submit",async ev=>{
   ev.preventDefault();
+  const atual=dados.find(x=>x.id===editId)||null;
+  let anexo=atual?.arquivoPrincipal||null;
+  try{
+    if(removerArquivo()?.checked===true)anexo=null;
+    else if(driveUrl()?.value.trim())anexo=metaAnexoDrive({url:driveUrl().value,nome:driveNome()?.value,anterior:anexo});
+  }catch(e){
+    if(e.message==="drive-url-invalida")return msg(mensagem,"O link do anexo precisa ser um endereço do Google Drive.");
+    throw e;
+  }
+
   const d={
     empresaId:empresa.value,
     numero:numero.value.trim(),
@@ -264,7 +306,8 @@ on(form,"submit",async ev=>{
       percentualProjetado:Number(percentualProjetado()?.value||0),
       periodicidadeMeses:Number(periodicidade()?.value||12)
     },
-    comentarioPlanejamento:comentarioPlanejamento()?.value.trim()||""
+    comentarioPlanejamento:comentarioPlanejamento()?.value.trim()||"",
+    arquivoPrincipal:anexo
   };
   if(!d.empresaId||!d.fornecedor||!d.objeto||!d.inicio||!d.fim)return msg(mensagem,"Preencha fornecedor, objeto e vigência.");
   if(d.fim<d.inicio)return msg(mensagem,"A data de término não pode ser anterior ao início.");
@@ -274,12 +317,6 @@ on(form,"submit",async ev=>{
     let id=editId;
     if(editId)await atualizarDocumento("contratos",editId,d);
     else id=await criarDocumento("contratos",d);
-    const f=arquivo()?.files?.[0];
-    if(f){
-      msg(mensagem,"Enviando arquivo...");
-      const meta=await uploadArquivo({modulo:"contratos",registroId:id,arquivo:f,pasta:"principal"});
-      await atualizarDocumento("contratos",id,{arquivoPrincipal:meta});
-    }
     msg(mensagem,"Contrato salvo com sucesso.",true);
     await carregarContratos();
     emitirAlteracao("contratos");
@@ -287,7 +324,7 @@ on(form,"submit",async ev=>{
     setTimeout(()=>fecharBox(box,form,mensagem),500);
   }catch(e){
     console.error(e);
-    msg(mensagem,e?.code?.includes("storage")?"Contrato salvo, mas o Firebase Storage ainda precisa ser habilitado para anexos.":"Não foi possível salvar o contrato.");
+    msg(mensagem,"Não foi possível salvar o contrato.");
   }
 });
 
