@@ -304,8 +304,7 @@ service cloud.firestore {
     match /permutaMovimentos/{id} {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
-      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if false;
+      allow update, delete: if false;
     }
 
     match /planosAcao/{id} {
