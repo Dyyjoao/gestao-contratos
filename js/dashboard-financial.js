@@ -11,6 +11,7 @@ const PERIODOS={
 };
 NOMES_MESES.forEach((nome,i)=>PERIODOS[`m${String(i+1).padStart(2,"0")}`]={label:nome,indices:[i]});
 let carregando=false;
+function dashboardVisivel(){const p=$("pagina-dashboard");return !!p&&!p.classList.contains("hidden")}
 
 function garantirCss(){
   if(document.getElementById("sig-dashboard-finance-css"))return;
@@ -65,7 +66,7 @@ function addDias(iso,dias){const [a,m,d]=iso.split("-").map(Number),x=new Date(D
 function renderCaixa(contas,lancamentos){const hoje=new Date().toISOString().slice(0,10),ativas=contas.filter(x=>x.status!=="inativo"),base=ativas.reduce((s,x)=>s+num(x.saldoAbertura),0),validos=lancamentos.filter(x=>x.status!=="cancelado"),mov=(data,liquidado=false)=>validos.filter(x=>x.data<=data&&(!liquidado||x.status==="liquidado")).reduce((s,x)=>s+(x.natureza==="entrada"?1:-1)*num(x.valor),0);set("dashFinCaixaHoje",moeda(base+mov(hoje,true)));set("dashFinCaixaD30",moeda(base+mov(addDias(hoje,30))));set("dashFinCaixaD60",moeda(base+mov(addDias(hoje,60))));set("dashFinCaixaD90",moeda(base+mov(addDias(hoje,90))));const venc=validos.filter(x=>x.status!=="liquidado"&&x.data<hoje).length,al=$("dashFinCaixaAlerta");if(al)al.innerHTML=venc?`<div class="dash-cash-alerta">${venc} lançamento(s) pendente(s) com data vencida. A projeção merece revisão.</div>`:""}
 
 export async function carregar(){
-  montar();if(carregando||!permite("controladoria")){const s=$("dashFinanceiro");if(s)s.classList.toggle("hidden",!permite("controladoria"));return}
+  montar();if(!dashboardVisivel())return;if(carregando||!permite("controladoria")){const s=$("dashFinanceiro");if(s)s.classList.toggle("hidden",!permite("controladoria"));return}
   const s=$("dashFinanceiro");if(s)s.classList.remove("hidden");
   const ano=periodoAno(),periodo=periodoChave(),rotulo=(PERIODOS[periodo]||PERIODOS.total).label,qtdEmpresas=empresasSelecionadasIds().length;
   set("dashFinContexto",`${qtdEmpresas>1?`${qtdEmpresas} empresas consolidadas`:"Empresa selecionada"} · ${rotulo} · ${ano}`);
