@@ -32,6 +32,20 @@ Arquivos antigos podem permanecer no repositório, mas não devem ser considerad
 - Budget/Forecast compartilham motor de planejamento;
 - Dashboard/Prestação devem usar o núcleo comum `financial-reporting.js` para interpretação financeira.
 
+### Shell compartilhado de Caixa e Prestação
+
+Fluxo de Caixa e Prestação ainda usam o mesmo contêiner visual `pagina-controladoria`, mas o roteador cria apenas um **shell mínimo de abas internas** para essas duas telas.
+
+O caminho ativo **não importa mais**:
+
+- `fpa.js`;
+- `fpa-number-fix.js`;
+- `planning-details.js`.
+
+Esses arquivos podem permanecer fisicamente no histórico do repositório, porém abrir Caixa ou Prestação não deve montar DRE/Budget/Forecast/Plano antigos nem disparar consultas ocultas dessas bases.
+
+O alias `SIG_ABRIR_CTRL_LEGADO` redireciona para as ações atuais do roteador e não deve reativar telas antigas.
+
 ## Plano de Contas
 
 Máscara fixa:
