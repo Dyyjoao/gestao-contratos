@@ -26,23 +26,28 @@ jobs:
           grep -q 'browserSessionPersistence' js/core.js
           grep -q 'ctrlSubmenu' js/controllership-router.js
           grep -q 'ctrl-input-v4.js' js/controllership-router.js
-          grep -q 'ctrl-budget-v4.js' js/controllership-router.js
-          grep -q 'ctrl-forecast-v3.js' js/controllership-router.js
-          grep -q 'ctrl-dre-v3.js' js/controllership-router.js
+          grep -q 'ctrl-budget-v5.js' js/controllership-router.js
+          grep -q 'ctrl-forecast-v4.js' js/controllership-router.js
+          grep -q 'ctrl-dre-v4.js' js/controllership-router.js
+          grep -q 'ctrl-premises-v3.js' js/controllership-router.js
           grep -q 'closing-v3.js' js/controllership-router.js
           grep -q 'pagina-ctrl-input-v4' js/ctrl-input-v4.js
           grep -q 'Limpar legado do exercício' js/ctrl-input-v4.js
-          grep -q 'pagina-ctrl-budget-v4' js/ctrl-budget-v4.js
-          grep -q 'Todos / consolidado' js/ctrl-budget-v4.js
-          grep -q 'pagina-ctrl-forecast-v3' js/ctrl-forecast-v3.js
-          grep -q 'pagina-ctrl-dre-v3' js/ctrl-dre-v3.js
-          grep -q 'INDICADORES / CONTAS ESTATÍSTICAS' js/ctrl-dre-v3.js
+          grep -q 'pagina-ctrl-budget-v5' js/ctrl-budget-v5.js
+          grep -q 'Todo lançamento ocorre nas sublinhas' js/ctrl-budget-v5.js
+          grep -q 'Premissa:' js/ctrl-budget-v5.js
+          grep -q 'pagina-ctrl-forecast-v4' js/ctrl-forecast-v4.js
+          grep -q 'meses fechados vêm do Realizado' js/ctrl-forecast-v4.js
+          grep -q 'pagina-ctrl-dre-v4' js/ctrl-dre-v4.js
+          grep -q 'Consolidada por conta' js/ctrl-dre-v4.js
+          grep -q 'INDICADORES / CONTAS ESTATÍSTICAS' js/ctrl-dre-v4.js
+          grep -q 'pagina-ctrl-premissas-v3' js/ctrl-premises-v3.js
+          grep -q 'Sazonal mês a mês' js/ctrl-premises-v3.js
+          grep -q 'quantidade_preco' js/ctrl-premises-v3.js
           grep -q 'pagina-closing-v3' js/closing-v3.js
           grep -q 'duplicadoArquivado' js/closing-v3.js
           grep -q 'Inativar daqui em diante' js/closing-v3.js
           grep -q 'Excluir daqui em diante' js/closing-v3.js
-          grep -q 'pagina-ctrl-premissas' js/ctrl-premises.js
-          grep -q 'contaGerencialId' js/ctrl-premises.js
           grep -q 'pagina-permutas' js/permutas.js
           grep -q 'permutaMovimentos' js/permutas.js
           grep -q 'complianceObrigacoes' js/governance.js
@@ -95,10 +100,10 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{const mods=['ctrl-dre-v3.js','ctrl-input-v4.js','ctrl-budget-v4.js','ctrl-forecast-v3.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
+          teste='''<script type="module">(async()=>{const mods=['ctrl-dre-v4.js','ctrl-input-v4.js','ctrl-budget-v5.js','ctrl-forecast-v4.js','ctrl-premises-v3.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=16000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=20000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
           if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
             grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
             exit 1
