@@ -13,6 +13,7 @@ const fixo=[
  ["btnAplicarTodasPremissas",()=>fpa("budget")],
  ["btnSalvarForecast",()=>fpa("forecast")],
  ["btnNovaPremissa",()=>fpa("premissas")],
+ ["btnNovoBemV1",()=>fpa("imobilizado")],
  ["btnNovaContaGerencial",()=>fpa("planoContas")],
  ["btnNovoCentroCusto",()=>fpa("centrosCusto")],
  ["btnContaBancaria",()=>fpa("caixaContas")],
@@ -44,6 +45,7 @@ function aplicar(){
  document.querySelectorAll("[data-edit-conta]").forEach(e=>exibir(e,fpa("planoContas")));
  document.querySelectorAll("[data-edit-centro]").forEach(e=>exibir(e,fpa("centrosCusto")));
  document.querySelectorAll("[data-edit-premissa]").forEach(e=>exibir(e,fpa("premissas")));
+ document.querySelectorAll("[data-edit-bem]").forEach(e=>exibir(e,fpa("imobilizado")));
  document.querySelectorAll("[data-edit-lanc-caixa]").forEach(e=>exibir(e,fpa("caixaLancar")));
  document.querySelectorAll("[data-edit-conta-caixa]").forEach(e=>{e.disabled=!fpa("caixaContas");e.setAttribute("aria-disabled",String(!fpa("caixaContas")))});
  document.querySelectorAll("[data-edit-fixo]").forEach(e=>{e.disabled=!fpa("caixaFixos");e.setAttribute("aria-disabled",String(!fpa("caixaFixos")))});
