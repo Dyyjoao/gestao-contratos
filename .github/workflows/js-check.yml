@@ -52,19 +52,22 @@ jobs:
           grep -q 'Salvar mantém você nesta tela' js/ctrl-cost-centers-v2.js
           grep -q 'abrirMatrizCentro' js/ctrl-cost-centers-v2.js
           grep -q 'raízes 3 Receita e 4 Despesa' js/center-account-matrix-v2.js
-          grep -q 'contaDre' js/center-account-matrix-v2.js
+          grep -q 'contaAtivaNoExercicio' js/center-account-matrix-v2.js
 
-          grep -q 'criarMatrizPlanejamentoV3' js/ctrl-planning-matrix-v3.js
-          grep -q 'Ativo e Passivo são exclusivos do Balanço' js/ctrl-planning-matrix-v3.js
-          grep -q 'Estatística automática' js/ctrl-planning-matrix-v3.js
-          grep -q 'Abrir orçamento' js/ctrl-planning-matrix-v3.js
-          grep -q 'Finalizar orçamento' js/ctrl-planning-matrix-v3.js
-          grep -q 'Reabrir orçamento' js/ctrl-planning-matrix-v3.js
-          grep -q 'Nova versão' js/ctrl-planning-matrix-v3.js
-          grep -q 'RESULTADO / SALDO' js/ctrl-planning-matrix-v3.js
-          grep -q 'definido no cabeçalho' js/ctrl-planning-matrix-v3.js
-          grep -q 'criarMatrizPlanejamentoV3' js/ctrl-budget-v8.js
-          grep -q 'criarMatrizPlanejamentoV3' js/ctrl-forecast-v6.js
+          grep -q 'criarMatrizPlanejamentoV4' js/ctrl-planning-matrix-v4.js
+          grep -q 'premissaParaCompetencia' js/ctrl-planning-matrix-v4.js
+          grep -q 'Meses com premissa ficam bloqueados' js/ctrl-planning-matrix-v4.js
+          grep -q 'contaAtivaNoExercicio' js/ctrl-planning-matrix-v4.js
+          grep -q 'Ativo/Passivo são exclusivos do Balanço' js/ctrl-planning-matrix-v4.js
+          grep -q 'Estatística automática' js/ctrl-planning-matrix-v4.js
+          grep -q 'Abrir orçamento' js/ctrl-planning-matrix-v4.js
+          grep -q 'Finalizar orçamento' js/ctrl-planning-matrix-v4.js
+          grep -q 'Reabrir orçamento' js/ctrl-planning-matrix-v4.js
+          grep -q 'Nova versão' js/ctrl-planning-matrix-v4.js
+          grep -q 'RESULTADO / SALDO' js/ctrl-planning-matrix-v4.js
+          grep -q 'definido no cabeçalho' js/ctrl-planning-matrix-v4.js
+          grep -q 'criarMatrizPlanejamentoV4' js/ctrl-budget-v8.js
+          grep -q 'criarMatrizPlanejamentoV4' js/ctrl-forecast-v6.js
 
           grep -q 'classificarHorizonteCaixa' js/my-desk.js
           grep -q 'Primeira ruptura' js/my-desk.js
@@ -137,10 +140,10 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{const mods=['account-mask.js','account-validity.js','balance-center.js','statistical-center.js','ctrl-chart-accounts-v6.js','center-account-matrix-v2.js','ctrl-cost-centers-v2.js','ctrl-planning-matrix-v3.js','ctrl-budget-v8.js','ctrl-forecast-v6.js','ctrl-dre-v6.js','ctrl-input-v6.js','ctrl-premises-v4.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
+          teste='''<script type="module">(async()=>{const mods=['account-mask.js','account-validity.js','premise-validity.js','balance-center.js','statistical-center.js','ctrl-chart-accounts-v6.js','center-account-matrix-v2.js','ctrl-cost-centers-v2.js','ctrl-planning-matrix-v4.js','ctrl-budget-v8.js','ctrl-forecast-v6.js','ctrl-dre-v6.js','ctrl-input-v6.js','ctrl-premises-v4.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=24000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=26000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
           if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
             grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
             exit 1
