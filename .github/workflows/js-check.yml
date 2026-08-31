@@ -19,6 +19,10 @@ jobs:
             echo "Checking $file"
             node --check "$file"
           done
+          grep -q 'grupoContexto' js/company-context.js
+          grep -q 'empresasContexto' js/company-context.js
+          grep -q 'periodoContexto' js/company-context.js
+          grep -q 'concluidas' js/my-desk.js
 
   browser-smoke:
     runs-on: ubuntu-latest
@@ -43,6 +47,3 @@ jobs:
           grep -q 'id="btnEntrar"' /tmp/sig-dom.html
           grep -q 'id="tabelaBudget"' /tmp/sig-dom.html
           grep -q 'id="tabelaDre"' /tmp/sig-dom.html
-          grep -q 'id="grupoContexto"' /tmp/sig-dom.html
-          grep -q 'id="empresasContexto"' /tmp/sig-dom.html
-          grep -q 'id="periodoContexto"' /tmp/sig-dom.html
