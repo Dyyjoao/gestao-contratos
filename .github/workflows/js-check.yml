@@ -26,6 +26,14 @@ jobs:
           grep -q 'pagina-input-mensal' js/monthly-input.js
           grep -q 'contasPermitidas' js/center-account-matrix.js
           grep -q 'browserSessionPersistence' js/core.js
+          grep -q 'ctrlSubmenu' js/controllership-router.js
+          grep -q 'pagina-ctrl-dre' js/ctrl-dre.js
+          grep -q 'btnAtualizarDreV2' js/ctrl-dre.js
+          grep -q 'pagina-permutas' js/permutas.js
+          grep -q 'permutaMovimentos' js/permutas.js
+          grep -q 'configuracoesControladoria' firestore.rules
+          grep -q 'match /permutas/' firestore.rules
+          grep -q 'match /permutaMovimentos/' firestore.rules
 
   browser-smoke:
     runs-on: ubuntu-latest
