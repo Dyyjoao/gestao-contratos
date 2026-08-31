@@ -19,6 +19,8 @@ import "./js/fpa-number-fix.js";
 import "./js/planning-details.js";
 import "./js/fpa-period-filter.js";
 import "./js/controladoria-lazy.js";
+import "./js/center-account-matrix.js";
+import "./js/monthly-input.js";
 import "./js/governance.js";
 import "./js/dashboard.js";
 import "./js/dashboard-financial.js";
