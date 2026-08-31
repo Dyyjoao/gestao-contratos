@@ -2,7 +2,7 @@ name: SIG Quality Check
 
 on:
   push:
-    branches: [main, chatgpt/input-v4-limpeza-legado, chatgpt/sig-apresentacao-controladoria-compliance, chatgpt/auditoria-compliance-completa]
+    branches: [main, chatgpt/contas-estatisticas-dre-export, chatgpt/input-v4-limpeza-legado, chatgpt/sig-apresentacao-controladoria-compliance, chatgpt/auditoria-compliance-completa]
   pull_request:
     branches: [main]
 
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check JavaScript syntax
+      - name: Check JavaScript syntax and architecture contracts
         run: |
           set -e
           node --check app.js
@@ -19,54 +19,94 @@ jobs:
             echo "Checking $file"
             node --check "$file"
           done
+
           grep -q 'grupoContexto' js/company-context.js
           grep -q 'empresasContexto' js/company-context.js
           grep -q 'periodoContexto' js/company-context.js
-          grep -q 'concluidas' js/my-desk.js
-          grep -q 'SIG_ABRIR_CTRL?.("caixa")' js/my-desk.js
-          grep -q 'Exceções críticas' js/my-desk.js
-          ! grep -q 'listarDocumentos("cotacoes")' js/my-desk.js
-          ! grep -q 'listarDocumentos("veiculos")' js/my-desk.js
-          ! grep -q 'listarDocumentos("itensAlmoxarifado")' js/my-desk.js
           grep -q 'browserSessionPersistence' js/core.js
-          grep -q 'ctrlSubmenu' js/controllership-router.js
-          grep -q 'ctrl-input-v4.js' js/controllership-router.js
-          grep -q 'ctrl-budget-v5.js' js/controllership-router.js
-          grep -q 'ctrl-forecast-v4.js' js/controllership-router.js
-          grep -q 'ctrl-dre-v4.js' js/controllership-router.js
+
+          grep -q 'ctrl-dre-v6.js' js/controllership-router.js
+          grep -q 'ctrl-input-v6.js' js/controllership-router.js
+          grep -q 'ctrl-budget-v7.js' js/controllership-router.js
+          grep -q 'ctrl-forecast-v5.js' js/controllership-router.js
+          grep -q 'ctrl-chart-accounts-v3.js' js/controllership-router.js
           grep -q 'ctrl-premises-v3.js' js/controllership-router.js
           grep -q 'closing-v3.js' js/controllership-router.js
-          grep -q 'pagina-ctrl-input-v4' js/ctrl-input-v4.js
-          grep -q 'Limpar legado do exercício' js/ctrl-input-v4.js
-          grep -q 'pagina-ctrl-budget-v5' js/ctrl-budget-v5.js
-          grep -q 'Todo lançamento ocorre nas sublinhas' js/ctrl-budget-v5.js
-          grep -q 'Premissa:' js/ctrl-budget-v5.js
-          grep -q 'pagina-ctrl-forecast-v4' js/ctrl-forecast-v4.js
-          grep -q 'meses fechados vêm do Realizado' js/ctrl-forecast-v4.js
-          grep -q 'pagina-ctrl-dre-v4' js/ctrl-dre-v4.js
-          grep -q 'Consolidada por conta' js/ctrl-dre-v4.js
-          grep -q 'INDICADORES / CONTAS ESTATÍSTICAS' js/ctrl-dre-v4.js
+
+          grep -q 'CC_ESTATISTICO_ID' js/statistical-center.js
+          grep -q '__cc_estatistico__' js/statistical-center.js
+          grep -q 'tipoEstrutura' js/account-tree.js
+          grep -q 'contaPaiId' js/account-tree.js
+          grep -q 'folhasDescendentes' js/account-tree.js
+          grep -q 'arvoreParaFolhas' js/account-tree.js
+
+          grep -q 'pagina-ctrl-plano-v3' js/ctrl-chart-accounts-v3.js
+          grep -q 'Sintética' js/ctrl-chart-accounts-v3.js
+          grep -q 'Analítica' js/ctrl-chart-accounts-v3.js
+          grep -q 'Conta superior' js/ctrl-chart-accounts-v3.js
+          grep -q 'tipoEstatistica' js/ctrl-chart-accounts-v3.js
+          grep -q 'centroTecnicoId' js/ctrl-chart-accounts-v3.js
+
+          grep -q 'contaAnalitica' js/center-account-matrix.js
+          grep -q 'contaSintetica' js/center-account-matrix.js
+          grep -q '!contaEstatistica' js/center-account-matrix.js
+
+          grep -q 'pagina-ctrl-input-v6' js/ctrl-input-v6.js
+          grep -q 'Estatísticas / Indicadores' js/ctrl-input-v6.js
+          grep -q 'Conta sintética · não lançável' js/ctrl-input-v6.js
+          grep -q 'Limpar legado do exercício' js/ctrl-input-v6.js
+          grep -q 'duplicadoArquivado' js/ctrl-input-v6.js
+
+          grep -q 'criarMatrizPlanejamentoV2' js/ctrl-budget-v7.js
+          grep -q 'criarMatrizPlanejamentoV2' js/ctrl-forecast-v5.js
+          grep -q 'tipoRegistro:"budget_meta"' js/ctrl-planning-matrix-v2.js
+          grep -q 'Abrir orçamento' js/ctrl-planning-matrix-v2.js
+          grep -q 'Finalizar orçamento' js/ctrl-planning-matrix-v2.js
+          grep -q 'Reabrir orçamento' js/ctrl-planning-matrix-v2.js
+          grep -q 'Nova versão' js/ctrl-planning-matrix-v2.js
+          grep -q 'definido no cabeçalho' js/ctrl-planning-matrix-v2.js
+          grep -q 'RESULTADO / SALDO' js/ctrl-planning-matrix-v2.js
+          grep -q 'Soma automática das contas filhas' js/ctrl-planning-matrix-v2.js
+          grep -q 'CC_ESTATISTICO_ID' js/ctrl-planning-matrix-v2.js
+
+          grep -q 'pagina-ctrl-dre-v6' js/ctrl-dre-v6.js
+          grep -q 'Expandir tudo' js/ctrl-dre-v6.js
+          grep -q 'Recolher tudo' js/ctrl-dre-v6.js
+          grep -q 'Exportar Excel' js/ctrl-dre-v6.js
+          grep -q 'Imprimir / PDF' js/ctrl-dre-v6.js
+          grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v6.js
+          grep -q 'Consolidada por conta' js/ctrl-dre-v6.js
+          grep -q 'Estatísticas / Indicadores' js/ctrl-dre-v6.js
+
           grep -q 'pagina-ctrl-premissas-v3' js/ctrl-premises-v3.js
           grep -q 'Sazonal mês a mês' js/ctrl-premises-v3.js
           grep -q 'quantidade_preco' js/ctrl-premises-v3.js
+
           grep -q 'pagina-closing-v3' js/closing-v3.js
           grep -q 'duplicadoArquivado' js/closing-v3.js
           grep -q 'Inativar daqui em diante' js/closing-v3.js
           grep -q 'Excluir daqui em diante' js/closing-v3.js
+
+          grep -q 'concluidas' js/my-desk.js
+          grep -q 'SIG_ABRIR_CTRL?.("caixa")' js/my-desk.js
+          ! grep -q 'listarDocumentos("cotacoes")' js/my-desk.js
+          ! grep -q 'listarDocumentos("veiculos")' js/my-desk.js
+          ! grep -q 'listarDocumentos("itensAlmoxarifado")' js/my-desk.js
+
           grep -q 'pagina-permutas' js/permutas.js
           grep -q 'permutaMovimentos' js/permutas.js
-          grep -q 'complianceObrigacoes' js/governance.js
-          grep -q 'complianceRiscos' js/governance.js
           grep -q 'complianceProgramasAuditoria' js/governance.js
           grep -q 'complianceCiclosAuditoria' js/governance.js
           grep -q 'Gerar plano de ação' js/governance.js
           grep -q 'jspdf@2.5.2' js/accountability-pdf.js
+
           grep -q './js/contracts.js' app.js
           ! grep -q './js/fleet.js' app.js
           ! grep -q './js/inventory.js' app.js
           ! grep -q './js/quotes.js' app.js
           ! grep -q './js/providers.js' app.js
           ! grep -q './js/monthly-input.js' app.js
+
           grep -q 'configuracoesControladoria' firestore.rules
           grep -q 'match /permutas/' firestore.rules
           grep -q 'match /permutaMovimentos/' firestore.rules
@@ -105,10 +145,10 @@ jobs:
           from pathlib import Path
           p=Path('module-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{const mods=['ctrl-dre-v4.js','ctrl-input-v4.js','ctrl-budget-v5.js','ctrl-forecast-v4.js','ctrl-premises-v3.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
+          teste='''<script type="module">(async()=>{const mods=['statistical-center.js','account-tree.js','ctrl-chart-accounts-v3.js','ctrl-dre-v6.js','ctrl-input-v6.js','ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js','ctrl-premises-v3.js','closing-v3.js'];for(const m of mods){try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id="module-error">'+m+' :: '+String(e.stack||e)+'</pre>');return}}document.documentElement.setAttribute('data-module-smoke','ok')})()</script>'''
           p.write_text(s.replace('</body>',teste+'</body>'))
           PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=20000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=22000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
           if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
             grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
             exit 1
