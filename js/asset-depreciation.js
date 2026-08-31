@@ -6,7 +6,7 @@ export function vidaUtilMeses(bem){const m=Math.trunc(n(bem?.vidaUtilMeses));ret
 export function depreciacaoMensalBase(bem){return baseDepreciavel(bem)/vidaUtilMeses(bem)}
 function ym(data){const s=String(data||"").slice(0,7);return /^\d{4}-(0[1-9]|1[0-2])$/.test(s)?s:""}
 function serial(comp){const [a,m]=String(comp||"").split("-").map(Number);return a*12+(m-1)}
-function inicioBem(bem){if(bem?.status==="em_implantacao"&&!ym(bem?.dataDisponivelUso||bem?.dataInicioDepreciacao))return"";return ym(bem?.dataDisponivelUso||bem?.dataInicioDepreciacao||bem?.dataAquisicao)}
+function inicioBem(bem){const exigeDisponivel=bem?.status==="em_implantacao"||bem?.status==="planejado";if(exigeDisponivel&&!ym(bem?.dataDisponivelUso||bem?.dataInicioDepreciacao))return"";return ym(bem?.dataDisponivelUso||bem?.dataInicioDepreciacao||bem?.dataAquisicao)}
 function fimBem(bem){return ym(bem?.dataBaixa||"")}
 export function depreciacaoCompetencia(bem,competencia){
   if(!bem||bem.status==="inativo"||bem.status==="cancelado")return 0;const ini=inicioBem(bem),comp=ym(competencia);if(!ini||!comp)return 0;const i=serial(ini),c=serial(comp),fim=fimBem(bem);if(c<i||fim&&c>serial(fim))return 0;const pos=c-i;if(pos<0||pos>=vidaUtilMeses(bem))return 0;const mensal=depreciacaoMensalBase(bem),acumAntes=mensal*pos,restante=Math.max(0,baseDepreciavel(bem)-acumAntes);return Math.min(mensal,restante)
