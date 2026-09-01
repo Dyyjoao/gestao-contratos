@@ -1,0 +1,94 @@
+name: SIG Consorcios Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'chatgpt/**'
+      - 'hotfix/**'
+  pull_request:
+    branches: [main]
+
+jobs:
+  consorcios-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Consorcios v1 contract
+        run: |
+          set -e
+
+          node --check js/consortium-calculations.js
+          node --check js/ctrl-consorcios-v1.js
+          node --check js/profiles.js
+          node --check js/controllership-router.js
+
+          grep -q 'ctrl-consorcios-v1.js' js/controllership-router.js
+          grep -q '\["consorcios","Consórcios"\]' js/controllership-router.js
+          grep -q 'case"consorcios"' js/controllership-router.js
+          grep -q 'consorciosVisualizar' js/controllership-router.js
+          grep -q 'consorciosEditar' js/controllership-router.js
+
+          grep -q '\["consorciosVisualizar","Visualizar consórcios"\]' js/profiles.js
+          grep -q '\["consorciosEditar","Gerir consórcios"\]' js/profiles.js
+
+          grep -q 'function consorciosVisualizar' firestore.rules
+          grep -q 'function consorciosEditar' firestore.rules
+          grep -q 'match /consorcios/' firestore.rules
+          grep -q 'allow delete: if false;' firestore.rules
+
+          grep -q 'Gestão independente nesta versão' js/ctrl-consorcios-v1.js
+          grep -q 'não alimenta DRE, Balanço, Fluxo de Caixa ou Budget/Forecast' js/ctrl-consorcios-v1.js
+          grep -q 'taxaAdministracaoPct' js/ctrl-consorcios-v1.js
+          grep -q 'jurosEncargosPct' js/ctrl-consorcios-v1.js
+          grep -q 'valorParcelaAtual' js/ctrl-consorcios-v1.js
+          grep -q 'valorPagoAcumulado' js/ctrl-consorcios-v1.js
+
+          node --input-type=module <<'NODE'
+          import { calcularConsorcio, statusConsorcioAtivo } from './js/consortium-calculations.js';
+          const r=calcularConsorcio({
+            creditoContratado:100000,
+            creditoAtual:100000,
+            prazoMeses:60,
+            parcelasPagas:12,
+            taxaAdministracaoPct:15,
+            fundoReservaPct:2,
+            seguroOutrosPct:1,
+            jurosEncargosPct:0
+          });
+          const perto=(a,b)=>Math.abs(a-b)<0.01;
+          if(!perto(r.taxaConsorcioValor,18000))throw new Error('Taxa do consórcio divergente');
+          if(!perto(r.totalEstimadoPlano,118000))throw new Error('Total estimado divergente');
+          if(!perto(r.parcelaMediaEstimada,118000/60))throw new Error('Parcela média divergente');
+          if(r.parcelasRestantes!==48)throw new Error('Parcelas restantes divergentes');
+          if(!perto(r.saldoTeorico,(118000/60)*48))throw new Error('Saldo teórico divergente');
+          if(!statusConsorcioAtivo('ativo')||!statusConsorcioAtivo('contemplado')||statusConsorcioAtivo('encerrado'))throw new Error('Status ativo divergente');
+          NODE
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/tmp/sig-consorcios-server.log 2>&1 &
+          echo $! > /tmp/sig-consorcios-server.pid
+          sleep 2
+      - name: Import and open Consorcios v1
+        run: |
+          set -e
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          cp index.html consorcios-smoke.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('consorcios-smoke.html')
+          s=p.read_text()
+          teste='''<script type="module">(async()=>{try{const m=await import('./js/ctrl-consorcios-v1.js');const core=await import('./js/core.js');core.state.perfil={id:'smoke',permissoes:{controladoria:{visualizar:true,consorciosVisualizar:true,consorciosEditar:true}}};core.state.usuario={id:'smoke-user',grupoId:'',empresaId:''};await m.abrir();const pg=document.getElementById('pagina-ctrl-consorcios-v1');if(!pg||pg.classList.contains('hidden'))throw new Error('Consórcios abrir() não exibiu a tela');if(!document.getElementById('consV1KpiAtivos'))throw new Error('KPIs ausentes');if(!document.getElementById('formConsorcioV1'))throw new Error('Formulário ausente');document.documentElement.setAttribute('data-consorcios-smoke','ok')}catch(e){document.documentElement.setAttribute('data-consorcios-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="consorcios-smoke-error">'+String(e.stack||e)+'</pre>')}})()</script>'''
+          s=s.replace('</body>',teste+'</body>')
+          p.write_text(s)
+          PY
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=8000 --dump-dom http://127.0.0.1:8000/consorcios-smoke.html > /tmp/consorcios-smoke-dom.html
+          grep -q 'data-consorcios-smoke="ok"' /tmp/consorcios-smoke-dom.html
+          grep -q 'id="pagina-ctrl-consorcios-v1"' /tmp/consorcios-smoke-dom.html
+          grep -q 'id="consV1KpiAtivos"' /tmp/consorcios-smoke-dom.html
