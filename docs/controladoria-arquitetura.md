@@ -1,6 +1,6 @@
 # Controladoria & FP&A — Arquitetura Modular Vigente
 
-**Baseline:** 01/09/2026 — Plano de Contas v6.
+**Baseline:** 01/09/2026 — Plano de Contas v6 + permissões modulares de DRE/Balanço.
 
 Este arquivo é um mapa operacional curto. Para regras completas, ler `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` e `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`.
 
@@ -22,6 +22,28 @@ Este arquivo é um mapa operacional curto. Para regras completas, ler `docs/SIG-
 - Plano de Contas — `ctrl-chart-accounts-v6.js`;
 - Centros de Custo — `ctrl-cost-centers-v2.js`;
 - Configurações — `ctrl-settings.js`.
+
+## Permissões da Controladoria
+
+O acesso ao menu pai continua condicionado a `controladoria.visualizar`, mas cada submódulo deve respeitar sua ação específica no perfil.
+
+Permissões explícitas de consulta:
+
+- `controladoria.dre` — Visualizar DRE Gerencial;
+- `controladoria.balanco` — Visualizar Balanço Patrimonial.
+
+Demais submódulos usam suas ações funcionais já existentes, por exemplo `budget`, `forecast`, `premissas`, `imobilizado`, `planoContas`, `centrosCusto`, `caixaVisualizar`, `prestacao`, `fechamento` e correlatas.
+
+`js/controllership-router.js` deve:
+
+- recalcular a visibilidade do submenu em cada `sig:ready` e `sig:page`;
+- bloquear a ação também no clique, não apenas esconder o botão;
+- limpar o cache lógico de módulos a cada novo login;
+- versionar o import dinâmico com usuário + perfil para evitar reaproveitar instâncias de tela entre sessões diferentes na mesma página.
+
+Perfis antigos que ainda não possuem as chaves `dre`/`balanco` mantêm temporariamente o comportamento legado baseado em `controladoria.visualizar`. Ao editar e salvar o perfil novamente, as novas chaves passam a ficar explícitas.
+
+As permissões de DRE/Balanço são controle de funcionalidade/interface. Como os relatórios reutilizam coleções contábeis compartilhadas com outros módulos, a confidencialidade dos documentos no Firestore continua baseada em `controladoria.visualizar`, grupo e empresa acessível.
 
 ## Plano de Contas v6
 
