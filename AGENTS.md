@@ -38,6 +38,7 @@ Não dependa de memória de conversa para interpretar o produto.
 - Conta inativa deve poder ser reativada; reativação remove a inativação futura.
 - Estatísticas usam `__cc_estatistico__` e não entram no resultado financeiro.
 - Balanço usa `__cc_balanco__`, é posição de fechamento e meses não são somados.
+- Balanço trimestral/anual mostra meses + posição final; comparativo anual usa dezembro atual x dezembro Last Year.
 - Natureza/multiplicadores vêm de `js/account-mask.js`.
 - Multiplicadores nunca regravam saldo bruto persistido.
 - Conta redutora é natureza oposta à raiz, não texto `(-)`.
@@ -48,6 +49,11 @@ Não dependa de memória de conversa para interpretar o produto.
 - Imobilizado integrado pode substituir saldo/projeção manual nas combinações mapeadas.
 - Fim da depreciação não baixa automaticamente o bem.
 - CAPEX ainda não gera desembolso automático no Fluxo de Caixa.
+- Consórcios ativo: `js/ctrl-consorcios-v1.js`; matemática: `js/consortium-calculations.js`; coleção: `consorcios`.
+- Consórcios usa permissões próprias `consorciosVisualizar` e `consorciosEditar`.
+- Consórcios v1 é gestão independente: não alimenta DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado.
+- Taxa de Consórcio e juros/encargos permanecem conceitos separados.
+- Ficha de Consórcio não é apagada na v1; usar Encerrado/Cancelado para preservar histórico.
 
 ## Mudança de máscara/hierarquia
 
@@ -66,6 +72,20 @@ Qualquer mudança de máscara deve revisar, no mínimo:
 
 Não alterar apenas a tela de cadastro.
 
+## Mudança em Consórcios
+
+Revisar em conjunto:
+
+- `js/ctrl-consorcios-v1.js`;
+- `js/consortium-calculations.js`;
+- `js/controllership-router.js`;
+- `js/profiles.js`;
+- `firestore.rules`;
+- `SIG Consorcios Contract Check`;
+- documentação.
+
+Não criar integração automática com contabilidade/caixa/planejamento sem decisão explícita e atualização dos contratos arquiteturais.
+
 ## Exclusão de conta
 
 A Rule de `planoContasGerencial` pode autorizar delete para `fpaPlano()`, mas a segurança funcional exige validação de referências no aplicativo. Não criar atalho que pule essa validação.
@@ -82,7 +102,7 @@ Antes de promover:
 
 - comparar branch com `main`;
 - revisar diff;
-- executar Quality Check e Firebase Contract Check;
+- executar Quality Check, Firebase Contract Check, Permissions Contract Check e contratos específicos do módulo alterado;
 - atualizar documentação;
 - confirmar Rules necessárias;
 - evitar force em `main`;
