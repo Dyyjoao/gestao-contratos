@@ -1,6 +1,6 @@
 # SIG — Firebase, Deploy e Rules
 
-**Baseline:** 01/09/2026 — Plano de Contas v6  
+**Baseline:** 01/09/2026 — Plano de Contas v6 + Consórcios v1  
 **Projeto Firebase:** `gestao-de-contratos-b266b`
 
 Este documento distingue o deploy do frontend do deploy do backend gerenciado do SIG.
@@ -50,20 +50,26 @@ A coleção `planoContasGerencial` mantém:
 
 - read: visualização da Controladoria + documento acessível;
 - create/update: `fpaPlano()` + documento acessível;
-- **delete: `fpaPlano()` + documento acessível**.
+- delete: `fpaPlano()` + documento acessível.
 
-O delete foi habilitado para permitir limpeza de cadastros de teste/erro no Plano v6. Isso **não significa** que qualquer conta pode ser apagada.
+O delete existe para limpeza de cadastro de teste/erro. O frontend verifica referências antes da exclusão. Com uso/histórico, a conta deve ser inativada.
 
-Antes do delete, `ctrl-chart-accounts-v6.js` verifica referências em bases financeiras, Premissas, Imobilizado, Centros de Custo e bases legadas relacionadas. Se existir vínculo, a aplicação bloqueia a exclusão.
+### 3.3 Consórcios v1
 
-Regra operacional:
+A coleção `consorcios` possui autorização própria:
 
-- sem uso → exclusão pode ser confirmada;
-- com uso/histórico → inativar, não excluir.
+- read: `consorciosVisualizar()`, que aceita Administração FP&A, `controladoria.consorciosVisualizar` ou `controladoria.consorciosEditar`;
+- create/update: `consorciosEditar()`, que aceita Administração FP&A ou `controladoria.consorciosEditar`;
+- Grupo/Empresa permanecem imutáveis em update;
+- delete: bloqueado.
+
+A tela também esconde ações de edição para perfil somente consulta, mas a Rule é a barreira de autorização efetiva.
+
+Consórcios v1 não depende de acesso às coleções contábeis para calcular sua carteira e não deve gerar lançamentos em outras bases.
 
 ## 4. Publicação desta versão
 
-Depois de promover a versão v6 para `main`, publicar as Rules completas.
+Depois de promover uma versão que altere `firestore.rules` para `main`, publicar as Rules completas.
 
 Firebase CLI autenticado:
 
@@ -89,25 +95,25 @@ Nunca misturar Rule antiga com frontend novo ou publicar apenas um bloco isolado
 
 ### `permission-denied` em Imobilizado
 
-Verificar:
-
-- Rule `match /imobilizados/{id}` publicada;
-- perfil com `controladoria.visualizar`;
-- `grupoId` / `empresaId` do documento;
-- acesso do usuário à empresa.
+Verificar Rule `match /imobilizados/{id}`, permissão de Controladoria, Grupo/Empresa e acesso do usuário.
 
 ### `permission-denied` ao excluir conta de teste
 
+Verificar Rule da v6, `controladoria.editar`/`controladoria.planoContas`, escopo do documento e se o frontend não bloqueou por referência.
+
+### `permission-denied` em Consórcios
+
 Verificar:
 
-- Rule da v6 publicada;
-- usuário com `controladoria.editar` ou `controladoria.planoContas`;
-- documento pertence ao Grupo/Empresa acessível;
-- frontend realmente chegou ao delete — se houver referência, ele deve bloquear antes da chamada ao Firestore.
+- Rule `match /consorcios/{id}` publicada;
+- `consorciosVisualizar` para consulta ou `consorciosEditar` para gestão;
+- `grupoId` / `empresaId` do documento;
+- empresa dentro do acesso do usuário;
+- ao criar, exatamente uma empresa selecionada no cabeçalho.
 
 ### Frontend atualizado, comportamento de Rule antigo
 
-Isso é esperado quando apenas GitHub Pages foi publicado. Confirmar a data/versão ativa das Rules no Firebase e republicar o arquivo completo.
+Isso ocorre quando apenas GitHub Pages foi publicado. Confirmar a versão ativa das Rules no Firebase e republicar o arquivo completo.
 
 ## 6. QA de contrato
 
@@ -116,8 +122,12 @@ Isso é esperado quando apenas GitHub Pages foi publicado. Confirmar a data/vers
 - `firebase.json` / `.firebaserc` sumirem ou divergirem;
 - a Rule de Imobilizado desaparecer;
 - a Rule de delete seguro do Plano v6 desaparecer;
+- a Rule/permissões de Consórcios desaparecerem;
+- o módulo Consórcios deixar de usar a coleção esperada;
 - o Plano ativo deixar de fazer checagem de referências;
 - documentação deixar de registrar que Pages e Rules têm deploy independente.
+
+`SIG Consorcios Contract Check` valida também rota, permissões, matemática básica e abertura real da tela.
 
 ## 7. Segurança
 
