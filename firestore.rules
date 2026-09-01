@@ -62,34 +62,32 @@ service cloud.firestore {
     function consorciosVisualizar() { return fpaEditar() || permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar'); }
     function consorciosEditar() { return fpaEditar() || permissao('controladoria','consorciosEditar'); }
 
+    function permutasVisualizar() {
+      return permissao('permutas','visualizar') ||
+        permissao('permutas','cadastrar') ||
+        permissao('permutas','editar') ||
+        permissao('permutas','movimentar') ||
+        permissao('permutas','estornar') ||
+        permissao('permutas','fechar') ||
+        permissao('permutas','inativar');
+    }
+    function permutasCadastrar() { return permissao('permutas','cadastrar'); }
+    function permutasEditar() { return permissao('permutas','editar'); }
+    function permutasMovimentar() { return permissao('permutas','movimentar'); }
+    function permutasEstornar() { return permissao('permutas','estornar'); }
+    function permutasFechar() { return permissao('permutas','fechar'); }
+    function permutasInativar() { return permissao('permutas','inativar'); }
+
     function caixaVisualizar() {
       return permissao('controladoria','visualizar') ||
         permissao('controladoria','caixaVisualizar');
     }
-
-    function caixaLancar() {
-      return fpaEditar() || permissao('controladoria','caixaLancar');
-    }
-
-    function caixaContas() {
-      return fpaEditar() || permissao('controladoria','caixaContas');
-    }
-
-    function caixaFixos() {
-      return fpaEditar() || permissao('controladoria','caixaFixos');
-    }
-
-    function prestacaoComentar() {
-      return fpaEditar() || permissao('controladoria','prestacaoComentar');
-    }
-
-    function fechamentoGerir() {
-      return fpaEditar() || permissao('controladoria','fechamento');
-    }
-
-    function fechamentoFechar() {
-      return fpaEditar() || permissao('controladoria','fecharCompetencia');
-    }
+    function caixaLancar() { return fpaEditar() || permissao('controladoria','caixaLancar'); }
+    function caixaContas() { return fpaEditar() || permissao('controladoria','caixaContas'); }
+    function caixaFixos() { return fpaEditar() || permissao('controladoria','caixaFixos'); }
+    function prestacaoComentar() { return fpaEditar() || permissao('controladoria','prestacaoComentar'); }
+    function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
+    function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
 
     function governancaVisualizar() {
       return permissao('governanca','visualizar') ||
@@ -98,34 +96,17 @@ service cloud.firestore {
         permissao('governanca','validar') ||
         permissao('governanca','configurar');
     }
-
-    function governancaConfigurar() {
-      return permissao('governanca','configurar');
-    }
-
-    function governancaAuditar() {
-      return governancaConfigurar() ||
-        permissao('governanca','auditar') ||
-        permissao('governanca','validar');
-    }
-
-    function governancaPlanoAcao() {
-      return governancaAuditar() ||
-        permissao('governanca','planoAcao');
-    }
-
-    function gerenciaUsuarios() {
-      return permissao('usuarios','visualizar') ||
-        permissao('usuarios','cadastrar') ||
-        permissao('usuarios','editar');
-    }
-
+    function governancaConfigurar() { return permissao('governanca','configurar'); }
+    function governancaAuditar() { return governancaConfigurar() || permissao('governanca','auditar') || permissao('governanca','validar'); }
+    function governancaPlanoAcao() { return governancaAuditar() || permissao('governanca','planoAcao'); }
+    function gerenciaUsuarios() { return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar'); }
     function usaCentroCusto() {
       return permissao('controladoria','visualizar') ||
         permissao('contratos','visualizar') ||
         permissao('almoxarifado','visualizar') ||
         permissao('cotacoes','visualizar') ||
-        permissao('frota','visualizar');
+        permissao('frota','visualizar') ||
+        permutasVisualizar();
     }
 
     match /usuarios/{usuarioId} {
@@ -242,7 +223,7 @@ service cloud.firestore {
     }
 
     match /planoContasGerencial/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow read: if (permissao('controladoria','visualizar') || permutasVisualizar()) && documentoAcessivel(resource.data);
       allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
       allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if fpaPlano() && documentoAcessivel(resource.data);
@@ -364,7 +345,6 @@ service cloud.firestore {
 
     match /configuracoesControladoria/{id} {
       allow read: if (permissao('controladoria','visualizar') || governancaVisualizar()) && documentoAcessivel(resource.data);
-
       allow create: if documentoAcessivel(request.resource.data) && (
         fpaEditar() ||
         (governancaConfigurar() && request.resource.data.keys().hasOnly([
@@ -372,7 +352,6 @@ service cloud.firestore {
           'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria'
         ]))
       );
-
       allow update: if documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId && (
@@ -384,21 +363,36 @@ service cloud.firestore {
             'complianceCiclosAuditoria','atualizadoEm'
           ]))
         );
-
       allow delete: if false;
     }
 
     match /permutas/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
-      allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if false;
+      allow read: if permutasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if permutasCadastrar() && documentoAcessivel(request.resource.data);
+      allow update: if (permutasEditar() || permutasInativar() || permutasFechar()) &&
+        documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /permutaMovimentos/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
-      allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
-      allow update, delete: if false;
+      allow read: if permutasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if (permutasMovimentar() || permutasFechar()) && documentoAcessivel(request.resource.data);
+      allow update: if permutasEstornar() && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'estornado','motivoEstorno','estornadoPor','estornadoPorNome','estornadoEm','atualizadoEm'
+        ]);
+      allow delete: if administrador() && documentoAcessivel(resource.data);
+    }
+
+    match /permutaFechamentos/{id} {
+      allow read: if permutasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if permutasFechar() && documentoAcessivel(request.resource.data);
+      allow update: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /planosAcao/{id} {
