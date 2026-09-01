@@ -2,7 +2,7 @@
 
 WebApp/PWA empresarial com frontend modular em JavaScript e backend gerenciado por Firebase Authentication + Cloud Firestore.
 
-**Baseline documental atual:** 01/09/2026 — Plano de Contas v6.
+**Baseline documental atual:** 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1.
 
 ## Escopo ativo
 
@@ -51,15 +51,26 @@ Leia nesta ordem:
 
 A fonte de verdade das rotas é `js/controllership-router.js`.
 
-Módulos atuais incluem DRE v6, Balanço v1, Input v6, Budget v7, Forecast v5, Plano v6, Premissas v4, Imobilizado v1, Centros v2, Fechamento v3, Caixa e Prestação.
+Módulos atuais incluem DRE v6, Balanço v1, Input v6, Budget v7, Forecast v5, Plano v6, Premissas v4, Imobilizado v1, **Consórcios v1**, Centros v2, Fechamento v3, Caixa e Prestação.
 
 Natureza contábil, raízes, máscara e multiplicadores são centralizados em `js/account-mask.js`.
+
+### Consórcios v1
+
+- tela: `js/ctrl-consorcios-v1.js`;
+- cálculos: `js/consortium-calculations.js`;
+- coleção: `consorcios`;
+- permissões: `consorciosVisualizar` e `consorciosEditar`;
+- gestão de ativos, contemplados, encerrados e cancelados;
+- carta contratada/atual, parcelas, taxas, encargos, contemplação e saldo teórico;
+- consulta pode consolidar empresas selecionadas; novo cadastro exige uma empresa;
+- nesta versão não alimenta DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado.
 
 ## Firebase
 
 GitHub Pages publica somente o frontend. `firestore.rules` e `storage.rules` precisam ser publicadas separadamente no Firebase quando alteradas.
 
-A baseline v6 altera a Rule de `planoContasGerencial` para permitir exclusão a usuários com permissão de Plano e acesso ao documento. A aplicação bloqueia o delete se houver referências/histórico.
+A baseline atual contém Rule de `imobilizados`, delete seguro de `planoContasGerencial` e autorização própria da coleção `consorcios`.
 
 Projeto configurado em `.firebaserc`: `gestao-de-contratos-b266b`.
 
@@ -69,6 +80,8 @@ Workflows principais:
 
 - `SIG Quality Check`;
 - `SIG Firebase Contract Check`;
+- `SIG Permissions Contract Check`;
+- `SIG Consorcios Contract Check`;
 - Pages build/deployment.
 
 Mudanças estruturais só devem chegar à `main` depois do HEAD final verde.
@@ -79,5 +92,7 @@ Mudanças estruturais só devem chegar à `main` depois do HEAD final verde.
 - Analítica é folha lançável;
 - saldo bruto persistido não é regravado para ajustar apresentação;
 - conta com histórico deve ser inativada, não apagada;
-- exclusão física serve apenas para cadastro de teste/erro sem referências;
-- base contábil crítica indisponível deve falhar de forma fechada.
+- exclusão física do Plano serve apenas para cadastro de teste/erro sem referências;
+- ficha de Consórcio é encerrada/cancelada e não apagada na v1;
+- base contábil crítica indisponível deve falhar de forma fechada;
+- módulo independente não passa a gerar lançamento automático sem decisão arquitetural explícita.
