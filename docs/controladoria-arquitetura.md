@@ -1,6 +1,6 @@
 # Controladoria & FP&A — Arquitetura Modular Vigente
 
-**Baseline:** 01/09/2026 — Plano de Contas v6 + permissões modulares de DRE/Balanço.
+**Baseline:** 01/09/2026 — Plano de Contas v6 + permissões modulares de DRE/Balanço + visões gerenciais do Balanço.
 
 Este arquivo é um mapa operacional curto. Para regras completas, ler `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` e `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`.
 
@@ -76,6 +76,15 @@ Plano v6 oferece:
 Hierarquia exibida: Raiz → N1 → N2 → Analítica.
 
 Analíticas são consolidadas por código entre empresas. Sintéticas podem ser reconstruídas pelos dois prefixos da máscara. Legado ainda preservado participa da reconciliação da raiz.
+
+O Balanço possui duas visões:
+
+1. **Evolução mensal + fechamento** — mantém os meses visíveis e acrescenta uma coluna final de fechamento quando o período é trimestral ou anual. `Total T1/T2/T3/T4` corresponde ao saldo do último mês do trimestre; `Total Ano` corresponde ao saldo de dezembro. Balanço é posição e nunca soma os saldos mensais.
+2. **Comparativo anual** — apresenta uma única posição do ano atual, uma coluna `Last Year`, `Variação R$` e `Variação %`. Ano atual e Last Year usam posição de dezembro. A variação em valor é `Atual − LY`; a percentual usa o módulo do saldo LY como base. Quando LY é zero e o atual não é zero, a variação percentual é exibida como não aplicável (`—`).
+
+Na comparação anual a estrutura considera contas vigentes no ano atual ou no ano anterior, evitando esconder histórico apenas porque uma conta foi inativada entre os exercícios.
+
+A primeira coluna do Balanço possui largura controlada para preservar espaço das colunas financeiras e evitar que a descrição ocupe desnecessariamente a maior parte da tela.
 
 ### DRE
 
