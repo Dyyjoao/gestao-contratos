@@ -2,41 +2,42 @@
 
 **Sistema Integrado de Gestão (SIG)**  
 **Documento portátil de handoff técnico, funcional e arquitetural**  
-**Baseline funcional:** 31/08/2026  
-**Repositório de referência:** `Dyyjoao/gestao-contratos`  
+**Baseline funcional:** 01/09/2026  
+**Repositório:** `Dyyjoao/gestao-contratos`  
 **Produção:** `main`
 
 ---
 
 ## 0. Fonte de verdade e ordem de leitura
 
-Este documento descreve o estado funcional consolidado do SIG. Ele não substitui o código: a execução vigente deve sempre ser confirmada no repositório antes de uma alteração.
+Este documento descreve o estado funcional consolidado do SIG. O código executável continua sendo a prova final do comportamento vigente.
 
-Ordem recomendada:
+Ordem recomendada de leitura:
 
 1. `AGENTS.md`;
 2. este Dossiê;
 3. `docs/SIG-MANUAL-MESTRE.md`;
 4. `docs/SIG-GUIA-DE-CONTINUIDADE.md`;
-5. `SECURITY.md`;
-6. `app.js`;
-7. `js/controllership-router.js` para Controladoria & FP&A;
-8. `firestore.rules` e `storage.rules` quando houver dados, permissões ou anexos;
-9. `.github/workflows/js-check.yml` antes de mudar arquitetura/testes.
+5. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`;
+6. `SECURITY.md`;
+7. `app.js`;
+8. `js/controllership-router.js`;
+9. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc`;
+10. `.github/workflows/`.
 
 **Regra de ouro:** conversa, memória de IA ou conhecimento informal nunca são a única fonte de verdade do SIG.
 
-Arquivos antigos podem continuar no repositório por compatibilidade ou histórico. O nome `vN` sozinho não define qual módulo está ativo. Para Controladoria, a rota em `js/controllership-router.js` é a referência operacional.
+Arquivos antigos podem permanecer no repositório por compatibilidade ou histórico. O maior número `vN` não define sozinho qual módulo está ativo. Para Controladoria, a rota em `js/controllership-router.js` é a referência operacional.
 
 ---
 
 # 1. Visão do produto
 
-O SIG é um sistema empresarial de gestão, controle e decisão. Ele não deve evoluir como uma coleção de telas isoladas.
+O SIG é um sistema empresarial de gestão, controle e decisão. Ele deve evoluir como uma arquitetura integrada, não como uma coleção de telas isoladas.
 
 Camadas conceituais:
 
-- **Operação:** fontes de eventos e compromissos empresariais;
+- **Operação:** fontes de eventos e compromissos;
 - **Gestão:** Controladoria & FP&A;
 - **Controle:** Governança & Compliance;
 - **Execução:** Minha Mesa, exceções e planos de ação;
@@ -51,7 +52,7 @@ Escopo ativo priorizado:
 - Governança & Compliance;
 - Administração.
 
-Módulos operacionais antigos podem permanecer no código para reaproveitamento futuro, mas não devem ser reativados no SIG sem decisão arquitetural explícita.
+Módulos operacionais antigos podem permanecer fisicamente no repositório, mas não devem ser reativados sem decisão arquitetural explícita.
 
 ---
 
@@ -71,21 +72,52 @@ Módulos operacionais antigos podem permanecer no código para reaproveitamento 
 
 - Firebase Authentication;
 - Cloud Firestore;
-- segurança efetiva em `firestore.rules`;
-- `storage.rules` preparado para evolução de anexos;
-- Google Drive ainda pode ser usado como referência temporária de anexos.
+- Firebase Storage para caminhos suportados;
+- regras de autorização em `firestore.rules` e `storage.rules`.
 
-## 2.3 Hospedagem e banco são independentes
+## 2.3 Contrato Firebase do repositório
 
-GitHub Pages hospeda o frontend; os dados ficam no Firebase/Firestore.
+A partir da baseline de 01/09/2026, o repositório contém:
 
-Mudar o frontend para Firebase Hosting, Vercel, Netlify, Cloudflare Pages ou outro host **não apaga nem migra automaticamente o banco**. Mantendo o mesmo projeto Firebase, a base continua a mesma.
+- `.firebaserc` → projeto `gestao-de-contratos-b266b`;
+- `firebase.json` → referencia `firestore.rules` e `storage.rules`;
+- `firestore.rules`;
+- `storage.rules`.
 
-Migração de dados só é necessária quando o modelo de dados mudar ou quando houver decisão explícita de trocar o projeto Firebase.
+Esses arquivos formam o contrato de deploy do backend gerenciado.
+
+## 2.4 Frontend e Rules são deploys independentes
+
+**GitHub Pages publica apenas o frontend.**
+
+Promover `main` e concluir o Pages não publica automaticamente:
+
+- Firestore Rules;
+- Storage Rules;
+- índices Firestore;
+- configurações administrativas do Firebase.
+
+Portanto, uma release que altera Rules só está concluída quando as Rules também forem publicadas no Firebase e testadas em produção.
+
+Esse ponto passou a ser uma invariante formal após a consolidação de Imobilizado/CAPEX: o frontend novo foi capaz de chegar ao Pages antes de haver confirmação de que a nova Rule de `imobilizados` estava ativa no Firebase.
 
 ---
 
-# 3. Contexto global e multiempresa
+# 3. Recuperação e checkpoint histórico
+
+Antes da consolidação estrutural de 31/08/2026, foi preservado o snapshot:
+
+```text
+archive/sig-pre-consolidacao-2026-08-31
+```
+
+Esse snapshot aponta para o estado cumulativo pré-consolidação e deve ser tratado como recuperação histórica, não como branch normal de desenvolvimento.
+
+O desenvolvimento deve partir da `main` vigente ou de branch criada explicitamente a partir dela.
+
+---
+
+# 4. Contexto global e multiempresa
 
 O cabeçalho global controla:
 
@@ -96,49 +128,46 @@ O cabeçalho global controla:
 
 Regras:
 
-- relatórios gerenciais podem consolidar várias empresas;
+- relatórios podem consolidar várias empresas quando o módulo declarar suporte;
 - telas de lançamento normalmente exigem uma única empresa;
-- Input Mensal exige competência mensal;
+- Input Mensal exige uma empresa e competência mensal;
 - Fluxo de Caixa é monoempresa;
 - Prestação de Contas é monoempresa;
-- Budget é anual: o exercício global define o orçamento; a competência mensal do cabeçalho não corta a matriz anual;
-- DRE e Dashboard usam o período global para apresentação;
-- telas pesadas podem marcar contexto como alterado e exigir `Atualizar`, evitando consultas desnecessárias.
-
-Nenhuma tela de lançamento deve usar silenciosamente “a primeira empresa selecionada” quando o contexto tiver várias empresas.
+- Imobilizado & CAPEX é monoempresa;
+- Budget/Forecast para edição são monoempresa;
+- DRE e Balanço podem consolidar várias empresas;
+- nenhuma gravação pode usar silenciosamente “a primeira empresa selecionada”.
 
 ---
 
-# 4. Controladoria & FP&A — rotas vigentes
+# 5. Controladoria & FP&A — rotas vigentes
 
-O submenu atual é definido em `js/controllership-router.js`.
+O submenu é definido em `js/controllership-router.js`.
 
-Rotas principais consolidadas:
+Rotas consolidadas da baseline:
 
 - DRE Gerencial — `ctrl-dre-v6.js`;
 - Balanço Patrimonial — `ctrl-balance-sheet-v1.js`;
 - Input Mensal — `ctrl-input-v6.js`;
 - Budget — `ctrl-budget-v7.js`;
 - Forecast — `ctrl-forecast-v5.js`;
-- Fluxo de Caixa — `cashflow.js`, carregado sob demanda dentro do shell FP&A;
-- Prestação de Contas — `accountability.js`, carregada sob demanda dentro do shell FP&A;
-- Cockpit de Fechamento — `closing-v3.js`;
-- Permutas — `permutas.js`;
+- Fluxo de Caixa — módulo compartilhado atual;
+- Prestação de Contas — módulo compartilhado atual;
+- Fechamento — `closing-v3.js`;
 - Premissas — `ctrl-premises-v4.js`;
 - Imobilizado & CAPEX — `ctrl-assets-v1.js`;
 - Plano de Contas — `ctrl-chart-accounts-v5.js`;
-- Centros de Custo — `ctrl-cost-centers-v2.js`;
-- Configurações — `ctrl-settings.js`.
+- Centros de Custo — `ctrl-cost-centers-v2.js`.
 
-Atalhos de Configurações devem abrir essas rotas atuais, nunca telas antigas por caminhos paralelos.
+Budget e Forecast possuem wrappers próprios e usam o motor compartilhado `ctrl-planning-matrix-v2.js`.
+
+A abertura real de Budget/Forecast passou a ser testada no navegador após correção de um bug em que o wrapper passava `pagina-ctrl-*` para `abrirPagina()`, fazendo o core procurar `pagina-pagina-ctrl-*`.
 
 ---
 
-# 5. Plano de Contas Gerencial
+# 6. Plano de Contas — contrato canônico
 
-## 5.1 Máscara vigente
-
-A estrutura aprovada é fixa:
+## 6.1 Raízes
 
 ```text
 1 Ativo
@@ -146,624 +175,530 @@ A estrutura aprovada é fixa:
 3 Receita
 4 Despesa
 9 Estatística
-
-#          = raiz do sistema
-#.##       = Sintética
-#.##.####  = Analítica
 ```
 
-Não existe, na arquitetura vigente, uma árvore financeira com níveis Sintéticos arbitrários além dessa máscara.
+## 6.2 Máscara
+
+```text
+#.##       Sintética
+#.##.####  Analítica
+```
+
+A raiz também é sintética virtual do sistema.
 
 Regras:
 
-- raiz é estrutural do sistema;
-- `#.##` é Sintética;
-- `#.##.####` é Analítica;
-- Sintética nunca recebe lançamento manual;
-- Analítica é a folha lançável;
-- `contaPaiId` liga a Analítica à Sintética;
-- códigos não devem ser reutilizados automaticamente;
-- contas legadas fora da máscara podem ser preservadas até migração controlada.
+- Sintética agrupa e nunca recebe lançamento manual;
+- Analítica é folha lançável quando permitida pelo contexto;
+- `contaPaiId` define a relação hierárquica;
+- ciclos são proibidos;
+- códigos novos são gerados dentro da máscara;
+- contas legadas fora da máscara podem permanecer visíveis até migração controlada.
 
-## 5.2 Vigência
+## 6.3 Vigência
 
-Contas possuem vigência histórica por exercício.
+Contas podem possuir vigência por exercício.
 
-A inativação:
+Inativação não apaga histórico. Antes de programar inativação, o SIG verifica uso atual/futuro em:
 
-- não apaga histórico;
-- deve bloquear se houver uso incompatível no exercício de início da inativação ou em exercícios posteriores;
-- deve considerar Realizado, Budget, Forecast, detalhamentos, premissas e vínculos relevantes como Imobilizado;
-- pode ser aplicada a um ramo quando a Sintética é inativada.
-
-## 5.3 Cópia entre empresas
-
-A cópia do Plano transfere estrutura e parâmetros, nunca:
-
-- saldos;
 - Realizado;
 - Budget;
 - Forecast;
+- detalhamento de planejamento;
 - premissas;
-- Centros de Custo;
-- histórico.
+- Imobilizado/CAPEX.
 
-Códigos existentes no destino são preservados e não sobrescritos silenciosamente.
-
-Operações de grande volume devem ser divididas em lotes compatíveis com os limites do Firestore.
+Se a coleção `imobilizados` estiver indisponível, a inativação é bloqueada por segurança.
 
 ---
 
-# 6. Natureza contábil e multiplicadores
+# 7. Natureza contábil e multiplicadores
 
-O núcleo de regra está em `js/account-mask.js`.
+A natureza estruturada é a fonte de verdade.
 
-| Raiz | Natureza padrão | Apresentação normal | Resultado |
-|---|---|---:|---:|
-| 1 Ativo | Devedora | +1 | 0 |
-| 2 Passivo | Credora | +1 | 0 |
-| 3 Receita | Credora | +1 | +1 |
-| 4 Despesa | Devedora | +1 | -1 |
-| 9 Estatística | Neutra | informativa | 0 |
+Padrões:
 
-Campos estruturados relevantes:
+| Raiz | Natureza padrão | Resultado |
+| --- | --- | --- |
+| Ativo | Devedora | não compõe DRE |
+| Passivo | Credora | não compõe DRE |
+| Receita | Credora | +1 |
+| Despesa | Devedora | -1 |
+| Estatística | Neutra | 0 |
 
-- `naturezaContabil`;
-- `multiplicadorApresentacao`;
-- `multiplicadorResultado`;
-- `contaRedutora`.
+Conta redutora usa natureza oposta à raiz.
 
-## 6.1 Regra de conta redutora
+Exemplos:
 
-Conta redutora é definida pela natureza oposta à natureza padrão da raiz.
+- Ativo normal → apresentação +1;
+- contra-Ativo / Depreciação Acumulada → apresentação -1;
+- Passivo normal → apresentação +1;
+- contra-Passivo → apresentação -1;
+- Receita normal → resultado +1;
+- contra-Receita → resultado -1;
+- Despesa normal → resultado -1;
+- contra-Despesa → resultado +1;
+- Estatística → resultado 0.
 
-Exemplo:
+**Saldo bruto armazenado nunca é regravado para aplicar sinal.** Multiplicadores são de apresentação e cálculo gerencial.
 
-```text
-1.01.0001 Máquinas e Equipamentos   Devedora  apresentação +1
-1.01.0002 Depreciação Acumulada     Credora   apresentação -1
-```
-
-Com saldos brutos 1.000.000 e 300.000:
-
-```text
-Imobilizado líquido = 1.000.000 + (300.000 × -1) = 700.000
-```
-
-O texto `(-)` no nome não é fonte de verdade.
-
-## 6.2 Invariante crítica
-
-**Multiplicador é de apresentação/cálculo gerencial. Ele nunca regrava ou corrige o saldo bruto persistido.**
-
-Override explícito de natureza em conta Analítica deve prevalecer sobre inferência automática.
+O helper central é `js/account-mask.js`.
 
 ---
 
-# 7. Centros técnicos
+# 8. Centros técnicos
 
-Dois Centros técnicos internos são reservados:
+O SIG usa centros técnicos que não representam Centros de Custo operacionais:
 
 ```text
 __cc_estatistico__
 __cc_balanco__
 ```
 
-Eles existem para manter identidade consistente de documentos e não devem aparecer como Centros de Custo operacionais normais.
+- `__cc_estatistico__` organiza drivers/indicadores estatísticos;
+- `__cc_balanco__` organiza posições patrimoniais no `realizadoMensal`.
 
-- Estatísticas usam `__cc_estatistico__`;
-- Balanço usa `__cc_balanco__`.
+Esses centros não devem ser confundidos com centros cadastrados pelo usuário.
 
 ---
 
-# 8. Input Mensal
+# 9. Input Mensal
+
+O Input é a entrada canônica do Realizado.
 
 Regras:
 
-- uma empresa por lançamento;
-- uma competência mensal;
-- Sintética nunca editável;
-- Analítica financeira depende da matriz Centro × Conta;
-- Estatística Manual pode ser digitada;
-- Estatística Automática/Calculada fica bloqueada;
-- Balanço recebe saldo bruto de fechamento;
-- competência fechada/bloqueada impede alteração;
-- documento canônico prevalece sobre duplicidade;
-- duplicidades nunca são somadas silenciosamente;
-- legado financeiro sem CC pode ser arquivado de forma controlada;
-- CCs técnicos de Estatística/Balanço nunca são tratados como “legado sem CC”.
+- uma empresa por vez;
+- competência mensal para lançamento;
+- Sintéticas nunca editáveis;
+- contas estatísticas calculadas não são lançáveis;
+- contas patrimoniais usam posição de fechamento, não movimento;
+- saldo patrimonial bruto é armazenado sem inversão de sinal;
+- contas patrimoniais controladas automaticamente pelo Imobilizado ficam bloqueadas para lançamento manual;
+- documento canônico é preferido e duplicidades são reconciliadas/arquivadas conforme regras do módulo.
 
-## 8.1 Conta patrimonial automática
-
-Quando uma conta de Balanço é controlada automaticamente pelo Imobilizado:
-
-- o Input mostra o valor automático;
-- a digitação manual é bloqueada;
-- saldo manual antigo, se existir, deve ser sinalizado para reconciliação e ignorado na apresentação automática, não apagado silenciosamente.
+Se `imobilizados` falhar, o Input não pode assumir que as contas automáticas são manuais. O motor de integração bloqueia o cálculo automático.
 
 ---
 
-# 9. Balanço Patrimonial
+# 10. Balanço Patrimonial
 
-O Balanço é uma **posição de fechamento**, não uma DRE e não uma soma de meses.
+O Balanço é relatório de posição.
 
 Regras:
 
-- raízes 1 e 2;
-- somente contas patrimoniais ativas do exercício;
-- valores armazenados permanecem brutos;
-- `multiplicadorApresentacao` define a apresentação;
-- conta redutora reduz o subtotal sem exigir saldo negativo no banco;
-- Sintéticas somam as Analíticas correspondentes;
-- multiempresa consolida por **código contábil**, não por ID interno de conta;
-- divergência de natureza para o mesmo código entre empresas deve ser sinalizada;
-- diferença final `Ativo − Passivo/PL` deve ficar visível;
-- Imobilizado integrado pode substituir a origem manual das contas mapeadas;
-- legado deve ser evidenciado/reconciliado, não descartado silenciosamente.
+- mês = posição daquele fechamento;
+- trimestre = exibe posições dos três fechamentos, sem somá-las;
+- total anual = exibe as doze posições, sem somá-las entre si;
+- consolidação multiempresa por código contábil;
+- natureza/multiplicador central aplicado apenas na apresentação;
+- redutoras diminuem a posição do grupo;
+- Ativo e Passivo/PL são reconciliados;
+- diferença Ativo − Passivo/PL é exibida;
+- contas Sintéticas ausentes podem ser reconstruídas para reconciliação e sinalizadas;
+- divergência de natureza do mesmo código entre empresas é sinalizada;
+- contas legadas permanecem na reconciliação.
 
-Mês e trimestre mostram posições. Um trimestre não é a soma dos três Balanços mensais.
+## 10.1 Integração de Imobilizado
 
----
+Para bens com `integrarBalanco === true`:
 
-# 10. Estatísticas e Indicadores
+- conta do Ativo bruto é derivada do cadastro do bem;
+- conta de Depreciação Acumulada recebe o acumulado calculado;
+- valor automático substitui o saldo manual da mesma conta no relatório;
+- baixa remove o bem das posições posteriores à data de baixa.
 
-Contas Estatísticas usam a mesma máscara, com raiz 9 e natureza neutra.
-
-Tipos conceituais:
-
-- Driver operacional;
-- Indicador calculado.
-
-Modo de preenchimento:
-
-- `manual`;
-- `automatico`.
-
-Conta antiga sem flag deve ser tratada como Manual por compatibilidade até configuração explícita.
-
-Consolidação estatística deve declarar:
-
-- Soma;
-- Média;
-- Último valor;
-- Recalcular fórmula.
-
-Percentuais/índices não podem ser somados indiscriminadamente ao consolidar períodos.
+Se `imobilizados` estiver indisponível, o Balanço não deve calcular como se não houvesse bens.
 
 ---
 
-# 11. Budget e Forecast
+# 11. Budget
 
-## 11.1 Budget
+Budget é anual, versionado e governado por ciclo.
 
-Budget é anual e possui ciclo formal por Empresa + Exercício + Versão:
+Estados:
+
+- NÃO ABERTO;
+- EM ELABORAÇÃO;
+- FINALIZADO.
+
+Características:
+
+- exercício vem do cabeçalho global;
+- A-1 = realizado do exercício imediatamente anterior;
+- linha Analítica principal é calculada por sublinhas, premissas ou automação;
+- Sintéticas são subtotais;
+- versões são preservadas;
+- orçamento finalizado bloqueia edição até reabertura;
+- conta fechada bloqueia edição manual.
+
+A abertura efetiva da tela Budget é coberta pelo browser smoke test.
+
+---
+
+# 12. Forecast
+
+Forecast combina:
 
 ```text
-NÃO ABERTO → EM ELABORAÇÃO → FINALIZADO
+meses fechados = Realizado
+meses futuros  = Forecast
 ```
-
-Pode ser reaberto por perfil autorizado.
 
 Regras:
 
-- Realizado A-1 usa o exercício imediatamente anterior ao exercício selecionado;
-- linha Analítica principal é calculada pelas sublinhas/memórias;
-- Sintéticas somam descendentes;
-- conta pode ser fechada individualmente;
-- versão nova não apaga versão anterior.
+- meses fechados não são sobrescritos;
+- projeção futura pode vir de sublinha, premissa ou automação;
+- versão e exercício são explícitos;
+- depreciação automática se aplica somente aos meses futuros; meses fechados permanecem Realizado.
 
-## 11.2 Forecast
-
-```text
-FY Forecast = Realizado fechado + projeção futura
-```
-
-Meses fechados pertencem ao Realizado e não podem ser sobrescritos pelo Forecast.
-
-## 11.3 Premissas e vigência
-
-Premissas podem valer para Budget, Forecast ou ambos.
-
-Regras:
-
-- premissa específica do CC vence premissa corporativa;
-- a vigência é aplicada **mês a mês**;
-- uma premissa Jan–Jun não pode controlar Jul–Dez;
-- uma premissa Jul–Dez não pode retroagir para Jan–Jun;
-- override mensal pode substituir parâmetro-base;
-- conta × CC com premissa vigente bloqueia lançamento manual no período controlado;
-- sublinha criada por premissa deve manter origem identificável.
-
-Drivers já suportados conceitualmente:
-
-- A-1 + percentual;
-- valor fixo;
-- repetir A-1;
-- quantidade × preço unitário.
+A abertura efetiva da tela Forecast também é coberta pelo browser smoke test.
 
 ---
 
-# 12. Imobilizado & CAPEX
+# 13. Premissas
 
-CAPEX é investimento e não deve ser classificado como despesa operacional apenas para caber na DRE.
+Premissas são resolvidas por competência, não apenas por ano.
 
-O motor de depreciação usa `js/asset-depreciation.js` e integra planejamento por `js/asset-planning.js`.
+Exemplo válido:
 
-Dados principais:
+- Premissa A: Jan–Jun;
+- Premissa B: Jul–Dez.
 
-- valor de aquisição;
-- valor residual;
-- vida útil;
+O motor seleciona a premissa válida para cada mês.
+
+Prioridade:
+
+1. premissa específica do Centro de Custo;
+2. premissa corporativa aplicável.
+
+Uma premissa ativa controla o valor projetado e bloqueia edição manual equivalente até que o fluxo seja alterado conscientemente.
+
+---
+
+# 14. Imobilizado & CAPEX
+
+Coleção persistente:
+
+```text
+imobilizados
+```
+
+Campos principais:
+
+- descrição;
+- categoria;
+- status;
 - data de aquisição/desembolso;
 - data disponível para uso;
 - data de baixa;
+- valor de aquisição/CAPEX;
+- valor residual;
+- vida útil em meses;
+- Centro de Custo da depreciação;
 - conta do Ativo;
 - conta de Depreciação Acumulada;
 - conta de Despesa de Depreciação;
-- Centro de Custo da despesa;
 - integração com Balanço;
-- integração com Budget/Forecast.
+- integração com Budget/Forecast;
+- observações.
 
-Regras:
+Status cadastráveis:
 
-- bem não deprecia antes de estar disponível para uso;
-- conta de Ativo deve ser patrimonial compatível;
-- Depreciação Acumulada deve ser conta redutora do Ativo;
-- conta de despesa deve ser compatível com resultado;
-- integração automática substitui projeção manual da mesma Conta × CC para evitar duplicidade;
-- Budget/Forecast e DRE devem reconhecer a depreciação automática.
+- Planejado / CAPEX;
+- Em implantação;
+- Em operação;
+- Baixado;
+- Cancelado.
+
+## 14.1 Depreciação
+
+- base depreciável = valor de aquisição − valor residual;
+- depreciação inicia na disponibilidade para uso;
+- não ocorre antes da disponibilidade para uso em bem planejado/em implantação;
+- termina ao completar a vida útil;
+- acumulada nunca supera a base depreciável;
+- VCL nunca fica abaixo do valor residual.
+
+**Fim da depreciação não significa baixa.** Bem totalmente depreciado continua no patrimônio enquanto não houver baixa efetiva.
+
+## 14.2 Planejamento
+
+Quando `integrarPlanejamento === true`:
+
+- Budget recebe a depreciação anual automática;
+- Forecast usa Realizado nos meses fechados e depreciação automática nos meses futuros;
+- a automação substitui, e não soma, a projeção manual da mesma Conta × CC;
+- DRE Budget/Forecast recebe a mesma depreciação projetada.
+
+CAPEX não vira despesa operacional. A DRE recebe depreciação/amortização; o desembolso do investimento deve ser tratado separadamente no fluxo financeiro quando esse motor for evoluído.
 
 ---
 
-# 13. DRE Gerencial
+# 15. Dependência crítica de `imobilizados` e fail-closed
 
-DRE é relatório, não tela de lançamento.
+A auditoria de 01/09/2026 identificou cinco consumidores que antes toleravam falha de leitura de `imobilizados` como lista vazia:
 
-Modos:
+1. Balanço;
+2. Input;
+3. Budget/Forecast;
+4. DRE projetada;
+5. validação de inativação do Plano de Contas.
 
-- Por Centro de Custo;
-- Consolidada por conta.
+Isso era perigoso porque um `permission-denied` poderia parecer “nenhum bem cadastrado” e produzir número incorreto sem alerta.
 
-Cenários:
+A regra da baseline passa a ser:
+
+> **dependência contábil crítica deve falhar de forma fechada.**
+
+O núcleo de dados registra falhas por coleção. Os motores de depreciação/Balanço verificam a disponibilidade de `imobilizados` antes de calcular. O Plano de Contas bloqueia a inativação se não conseguir confirmar vínculos patrimoniais.
+
+Nunca reintroduzir `.catch(() => [])` como mecanismo de normalização de uma base crítica sem uma trava posterior que diferencie “coleção vazia” de “coleção indisponível”.
+
+---
+
+# 16. DRE Gerencial
+
+A DRE usa natureza/multiplicador central.
+
+Características:
 
 - Realizado;
 - Budget;
-- Forecast.
+- Forecast;
+- visão por Centro de Custo;
+- visão consolidada multiempresa por código;
+- estatísticas separadas do resultado financeiro;
+- exportação Excel/PDF;
+- estrutura Sintética/Analítica;
+- cada empresa usa sua própria versão mais recente quando a visão projetada for consolidada;
+- depreciação automática do Imobilizado entra nos cenários projetados sem duplicar linha manual.
 
-Regras consolidadas:
-
-- apenas contas financeiras de resultado entram na DRE;
-- Ativo, Passivo e Estatística não entram no resultado;
-- natureza/multiplicador de resultado vem do núcleo comum;
-- consolidação multiempresa é por **código**, não por ID da conta;
-- cada empresa pode usar sua própria versão mais recente de Budget/Forecast na consolidação;
-- depreciação automática do Imobilizado entra sem duplicar linha manual;
-- Estatísticas aparecem em bloco separado quando solicitado;
-- Sintéticas podem expandir/recolher;
-- linha final apresenta `RESULTADO / SALDO DO PERÍODO`.
+Ativo, Passivo e Estatística não podem virar OPEX por regra genérica.
 
 ---
 
-# 14. Núcleo comum de relatórios financeiros
+# 17. Dashboard e Prestação de Contas
 
-`js/financial-reporting.js` centraliza a interpretação financeira usada por Dashboard e Prestação de Contas e deve ser preferido a regras locais paralelas.
+O helper `js/financial-reporting.js` centraliza a classificação financeira usada pelas visões que precisam interpretar Receita, Custo/Despesa e Resultado.
 
-Objetivo:
+Objetivo: evitar que cada relatório reinvente sinais e classificação.
 
-- excluir Balanço/Estatística do resultado;
-- respeitar natureza/multiplicador;
-- canonicalizar documentos;
-- resolver versões de planejamento por empresa;
-- integrar depreciação automática;
-- manter Dashboard, DRE e Prestação semanticamente coerentes.
+Prestação de Contas é monoempresa porque comentários, cabeçalho e saída pertencem a uma empresa determinada.
 
-Não recriar em cada relatório regras próprias do tipo “Receita = X; todo o resto = OPEX”.
+Fluxo de Caixa também é monoempresa.
+
+O shell desses módulos não carrega mais o antigo `fpa.js` apenas para construir abas.
 
 ---
 
-# 15. Dashboard
+# 18. Segurança e permissões
 
-Dashboard financeiro/executivo deve derivar Receita, OPEX e Resultado de contas financeiras de DRE.
+O frontend não é camada de segurança.
 
-Regras:
+Princípios:
 
-- Ativo e Passivo nunca viram OPEX;
-- Estatística não entra no resultado;
-- custos/despesas reduzem resultado conforme núcleo contábil;
-- CAPEX é apresentado separadamente;
-- Budget/Forecast respeitam versões e base financeira canônica;
-- posição de caixa é tratada como posição financeira, não resultado contábil.
+- Authentication identifica o usuário;
+- Firestore Rules autorizam os dados;
+- Storage Rules autorizam arquivos;
+- toda leitura/gravação deve respeitar Grupo e Empresa;
+- nenhuma nova coleção pode ser lançada sem Rule correspondente.
 
----
+## 18.1 Regra do Imobilizado
 
-# 16. Fluxo de Caixa
+A Rule de `imobilizados` exige:
 
-Fluxo de Caixa é monoempresa.
+- `controladoria.visualizar` para leitura;
+- permissão `controladoria.imobilizado` ou capacidade FP&A de edição para criar/alterar;
+- documento acessível ao Grupo/Empresa;
+- preservação de `grupoId` e `empresaId` em update;
+- delete desabilitado.
 
-Se o usuário mudar o cabeçalho para múltiplas empresas enquanto a tela estiver aberta:
+## 18.2 Storage
 
-- dados atuais da tela são limpos;
-- ações de criar/editar/exportar ficam bloqueadas;
-- formulários abertos são fechados;
-- a tela informa que exige uma única empresa;
-- nenhuma gravação ocorre usando “a primeira empresa”.
-
-A tela mantém:
-
-- contas bancárias;
-- saldo liquidado hoje;
-- D+30/D+60/D+90;
-- lançamentos;
-- provisões;
-- compromissos fixos;
-- geração idempotente de provisões quando aplicável.
-
-Competência contábil e data de caixa são conceitos distintos.
+A release atual não inclui anexos próprios no Imobilizado. Se isso for implementado no futuro, revisar previamente a granularidade da permissão de Storage.
 
 ---
 
-# 17. Prestação de Contas
+# 19. Modelo de deploy
 
-Prestação de Contas é monoempresa porque comentários, cabeçalho e PDF pertencem a uma empresa específica.
+## 19.1 Frontend
 
-Regras:
+Fluxo atual:
 
-- usa a mesma base financeira canônica dos demais relatórios;
-- Balanço/Estatística não entram como OPEX;
-- mostra Receita, OPEX, Resultado e CAPEX;
-- desvios são calculados contra Budget;
-- comentários são salvos por competência/CC/conta;
-- PDF executivo inclui DRE gerencial, desvios, CAPEX, caixa e ações;
-- contexto multiempresa bloqueia análise/salvamento/PDF.
+```text
+branch → QA → main → GitHub Pages
+```
 
-A evolução futura deve aprofundar narrativa gerencial e indicadores industriais, sem duplicar motores de cálculo.
+## 19.2 Backend Rules
 
----
+Quando houver mudança de Rules:
 
-# 18. Fechamento
+```text
+revisão → Firebase CLI autenticada → deploy das Rules → teste autenticado
+```
 
-Existe fechamento mensal e anual.
+Comando operacional documentado:
 
-Regras:
+```bash
+firebase deploy --only firestore:rules,storage
+```
 
-- checklist deve ser idempotente;
-- identidade deve ser determinística por Empresa × Competência × tarefa;
-- duplicidades legadas podem ser arquivadas sem destruir histórico;
-- fechamento/bloqueio impede alterações em telas de lançamento;
-- configuração temporal deve preservar competências anteriores.
+A execução depende de credencial autorizada e não deve armazenar segredos no Git.
+
+Uma release com Rule alterada não deve ser marcada como concluída antes dessa segunda etapa.
 
 ---
 
-# 19. Centros de Custo
+# 20. Matriz de persistência da baseline
 
-Centro de Custo responde **onde**; Conta responde **o que**.
+| Recurso | Coleção principal | Observação |
+| --- | --- | --- |
+| Plano de Contas | `planoContasGerencial` | natureza, máscara, vigência e estrutura |
+| Centros de Custo | `centrosCusto` | contas permitidas por CC |
+| Realizado / Input | `realizadoMensal` | inclui CCs técnicos |
+| Budget | `budgetLinhas` | inclui metadados de ciclo/versão |
+| Forecast | `forecastLinhas` | projeção futura |
+| Memória de planejamento | `planejamentoDetalhes` | sublinhas e origem |
+| Premissas | `premissasPlanejamento` | vigência por competência |
+| Imobilizado/CAPEX | `imobilizados` | nova coleção da consolidação |
+| Fechamento | `fechamentosMensais` | bloqueio/competência |
 
-A matriz Centro × Conta deve listar apenas contas:
+Nova coleção desta consolidação estrutural: **`imobilizados`**.
 
-- financeiras de resultado;
-- Analíticas;
-- ativas no exercício.
-
-Ativo/Passivo usam CC técnico do Balanço. Estatísticas usam CC técnico estatístico. Eles não pertencem à matriz operacional comum.
-
----
-
-# 20. Segurança
-
-A política oficial está em `SECURITY.md`.
-
-Princípios resumidos:
-
-- autenticação não é autorização;
-- ocultar botão não é segurança;
-- `firestore.rules` é a barreira real de dados;
-- Grupo/Empresa devem ser preservados;
-- menor privilégio;
-- sem segredos no frontend/repositório;
-- nova coleção/padrão de escrita exige revisão de Rules;
-- mudanças de domínio/hospedagem exigem revisão dos domínios autorizados do Firebase Authentication.
+As demais evoluções principais desta versão usaram coleções já existentes e não exigiram novos blocos de Rules apenas por adicionarem campos.
 
 ---
 
-# 21. Modelo de dados relevante
+# 21. QA e contratos de regressão
 
-Coleções do núcleo atual incluem:
+O QA deve verificar, no mínimo:
 
-| Coleção | Finalidade |
-|---|---|
-| `usuarios` | usuários/escopo |
-| `perfisAcesso` | permissões |
-| `gruposEmpresariais` | grupos |
-| `empresas` | empresas |
-| `contratos` | contratos |
-| `planoContasGerencial` | Plano de Contas |
-| `centrosCusto` | Centros de Custo/matriz |
-| `premissasPlanejamento` | premissas |
-| `realizadoMensal` | Realizado |
-| `budgetLinhas` | Budget e ciclo |
-| `forecastLinhas` | Forecast |
-| `planejamentoDetalhes` | sublinhas/memórias |
-| `imobilizados` | Imobilizado/CAPEX |
-| `contasBancarias` | contas bancárias |
-| `fluxoCaixaLancamentos` | movimentos de caixa |
-| `fluxoCaixaFixos` | compromissos recorrentes |
-| `prestacaoContas` | cabeçalhos/comentários executivos |
-| `prestacaoComentarios` | comentários por conta |
-| `fechamentoTarefas` | checklist |
-| `fechamentosMensais` | estado do fechamento |
-| `planosAcao` | ações |
-| `permutas` | acordos |
-| `permutaMovimentos` | razão da permuta |
+- sintaxe de todos os módulos ativos;
+- imports dinâmicos;
+- abertura real de Budget/Forecast;
+- rotas vigentes;
+- ausência de reativação do FP&A legado;
+- natureza e multiplicadores;
+- Balanço e CC técnico;
+- Imobilizado e depreciação;
+- vigência de premissas;
+- monoempresa onde exigido;
+- contrato Firebase (`firebase.json`, `.firebaserc`, Rules);
+- fail-closed da coleção `imobilizados`.
 
-Antes de usar coleção nova, confirmar `firestore.rules`.
+Smoke de importação sozinho não é prova de abertura funcional de uma tela.
 
 ---
 
-# 22. Compatibilidade e migrações
+# 22. Política de release e rollback
 
-Novas versões devem assumir que dados antigos já existem.
+Antes de merge:
 
-Padrões aprovados:
+1. branch comparada com `main`;
+2. QA verde;
+3. documentação atualizada;
+4. novas coleções cobertas por Rules;
+5. dependências críticas sem falha silenciosa;
+6. rollback conhecido.
 
-- default compatível na leitura;
-- adicionar campo novo sem destruir o antigo;
-- documento canônico;
-- `legadoArquivado` / `duplicadoArquivado` quando apropriado;
-- migração idempotente;
-- rollback possível;
-- nunca corrigir dado persistido apenas para compensar erro de apresentação.
+Depois do merge:
 
-Exemplo: conta estatística antiga sem modo explícito continua Manual até configuração consciente.
+1. validar Pages;
+2. validar Quality Check;
+3. publicar Rules separadamente quando alteradas;
+4. testar com usuário autenticado;
+5. conferir console;
+6. só então encerrar a release.
 
----
+Rollback de frontend não deve apagar dados.
 
-# 23. Política de código legado
-
-O repositório ainda pode conter gerações anteriores de módulos, como versões antigas de DRE, Input, Budget, Plano, Premissas, Closing e matrizes.
-
-Esses arquivos:
-
-- não são automaticamente parte do produto ativo;
-- não devem ser importados por nova funcionalidade só porque existem;
-- só podem ser excluídos após prova de que nenhuma rota, import dinâmico, migração ou compatibilidade depende deles;
-- devem ser tratados como dívida técnica/histórico até remoção segura.
-
-A prioridade é eliminar **rotas antigas e duas verdades**, não apagar histórico às cegas.
+Rollback de Rules deve considerar compatibilidade com o frontend restaurado.
 
 ---
 
-# 24. QA e release
+# 23. Hosting futuro e domínio
 
-Antes de promover uma mudança estrutural:
+O frontend pode migrar para Firebase Hosting, Vercel, Netlify, Cloudflare Pages ou host pago com domínio próprio sem migrar automaticamente o Firestore.
 
-1. conferir diff contra `main`;
-2. rodar `node --check`;
-3. validar contratos arquiteturais do workflow;
-4. importar módulos dinâmicos;
-5. executar smoke test em navegador headless;
-6. validar Rules quando persistência mudar;
-7. atualizar documentação;
-8. conferir que não há referências de rota a versões antigas;
-9. testar contexto monoempresa/multiempresa conforme módulo;
-10. testar dados antigos/duplicados;
-11. testar fechamento;
-12. testar rollback do frontend sem apagar dados.
+Mantendo `gestao-de-contratos-b266b`, a base de dados permanece no mesmo projeto.
 
-Quality Check verde é condição necessária, não prova isolada de correção funcional.
+Ao trocar domínio:
+
+- configurar HTTPS;
+- revisar domínio autorizado no Firebase Authentication;
+- testar login;
+- testar Rules;
+- preservar cache/versionamento;
+- não colocar segredo no frontend.
 
 ---
 
-# 25. Casos mínimos de QA contábil
+# 24. Compras — limite de escopo futuro
 
-Antes de release de Controladoria:
+O SIG não deve virar um sistema completo de Compras.
 
-1. Ativo normal;
-2. contra-Ativo;
-3. Passivo normal;
-4. contra-Passivo;
-5. Receita;
-6. Despesa;
-7. Estatística neutra;
-8. override manual de natureza;
-9. saldo bruto preservado;
-10. Balanço fecha Ativo = Passivo/PL;
-11. Balanço mensal não soma posições;
-12. consolidação multiempresa por código;
-13. divergência de natureza entre empresas;
-14. premissa Jan–Jun + Jul–Dez;
-15. conta fora da vigência;
-16. Budget A-1 correto;
-17. Forecast Realizado fechado + futuro;
-18. depreciação automática sem duplicidade;
-19. Input automático do Imobilizado bloqueado;
-20. Dashboard/Prestação ignorando Balanço e Estatística;
-21. Fluxo de Caixa bloqueado em multiempresa;
-22. Prestação bloqueada em multiempresa.
+Objetivo futuro:
+
+1. operação solicita cotação pelo celular;
+2. comprador conduz/lança cotações;
+3. gestor aprova;
+4. processo é finalizado.
+
+O Pangeia continua como sistema próprio de Compras. O SIG atua apenas como camada simples de workflow/aprovação, especialmente amigável para mobile.
 
 ---
 
-# 26. Continuidade, backup e hospedagem futura
+# 25. Handoff para próxima IA/equipe
 
-Antes de tornar o SIG crítico para operação real, instituir política de backup de dados e teste de restauração.
+Ao retomar o projeto:
 
-Código e dados são ativos diferentes.
+1. leia os documentos oficiais;
+2. confirme a `main` atual;
+3. confira `js/controllership-router.js`;
+4. confira `firebase.json`, `.firebaserc` e Rules;
+5. não assuma que Rule no Git está publicada;
+6. preserve saldo bruto;
+7. preserve Grupo/Empresa;
+8. respeite máscara e natureza;
+9. preserve CCs técnicos;
+10. trate `imobilizados` como dependência crítica das integrações automáticas;
+11. não converta erro de coleção crítica em zero silencioso;
+12. atualize documentação e QA junto com mudanças estruturais.
 
-Para mudança de host/domínio:
+Texto curto:
 
-1. preservar commit/tag estável;
-2. manter o mesmo Firebase inicialmente;
-3. configurar novo host;
-4. atualizar domínios autorizados do Firebase Auth;
-5. testar HTTPS/login/perfis/Rules;
-6. testar uma empresa e consolidação;
-7. alterar DNS somente após aceite;
-8. manter rollback do frontend disponível.
-
-Funcionalidades com segredos, IA, integrações server-to-server ou migrações administrativas devem migrar para backend confiável (Cloud Functions/Cloud Run ou equivalente), nunca para JavaScript cliente.
-
----
-
-# 27. Roadmap sem alterar as invariantes atuais
-
-Possíveis evoluções:
-
-- motor seguro de fórmulas de indicadores;
-- Prestação/Board Pack mais executivos;
-- motor tributário versionado por vigência;
-- aprovação genérica;
-- agenda/SLA/notificações;
-- diário de decisões;
-- pesquisa global;
-- timeline por entidade;
-- Committed Budget / What-if;
-- metas de KPI;
-- IA de apoio a Budget/Forecast/Prestação com aceitar/editar/descartar e sem autosave crítico.
-
-O workflow de solicitação/cotação/aprovação futuro deve ser simples e mobile; não deve duplicar um sistema completo de Compras.
+> O SIG está na baseline 01/09/2026 com Plano v5, natureza/multiplicadores centrais, Balanço, Input patrimonial, Budget/Forecast, vigências e Imobilizado/CAPEX integrado. GitHub Pages publica apenas o frontend; Rules Firebase têm deploy separado. A coleção `imobilizados` é crítica para Balanço, Input, planejamento, DRE projetada e inativação do Plano. Se ela falhar, o SIG deve bloquear cálculos/ações automáticos, nunca assumir lista vazia. Confira o roteador e as Rules antes de alterar a arquitetura.
 
 ---
 
-# 28. Checklist obrigatório para atualização estrutural
+# 26. Pendências funcionais conhecidas que NÃO devem ser confundidas com bug
 
-Responder SIM antes de considerar a entrega pronta:
+Itens ainda não implementados como ciclo completo:
 
-- [ ] código preserva dados existentes;
-- [ ] Grupo/Empresa/permissões estão corretos;
-- [ ] telas monoempresa bloqueiam contexto múltiplo;
-- [ ] Sintéticas seguem não lançáveis;
-- [ ] Estatísticas continuam fora do resultado;
-- [ ] Balanço continua posição, não soma;
-- [ ] natureza/multiplicadores vêm do núcleo comum;
-- [ ] saldo bruto não foi regravado para ajustar sinal;
-- [ ] duplicidades não são somadas silenciosamente;
-- [ ] Budget/Forecast/DRE/Dashboard/Prestação estão semanticamente coerentes;
-- [ ] vigências são respeitadas;
-- [ ] Imobilizado não duplica projeção/manual;
-- [ ] fechamentos protegem lançamentos;
-- [ ] Firestore Rules cobrem mudanças de persistência;
-- [ ] QA automático passou;
-- [ ] QA funcional relevante foi executado;
-- [ ] documentação foi atualizada;
-- [ ] existe rollback do frontend sem apagar a base.
+- integração de desembolso CAPEX ao Fluxo de Caixa;
+- tratamento completo de alienação/baixa com ganho ou perda na DRE;
+- status calculado visual “Totalmente depreciado · Em uso”;
+- anexos patrimoniais específicos do Imobilizado;
+- workflow simplificado futuro de solicitações/cotações/aprovação.
+
+Esses pontos são roadmap, não funcionalidade já entregue.
 
 ---
 
-# 29. Regra de manutenção deste dossiê
+# 27. Regra final de coerência
 
-Atualize este documento quando houver:
+Toda mudança estrutural futura deve responder, antes do merge:
 
-- novo módulo ou remoção de módulo;
-- mudança de rota ativa;
-- alteração da máscara/hierarquia do Plano;
-- mudança de natureza/multiplicador;
-- mudança de contexto global;
-- nova regra de canonicalização;
-- nova coleção relevante;
-- nova regra de fechamento;
-- mudança em Budget/Forecast/Premissas;
-- mudança no Balanço/Imobilizado;
-- mudança de segurança/permissões;
-- mudança de hospedagem/dados/anexos;
-- novo motor automático relevante.
+- qual módulo ativo muda?
+- qual dado muda?
+- existe coleção/campo novo?
+- a Rule precisa mudar?
+- a Rule foi apenas versionada ou também será publicada?
+- qual relatório depende desse dado?
+- o que acontece se a leitura falhar?
+- o comportamento é fail-closed quando o número contábil depende da base?
+- qual QA impede regressão?
+- qual documentação precisa ser atualizada?
 
-**Se o código muda estruturalmente e este documento permanece antigo, a entrega está incompleta.**
+Se essas respostas não estiverem claras, a mudança ainda não está pronta para produção.
