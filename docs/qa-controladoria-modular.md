@@ -2,7 +2,7 @@
 
 Checklist mínimo antes de merge/publicação de mudança estrutural.
 
-**Baseline:** 01/09/2026 — Plano de Contas v6.
+**Baseline:** 01/09/2026 — Plano de Contas v6 + permissões modulares.
 
 ## 1. Automático
 
@@ -12,9 +12,24 @@ Checklist mínimo antes de merge/publicação de mudança estrutural.
 - [ ] Plano v6, Budget e Forecast executam `abrir()` de verdade no browser test;
 - [ ] roteador aponta para os módulos aprovados;
 - [ ] Firebase Contract Check passa;
-- [ ] Rules são revisadas quando persistência/permissões mudam.
+- [ ] Permissions Contract Check passa;
+- [ ] Rules são revisadas quando persistência/permissões de dados mudam.
 
-## 2. Plano de Contas v6
+## 2. Permissões da Controladoria
+
+- [ ] perfil exibe opções **Visualizar DRE Gerencial** e **Visualizar Balanço Patrimonial**;
+- [ ] marcar qualquer ação da Controladoria continua marcando `Visualizar` como permissão-base;
+- [ ] DRE aparece no submenu somente quando `controladoria.dre`, Administração FP&A ou compatibilidade legada autorizam;
+- [ ] Balanço aparece no submenu somente quando `controladoria.balanco`, Administração FP&A ou compatibilidade legada autorizam;
+- [ ] Input aparece somente para perfil com Realizado/Importar/Administração FP&A;
+- [ ] Budget, Forecast, Premissas, Imobilizado, Plano, Centros, Caixa, Prestação e Fechamento respeitam suas ações específicas;
+- [ ] trocar de Administrador para perfil limitado sem recarregar a página recalcula o submenu;
+- [ ] item escondido também é bloqueado quando acionado programaticamente;
+- [ ] módulos importados dinamicamente não reutilizam a mesma instância entre usuários/perfis diferentes;
+- [ ] perfil legado sem chaves `dre`/`balanco` mantém `controladoria.visualizar` até ser editado e salvo;
+- [ ] após salvar um perfil na versão atual, `dre` e `balanco` ficam explicitamente gravados como `true`/`false`.
+
+## 3. Plano de Contas v6
 
 - [ ] máscara vigente é `#.##.##.####`;
 - [ ] raiz aceita mais de uma Sintética N1;
@@ -54,7 +69,7 @@ Criar e validar:
 
 Cada N1 deve permitir novas N2 independentes.
 
-## 3. Balanço Patrimonial
+## 4. Balanço Patrimonial
 
 - [ ] raízes 1 e 2 aparecem separadamente;
 - [ ] estrutura exibida é Raiz → N1 → N2 → Analítica;
@@ -69,7 +84,7 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] legado ainda preservado participa da raiz;
 - [ ] diferença Ativo − Passivo/PL continua sendo calculada.
 
-## 4. DRE
+## 5. DRE
 
 - [ ] por Centro de Custo respeita árvore N1 → N2 → Analítica;
 - [ ] Sintéticas expandem/recolhem corretamente;
@@ -80,7 +95,7 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] divergência de nome/natureza entre empresas continua sinalizada;
 - [ ] depreciação automática aparece em Budget/Forecast sem duplicar projeção manual.
 
-## 5. Input
+## 6. Input
 
 - [ ] somente Analíticas vigentes são lançáveis;
 - [ ] Sintéticas permanecem não lançáveis independentemente da profundidade;
@@ -89,7 +104,7 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] conta automática do Imobilizado fica bloqueada para input manual;
 - [ ] competência fechada respeita bloqueio vigente.
 
-## 6. Budget / Forecast / Premissas
+## 7. Budget / Forecast / Premissas
 
 - [ ] Budget abre e salva versão;
 - [ ] Forecast abre e usa Realizado fechado + futuro;
@@ -99,7 +114,7 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] específica por CC prevalece sobre corporativa;
 - [ ] Imobilizado indisponível não vira lista vazia silenciosa.
 
-## 7. Imobilizado & CAPEX
+## 8. Imobilizado & CAPEX
 
 - [ ] coleção `imobilizados` carrega com Rules publicadas;
 - [ ] conta do Ativo é raiz 1 não redutora;
@@ -110,7 +125,7 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] fim da vida útil interrompe depreciação sem baixar o bem;
 - [ ] falha de Rules interrompe os cálculos dependentes.
 
-## 8. Firestore / segurança
+## 9. Firestore / segurança
 
 - [ ] `firestore.rules` contém `imobilizados`;
 - [ ] `planoContasGerencial` permite delete somente via `fpaPlano()` + documento acessível;
@@ -119,19 +134,21 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] Grupo/Empresa não podem ser trocados em update;
 - [ ] Rules da versão foram efetivamente publicadas, não apenas commitadas.
 
-## 9. Contexto e relatórios auxiliares
+## 10. Contexto e relatórios auxiliares
 
 - [ ] Fluxo de Caixa bloqueia múltiplas empresas;
 - [ ] Prestação bloqueia múltiplas empresas;
 - [ ] Dashboard não mistura Balanço/Estatísticas em OPEX;
 - [ ] Minha Mesa usa primeiro dia real de caixa negativo, não rótulo fixo D+90.
 
-## 10. Critério de aprovação
+## 11. Critério de aprovação
 
 Não aprovar merge quando houver:
 
 - erro de sintaxe/import;
 - rota apontando para versão antiga;
+- perfil limitado herdando submenu de usuário anterior;
+- módulo acessível sem sua permissão funcional;
 - máscara/documentação divergentes;
 - cálculo silencioso com base crítica indisponível;
 - exclusão sem validação de referências;
