@@ -1,151 +1,126 @@
 # SIG — Firebase, Deploy e Rules
 
-**Baseline:** 01/09/2026  
+**Baseline:** 01/09/2026 — Plano de Contas v6  
 **Projeto Firebase:** `gestao-de-contratos-b266b`
 
-Este documento é a fonte operacional para distinguir o deploy do frontend do deploy do backend gerenciado do SIG.
+Este documento distingue o deploy do frontend do deploy do backend gerenciado do SIG.
 
 ## 1. Dois deploys independentes
 
-O SIG usa hoje:
+O SIG usa:
 
-- **GitHub Pages** para HTML, CSS e JavaScript;
-- **Firebase Authentication** para autenticação;
-- **Cloud Firestore** para os dados;
-- **Firebase Storage** para anexos suportados pelas regras.
+- GitHub Pages para HTML/CSS/JavaScript;
+- Firebase Authentication;
+- Cloud Firestore;
+- Firebase Storage.
 
-Promover a branch para `main` e concluir o GitHub Pages **não publica automaticamente**:
+Promover `main` e concluir GitHub Pages **não publica automaticamente**:
 
 - `firestore.rules`;
 - `storage.rules`;
-- índices do Firestore;
-- configurações administrativas do projeto Firebase.
+- índices/configurações administrativas Firebase.
 
-Por isso uma versão pode ter frontend novo e backend ainda com Rules antigas. Essa situação deve ser tratada como release incompleta.
+Uma versão com frontend novo e Rule antiga é release incompleta.
 
-## 2. Contrato de configuração no repositório
+## 2. Contrato do repositório
 
-A raiz do repositório contém:
+- `.firebaserc` — projeto Firebase de destino;
+- `firebase.json` — aponta para arquivos de Rules;
+- `firestore.rules` — autorização Firestore;
+- `storage.rules` — autorização Storage;
+- `.github/workflows/firebase-contract-check.yml` — valida o contrato mínimo.
 
-- `.firebaserc` — identifica o projeto Firebase de destino;
-- `firebase.json` — declara quais arquivos de Rules pertencem ao projeto;
-- `firestore.rules` — autorização do Cloud Firestore;
-- `storage.rules` — autorização do Firebase Storage.
+Projeto esperado: `gestao-de-contratos-b266b`.
 
-A configuração atual aponta para:
+## 3. Rules críticas atuais
 
-`gestao-de-contratos-b266b`
+### 3.1 Imobilizado
 
-Não colocar tokens, service accounts, chaves privadas ou credenciais administrativas nesses arquivos.
+A coleção `imobilizados` exige:
 
-## 3. Nova versão de Controladoria — dependência de backend
+- leitura: permissão de visualização da Controladoria + documento acessível;
+- create/update: `fpaImobilizado()` + isolamento Grupo/Empresa;
+- delete: não permitido pela Rule atual.
 
-A versão consolidada de 31/08–01/09/2026 introduziu a coleção:
+A integração contábil depende dessa coleção e deve operar fail-closed em falha de leitura.
 
-`imobilizados`
+### 3.2 Plano de Contas v6
 
-Ela é usada por:
+A coleção `planoContasGerencial` mantém:
 
-- Imobilizado & CAPEX;
-- Balanço Patrimonial;
-- Input Mensal no bloco patrimonial;
-- Budget;
-- Forecast;
-- DRE em cenários projetados;
-- validação de inativação do Plano de Contas.
+- read: visualização da Controladoria + documento acessível;
+- create/update: `fpaPlano()` + documento acessível;
+- **delete: `fpaPlano()` + documento acessível**.
 
-A regra correspondente em `firestore.rules` exige:
+O delete foi habilitado para permitir limpeza de cadastros de teste/erro no Plano v6. Isso **não significa** que qualquer conta pode ser apagada.
 
-- usuário com acesso de visualização à Controladoria para leitura;
-- `controladoria.imobilizado` ou administração FP&A para criar/alterar;
-- mesmo grupo empresarial;
-- empresa acessível pelo usuário;
-- preservação de `grupoId` e `empresaId` em updates;
-- exclusão direta desabilitada.
+Antes do delete, `ctrl-chart-accounts-v6.js` verifica referências em bases financeiras, Premissas, Imobilizado, Centros de Custo e bases legadas relacionadas. Se existir vínculo, a aplicação bloqueia a exclusão.
 
-## 4. Falha fechada em integrações contábeis
+Regra operacional:
 
-A partir desta baseline, a indisponibilidade da coleção `imobilizados` não pode ser interpretada como “nenhum bem cadastrado”.
+- sem uso → exclusão pode ser confirmada;
+- com uso/histórico → inativar, não excluir.
 
-Motivo: um erro de permissão convertido silenciosamente em lista vazia poderia:
+## 4. Publicação desta versão
 
-- retirar depreciação do Budget/Forecast;
-- retirar depreciação da DRE projetada;
-- retirar integração automática do Balanço;
-- liberar digitação manual no Input em contas que deveriam ser automáticas;
-- permitir inativação de conta ainda vinculada a bem/CAPEX.
+Depois de promover a versão v6 para `main`, publicar as Rules completas.
 
-O núcleo de dados registra falhas de coleção e os motores automáticos devem **falhar de forma fechada**. Em dúvida, o SIG bloqueia o cálculo/ação em vez de assumir zero.
-
-## 5. Como publicar as Rules
-
-Pré-requisitos:
-
-1. Firebase CLI instalada;
-2. usuário autenticado e autorizado no projeto;
-3. revisão do diff de `firestore.rules` e `storage.rules`;
-4. execução a partir da raiz do repositório.
-
-Comando de publicação:
+Firebase CLI autenticado:
 
 ```bash
 firebase deploy --only firestore:rules,storage
 ```
 
-Depois do deploy:
+Se a publicação for manual:
 
-1. abrir o SIG publicado;
-2. autenticar normalmente;
-3. selecionar uma única empresa;
-4. abrir Imobilizado & CAPEX;
-5. confirmar que Plano de Contas e Centros de Custo são carregados;
-6. cadastrar ou editar um bem de teste controlado;
-7. validar a integração no Balanço e no planejamento;
-8. remover ou regularizar o dado de teste conforme procedimento da empresa.
+1. abrir Firebase Console;
+2. selecionar `gestao-de-contratos-b266b`;
+3. abrir Firestore Database;
+4. abrir aba **Regras**;
+5. substituir pelo conteúdo integral de `firestore.rules` da mesma versão da `main`;
+6. publicar;
+7. testar autenticado.
 
-## 6. Diagnóstico de `permission-denied`
+Para Storage, publicar `storage.rules` se ela também tiver sido alterada.
 
-Se uma tela nova abrir, mas apresentar erro ao consultar uma coleção:
+Nunca misturar Rule antiga com frontend novo ou publicar apenas um bloco isolado sem o arquivo completo.
 
-1. confirmar se a regra existe no **repositório**;
-2. confirmar se a regra foi **publicada no Firebase**;
-3. conferir perfil e permissões do usuário;
-4. conferir `grupoId` e `empresaId` dos documentos;
-5. conferir se o usuário possui acesso à empresa selecionada;
-6. somente depois investigar índices ou erro de frontend.
+## 5. Diagnóstico rápido
 
-Regra existente no Git não prova que ela está ativa no Firebase.
+### `permission-denied` em Imobilizado
 
-## 7. Matriz da versão 01/09/2026
+Verificar:
 
-| Recurso | Coleção / backend | Nova nesta versão? | Rule adicional? |
-| --- | --- | --- | --- |
-| Plano v5 / natureza / multiplicadores | `planoContasGerencial` | novos campos | não; rule existente continua compatível |
-| Balanço Patrimonial | `realizadoMensal` + `imobilizados` | módulo novo | `imobilizados` sim |
-| Input patrimonial | `realizadoMensal` + `imobilizados` | fluxo novo | `imobilizados` sim |
-| Budget | `budgetLinhas`, `planejamentoDetalhes`, `premissasPlanejamento`, `imobilizados` | motor evoluído | somente `imobilizados` |
-| Forecast | `forecastLinhas`, `planejamentoDetalhes`, `premissasPlanejamento`, `realizadoMensal`, `imobilizados` | motor evoluído | somente `imobilizados` |
-| DRE projetada | Budget/Forecast + `imobilizados` | integração nova | somente `imobilizados` |
-| Imobilizado & CAPEX | `imobilizados` | coleção nova | sim |
-| Vigência de premissas | `premissasPlanejamento` | campos/lógica novos | não |
-| Consolidação DRE por código | bases existentes | lógica nova | não |
-| Dashboard / Prestação | bases existentes | lógica compartilhada | não |
+- Rule `match /imobilizados/{id}` publicada;
+- perfil com `controladoria.visualizar`;
+- `grupoId` / `empresaId` do documento;
+- acesso do usuário à empresa.
 
-## 8. Storage
+### `permission-denied` ao excluir conta de teste
 
-Nenhum anexo específico do Imobilizado/CAPEX foi introduzido nesta release. Portanto `storage.rules` não precisou de regra nova para o módulo.
+Verificar:
 
-Se futuramente forem adicionados notas fiscais, laudos, fotos ou termos de baixa ao Imobilizado, revisar previamente a granularidade da permissão de escrita. Hoje o módulo `controladoria` no Storage usa autorização geral de Controladoria para gravação, e isso não deve ser presumido como suficiente para uma futura função de anexos patrimoniais.
+- Rule da v6 publicada;
+- usuário com `controladoria.editar` ou `controladoria.planoContas`;
+- documento pertence ao Grupo/Empresa acessível;
+- frontend realmente chegou ao delete — se houver referência, ele deve bloquear antes da chamada ao Firestore.
 
-## 9. Regra para futuras versões
+### Frontend atualizado, comportamento de Rule antigo
 
-Toda feature que criar coleção, subcoleção, caminho de Storage ou nova ação de permissão deve incluir no mesmo pacote:
+Isso é esperado quando apenas GitHub Pages foi publicado. Confirmar a data/versão ativa das Rules no Firebase e republicar o arquivo completo.
 
-1. código da feature;
-2. Rules correspondentes;
-3. contrato de deploy;
-4. QA de autorização;
-5. documentação;
-6. plano de rollback.
+## 6. QA de contrato
 
-Frontend novo com Rules antigas é um estado inválido de produção.
+`SIG Firebase Contract Check` deve falhar se:
+
+- `firebase.json` / `.firebaserc` sumirem ou divergirem;
+- a Rule de Imobilizado desaparecer;
+- a Rule de delete seguro do Plano v6 desaparecer;
+- o Plano ativo deixar de fazer checagem de referências;
+- documentação deixar de registrar que Pages e Rules têm deploy independente.
+
+## 7. Segurança
+
+Rules são a barreira efetiva de autorização. Botões, filtros e confirmações são proteção adicional de negócio, não substitutos das Rules.
+
+Não colocar Service Account, token administrativo ou segredo no frontend/repositório.
