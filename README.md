@@ -2,6 +2,8 @@
 
 WebApp/PWA empresarial com frontend modular em JavaScript e backend gerenciado por Firebase Authentication + Cloud Firestore.
 
+**Baseline documental atual:** 01/09/2026.
+
 ## Escopo ativo
 
 - Dashboard gerencial;
@@ -21,9 +23,10 @@ Leia nesta ordem:
 2. `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` — estado funcional e arquitetural completo;
 3. `docs/SIG-MANUAL-MESTRE.md` — invariantes que não podem ser quebradas;
 4. `docs/SIG-GUIA-DE-CONTINUIDADE.md` — retomada, release e rollback;
-5. `SECURITY.md` — política de segurança;
-6. `docs/qa-controladoria-modular.md` — QA funcional/contábil;
-7. `docs/release-controladoria-modular.md` — checklist de promoção.
+5. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md` — contrato de backend, deploy e diagnóstico de Rules;
+6. `SECURITY.md` — política de segurança;
+7. `docs/qa-controladoria-modular.md` — QA funcional/contábil;
+8. `docs/release-controladoria-modular.md` — checklist de promoção.
 
 Não existem documentos obrigatórios ocultos fora dessa lista.
 
@@ -64,6 +67,8 @@ Natureza e multiplicadores são centralizados em `js/account-mask.js`. Multiplic
 
 `js/financial-reporting.js` centraliza a interpretação financeira compartilhada por relatórios gerenciais.
 
+A coleção `imobilizados` é dependência crítica das integrações patrimoniais e de depreciação. Erro de leitura dessa coleção não pode ser tratado como “nenhum bem cadastrado”; cálculos e ações dependentes devem falhar de forma fechada.
+
 ## Arquitetura
 
 - `index.html` + `app.js`;
@@ -71,10 +76,14 @@ Natureza e multiplicadores são centralizados em `js/account-mask.js`. Multiplic
 - carregamento sob demanda para módulos pesados;
 - Firebase Authentication;
 - Cloud Firestore;
-- `firestore.rules` como barreira real de dados;
+- Firebase Storage;
+- `firestore.rules` e `storage.rules` como barreiras reais de dados/arquivos;
+- `.firebaserc` + `firebase.json` como contrato de deploy Firebase;
 - GitHub Pages como hospedagem atual do frontend.
 
 Frontend e banco são independentes: trocar de host/domínio não apaga o Firestore se o mesmo projeto Firebase continuar sendo usado.
+
+**Importante:** GitHub Pages publica HTML/CSS/JavaScript, mas não publica Firestore/Storage Rules. Se uma versão alterar Rules, o deploy Firebase é uma etapa separada e obrigatória antes de considerar a release concluída.
 
 ## Segurança
 
@@ -84,6 +93,8 @@ Nunca colocar Service Account, chave privada, token administrativo ou outro segr
 
 ## Qualidade
 
-GitHub Actions executa o `SIG Quality Check`, incluindo validações de sintaxe, contratos arquiteturais e smoke/import dos módulos da Controladoria.
+GitHub Actions executa o `SIG Quality Check`, incluindo validações de sintaxe, contratos arquiteturais e browser smoke dos módulos da Controladoria.
 
-Mudança estrutural só é considerada completa quando código, QA, Rules quando aplicável e documentação estão coerentes.
+Há também contrato específico de Firebase para garantir presença de configuração, Rules do Imobilizado e travas fail-closed das dependências críticas.
+
+Mudança estrutural só é considerada completa quando código, QA, Rules aplicáveis, **deploy das Rules quando necessário** e documentação estão coerentes.
