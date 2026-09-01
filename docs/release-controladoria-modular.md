@@ -2,81 +2,93 @@
 
 Checklist de promoção para `main`.
 
-> **Regra de release desde 01/09/2026:** publicar o frontend no GitHub Pages **não publica** `firestore.rules` nem `storage.rules`. Quando uma versão alterar regras, coleções ou permissões, o release só está completo depois do deploy das Rules no Firebase e de um teste autenticado em produção.
+**Baseline:** 01/09/2026 — Plano de Contas v6.
+
+> GitHub Pages publica o frontend, mas **não publica** `firestore.rules` nem `storage.rules`. Quando uma versão alterar Rules, o release só termina após publicação Firebase e teste autenticado.
 
 ## Antes do merge
 
 - [ ] branch comparada com `main`;
-- [ ] todos os módulos novos/alterados estão completos;
-- [ ] `js/controllership-router.js` aponta somente para versões atuais aprovadas;
-- [ ] atalhos de Configurações não abrem módulos antigos;
-- [ ] documentação oficial está atualizada;
-- [ ] `SECURITY.md`, `firestore.rules` e `storage.rules` foram revisados quando necessário;
-- [ ] `firebase.json` referencia `firestore.rules` e `storage.rules`;
-- [ ] `.firebaserc` aponta para o projeto Firebase correto;
-- [ ] toda coleção nova usada pelo frontend possui regra explícita antes da promoção;
-- [ ] integrações contábeis críticas falham de forma fechada: indisponibilidade de uma base automática não pode ser convertida silenciosamente em `[]` ou zero;
-- [ ] QA automático está verde;
-- [ ] casos contábeis críticos do `docs/qa-controladoria-modular.md` foram verificados;
-- [ ] nenhuma migração destrutiva foi introduzida sem rollback;
-- [ ] não há necessidade de alterar saldo bruto para corrigir apresentação;
-- [ ] telas monoempresa bloqueiam contexto múltiplo;
-- [ ] legado conhecido permanece preservado ou foi removido com prova de não dependência.
+- [ ] `main` não será sobrescrita por force;
+- [ ] módulos novos/alterados estão completos;
+- [ ] roteador aponta para as versões aprovadas;
+- [ ] Plano ativo é `ctrl-chart-accounts-v6.js`;
+- [ ] máscara vigente é `#.##.##.####`;
+- [ ] Balanço e DRE consolidada entendem N1 e N2;
+- [ ] Input/Budget/Forecast continuam operando por Analíticas/IDs;
+- [ ] documentação oficial foi atualizada no mesmo pacote;
+- [ ] `SECURITY.md` foi revisado;
+- [ ] `firestore.rules` contém a Rule necessária para delete seguro do Plano;
+- [ ] `firebase.json` e `.firebaserc` continuam coerentes;
+- [ ] `SIG Quality Check` está verde no HEAD final;
+- [ ] `SIG Firebase Contract Check` está verde no HEAD final;
+- [ ] browser smoke executa `abrir()` do Plano v6, Budget e Forecast;
+- [ ] nenhuma base crítica é transformada silenciosamente em vazio/zero;
+- [ ] telas monoempresa continuam bloqueando múltiplas empresas;
+- [ ] exclusão de conta tem validação de referências;
+- [ ] histórico real continua sendo preservado por inativação;
+- [ ] não existe migração destrutiva implícita de v5 para v6.
+
+## Casos funcionais obrigatórios da v6
+
+Antes da publicação, validar ao menos:
+
+- criar N1 em uma raiz;
+- criar N2 dentro de N1;
+- criar Analítica dentro de N2;
+- criar duas N1 diferentes dentro da mesma raiz;
+- recolher/expandir árvore;
+- filtrar Ativas / Inativas / Todas;
+- inativar conta sem uso;
+- confirmar ação **Reativar**;
+- reativar;
+- tentar excluir conta com referência e confirmar bloqueio;
+- excluir conta de teste sem uso somente após Rules publicadas;
+- Balanço com N1/N2;
+- DRE consolidada com N1/N2.
 
 ## Promoção do frontend
 
 Preferir fast-forward quando o histórico permitir.
 
-Não publicar pacote estrutural pela metade. Se um módulo depende de outra mudança da mesma branch para manter integridade, promover o conjunto somente depois de QA completo.
+Não publicar pacote estrutural pela metade. Plano v6, máscara, Balanço, DRE, Rules, QA e documentação são um único pacote de release.
 
-A promoção da `main` dispara o GitHub Pages e publica HTML/CSS/JavaScript. **Ela não substitui o deploy Firebase descrito abaixo.**
+## Publicação Firebase desta versão
 
-## Deploy das Rules do Firebase
+Esta versão altera `firestore.rules`:
 
-Quando `firestore.rules`, `storage.rules`, `firebase.json` ou o modelo de permissões tiver mudado:
+```text
+/planoContasGerencial/{id}
+  delete → fpaPlano() && documentoAcessivel(resource.data)
+```
 
-1. confirmar que `.firebaserc` aponta para `gestao-de-contratos-b266b`;
-2. revisar o diff das Rules antes do deploy;
-3. autenticar a Firebase CLI com uma conta autorizada;
-4. executar, a partir da raiz do repositório:
-   - `firebase deploy --only firestore:rules,storage`;
-5. confirmar que o deploy concluiu sem erro;
-6. sair e entrar novamente no SIG se o perfil/permissão tiver mudado;
-7. testar a coleção/fluxo novo com usuário real de produção;
-8. só então considerar a release concluída.
+Depois do merge, publicar as Rules completas no projeto Firebase `gestao-de-contratos-b266b`.
 
-Não armazenar token, service account ou credenciais Firebase no repositório.
+Com Firebase CLI autenticado:
 
-## Depois do merge / deploy
+```bash
+firebase deploy --only firestore:rules,storage
+```
 
-- [ ] acompanhar `SIG Quality Check` da `main`;
-- [ ] acompanhar deploy do frontend;
-- [ ] se Rules mudaram, confirmar deploy separado no Firebase;
-- [ ] validar login e contexto de empresa;
-- [ ] validar Input Mensal;
-- [ ] validar Balanço;
-- [ ] validar DRE;
-- [ ] validar Budget/Forecast;
-- [ ] validar Imobilizado/CAPEX e leitura da coleção `imobilizados`;
-- [ ] validar depreciação automática em Balanço, Input, Budget, Forecast e DRE;
-- [ ] validar que falha de leitura de `imobilizados` bloqueia os cálculos automáticos em vez de assumir zero;
-- [ ] validar Dashboard;
-- [ ] validar Fluxo de Caixa em empresa única e bloqueio multiempresa;
-- [ ] validar Prestação de Contas em empresa única e bloqueio multiempresa;
-- [ ] confirmar console sem erro crítico;
-- [ ] forçar recarga de cache quando necessário.
+Ou publicar a Rule completa pelo console do Firestore.
+
+**Não** publicar apenas um trecho isolado da Rule.
+
+## Pós-publicação
+
+- [ ] GitHub Pages concluiu build/deploy do SHA correto;
+- [ ] Firestore Rules foram publicadas;
+- [ ] Imobilizado continua carregando;
+- [ ] Plano v6 abre;
+- [ ] criação N1/N2/Analítica funciona;
+- [ ] exclusão de teste sem uso funciona;
+- [ ] exclusão de histórico é bloqueada pela aplicação;
+- [ ] Balanço e DRE exibem a nova hierarquia;
+- [ ] Budget/Forecast continuam abrindo;
+- [ ] revisar console do navegador para erros.
 
 ## Rollback
 
-Rollback de frontend deve apontar para commit estável anterior e **não apagar dados**.
+Se o problema surgir antes de criação de dados reais v6, reverter frontend e Rules em conjunto.
 
-Rules e frontend possuem ciclos de deploy independentes. Se o frontend for revertido, conferir se as Rules continuam compatíveis com a versão restaurada antes de revertê-las também.
-
-Se houver problema após deploy:
-
-1. identificar se é cache, frontend, Rules ou dado;
-2. preservar evidências;
-3. reverter frontend quando apropriado;
-4. reverter Rules apenas para uma versão conhecida e compatível, se necessário;
-5. não modificar Firestore em massa para mascarar erro visual;
-6. aplicar migração de dados somente se o modelo realmente exigir.
+Se já houver contas `versaoMascara: "v6"`, não retornar silenciosamente para versão do Plano que não compreende `#.##.##.####`. Nesse cenário, rollback exige análise de compatibilidade/migração.
