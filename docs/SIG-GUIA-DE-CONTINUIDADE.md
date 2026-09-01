@@ -36,6 +36,8 @@ Balanço atual possui visão mensal com fechamento final do trimestre/ano e comp
 
 Consórcios ativo: `js/ctrl-consorcios-v1.js`. A matemática fica em `js/consortium-calculations.js`. Persistência: coleção `consorcios`.
 
+**Consórcios é um módulo de primeiro nível no menu principal, posicionado logo após Contratos. Não deve aparecer dentro do submenu Controladoria & FP&A.** O roteamento lazy atual ainda é mantido em `js/controllership-router.js` por compatibilidade estrutural.
+
 ---
 
 ## 3. Como retomar desenvolvimento
@@ -59,6 +61,8 @@ Mudança de Consórcios exige revisar:
 - `firestore.rules`;
 - `SIG Consorcios Contract Check`;
 - documentação.
+
+**Não recolocar Consórcios no submenu da Controladoria sem decisão arquitetural explícita.**
 
 **Não integrar Consórcios a DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado sem decisão arquitetural explícita.** A v1 é independente.
 
@@ -106,6 +110,9 @@ Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de co
 
 ### Consórcios
 
+- o item deve aparecer no menu principal imediatamente após Contratos;
+- o item não deve aparecer dentro do submenu Controladoria & FP&A;
+- ao abrir Consórcios, Controladoria não deve permanecer marcada como menu ativo;
 - perfil somente consulta visualiza a carteira sem ação de edição;
 - perfil de gestão cria e edita ficha;
 - novo cadastro exige uma empresa;
