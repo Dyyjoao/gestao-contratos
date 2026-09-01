@@ -24,12 +24,17 @@ jobs:
           grep -q '\["dre","Visualizar DRE Gerencial"\]' js/profiles.js
           grep -q '\["balanco","Visualizar Balanço Patrimonial"\]' js/profiles.js
 
-          # Consórcios separa consulta de gestão.
+          # Consórcios separa consulta de gestão e é exibido fora do submenu da Controladoria.
           grep -q '\["consorciosVisualizar","Visualizar consórcios"\]' js/profiles.js
           grep -q '\["consorciosEditar","Gerir consórcios"\]' js/profiles.js
           grep -q 'case"consorcios"' js/controllership-router.js
           grep -q 'ctrlAcao("consorciosVisualizar")||ctrlAcao("consorciosEditar")' js/controllership-router.js
           grep -q 'ctrl-consorcios-v1.js' js/controllership-router.js
+          grep -q 'menuConsorcios' js/controllership-router.js
+          if grep -Fq '["consorcios","Consórcios"]' js/controllership-router.js; then
+            echo 'Consórcios não pode ficar no submenu da Controladoria.' >&2
+            exit 1
+          fi
 
           # Perfis legados com apenas Visualizar mantêm acesso a DRE/Balanço até serem salvos novamente.
           grep -q 'legadoVisualizar:true' js/controllership-router.js
