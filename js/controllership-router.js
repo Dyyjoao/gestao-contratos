@@ -1,7 +1,7 @@
 import { $, abrirPagina, permite, admin, state } from "./core.js";
 import { empresasSelecionadasIds } from "./shared.js";
 
-const modulos=new Map();const MODULO_VERSAO="20260901permissoes2";
+const modulos=new Map();const MODULO_VERSAO="20260901permissoes3";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function prepararShellCompartilhado(){const p=paginaControladoria();if(!p)return false;if(!p.querySelector(".fpa-tabs"))p.innerHTML='<nav class="fpa-tabs" aria-label="Áreas internas da Controladoria"></nav>';esconderTabsInternas();return true}
@@ -33,7 +33,8 @@ function podeAbrir(chave){
   }
 }
 function validarPermissao(chave){if(podeAbrir(chave))return true;alert(`Seu perfil não possui permissão para acessar ${nomeModulo(chave)}.`);return false}
-async function importar(chave,arquivo){if(!modulos.has(chave)){const p=import(`${arquivo}?v=${MODULO_VERSAO}`).catch(e=>{modulos.delete(chave);throw e});modulos.set(chave,p)}return modulos.get(chave)}
+function chaveSessaoModulo(){return`${MODULO_VERSAO}:${state.usuario?.id||"anon"}:${state.perfil?.id||"sem-perfil"}`}
+async function importar(chave,arquivo){if(!modulos.has(chave)){const versao=encodeURIComponent(chaveSessaoModulo());const p=import(`${arquivo}?v=${versao}`).catch(e=>{modulos.delete(chave);throw e});modulos.set(chave,p)}return modulos.get(chave)}
 async function abrirModuloCompartilhado(chave,arquivo,tabId){if(!validarPermissao(chave)||!validarContexto(chave))return;try{marcarAtivo(chave);if(!prepararShellCompartilhado())throw new Error("shell-controladoria-ausente");await importar(chave,arquivo);abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>$(tabId)?.click())}catch(e){erroModulo(chave,e)}}
 async function abrirTela(chave,arquivo){if(!validarPermissao(chave)||!validarContexto(chave))return;try{marcarAtivo(chave);const m=await importar(chave,arquivo);if(typeof m.abrir!=="function")throw new Error("modulo-sem-funcao-abrir");m.abrir()}catch(e){erroModulo(chave,e)}}
 async function abrirPermutas(){if(!validarPermissao("permutas"))return;await abrirTela("permutas","./permutas.js");const editar=admin()||permite("controladoria","editar");["btnNovaPermuta","btnNovoMovPermuta"].forEach(id=>$(id)?.classList.toggle("hidden",!editar))}
