@@ -29,6 +29,27 @@ export function statusHtml(texto,classe="status-ativo"){return `<span class="${c
 export function fluxoHtml(status){const nomes={solicitada:"Solicitada",em_cotacao:"Em cotação",aguardando_aprovacao:"Aguardando aprovação",aprovada:"Aprovada",reprovada:"Reprovada",finalizada:"Finalizada"};return `<span class="fluxo-status status-${status}">${esc(nomes[status]||status)}</span>`}
 export function emitirAlteracao(modulo){window.dispatchEvent(new CustomEvent("sig:data-changed",{detail:{modulo}}))}
 
+// Contrato global de documentos fiscais do SIG.
+// CPF: 000.000.000-00 | CNPJ: 00.000.000/0000-00.
+export const somenteDigitosDocumento=v=>String(v||"").replace(/\D/g,"").slice(0,14);
+export function formatarCpfCnpj(v){
+  const d=somenteDigitosDocumento(v);
+  if(d.length<=11)return d.replace(/^(\d{3})(\d)/,"$1.$2").replace(/^(\d{3})\.(\d{3})(\d)/,"$1.$2.$3").replace(/\.(\d{3})(\d)/,".$1-$2");
+  return d.replace(/^(\d{2})(\d)/,"$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3").replace(/\.(\d{3})(\d)/,".$1/$2").replace(/(\d{4})(\d)/,"$1-$2");
+}
+function cpfValido(d){
+  if(d.length!==11||/^(\d)\1{10}$/.test(d))return false;
+  const dig=(base,peso)=>{let s=0;for(let i=0;i<base.length;i++)s+=Number(base[i])*(peso-i);const r=(s*10)%11;return r===10?0:r};
+  const d1=dig(d.slice(0,9),10),d2=dig(d.slice(0,9)+d1,11);return d===d.slice(0,9)+d1+d2;
+}
+function cnpjValido(d){
+  if(d.length!==14||/^(\d)\1{13}$/.test(d))return false;
+  const calc=b=>{let p=b.length-7,s=0;for(const x of b){s+=Number(x)*p--;if(p<2)p=9}const r=s%11;return r<2?0:11-r};
+  const d1=calc(d.slice(0,12)),d2=calc(d.slice(0,12)+d1);return d===d.slice(0,12)+d1+d2;
+}
+export function validarCpfCnpj(v){const d=somenteDigitosDocumento(v);return d.length===11?cpfValido(d):d.length===14?cnpjValido(d):false}
+export function aplicarMascaraCpfCnpj(input){if(!input)return;const atualizar=()=>{input.value=formatarCpfCnpj(input.value)};input.addEventListener("input",atualizar);atualizar()}
+
 function mapaErrosColecoes(){if(!(state.errosColecoes instanceof Map))state.errosColecoes=new Map();return state.errosColecoes}
 function registrarErroColecao(nome,e){mapaErrosColecoes().set(String(nome||""),e||new Error("colecao-indisponivel"))}
 function limparErroColecao(nome){mapaErrosColecoes().delete(String(nome||""))}
