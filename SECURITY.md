@@ -2,9 +2,7 @@
 
 Este documento define as regras mínimas de segurança do **SIG — Sistema Integrado de Gestão**.
 
-A segurança do sistema deve ser tratada como parte da arquitetura e não como acabamento de interface.
-
-**Baseline:** 01/09/2026.
+**Baseline:** 01/09/2026 — Plano de Contas v6.
 
 ---
 
@@ -12,13 +10,14 @@ A segurança do sistema deve ser tratada como parte da arquitetura e não como a
 
 1. **Autenticação não é autorização.** Estar logado não significa poder ler ou alterar qualquer dado.
 2. **Interface não é barreira de segurança.** Botão oculto não substitui `firestore.rules`.
-3. **Isolamento de Grupo e Empresa é obrigatório.** Documentos empresariais devem manter `grupoId` e `empresaId` quando aplicável.
-4. **Menor privilégio.** Usuários devem receber apenas permissões necessárias à função.
-5. **Sem segredos no frontend.** O navegador é ambiente não confiável para credenciais administrativas.
-6. **Mudança estrutural exige revisão de Rules.** Nova coleção ou novo fluxo de escrita não pode ser publicado sem regra correspondente.
-7. **Rule versionada não significa Rule publicada.** O deploy do GitHub Pages não publica Firestore/Storage Rules.
-8. **Dados não são corrigidos para compensar bug visual.** Primeiro corrigir código/regra; só depois avaliar migração de dados.
-9. **Base crítica indisponível não é base vazia.** Cálculo financeiro dependente deve falhar de forma fechada.
+3. **Isolamento de Grupo e Empresa é obrigatório.**
+4. **Menor privilégio.** Usuários recebem somente permissões necessárias.
+5. **Sem segredos no frontend.**
+6. **Mudança estrutural exige revisão de Rules.**
+7. **Rule versionada não significa Rule publicada.** GitHub Pages não publica Firebase Rules.
+8. **Dados não são corrigidos para compensar bug visual.**
+9. **Base crítica indisponível não é base vazia.** Cálculo dependente deve falhar de forma fechada.
+10. **Histórico contábil é preservado.** Exclusão física só é admitida para cadastro de teste/erro sem referências.
 
 ---
 
@@ -28,37 +27,33 @@ O SIG utiliza Firebase Authentication.
 
 Requisitos:
 
-- somente usuários autenticados podem alcançar dados protegidos;
-- usuário deve existir na coleção `usuarios`;
-- usuário deve estar ativo;
-- perfil de acesso deve existir e estar ativo;
-- domínios autorizados no Firebase Authentication devem ser revisados quando a hospedagem ou domínio mudar;
-- sessão e persistência devem seguir a configuração aprovada no núcleo do sistema.
+- usuário autenticado;
+- documento correspondente em `usuarios`;
+- usuário ativo;
+- perfil existente e ativo;
+- domínio autorizado revisado quando hospedagem mudar;
+- persistência de sessão conforme núcleo aprovado.
 
 ---
 
 ## 3. Autorização e segregação
 
-A autorização efetiva é aplicada por `firestore.rules`.
+A autorização efetiva é aplicada por `firestore.rules` e considera:
 
-O modelo vigente considera:
-
-- `grupoId` do usuário;
+- `grupoId`;
 - empresa principal;
 - `empresasAcesso`;
-- acesso global quando explicitamente autorizado;
+- acesso global explicitamente autorizado;
 - perfil e permissões por módulo/ação;
 - `grupoId` e `empresaId` do documento.
 
-### 3.1 Invariantes
+Uma atualização nunca deve permitir:
 
-Uma atualização nunca deve permitir silenciosamente:
-
-- usuário de um grupo ler dados de outro grupo;
-- usuário sem acesso a uma empresa consultar ou alterar seus documentos;
-- troca de `grupoId`/`empresaId` em update para escapar do escopo original;
-- perfil comum atribuir a si mesmo acesso administrativo;
-- frontend contornar restrição apenas chamando Firestore diretamente.
+- leitura cruzada entre grupos;
+- acesso a empresa não autorizada;
+- troca de `grupoId`/`empresaId` em update para escapar do escopo;
+- autoelevação de perfil comum para administrador;
+- bypass de autorização por chamada direta ao Firestore.
 
 ---
 
@@ -73,209 +68,128 @@ Nunca commitar ou expor no frontend:
 - tokens pessoais do GitHub;
 - segredos de API;
 - credenciais de banco;
-- chaves de serviços backend com poder administrativo.
+- chaves backend com poder administrativo.
 
-A configuração pública de um Firebase Web App não equivale a uma Service Account e precisa existir no cliente, mas isso **não dispensa**:
-
-- Security Rules corretas;
-- restrições de chave quando aplicáveis no Google Cloud;
-- controle de domínios autorizados;
-- App Check quando adotado;
-- monitoramento de uso e cotas.
-
-`.firebaserc` e `firebase.json` podem ser versionados porque descrevem o projeto/arquivos de deploy, não credenciais administrativas.
+A configuração pública do Firebase Web App não substitui Security Rules.
 
 ---
 
-## 5. Firestore Rules
+## 5. Firestore
 
-`firestore.rules` é parte do contrato arquitetural.
+### 5.1 Regra geral
 
-Antes de criar uma coleção nova:
+Documentos empresariais devem permanecer no mesmo Grupo/Empresa durante update. Create deve validar o contexto e delete deve ser explicitamente autorizado por coleção.
 
-1. definir quem pode ler;
-2. definir quem pode criar;
-3. definir quem pode alterar;
-4. definir campos que não podem mudar após criação;
-5. decidir se delete é permitido — padrão do SIG é **não permitir delete** em registros críticos;
-6. garantir segregação de Grupo/Empresa;
-7. testar perfil autorizado e não autorizado;
-8. publicar a Rule no Firebase antes de considerar a release encerrada.
+### 5.2 Imobilizado
 
-Coleções de histórico, movimentos, fechamentos e trilhas devem privilegiar imutabilidade ou alterações restritas.
+`imobilizados`:
 
-### 5.1 Imobilizado/CAPEX
+- read: visualização da Controladoria + documento acessível;
+- create/update: `fpaImobilizado()` + escopo;
+- delete: bloqueado.
 
-A coleção `imobilizados` foi introduzida na consolidação de 31/08–01/09/2026.
+Consumidores contábeis devem tratar falha da coleção como erro crítico, não como `[]`.
 
-A Rule deve garantir:
+### 5.3 Plano de Contas v6
 
-- leitura apenas com visualização da Controladoria e documento acessível;
-- criação/edição apenas com permissão adequada de Imobilizado/FP&A;
-- isolamento de Grupo/Empresa;
-- `grupoId` e `empresaId` preservados no update;
-- delete direto desabilitado.
+`planoContasGerencial`:
 
-A coleção é dependência crítica para Balanço, Input patrimonial, Budget, Forecast, DRE projetada e validação de inativação do Plano de Contas.
+- read: visualização da Controladoria + documento acessível;
+- create/update: `fpaPlano()` + documento acessível;
+- delete: `fpaPlano()` + documento acessível.
 
----
+A permissão de delete foi introduzida para limpar cadastro incorreto/teste. Ela não autoriza apagar histórico empresarial indiscriminadamente.
 
-## 6. Deploy de Rules
+O frontend `ctrl-chart-accounts-v6.js` deve verificar referências antes de executar delete em:
 
-O contrato do projeto Firebase fica em:
+- Realizado;
+- Budget;
+- Forecast;
+- detalhamentos;
+- Premissas;
+- Imobilizado/CAPEX;
+- Centros de Custo;
+- classificações/planejamento legados relacionados.
 
-- `.firebaserc`;
-- `firebase.json`;
-- `firestore.rules`;
-- `storage.rules`.
+Se qualquer referência existir, excluir é proibido funcionalmente e a conta deve ser inativada.
 
-Projeto atual: `gestao-de-contratos-b266b`.
-
-**GitHub Pages não publica esses arquivos no Firebase.**
-
-Quando Rules mudarem, o release exige uma etapa autenticada separada. O procedimento operacional está em `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`.
-
-Comando atualmente documentado:
-
-```bash
-firebase deploy --only firestore:rules,storage
-```
-
-O comando só deve ser executado com usuário autorizado. Nunca colocar credenciais de deploy no código cliente ou no repositório.
+Não criar endpoint, botão ou rotina de limpeza que ignore essa validação.
 
 ---
 
-## 7. Storage e anexos
+## 6. Plano de Contas e integridade contábil
 
-`storage.rules` deve ser revisado antes de migrar/adicionar anexos.
+Máscara v6: `#.##.##.####`.
 
-Enquanto Google Drive for usado como referência de anexos:
-
-- o Firestore deve guardar apenas metadados/referências necessárias;
-- permissões do arquivo no Drive continuam sendo responsabilidade do Drive;
-- não assumir que ter a URL significa ter autorização adequada;
-- não armazenar token OAuth ou credencial do Drive no documento empresarial.
-
-Ao ativar Firebase Storage, o caminho do arquivo deve permitir validar Grupo/Empresa e evitar escrita fora do escopo autorizado.
-
-A baseline atual não adiciona anexos específicos ao Imobilizado/CAPEX. Se essa função for criada, revisar a granularidade da permissão de Storage antes da implementação.
+- Raiz → Sintética N1 → Sintética N2 → Analítica;
+- somente Analíticas recebem lançamentos;
+- natureza e multiplicadores são centralizados em `js/account-mask.js`;
+- saldo persistido permanece bruto;
+- redutora é determinada por natureza oposta à raiz;
+- inativação preserva histórico por exercício;
+- reativação remove inativação programada;
+- contas antigas não devem ser migradas/destruídas implicitamente.
 
 ---
 
-## 8. Frontend e código cliente
+## 7. Storage
 
-O frontend do SIG é público para o navegador mesmo quando o repositório for privado.
+`storage.rules` é independente de `firestore.rules`.
 
-Portanto:
+Todo novo caminho de upload deve definir:
 
-- nunca implementar segurança baseada em segredo JavaScript;
-- não confiar em campos enviados pelo cliente sem Rules;
-- sanitizar conteúdo usado em HTML;
-- preferir funções comuns de escape já existentes;
-- validar identificadores e contexto antes de gravar;
-- evitar URLs `javascript:` ou HTML arbitrário vindo de dados;
-- dependências de CDN devem usar versões fixadas quando possível.
+- quem lê;
+- quem grava;
+- vínculo com Grupo/Empresa quando aplicável;
+- limites de tamanho/tipo quando necessários.
 
----
-
-## 9. Integridade financeira e fail-closed
-
-Integridade de cálculo também é requisito de segurança operacional.
-
-A natureza contábil e os multiplicadores ficam centralizados em `js/account-mask.js`.
-
-Regras:
-
-- saldo bruto persistido não deve ser multiplicado e sobrescrito para ajustar relatório;
-- conta redutora é definida por natureza oposta à natureza padrão da raiz;
-- Estatística não compõe resultado financeiro;
-- Sintética nunca recebe lançamento manual;
-- duplicidades não podem ser somadas silenciosamente;
-- documento canônico deve prevalecer quando houver legado duplicado;
-- Balanço é posição de fechamento, não soma de meses;
-- falha de leitura de base automática crítica não pode ser convertida silenciosamente em lista vazia ou zero.
-
-Para `imobilizados`, o núcleo registra falhas de coleção e os motores automáticos bloqueiam cálculos/ações dependentes enquanto a base estiver indisponível.
-
-Isso evita que um `permission-denied`, indisponibilidade de rede ou Rule desatualizada produza um relatório aparentemente válido sem depreciação/ativo automático.
+Não presumir que permissão de Firestore automaticamente vale no Storage.
 
 ---
 
-## 10. Mudança de hospedagem e domínio
+## 8. Deploy seguro
 
-O frontend pode mudar de host sem mover o Firestore.
+Uma release pode envolver dois ciclos:
 
-Antes de trocar GitHub Pages por outro host ou domínio:
+1. frontend → GitHub Pages;
+2. Rules → Firebase.
 
-- preservar commit/tag estável;
-- habilitar HTTPS;
-- revisar Firebase Authentication authorized domains;
-- revisar CORS/integrações aplicáveis;
-- revisar restrições da API key pública;
-- testar login e logout;
-- testar leitura e escrita com perfil administrador e perfil restrito;
-- testar isolamento entre empresas;
-- validar console do navegador sem erros de origem/CSP;
-- alterar DNS definitivo somente após smoke test.
+Quando `firestore.rules` ou `storage.rules` forem alteradas:
 
-A troca de host não deve ser confundida com troca de projeto Firebase.
+- versionar Rule completa;
+- passar `SIG Firebase Contract Check`;
+- promover frontend compatível;
+- publicar Rules no Firebase;
+- testar com usuário autenticado e permissões reais.
+
+Para esta baseline, o delete do Plano v6 só funcionará depois da Rule correspondente estar publicada no Firebase.
 
 ---
 
-## 11. Checklist antes de publicar
+## 9. QA de segurança
 
-Uma release que altera dados ou permissões só pode ser considerada pronta após verificar:
+Antes de release estrutural:
 
-- [ ] nenhuma credencial sensível entrou no diff;
-- [ ] `firestore.rules` cobre todas as coleções novas/alteradas;
-- [ ] `storage.rules` foi revisado se anexos mudaram;
-- [ ] `firebase.json` e `.firebaserc` apontam para o contrato correto;
-- [ ] `grupoId` e `empresaId` permanecem protegidos;
-- [ ] perfil sem permissão foi testado;
-- [ ] operações críticas não dependem apenas de botão oculto;
-- [ ] dependências financeiras críticas falham de forma fechada;
-- [ ] não existe delete destrutivo novo sem justificativa explícita;
-- [ ] migração de dados, se houver, é idempotente e possui rollback;
-- [ ] QA de sintaxe e browser passou;
-- [ ] QA de contrato Firebase passou;
-- [ ] documentação de continuidade foi atualizada;
-- [ ] se Rules mudaram, o deploy separado no Firebase foi concluído e testado.
+- [ ] usuário sem acesso à empresa continua bloqueado;
+- [ ] usuário sem permissão de Plano não consegue criar/editar/excluir conta;
+- [ ] conta com referência não é excluída pela aplicação;
+- [ ] conta de teste sem referência pode ser excluída somente por usuário autorizado;
+- [ ] Grupo/Empresa permanecem imutáveis em update;
+- [ ] Imobilizado falha fechado se a Rule estiver ausente;
+- [ ] Rules ativas no Firebase correspondem à versão do frontend;
+- [ ] nenhum segredo foi adicionado ao repositório.
 
 ---
 
-## 12. Incidente e recuperação
+## 10. Resposta a incidente
 
-Se houver suspeita de acesso indevido, exposição de segredo, Rule incompatível ou corrupção de dados:
+Se uma Rule permissiva for publicada indevidamente:
 
-1. interromper nova publicação;
-2. preservar evidências e commits envolvidos;
-3. revogar imediatamente a credencial exposta, quando existir;
-4. comparar Rules do Git com Rules efetivamente publicadas;
-5. revisar logs disponíveis;
-6. identificar Grupo/Empresa/documentos afetados;
-7. não sobrescrever em massa os dados antes de entender a extensão do problema;
-8. corrigir a causa;
-9. executar migração/restauração controlada se necessário;
-10. documentar o incidente e a correção.
+1. interromper operações de escrita de risco;
+2. restaurar Rule conhecida e segura;
+3. republicar no Firebase;
+4. revisar logs/dados afetados quando disponíveis;
+5. corrigir frontend/QA que permitiu a regressão;
+6. registrar a decisão nos documentos de continuidade.
 
-Segredo commitado deve ser considerado comprometido mesmo após apagar o arquivo do commit mais recente; a credencial deve ser rotacionada.
-
-Se a interface abrir mas uma integração automática falhar, não considerar os números derivados confiáveis até confirmar que a coleção crítica voltou a ser lida com sucesso.
-
----
-
-## 13. Continuidade e revisão
-
-Ler também:
-
-- `AGENTS.md`;
-- `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`;
-- `docs/SIG-MANUAL-MESTRE.md`;
-- `docs/SIG-GUIA-DE-CONTINUIDADE.md`;
-- `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`;
-- `firestore.rules`;
-- `storage.rules`;
-- `firebase.json`;
-- `.firebaserc`.
-
-Esta política deve ser atualizada quando houver mudança relevante em autenticação, permissões, armazenamento, hospedagem, modelo multiempresa, integrações ou tratamento de dados sensíveis.
+Nunca corrigir incidente de autorização apagando dados em massa sem análise de dependências e backup/rollback.
