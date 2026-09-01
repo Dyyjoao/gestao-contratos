@@ -44,6 +44,7 @@ service cloud.firestore {
         get(/databases/$(database)/documents/perfisAcesso/$(perfilId)).data.grupoId == usuario().data.grupoId
       );
     }
+
     function responsavelValido(usuarioId) {
       return exists(/databases/$(database)/documents/usuarios/$(usuarioId)) &&
         get(/databases/$(database)/documents/usuarios/$(usuarioId)).data.ativo == true &&
@@ -58,13 +59,38 @@ service cloud.firestore {
     function fpaPlano() { return fpaEditar() || permissao('controladoria','planoContas'); }
     function fpaCentros() { return fpaEditar() || permissao('controladoria','centrosCusto'); }
     function fpaImobilizado() { return fpaEditar() || permissao('controladoria','imobilizado'); }
-    function caixaVisualizar() { return permissao('controladoria','visualizar') || permissao('controladoria','caixaVisualizar'); }
-    function caixaLancar() { return fpaEditar() || permissao('controladoria','caixaLancar'); }
-    function caixaContas() { return fpaEditar() || permissao('controladoria','caixaContas'); }
-    function caixaFixos() { return fpaEditar() || permissao('controladoria','caixaFixos'); }
-    function prestacaoComentar() { return fpaEditar() || permissao('controladoria','prestacaoComentar'); }
-    function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
-    function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
+    function consorciosVisualizar() { return fpaEditar() || permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar'); }
+    function consorciosEditar() { return fpaEditar() || permissao('controladoria','consorciosEditar'); }
+
+    function caixaVisualizar() {
+      return permissao('controladoria','visualizar') ||
+        permissao('controladoria','caixaVisualizar');
+    }
+
+    function caixaLancar() {
+      return fpaEditar() || permissao('controladoria','caixaLancar');
+    }
+
+    function caixaContas() {
+      return fpaEditar() || permissao('controladoria','caixaContas');
+    }
+
+    function caixaFixos() {
+      return fpaEditar() || permissao('controladoria','caixaFixos');
+    }
+
+    function prestacaoComentar() {
+      return fpaEditar() || permissao('controladoria','prestacaoComentar');
+    }
+
+    function fechamentoGerir() {
+      return fpaEditar() || permissao('controladoria','fechamento');
+    }
+
+    function fechamentoFechar() {
+      return fpaEditar() || permissao('controladoria','fecharCompetencia');
+    }
+
     function governancaVisualizar() {
       return permissao('governanca','visualizar') ||
         permissao('governanca','auditar') ||
@@ -72,11 +98,35 @@ service cloud.firestore {
         permissao('governanca','validar') ||
         permissao('governanca','configurar');
     }
-    function governancaConfigurar() { return permissao('governanca','configurar'); }
-    function governancaAuditar() { return governancaConfigurar() || permissao('governanca','auditar') || permissao('governanca','validar'); }
-    function governancaPlanoAcao() { return governancaAuditar() || permissao('governanca','planoAcao'); }
-    function gerenciaUsuarios() { return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar'); }
-    function usaCentroCusto() { return permissao('controladoria','visualizar') || permissao('contratos','visualizar') || permissao('almoxarifado','visualizar') || permissao('cotacoes','visualizar') || permissao('frota','visualizar'); }
+
+    function governancaConfigurar() {
+      return permissao('governanca','configurar');
+    }
+
+    function governancaAuditar() {
+      return governancaConfigurar() ||
+        permissao('governanca','auditar') ||
+        permissao('governanca','validar');
+    }
+
+    function governancaPlanoAcao() {
+      return governancaAuditar() ||
+        permissao('governanca','planoAcao');
+    }
+
+    function gerenciaUsuarios() {
+      return permissao('usuarios','visualizar') ||
+        permissao('usuarios','cadastrar') ||
+        permissao('usuarios','editar');
+    }
+
+    function usaCentroCusto() {
+      return permissao('controladoria','visualizar') ||
+        permissao('contratos','visualizar') ||
+        permissao('almoxarifado','visualizar') ||
+        permissao('cotacoes','visualizar') ||
+        permissao('frota','visualizar');
+    }
 
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
@@ -202,6 +252,13 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaImobilizado() && documentoAcessivel(request.resource.data);
       allow update: if fpaImobilizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /consorcios/{id} {
+      allow read: if consorciosVisualizar() && documentoAcessivel(resource.data);
+      allow create: if consorciosEditar() && documentoAcessivel(request.resource.data);
+      allow update: if consorciosEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
