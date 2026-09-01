@@ -14,6 +14,8 @@ on:
       - 'firebase.json'
       - '.firebaserc'
       - 'js/shared.js'
+      - 'js/permutas.js'
+      - 'js/profiles.js'
       - 'js/asset-depreciation.js'
       - 'js/ctrl-assets-v1.js'
       - 'js/ctrl-consorcios-v1.js'
@@ -63,9 +65,31 @@ jobs:
           grep -q 'criarDocumento("consorcios"' js/ctrl-consorcios-v1.js
           grep -q 'atualizarDocumento("consorcios"' js/ctrl-consorcios-v1.js
 
+          # Permutas v2 é módulo operacional com coleção de fechamentos e ações separadas.
+          grep -q 'function permutasVisualizar' firestore.rules
+          grep -q 'function permutasCadastrar' firestore.rules
+          grep -q 'function permutasMovimentar' firestore.rules
+          grep -q 'function permutasEstornar' firestore.rules
+          grep -q 'function permutasFechar' firestore.rules
+          grep -q 'function permutasInativar' firestore.rules
+          grep -q 'match /permutas/' firestore.rules
+          grep -q 'match /permutaMovimentos/' firestore.rules
+          grep -q 'match /permutaFechamentos/' firestore.rules
+          grep -q 'permutasEstornar()' firestore.rules
+          grep -q 'permutasFechar()' firestore.rules
+          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
+          grep -q 'listarDocumentos("permutaFechamentos")' js/permutas.js
+          grep -q 'reauthenticateWithCredential' js/permutas.js
+
+          # Permutas pode consultar CC e plano apenas como lookup operacional.
+          grep -q 'permutasVisualizar();' firestore.rules
+          grep -q "permissao('controladoria','visualizar') || permutasVisualizar()" firestore.rules
+
           grep -q 'errosColecoes' js/shared.js
           grep -q 'exigirColecaoDisponivel' js/shared.js
           grep -q 'mensagemErroDados' js/shared.js
+          grep -q 'formatarCpfCnpj' js/shared.js
+          grep -q 'validarCpfCnpj' js/shared.js
           grep -q 'exigirColecaoDisponivel("imobilizados")' js/asset-depreciation.js
           grep -q 'exigirColecaoDisponivel("imobilizados")' js/ctrl-chart-accounts-v6.js
           grep -q 'usosParaExclusao' js/ctrl-chart-accounts-v6.js
@@ -80,6 +104,8 @@ jobs:
           grep -q '01/09/2026' docs/SIG-GUIA-DE-CONTINUIDADE.md
 
           node --check js/shared.js
+          node --check js/permutas.js
+          node --check js/profiles.js
           node --check js/asset-depreciation.js
           node --check js/ctrl-assets-v1.js
           node --check js/consortium-calculations.js
