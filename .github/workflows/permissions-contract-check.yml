@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Controladoria permission contract
+      - name: Validate permission contract
         run: |
           set -e
           node --check js/profiles.js
@@ -24,9 +24,27 @@ jobs:
           grep -q '\["dre","Visualizar DRE Gerencial"\]' js/profiles.js
           grep -q '\["balanco","Visualizar Balanço Patrimonial"\]' js/profiles.js
 
-          # Consórcios separa consulta de gestão e é exibido fora do submenu da Controladoria.
-          grep -q '\["consorciosVisualizar","Visualizar consórcios"\]' js/profiles.js
-          grep -q '\["consorciosEditar","Gerir consórcios"\]' js/profiles.js
+          # Todo módulo navegável novo deve possuir bloco próprio na grade de Perfis.
+          # Consórcios é módulo de primeiro nível e não pode continuar exposto como ação visual da Controladoria.
+          grep -q '\["consorcios","Consórcios",\[\["visualizar","Visualizar"\],\["editar","Gerir consórcios"\]\]\]' js/profiles.js
+          if grep -Fq '["consorciosVisualizar","Visualizar consórcios"]' js/profiles.js; then
+            echo 'Permissão visual de Consórcios não pode permanecer no bloco visível da Controladoria.' >&2
+            exit 1
+          fi
+          if grep -Fq '["consorciosEditar","Gerir consórcios"]' js/profiles.js; then
+            echo 'Permissão de gestão de Consórcios não pode permanecer no bloco visível da Controladoria.' >&2
+            exit 1
+          fi
+
+          # Compatibilidade temporária: ao salvar o novo bloco, espelhar as chaves legadas
+          # usadas pelo roteador/Rules atuais para não retirar acesso de perfis existentes.
+          grep -q 'consorciosVisualizar:cons.visualizar===true||cons.editar===true' js/profiles.js
+          grep -q 'consorciosEditar:cons.editar===true' js/profiles.js
+          grep -q 'c.dataset.modulo==="consorcios"' js/profiles.js
+          grep -q 'p?.controladoria?.consorciosVisualizar' js/profiles.js
+          grep -q 'p?.controladoria?.consorciosEditar' js/profiles.js
+
+          # Consórcios permanece fora do submenu da Controladoria e o roteador continua protegido.
           grep -q 'case"consorcios"' js/controllership-router.js
           grep -q 'ctrlAcao("consorciosVisualizar")||ctrlAcao("consorciosEditar")' js/controllership-router.js
           grep -q 'ctrl-consorcios-v1.js' js/controllership-router.js
