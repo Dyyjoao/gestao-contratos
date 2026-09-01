@@ -1,7 +1,7 @@
 # SIG — Guia Operacional de Continuidade
 
 **Finalidade:** retomar o SIG em outra conversa, IA, equipe, computador, repositório ou hospedagem sem depender de memória informal.  
-**Data-base:** 01/09/2026 — Plano de Contas v6.
+**Data-base:** 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1.
 
 ---
 
@@ -18,153 +18,139 @@
 9. `firestore.rules`, `storage.rules`, `firebase.json`, `.firebaserc`;
 10. `.github/workflows/`.
 
-Nunca deduza módulo ativo apenas pelo nome do arquivo. Na Controladoria, confira o roteador.
+Na Controladoria, nunca deduzir o módulo ativo pelo nome do arquivo: conferir o roteador.
 
 ---
 
 ## 2. Estado estrutural atual
 
-Plano de Contas ativo: `js/ctrl-chart-accounts-v6.js`.
+Plano ativo: `js/ctrl-chart-accounts-v6.js`.
 
-Máscara:
+Máscara: `#.##.##.####`.
 
-`#.##.##.####`
+Hierarquia: `Raiz → Sintética N1 → Sintética N2 → Analítica`.
 
-Hierarquia:
+O Plano oferece árvore expansível, filtro Ativas/Inativas/Todas, inativação, reativação, exclusão segura de teste/legado e cópia de estrutura v6.
 
-`Raiz → Sintética N1 (#.##) → Sintética N2 (#.##.##) → Analítica (#.##.##.####)`.
+Balanço atual possui visão mensal com fechamento final do trimestre/ano e comparativo anual Atual x Last Year.
 
-Novos registros v6 têm `versaoMascara: "v6"`. Contas antigas não são convertidas implicitamente.
-
-Ações do Plano v6:
-
-- expandir/recolher ramos pela seta;
-- filtrar Ativas / Inativas / Todas;
-- inativar por exercício;
-- reativar conta ou ramo;
-- excluir cadastro sem uso;
-- limpar legado/testes sem referências;
-- copiar apenas estrutura v6 para outra empresa.
+Consórcios ativo: `js/ctrl-consorcios-v1.js`. A matemática fica em `js/consortium-calculations.js`. Persistência: coleção `consorcios`.
 
 ---
 
 ## 3. Como retomar desenvolvimento
 
-1. confirme a branch e o HEAD;
-2. compare com `main`;
-3. leia o roteador e os módulos afetados;
-4. busque consumidores indiretos antes de mudar formato de dados/máscara;
-5. altere documentação no mesmo pacote;
-6. rode QA;
-7. só promova depois dos checks verdes.
+1. confirmar branch e HEAD;
+2. comparar com `main`;
+3. ler o roteador e os módulos afetados;
+4. buscar consumidores indiretos antes de alterar formatos ou regras;
+5. atualizar documentação no mesmo pacote;
+6. rodar QA;
+7. promover somente o HEAD validado.
 
-Para mudanças de Plano de Contas, revisar obrigatoriamente:
+Mudança de Plano exige revisar máscara, árvore, Balanço, DRE, Input, Budget/Forecast, Centros, Rules e QA.
 
-- `js/account-mask.js`;
-- `js/account-tree.js`;
-- módulo ativo do Plano;
-- Balanço;
-- DRE consolidada;
-- Input;
-- Budget/Forecast;
-- matriz de Centros de Custo;
-- Firestore Rules;
-- documentação e workflows.
+Mudança de Consórcios exige revisar:
+
+- `js/ctrl-consorcios-v1.js`;
+- `js/consortium-calculations.js`;
+- `js/controllership-router.js`;
+- `js/profiles.js`;
+- `firestore.rules`;
+- `SIG Consorcios Contract Check`;
+- documentação.
+
+**Não integrar Consórcios a DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado sem decisão arquitetural explícita.** A v1 é independente.
 
 ---
 
-## 4. Exclusão versus inativação
+## 4. Histórico
 
-**Inativação** é a opção padrão para conta que já teve vida real no sistema. Preserva histórico por exercício.
+Plano de Contas: conta que teve vida real deve ser inativada; exclusão é apenas para teste/erro sem referência.
 
-**Exclusão** é somente para:
-
-- teste;
-- duplicidade sem uso;
-- cadastro errado sem histórico ou vínculo.
-
-O Plano v6 verifica referências antes de excluir. Se qualquer vínculo for encontrado, não contorne a proteção removendo a conta diretamente pelo console do Firebase. Regularize a dependência ou mantenha a conta inativa.
-
-A ação `Limpar legado/testes` segue a mesma regra.
+Consórcios: não existe exclusão física na v1. Usar `Encerrado` para plano concluído e `Cancelado` para plano cancelado.
 
 ---
 
 ## 5. Firebase
 
-Frontend e backend têm ciclos de publicação diferentes.
+GitHub Pages publica frontend, mas não publica `firestore.rules` nem `storage.rules`.
 
-GitHub Pages publica HTML/CSS/JS. Não publica:
+A baseline atual contém Rules para:
 
-- `firestore.rules`;
-- `storage.rules`;
-- configurações administrativas Firebase.
+- `imobilizados`;
+- delete seguro de `planoContasGerencial`;
+- `consorcios`.
 
-Esta versão altera a Rule de `planoContasGerencial` para permitir delete a usuário com permissão de Plano no documento acessível. Portanto, depois da promoção desta versão para `main`, as Rules precisam ser republicadas.
+Consórcios exige permissão própria:
 
-Com Firebase CLI autenticado:
+- leitura: `consorciosVisualizar`, `consorciosEditar` ou Administração FP&A;
+- criação/edição: `consorciosEditar` ou Administração FP&A;
+- grupo e empresa devem permanecer dentro do escopo permitido;
+- exclusão física é bloqueada.
 
-```bash
-firebase deploy --only firestore:rules,storage
-```
-
-Pelo console, é possível publicar a `firestore.rules` completa na aba **Firestore Database → Regras**.
-
-Não considerar release concluído até um teste autenticado confirmar a operação nova.
+Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de considerar a release encerrada.
 
 ---
 
 ## 6. QA mínimo pós-release
 
-### Plano de Contas
+### Plano / Relatórios
 
-1. criar `1.01 Ativo Circulante`;
-2. criar `1.01.01 Disponibilidades`;
-3. criar `1.01.01.0001 Caixa`;
-4. recolher/expandir `1.01` e `1.01.01`;
-5. inativar uma conta sem uso;
-6. confirmar que aparece **Reativar**;
-7. testar filtros Ativas / Inativas / Todas;
-8. reativar;
-9. criar conta de teste sem uso e excluir;
-10. confirmar que conta com referência não pode ser excluída.
+- validar `1.01 → 1.01.01 → 1.01.01.0001`;
+- validar expandir/recolher, filtros, inativar/reativar e exclusão segura;
+- Balanço deve mostrar N1 → N2 → Analítica;
+- trimestre/ano devem ter coluna final de fechamento sem somar saldos mensais;
+- comparativo anual deve usar dezembro atual x dezembro Last Year;
+- DRE e Input devem continuar respeitando a hierarquia v6.
 
-### Relatórios
+### Consórcios
 
-- Balanço mostra N1 → N2 → Analítica;
-- DRE por CC mantém árvore correta;
-- DRE consolidada mostra N1 → N2 → Analítica;
-- Input continua lançando somente Analíticas;
-- Budget/Forecast continuam trabalhando apenas com folhas Analíticas e Centros permitidos.
+- perfil somente consulta visualiza a carteira sem ação de edição;
+- perfil de gestão cria e edita ficha;
+- novo cadastro exige uma empresa;
+- visão da carteira pode consolidar empresas selecionadas;
+- carta atual substitui a carta contratada como base quando informada;
+- taxa do consórcio soma administração + reserva + seguro/outros;
+- juros/encargos permanecem separados;
+- parcela atual permanece separada da média estimada;
+- valor pago acumulado altera o saldo teórico;
+- contemplação registra data, modalidade e lance;
+- nenhum valor do módulo deve aparecer automaticamente em DRE, Balanço, Caixa ou Planejamento.
 
 ### Firebase
 
 - Imobilizado continua carregando;
-- delete seguro no Plano funciona após Rules publicadas;
-- usuário sem permissão de Plano não consegue excluir via Firestore.
+- delete seguro do Plano continua funcionando;
+- Consórcios carrega com Rules publicadas;
+- perfil somente consulta não grava Consórcios;
+- exclusão de Consórcios permanece bloqueada.
 
 ---
 
 ## 7. Rollback
 
-Se a v6 falhar antes de dados reais novos serem criados:
+Se a versão falhar:
 
-1. não apagar histórico existente;
+1. não apagar histórico;
 2. reverter frontend para último SHA estável;
-3. reverter `firestore.rules` somente se necessário e com Rule completa conhecida;
-4. publicar novamente frontend/Rules correspondentes;
+3. reverter Rules apenas com versão completa conhecida;
+4. publicar frontend e Rules correspondentes;
 5. registrar causa e correção.
 
-Se já houver contas v6 persistidas, não retornar silenciosamente para um frontend que não entende `#.##.##.####`. Tratar rollback como migração controlada.
+Se já houver dados persistidos no formato novo, tratar rollback como migração controlada.
 
 ---
 
-## 8. Princípios que evitam perda de coerência
+## 8. Princípios
 
 - uma fonte de verdade por regra;
 - código e documentação mudam juntos;
 - regras de negócio não ficam só na UI;
+- matemática reutilizável fica fora da tela;
 - dados contábeis não são alterados para mascarar bug visual;
 - integração crítica é fail-closed;
+- módulo independente não gera lançamentos sem desenho aprovado;
 - arquivos legados não definem comportamento ativo;
-- histórico com uso é inativado, não apagado;
-- merge só ocorre depois de QA do HEAD final.
+- histórico real não é apagado;
+- merge somente depois de QA do HEAD final.
