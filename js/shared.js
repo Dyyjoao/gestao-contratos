@@ -29,6 +29,13 @@ export function statusHtml(texto,classe="status-ativo"){return `<span class="${c
 export function fluxoHtml(status){const nomes={solicitada:"Solicitada",em_cotacao:"Em cotação",aguardando_aprovacao:"Aguardando aprovação",aprovada:"Aprovada",reprovada:"Reprovada",finalizada:"Finalizada"};return `<span class="fluxo-status status-${status}">${esc(nomes[status]||status)}</span>`}
 export function emitirAlteracao(modulo){window.dispatchEvent(new CustomEvent("sig:data-changed",{detail:{modulo}}))}
 
+function mapaErrosColecoes(){if(!(state.errosColecoes instanceof Map))state.errosColecoes=new Map();return state.errosColecoes}
+function registrarErroColecao(nome,e){mapaErrosColecoes().set(String(nome||""),e||new Error("colecao-indisponivel"))}
+function limparErroColecao(nome){mapaErrosColecoes().delete(String(nome||""))}
+export function erroColecao(nome){return mapaErrosColecoes().get(String(nome||""))||null}
+export function exigirColecaoDisponivel(nome){const original=erroColecao(nome);if(!original)return true;const e=new Error(`Coleção ${nome} indisponível; cálculo automático bloqueado para evitar dados incompletos.`);e.code=original?.code||"colecao-indisponivel";e.cause=original;throw e}
+export function mensagemErroDados(e,alvo="dados"){const c=String(e?.code||e?.cause?.code||"").toLowerCase();if(c.includes("permission-denied"))return`Sem permissão para acessar ${alvo}. Verifique se as regras do Firestore publicadas correspondem à versão do SIG.`;if(c.includes("failed-precondition"))return`O Firestore exige configuração adicional para acessar ${alvo}.`;if(c.includes("unavailable")||c.includes("network"))return`Não foi possível acessar ${alvo} por indisponibilidade de conexão.`;return`Não foi possível acessar ${alvo}.`}
+
 export function idsEmpresasPermitidas(){
   if(!state.usuario)return[];
   if(admin()||state.usuario?.acessoGlobal===true){
@@ -77,20 +84,22 @@ async function consultarEmpresa(nomeColecao,empresaId){
 }
 export async function listarDocumentosEmpresa(nomeColecao,empresaId){
   if(!empresaId||!podeEmpresa(empresaId))return[];
-  return consultarEmpresa(nomeColecao,empresaId);
+  try{const saida=await consultarEmpresa(nomeColecao,empresaId);limparErroColecao(nomeColecao);return saida}catch(e){registrarErroColecao(nomeColecao,e);throw e}
 }
 
 export async function listarDocumentos(nomeColecao){
-  const grupo=grupoAtualId();if(!grupo)return[];
-  let ids=empresasSelecionadasIds();
-  if(!ids.length)ids=idsEmpresasPermitidas();
-  ids=[...new Set(ids.filter(id=>podeEmpresa(id)))];if(!ids.length)return[];
-  if((admin()||state.usuario?.acessoGlobal===true)&&state.todasEmpresasSelecionadas===true){
-    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo))),permitidos=new Set(ids),saida=[];
-    s.forEach(r=>{const d=r.data();if(permitidos.has(d.empresaId))saida.push({id:r.id,...d})});return saida;
-  }
-  const blocos=await Promise.all(ids.map(id=>consultarEmpresa(nomeColecao,id))),saida=[];
-  blocos.forEach(arr=>arr.forEach(x=>saida.push(x)));return saida;
+  try{
+    const grupo=grupoAtualId();if(!grupo){limparErroColecao(nomeColecao);return[]}
+    let ids=empresasSelecionadasIds();
+    if(!ids.length)ids=idsEmpresasPermitidas();
+    ids=[...new Set(ids.filter(id=>podeEmpresa(id)))];if(!ids.length){limparErroColecao(nomeColecao);return[]}
+    if((admin()||state.usuario?.acessoGlobal===true)&&state.todasEmpresasSelecionadas===true){
+      const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo))),permitidos=new Set(ids),saida=[];
+      s.forEach(r=>{const d=r.data();if(permitidos.has(d.empresaId))saida.push({id:r.id,...d})});limparErroColecao(nomeColecao);return saida;
+    }
+    const blocos=await Promise.all(ids.map(id=>consultarEmpresa(nomeColecao,id))),saida=[];
+    blocos.forEach(arr=>arr.forEach(x=>saida.push(x)));limparErroColecao(nomeColecao);return saida;
+  }catch(e){registrarErroColecao(nomeColecao,e);throw e}
 }
 
 function empresaParaGravacao(dados={}){
