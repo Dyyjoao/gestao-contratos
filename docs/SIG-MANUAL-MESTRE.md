@@ -1,7 +1,7 @@
 # SIG — Manual Mestre de Arquitetura e Regras
 
 > Documento de invariantes do Sistema Integrado de Gestão (SIG).  
-> Atualizado em: 01/09/2026 — Plano de Contas v6.
+> Atualizado em: 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1.
 
 O estado funcional completo está em `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`. Aqui ficam as regras que uma evolução não pode quebrar silenciosamente.
 
@@ -28,6 +28,7 @@ Memória de conversa não substitui nenhuma dessas fontes.
 - Grupo e Empresa são fronteiras de segurança;
 - updates não podem trocar `grupoId`/`empresaId` para escapar do escopo;
 - tela monoempresa exige uma empresa explicitamente selecionada;
+- consulta multiempresa só é aceita quando o módulo foi desenhado para isso;
 - GitHub Pages não publica Firestore/Storage Rules;
 - Rule alterada exige deploy Firebase separado;
 - base crítica indisponível não pode ser convertida silenciosamente em `[]` ou zero.
@@ -105,7 +106,13 @@ Exceções que consolidam por código devem reconhecer N1 e N2:
 - Balanço Patrimonial;
 - DRE consolidada multiempresa.
 
-Balanço deve reconciliar todas as Analíticas patrimoniais ativas, inclusive legado ainda preservado.
+Balanço deve reconciliar todas as Analíticas patrimoniais aplicáveis, inclusive legado ainda preservado.
+
+Balanço é **posição**, nunca soma de saldos mensais:
+
+- trimestre = meses visíveis + posição do último mês em `Total Tn`;
+- ano = Jan–Dez + posição de dezembro em `Total Ano`;
+- comparativo anual = dezembro do ano atual x dezembro do Last Year, com variação em valor e percentual.
 
 ---
 
@@ -148,7 +155,37 @@ Falha de leitura de `imobilizados` deve interromper cálculos dependentes de for
 
 ---
 
-## 8. Release
+## 8. Consórcios v1
+
+A coleção `consorcios` é independente das bases contábeis nesta versão.
+
+Permissões:
+
+- `controladoria.consorciosVisualizar` — consulta;
+- `controladoria.consorciosEditar` — criação/edição;
+- Administração FP&A também autoriza o módulo.
+
+Regras funcionais:
+
+- consulta pode consolidar mais de uma empresa selecionada;
+- novo cadastro exige uma única empresa;
+- status válidos: `ativo`, `contemplado`, `encerrado`, `cancelado`;
+- ficha encerrada/cancelada é preservada; não existe delete físico;
+- carta atual/reajustada é a base de cálculo quando informada; caso contrário usa carta contratada;
+- taxa de administração, fundo de reserva e seguro/outros formam a **taxa do consórcio**;
+- juros/encargos ficam separados e são opcionais;
+- total estimado do plano = carta base + custos informados;
+- parcela média estimada = total estimado / prazo total;
+- parcela atual contratual/reajustada permanece separada da média estimada;
+- se houver valor pago acumulado, ele é usado no saldo teórico; caso contrário, o saldo é estimado pelas parcelas restantes.
+
+`js/consortium-calculations.js` é a fonte da matemática. A tela não deve duplicar fórmulas paralelas.
+
+**Invariante da v1:** Consórcios não alimenta DRE, Balanço, Fluxo de Caixa, Budget, Forecast ou Imobilizado. Qualquer integração futura deve ser desenhada e documentada antes de alterar lançamentos ou relatórios.
+
+---
+
+## 9. Release
 
 Nenhuma versão estrutural deve chegar à `main` enquanto:
 
@@ -156,6 +193,8 @@ Nenhuma versão estrutural deve chegar à `main` enquanto:
 - documentação estiver divergente;
 - `SIG Quality Check` não estiver verde;
 - `SIG Firebase Contract Check` não estiver verde;
+- `SIG Permissions Contract Check` não estiver verde quando permissões mudarem;
+- `SIG Consorcios Contract Check` não estiver verde enquanto Consórcios fizer parte da baseline;
 - Rules necessárias não estiverem versionadas;
 - não houver plano claro para publicar as Rules no Firebase.
 
