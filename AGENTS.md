@@ -13,8 +13,9 @@ Trate como contrato arquitetural:
 5. `SECURITY.md`
 6. `app.js`
 7. `js/controllership-router.js` quando envolver Controladoria/FP&A ou o roteamento atual de Consórcios
-8. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc` quando houver persistência/permissões/backend
-9. `.github/workflows/` antes de mudar arquitetura/testes
+8. `js/profiles.js` e `.github/workflows/permissions-contract-check.yml` sempre que houver nova aba, novo módulo navegável ou mudança de autorização
+9. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc` quando houver persistência/permissões/backend
+10. `.github/workflows/` antes de mudar arquitetura/testes
 
 Não dependa de memória de conversa para interpretar o produto.
 
@@ -24,6 +25,8 @@ Não dependa de memória de conversa para interpretar o produto.
 - **GitHub Pages não publica Firestore/Storage Rules.**
 - Rule no Git não prova que está ativa no Firebase.
 - Grupo/Empresa/permissões devem ser preservados em toda persistência.
+- **Toda nova aba ou módulo navegável deve nascer com autorização correspondente na grade de Perfis de Acesso (`js/profiles.js`), bloqueio real de abertura/ação e QA de permissões no mesmo pacote. Não liberar módulo novo apenas escondendo ou exibindo menu.**
+- Quando um módulo mudar de área do sistema, a grade de Perfis também deve refletir a nova posição lógica; compatibilidade legada pode ser mantida internamente, mas não deve confundir a autorização exibida ao administrador.
 - Nova coleção/caminho Storage exige Rule, QA e documentação no mesmo pacote.
 - Base contábil crítica indisponível deve operar fail-closed.
 - Tela monoempresa não pode usar silenciosamente a primeira empresa de um contexto múltiplo.
@@ -51,7 +54,8 @@ Não dependa de memória de conversa para interpretar o produto.
 - CAPEX ainda não gera desembolso automático no Fluxo de Caixa.
 - Consórcios ativo: `js/ctrl-consorcios-v1.js`; matemática: `js/consortium-calculations.js`; coleção: `consorcios`.
 - **Consórcios é módulo de primeiro nível no menu principal, logo após Contratos; não pertence ao submenu Controladoria & FP&A.**
-- Consórcios usa permissões próprias `consorciosVisualizar` e `consorciosEditar` dentro do contrato de permissões vigente.
+- A grade de Perfis exibe Consórcios como módulo próprio com `permissoes.consorcios.visualizar` e `permissoes.consorcios.editar`.
+- Durante a compatibilidade de migração, `js/profiles.js` espelha essas autorizações nas chaves legadas `controladoria.consorciosVisualizar` e `controladoria.consorciosEditar`, porque o roteador e as Rules publicadas ainda reconhecem esse contrato. O espelho é técnico e não deve reaparecer como opção visual dentro de Controladoria.
 - Consórcios v1 é gestão independente: não alimenta DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado.
 - Taxa de Consórcio e juros/encargos permanecem conceitos separados.
 - Ficha de Consórcio não é apagada na v1; usar Encerrado/Cancelado para preservar histórico.
@@ -81,7 +85,8 @@ Revisar em conjunto:
 - `js/consortium-calculations.js`;
 - `js/controllership-router.js`;
 - `js/profiles.js`;
-- `firestore.rules`;
+- `firestore.rules` quando mudar o contrato efetivo de autorização;
+- `SIG Permissions Contract Check`;
 - `SIG Consorcios Contract Check`;
 - documentação.
 
