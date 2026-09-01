@@ -44,6 +44,20 @@ jobs:
           grep -q 'match /consorcios/' firestore.rules
           grep -q 'allow delete: if false;' firestore.rules
 
+          # Contratos de cálculo e detalhamento.
+          grep -q 'gerarCronogramaConsorcio' js/consortium-calculations.js
+          grep -q 'consV1DetalheView' js/ctrl-consorcios-v1.js
+          grep -q 'consV1TabelaParcelas' js/ctrl-consorcios-v1.js
+          grep -q 'PDF da ficha' js/ctrl-consorcios-v1.js
+          grep -q 'PDF parcelas' js/ctrl-consorcios-v1.js
+          grep -q 'Excel parcelas' js/ctrl-consorcios-v1.js
+          grep -q 'PDF carteira' js/ctrl-consorcios-v1.js
+          grep -q 'Excel carteira' js/ctrl-consorcios-v1.js
+          grep -q 'PROJEÇÃO · NÃO É EXTRATO' js/ctrl-consorcios-v1.js
+          grep -q 'não cria histórico individual de pagamentos' js/ctrl-consorcios-v1.js
+          grep -q 'exportarTabelaPdf' js/ctrl-consorcios-v1.js
+          grep -q 'exportarTabelaXls' js/ctrl-consorcios-v1.js
+
           grep -q 'Gestão independente nesta versão' js/ctrl-consorcios-v1.js
           grep -q 'não alimenta DRE, Balanço, Fluxo de Caixa ou Budget/Forecast' js/ctrl-consorcios-v1.js
           grep -q 'taxaAdministracaoPct' js/ctrl-consorcios-v1.js
@@ -52,8 +66,8 @@ jobs:
           grep -q 'valorPagoAcumulado' js/ctrl-consorcios-v1.js
 
           node --input-type=module <<'NODE'
-          import { calcularConsorcio, statusConsorcioAtivo } from './js/consortium-calculations.js';
-          const r=calcularConsorcio({
+          import { calcularConsorcio, gerarCronogramaConsorcio, statusConsorcioAtivo } from './js/consortium-calculations.js';
+          const base={
             creditoContratado:100000,
             creditoAtual:100000,
             prazoMeses:60,
@@ -61,8 +75,11 @@ jobs:
             taxaAdministracaoPct:15,
             fundoReservaPct:2,
             seguroOutrosPct:1,
-            jurosEncargosPct:0
-          });
+            jurosEncargosPct:0,
+            valorParcelaAtual:2100,
+            dataInicio:'2026-01-10'
+          };
+          const r=calcularConsorcio(base);
           const perto=(a,b)=>Math.abs(a-b)<0.01;
           if(!perto(r.taxaConsorcioValor,18000))throw new Error('Taxa do consórcio divergente');
           if(!perto(r.totalEstimadoPlano,118000))throw new Error('Total estimado divergente');
@@ -70,6 +87,12 @@ jobs:
           if(r.parcelasRestantes!==48)throw new Error('Parcelas restantes divergentes');
           if(!perto(r.saldoTeorico,(118000/60)*48))throw new Error('Saldo teórico divergente');
           if(!statusConsorcioAtivo('ativo')||!statusConsorcioAtivo('contemplado')||statusConsorcioAtivo('encerrado'))throw new Error('Status ativo divergente');
+          const cron=gerarCronogramaConsorcio(base);
+          if(cron.length!==60)throw new Error('Cronograma deve respeitar o prazo total');
+          if(cron[0].status!=='paga'||cron[11].status!=='paga'||cron[12].status!=='a_vencer')throw new Error('Status do cronograma divergente');
+          if(cron[0].competencia!=='01/2026'||cron[12].competencia!=='01/2027')throw new Error('Competência do cronograma divergente');
+          if(!perto(cron[0].valorTeorico,118000/60))throw new Error('Parcela teórica divergente');
+          if(!perto(cron[12].valorReferencia,2100))throw new Error('Parcela atual deve ser referência futura');
           NODE
 
   browser-smoke:
@@ -91,7 +114,7 @@ jobs:
           from pathlib import Path
           p=Path('consorcios-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{try{const core=await import('./js/core.js');await import('./js/controllership-router.js');core.state.perfil={id:'smoke',acessoTotal:true,permissoes:{}};core.state.usuario={id:'smoke-user',grupoId:'',empresaId:''};window.dispatchEvent(new Event('sig:ready'));const menu=document.getElementById('menuConsorcios');if(!menu)throw new Error('Menu Consórcios ausente');if(menu.classList.contains('hidden'))throw new Error('Menu Consórcios permaneceu oculto');if(menu.closest('#ctrlSubmenu'))throw new Error('Consórcios ainda está dentro do submenu da Controladoria');const contratos=document.getElementById('menuContratos');if(contratos?.nextElementSibling!==menu)throw new Error('Consórcios não ficou logo após Contratos');menu.click();await new Promise(r=>setTimeout(r,1500));const pg=document.getElementById('pagina-ctrl-consorcios-v1');if(!pg||pg.classList.contains('hidden'))throw new Error('Clique no menu não abriu Consórcios');if(!menu.classList.contains('ativo'))throw new Error('Menu Consórcios não ficou ativo');if(document.getElementById('menuControladoria')?.classList.contains('ativo'))throw new Error('Controladoria ficou ativa ao abrir Consórcios');if(pg.querySelector('.eyebrow')?.textContent!=='CONSÓRCIOS')throw new Error('Cabeçalho ainda identifica Consórcios como Controladoria');if(!document.getElementById('consV1KpiAtivos'))throw new Error('KPIs ausentes');if(!document.getElementById('formConsorcioV1'))throw new Error('Formulário ausente');document.documentElement.setAttribute('data-consorcios-smoke','ok')}catch(e){document.documentElement.setAttribute('data-consorcios-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="consorcios-smoke-error">'+String(e.stack||e)+'</pre>')}})()</script>'''
+          teste='''<script type="module">(async()=>{try{const core=await import('./js/core.js');await import('./js/controllership-router.js');core.state.perfil={id:'smoke',acessoTotal:true,permissoes:{}};core.state.usuario={id:'smoke-user',grupoId:'',empresaId:''};window.dispatchEvent(new Event('sig:ready'));const menu=document.getElementById('menuConsorcios');if(!menu)throw new Error('Menu Consórcios ausente');if(menu.classList.contains('hidden'))throw new Error('Menu Consórcios permaneceu oculto');if(menu.closest('#ctrlSubmenu'))throw new Error('Consórcios ainda está dentro do submenu da Controladoria');const contratos=document.getElementById('menuContratos');if(contratos?.nextElementSibling!==menu)throw new Error('Consórcios não ficou logo após Contratos');menu.click();await new Promise(r=>setTimeout(r,1500));const pg=document.getElementById('pagina-ctrl-consorcios-v1');if(!pg||pg.classList.contains('hidden'))throw new Error('Clique no menu não abriu Consórcios');if(!menu.classList.contains('ativo'))throw new Error('Menu Consórcios não ficou ativo');if(document.getElementById('menuControladoria')?.classList.contains('ativo'))throw new Error('Controladoria ficou ativa ao abrir Consórcios');if(pg.querySelector('.eyebrow')?.textContent!=='CONSÓRCIOS')throw new Error('Cabeçalho ainda identifica Consórcios como Controladoria');['consV1KpiAtivos','formConsorcioV1','consV1DetalheView','consV1TabelaParcelas','btnConsorciosPdfV1','btnConsorciosExcelV1','btnDetalhePdfV1','btnParcelasPdfV1','btnParcelasExcelV1'].forEach(id=>{if(!document.getElementById(id))throw new Error('Elemento de Consórcios ausente: '+id)});document.documentElement.setAttribute('data-consorcios-smoke','ok')}catch(e){document.documentElement.setAttribute('data-consorcios-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="consorcios-smoke-error">'+String(e.stack||e)+'</pre>')}})()</script>'''
           s=s.replace('</body>',teste+'</body>')
           p.write_text(s)
           PY
@@ -99,4 +122,5 @@ jobs:
           grep -q 'data-consorcios-smoke="ok"' /tmp/consorcios-smoke-dom.html
           grep -q 'id="menuConsorcios"' /tmp/consorcios-smoke-dom.html
           grep -q 'id="pagina-ctrl-consorcios-v1"' /tmp/consorcios-smoke-dom.html
-          grep -q 'id="consV1KpiAtivos"' /tmp/consorcios-smoke-dom.html
+          grep -q 'id="consV1DetalheView"' /tmp/consorcios-smoke-dom.html
+          grep -q 'id="consV1TabelaParcelas"' /tmp/consorcios-smoke-dom.html
