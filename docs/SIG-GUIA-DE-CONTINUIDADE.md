@@ -15,8 +15,9 @@
 6. `SECURITY.md`;
 7. `app.js`;
 8. `js/controllership-router.js`;
-9. `firestore.rules`, `storage.rules`, `firebase.json`, `.firebaserc`;
-10. `.github/workflows/`.
+9. `js/profiles.js` quando houver módulos, abas ou autorizações;
+10. `firestore.rules`, `storage.rules`, `firebase.json`, `.firebaserc`;
+11. `.github/workflows/`.
 
 Na Controladoria, nunca deduzir o módulo ativo pelo nome do arquivo: conferir o roteador.
 
@@ -38,6 +39,8 @@ Consórcios ativo: `js/ctrl-consorcios-v1.js`. A matemática fica em `js/consort
 
 **Consórcios é um módulo de primeiro nível no menu principal, posicionado logo após Contratos. Não deve aparecer dentro do submenu Controladoria & FP&A.** O roteamento lazy atual ainda é mantido em `js/controllership-router.js` por compatibilidade estrutural.
 
+Na grade de **Perfis de Acesso**, Consórcios aparece como módulo próprio com as autorizações `visualizar` e `editar/Gerir consórcios`. As antigas chaves internas da Controladoria não devem mais aparecer para o administrador na grade. Durante a migração, `js/profiles.js` mantém um espelho técnico nas chaves legadas para preservar compatibilidade com o roteador e com as Rules já publicadas.
+
 A carteira de Consórcios funciona como visão resumida. Ao abrir uma ficha, o módulo exibe detalhamento do plano, composição financeira, contemplação e cronograma teórico de parcelas. A carteira pode ser exportada em PDF/Excel; a ficha possui PDF próprio e o cronograma pode ser exportado em PDF/Excel.
 
 O cronograma de parcelas é **projeção calculada na base atual**, não histórico de pagamentos nem extrato da administradora. Parcelas marcadas como pagas refletem a quantidade cadastrada em `parcelasPagas`; valores históricos individuais não são inventados.
@@ -54,6 +57,8 @@ O cronograma de parcelas é **projeção calculada na base atual**, não histór
 6. rodar QA;
 7. promover somente o HEAD validado.
 
+**Toda nova aba ou módulo navegável exige, na mesma alteração, revisão da grade de Perfis em `js/profiles.js`, proteção real de abertura/ações e atualização do `SIG Permissions Contract Check`. Um menu visível ou oculto, sozinho, nunca é controle de autorização suficiente.**
+
 Mudança de Plano exige revisar máscara, árvore, Balanço, DRE, Input, Budget/Forecast, Centros, Rules e QA.
 
 Mudança de Consórcios exige revisar:
@@ -63,7 +68,8 @@ Mudança de Consórcios exige revisar:
 - `js/export-utils.js` quando alterar relatórios;
 - `js/controllership-router.js`;
 - `js/profiles.js`;
-- `firestore.rules`;
+- `firestore.rules` quando mudar o contrato efetivo de autorização;
+- `SIG Permissions Contract Check`;
 - `SIG Consorcios Contract Check`;
 - documentação.
 
@@ -93,10 +99,22 @@ A baseline atual contém Rules para:
 - delete seguro de `planoContasGerencial`;
 - `consorcios`.
 
-Consórcios exige permissão própria:
+Na interface de Perfis, Consórcios usa autorização própria:
 
-- leitura: `consorciosVisualizar`, `consorciosEditar` ou Administração FP&A;
-- criação/edição: `consorciosEditar` ou Administração FP&A;
+- `permissoes.consorcios.visualizar` para consulta;
+- `permissoes.consorcios.editar` para gestão.
+
+Por compatibilidade com o contrato backend vigente, ao salvar um perfil o frontend também espelha tecnicamente:
+
+- `controladoria.consorciosVisualizar` = visualizar ou editar;
+- `controladoria.consorciosEditar` = editar.
+
+Esse espelho não deve voltar a aparecer como opção visual dentro do bloco Controladoria. Ele existe apenas para que perfis antigos e Rules publicadas continuem funcionando durante a migração.
+
+Para Consórcios:
+
+- leitura depende da autorização de consulta/gestão e do escopo de grupo/empresa;
+- criação/edição depende da autorização de gestão;
 - grupo e empresa devem permanecer dentro do escopo permitido;
 - exclusão física é bloqueada.
 
@@ -119,14 +137,16 @@ Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de co
 
 - o item deve aparecer no menu principal imediatamente após Contratos;
 - o item não deve aparecer dentro do submenu Controladoria & FP&A;
+- a grade de Perfis deve possuir bloco próprio `Consórcios`;
+- o bloco Controladoria não deve exibir as antigas opções `Visualizar consórcios` e `Gerir consórcios`;
+- perfil somente consulta visualiza a carteira e a ficha sem ação de edição;
+- perfil de gestão cria e edita ficha;
 - ao abrir Consórcios, Controladoria não deve permanecer marcada como menu ativo;
 - clicar na linha da carteira deve abrir a ficha detalhada;
 - a ficha deve mostrar carta atual/contratada, total estimado, pago, saldo, parcela, prazo e progresso;
 - composição deve separar administração, fundo de reserva, seguro/outros e juros/encargos;
 - cronograma deve gerar exatamente a quantidade de parcelas do prazo;
 - cronograma deve ser identificado como projeção e não como extrato/histórico;
-- perfil somente consulta visualiza a carteira e a ficha sem ação de edição;
-- perfil de gestão cria e edita ficha;
 - novo cadastro exige uma empresa;
 - visão da carteira pode consolidar empresas selecionadas;
 - carta atual substitui a carta contratada como base quando informada;
@@ -168,6 +188,7 @@ Se já houver dados persistidos no formato novo, tratar rollback como migração
 
 - uma fonte de verdade por regra;
 - código e documentação mudam juntos;
+- toda nova aba/módulo entra também na grade de Perfis e no QA de permissões;
 - regras de negócio não ficam só na UI;
 - matemática reutilizável fica fora da tela;
 - dados contábeis não são alterados para mascarar bug visual;
