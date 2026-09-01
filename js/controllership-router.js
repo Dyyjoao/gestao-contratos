@@ -1,7 +1,7 @@
 import { $, abrirPagina, permite, admin } from "./core.js";
 import { empresasSelecionadasIds } from "./shared.js";
 
-const modulos=new Map();const MODULO_VERSAO="20260831audit4";
+const modulos=new Map();const MODULO_VERSAO="20260901plano6";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function prepararShellCompartilhado(){const p=paginaControladoria();if(!p)return false;if(!p.querySelector(".fpa-tabs"))p.innerHTML='<nav class="fpa-tabs" aria-label="Áreas internas da Controladoria"></nav>';esconderTabsInternas();return true}
@@ -27,7 +27,7 @@ const ACOES={
   permutas:abrirPermutas,
   premissas:()=>abrirTela("premissas","./ctrl-premises-v4.js"),
   imobilizado:()=>abrirTela("imobilizado","./ctrl-assets-v1.js"),
-  plano:()=>abrirTela("plano","./ctrl-chart-accounts-v5.js"),
+  plano:()=>abrirTela("plano","./ctrl-chart-accounts-v6.js"),
   centros:()=>abrirTela("centros","./ctrl-cost-centers-v2.js"),
   config:()=>abrirTela("config","./ctrl-settings.js")
 };
