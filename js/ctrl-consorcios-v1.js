@@ -4,9 +4,10 @@ import {
   empresaUnicaSelecionadaId, empresasSelecionadasIds, nomeEmpresa, moeda,
   dataBr, mensagemErroDados, emitirAlteracao
 } from "./shared.js";
-import { calcularConsorcio, statusConsorcioAtivo } from "./consortium-calculations.js";
+import { calcularConsorcio, gerarCronogramaConsorcio, statusConsorcioAtivo } from "./consortium-calculations.js";
+import { exportarTabelaPdf, exportarTabelaXls } from "./export-utils.js";
 
-let consorcios=[],editId=null,busy=false;
+let consorcios=[],editId=null,detalheId=null,busy=false;
 const pagina=()=>$("pagina-ctrl-consorcios-v1");
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const podeVisualizar=()=>admin()||permite("controladoria","editar")||permite("controladoria","consorciosVisualizar")||permite("controladoria","consorciosEditar");
@@ -27,12 +28,16 @@ const MODALIDADES={
   outro:"Outro"
 };
 
+const CATEGORIAS={veiculo:"Veículo",imovel:"Imóvel",equipamento:"Equipamento",servico:"Serviço",outro:"Outro"};
+
 function contextoNovoOk(){return empresasSelecionadasIds().length===1&&!!empresaUnicaSelecionadaId()}
 function pct(v){return `${n(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`}
 function numero(v,d=0){return n(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d})}
 function textoStatus(status){return STATUS[status]?.[0]||status||"—"}
 function badgeStatus(status){const [nome,classe]=STATUS[status]||[status||"—","cons-v1-status-neutro"];return `<span class="cons-v1-badge ${classe}">${esc(nome)}</span>`}
 function calc(c){return calcularConsorcio(c)}
+function nomeArquivo(c,sufixo="relatorio"){return `consorcio_${c?.grupo||"grupo"}_${c?.cota||"cota"}_${sufixo}`}
+function metaRelatorio(c){return [nomeEmpresa(c?.empresaId),c?.administradora,c?.grupo?`Grupo ${c.grupo}`:"",c?.cota?`Cota ${c.cota}`:"",`Gerado em ${new Date().toLocaleString("pt-BR")}`].filter(Boolean)}
 
 function criarPagina(){
   if(pagina())return;
@@ -42,100 +47,158 @@ function criarPagina(){
   s.id="pagina-ctrl-consorcios-v1";
   s.className="pagina hidden";
   s.innerHTML=`
-    <div class="pagina-cabecalho">
-      <div>
-        <span class="eyebrow">CONTROLADORIA & FP&A</span>
-        <h2>Consórcios</h2>
-        <p>Gestão da carteira, contemplações, parcelas, taxas e saldo estimado dos planos.</p>
+    <div id="consV1CarteiraView">
+      <div class="pagina-cabecalho">
+        <div>
+          <span class="eyebrow">CONSÓRCIOS</span>
+          <h2>Consórcios</h2>
+          <p>Gestão da carteira, contemplações, parcelas, taxas e saldo estimado dos planos.</p>
+        </div>
+        <div class="acoes-cabecalho cons-v1-header-actions">
+          <button id="btnConsorciosPdfV1" class="btn-secundario" type="button">PDF carteira</button>
+          <button id="btnConsorciosExcelV1" class="btn-secundario" type="button">Excel carteira</button>
+          <button id="btnAtualizarConsorcioV1" class="btn-secundario" type="button">Atualizar</button>
+          <button id="btnNovoConsorcioV1" class="btn-primario" type="button">Novo consórcio</button>
+        </div>
       </div>
-      <div class="acoes-cabecalho">
-        <button id="btnNovoConsorcioV1" class="btn-primario" type="button">Novo consórcio</button>
-        <button id="btnAtualizarConsorcioV1" class="btn-secundario" type="button">Atualizar</button>
+
+      <div class="modulo-aviso cons-v1-aviso">
+        <strong>Gestão independente nesta versão:</strong> Consórcios não alimenta DRE, Balanço, Fluxo de Caixa ou Budget/Forecast. A taxa do consórcio é demonstrada separadamente de juros/encargos; consórcio não é tratado como financiamento tradicional e o campo de juros é opcional para contratos que efetivamente possuam esse custo.
       </div>
+
+      <div class="cons-v1-kpis">
+        <article class="cons-v1-kpi"><span>Consórcios ativos</span><strong id="consV1KpiAtivos">0</strong><small>Ativos + contemplados</small></article>
+        <article class="cons-v1-kpi"><span>Contemplados</span><strong id="consV1KpiContemplados">0</strong><small>Na carteira exibida</small></article>
+        <article class="cons-v1-kpi"><span>Crédito atual</span><strong id="consV1KpiCredito">R$ 0,00</strong><small>Somente planos ativos</small></article>
+        <article class="cons-v1-kpi"><span>Parcela mensal</span><strong id="consV1KpiParcela">R$ 0,00</strong><small>Atual ou média estimada</small></article>
+        <article class="cons-v1-kpi"><span>Saldo teórico</span><strong id="consV1KpiSaldo">R$ 0,00</strong><small>Carteira ativa</small></article>
+      </div>
+
+      <section id="formConsorcioV1Box" class="form-card hidden cons-v1-form">
+        <div class="form-card-titulo">
+          <div><h3 id="consV1Titulo">Novo consórcio</h3><p id="consV1Sub">—</p></div>
+        </div>
+        <form id="formConsorcioV1">
+          <div class="cons-v1-bloco-titulo">Identificação</div>
+          <div class="form-grid form-grid-3">
+            <div class="campo campo-span-2"><label for="consV1Descricao">Descrição / identificação</label><input id="consV1Descricao" required placeholder="Ex.: Consórcio caminhão operação SP"></div>
+            <div class="campo"><label for="consV1Administradora">Administradora</label><input id="consV1Administradora" required placeholder="Ex.: Rodobens"></div>
+            <div class="campo"><label for="consV1Grupo">Grupo</label><input id="consV1Grupo"></div>
+            <div class="campo"><label for="consV1Cota">Cota</label><input id="consV1Cota"></div>
+            <div class="campo"><label for="consV1Categoria">Categoria</label><select id="consV1Categoria"><option value="veiculo">Veículo</option><option value="imovel">Imóvel</option><option value="equipamento">Equipamento</option><option value="servico">Serviço</option><option value="outro">Outro</option></select></div>
+            <div class="campo"><label for="consV1Status">Status</label><select id="consV1Status"><option value="ativo">Ativo</option><option value="contemplado">Contemplado</option><option value="encerrado">Encerrado</option><option value="cancelado">Cancelado</option></select></div>
+            <div class="campo"><label for="consV1DataInicio">Data de início</label><input id="consV1DataInicio" type="date"></div>
+            <div class="campo"><label for="consV1DataFim">Fim previsto</label><input id="consV1DataFim" type="date"></div>
+            <div class="campo"><label for="consV1ProximoVencimento">Próximo vencimento</label><input id="consV1ProximoVencimento" type="date"></div>
+          </div>
+
+          <div class="cons-v1-bloco-titulo">Crédito, prazo e parcelas</div>
+          <div class="form-grid form-grid-3">
+            <div class="campo"><label for="consV1CreditoContratado">Carta de crédito contratada</label><input id="consV1CreditoContratado" type="number" min="0" step="0.01" required></div>
+            <div class="campo"><label for="consV1CreditoAtual">Carta de crédito atual</label><input id="consV1CreditoAtual" type="number" min="0" step="0.01"><small>Use o valor reajustado vigente. Se vazio, usa a carta contratada.</small></div>
+            <div class="campo"><label for="consV1IndiceReajuste">Índice / critério de reajuste</label><input id="consV1IndiceReajuste" placeholder="Ex.: INCC, IPCA, preço do bem"></div>
+            <div class="campo"><label for="consV1Prazo">Prazo total (meses)</label><input id="consV1Prazo" type="number" min="1" step="1" required></div>
+            <div class="campo"><label for="consV1ParcelasPagas">Parcelas pagas</label><input id="consV1ParcelasPagas" type="number" min="0" step="1" value="0"></div>
+            <div class="campo"><label for="consV1ParcelaAtual">Valor da parcela atual</label><input id="consV1ParcelaAtual" type="number" min="0" step="0.01"><small>Mantida separada da parcela média calculada.</small></div>
+            <div class="campo"><label for="consV1ValorPago">Valor pago acumulado</label><input id="consV1ValorPago" type="number" min="0" step="0.01"><small>Inclua parcelas e lances já efetivamente pagos para um saldo teórico mais fiel.</small></div>
+          </div>
+
+          <div class="cons-v1-bloco-titulo">Taxas e custos</div>
+          <div class="form-grid form-grid-4">
+            <div class="campo"><label for="consV1TaxaAdm">Taxa de administração (%)</label><input id="consV1TaxaAdm" type="number" min="0" step="0.0001" value="0"></div>
+            <div class="campo"><label for="consV1FundoReserva">Fundo de reserva (%)</label><input id="consV1FundoReserva" type="number" min="0" step="0.0001" value="0"></div>
+            <div class="campo"><label for="consV1SeguroOutros">Seguro / outros (%)</label><input id="consV1SeguroOutros" type="number" min="0" step="0.0001" value="0"></div>
+            <div class="campo"><label for="consV1Juros">Juros / encargos (%)</label><input id="consV1Juros" type="number" min="0" step="0.0001" value="0"><small>Opcional. Informe somente se existir no contrato.</small></div>
+          </div>
+
+          <div class="cons-v1-calculadora">
+            <div><span>Taxa do consórcio</span><strong id="consV1CalcTaxa">—</strong><small id="consV1CalcTaxaPct">—</small></div>
+            <div><span>Juros / encargos</span><strong id="consV1CalcJuros">—</strong><small id="consV1CalcJurosPct">—</small></div>
+            <div><span>Total estimado do plano</span><strong id="consV1CalcTotal">—</strong><small>Carta atual + custos informados</small></div>
+            <div><span>Parcela média estimada</span><strong id="consV1CalcParcela">—</strong><small id="consV1CalcParcelas">—</small></div>
+            <div><span>Saldo teórico</span><strong id="consV1CalcSaldo">—</strong><small>Estimativa gerencial</small></div>
+          </div>
+
+          <div class="cons-v1-bloco-titulo">Contemplação</div>
+          <div class="form-grid form-grid-3">
+            <div class="campo"><label for="consV1DataContemplacao">Data da contemplação</label><input id="consV1DataContemplacao" type="date"></div>
+            <div class="campo"><label for="consV1Modalidade">Modalidade</label><select id="consV1Modalidade"><option value="">Não informado</option><option value="sorteio">Sorteio</option><option value="lance_livre">Lance livre</option><option value="lance_fixo">Lance fixo</option><option value="outro">Outro</option></select></div>
+            <div class="campo"><label for="consV1Lance">Valor do lance</label><input id="consV1Lance" type="number" min="0" step="0.01"></div>
+            <div class="campo"><label for="consV1CreditoUtilizado">Crédito utilizado</label><input id="consV1CreditoUtilizado" type="number" min="0" step="0.01"></div>
+            <div class="campo campo-span-2"><label for="consV1BemDestino">Bem / finalidade adquirida</label><input id="consV1BemDestino" placeholder="Ex.: Caminhão Volvo FH 540"></div>
+            <div class="campo campo-span-3"><label for="consV1Observacoes">Observações</label><textarea id="consV1Observacoes" rows="3"></textarea></div>
+          </div>
+
+          <div class="form-acoes"><button id="btnCancelarConsorcioV1" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar consórcio</button></div>
+          <p id="mensagemConsorcioV1" class="mensagem-form"></p>
+        </form>
+      </section>
+
+      <section class="lista-card">
+        <div class="lista-cabecalho cons-v1-lista-cabecalho">
+          <div><h3>Carteira de consórcios</h3><p id="consV1Contexto">—</p></div>
+          <div class="cons-v1-filtros">
+            <input id="consV1Busca" placeholder="Buscar administradora, grupo, cota ou bem...">
+            <select id="consV1FiltroStatus"><option value="ativos">Ativos + contemplados</option><option value="todos">Todos</option><option value="ativo">Ativos</option><option value="contemplado">Contemplados</option><option value="encerrado">Encerrados</option><option value="cancelado">Cancelados</option></select>
+          </div>
+        </div>
+        <div class="tabela-container"><table id="consV1TabelaCarteira" class="tabela cons-v1-table"><thead><tr><th>Consórcio</th><th>Status</th><th>Crédito atual</th><th>Parcela atual</th><th>Progresso</th><th>Taxa consórcio</th><th>Saldo teórico</th><th>Próx. vencimento</th><th class="nao-exportar">Ações</th></tr></thead><tbody id="listaConsorciosV1"></tbody></table></div>
+      </section>
     </div>
 
-    <div class="modulo-aviso cons-v1-aviso">
-      <strong>Gestão independente nesta versão:</strong> Consórcios não alimenta DRE, Balanço, Fluxo de Caixa ou Budget/Forecast. A taxa do consórcio é demonstrada separadamente de juros/encargos; consórcio não é tratado como financiamento tradicional e o campo de juros é opcional para contratos que efetivamente possuam esse custo.
-    </div>
-
-    <div class="cons-v1-kpis">
-      <article class="cons-v1-kpi"><span>Consórcios ativos</span><strong id="consV1KpiAtivos">0</strong><small>Ativos + contemplados</small></article>
-      <article class="cons-v1-kpi"><span>Contemplados</span><strong id="consV1KpiContemplados">0</strong><small>Na carteira exibida</small></article>
-      <article class="cons-v1-kpi"><span>Crédito atual</span><strong id="consV1KpiCredito">R$ 0,00</strong><small>Somente planos ativos</small></article>
-      <article class="cons-v1-kpi"><span>Parcela mensal</span><strong id="consV1KpiParcela">R$ 0,00</strong><small>Atual ou média estimada</small></article>
-      <article class="cons-v1-kpi"><span>Saldo teórico</span><strong id="consV1KpiSaldo">R$ 0,00</strong><small>Carteira ativa</small></article>
-    </div>
-
-    <section id="formConsorcioV1Box" class="form-card hidden cons-v1-form">
-      <div class="form-card-titulo">
-        <div><h3 id="consV1Titulo">Novo consórcio</h3><p id="consV1Sub">—</p></div>
-      </div>
-      <form id="formConsorcioV1">
-        <div class="cons-v1-bloco-titulo">Identificação</div>
-        <div class="form-grid form-grid-3">
-          <div class="campo campo-span-2"><label for="consV1Descricao">Descrição / identificação</label><input id="consV1Descricao" required placeholder="Ex.: Consórcio caminhão operação SP"></div>
-          <div class="campo"><label for="consV1Administradora">Administradora</label><input id="consV1Administradora" required placeholder="Ex.: Rodobens"></div>
-          <div class="campo"><label for="consV1Grupo">Grupo</label><input id="consV1Grupo"></div>
-          <div class="campo"><label for="consV1Cota">Cota</label><input id="consV1Cota"></div>
-          <div class="campo"><label for="consV1Categoria">Categoria</label><select id="consV1Categoria"><option value="veiculo">Veículo</option><option value="imovel">Imóvel</option><option value="equipamento">Equipamento</option><option value="servico">Serviço</option><option value="outro">Outro</option></select></div>
-          <div class="campo"><label for="consV1Status">Status</label><select id="consV1Status"><option value="ativo">Ativo</option><option value="contemplado">Contemplado</option><option value="encerrado">Encerrado</option><option value="cancelado">Cancelado</option></select></div>
-          <div class="campo"><label for="consV1DataInicio">Data de início</label><input id="consV1DataInicio" type="date"></div>
-          <div class="campo"><label for="consV1DataFim">Fim previsto</label><input id="consV1DataFim" type="date"></div>
-          <div class="campo"><label for="consV1ProximoVencimento">Próximo vencimento</label><input id="consV1ProximoVencimento" type="date"></div>
+    <div id="consV1DetalheView" class="hidden">
+      <div class="pagina-cabecalho cons-v1-detalhe-header">
+        <div>
+          <button id="btnVoltarConsorciosV1" class="btn-voltar" type="button">← Carteira de consórcios</button>
+          <span class="eyebrow">DETALHAMENTO DO CONSÓRCIO</span>
+          <h2 id="consV1DetalheTitulo">Consórcio</h2>
+          <p id="consV1DetalheSubtitulo">—</p>
         </div>
-
-        <div class="cons-v1-bloco-titulo">Crédito, prazo e parcelas</div>
-        <div class="form-grid form-grid-3">
-          <div class="campo"><label for="consV1CreditoContratado">Carta de crédito contratada</label><input id="consV1CreditoContratado" type="number" min="0" step="0.01" required></div>
-          <div class="campo"><label for="consV1CreditoAtual">Carta de crédito atual</label><input id="consV1CreditoAtual" type="number" min="0" step="0.01"><small>Use o valor reajustado vigente. Se vazio, usa a carta contratada.</small></div>
-          <div class="campo"><label for="consV1IndiceReajuste">Índice / critério de reajuste</label><input id="consV1IndiceReajuste" placeholder="Ex.: INCC, IPCA, preço do bem"></div>
-          <div class="campo"><label for="consV1Prazo">Prazo total (meses)</label><input id="consV1Prazo" type="number" min="1" step="1" required></div>
-          <div class="campo"><label for="consV1ParcelasPagas">Parcelas pagas</label><input id="consV1ParcelasPagas" type="number" min="0" step="1" value="0"></div>
-          <div class="campo"><label for="consV1ParcelaAtual">Valor da parcela atual</label><input id="consV1ParcelaAtual" type="number" min="0" step="0.01"><small>Mantida separada da parcela média calculada.</small></div>
-          <div class="campo"><label for="consV1ValorPago">Valor pago acumulado</label><input id="consV1ValorPago" type="number" min="0" step="0.01"><small>Inclua parcelas e lances já efetivamente pagos para um saldo teórico mais fiel.</small></div>
-        </div>
-
-        <div class="cons-v1-bloco-titulo">Taxas e custos</div>
-        <div class="form-grid form-grid-4">
-          <div class="campo"><label for="consV1TaxaAdm">Taxa de administração (%)</label><input id="consV1TaxaAdm" type="number" min="0" step="0.0001" value="0"></div>
-          <div class="campo"><label for="consV1FundoReserva">Fundo de reserva (%)</label><input id="consV1FundoReserva" type="number" min="0" step="0.0001" value="0"></div>
-          <div class="campo"><label for="consV1SeguroOutros">Seguro / outros (%)</label><input id="consV1SeguroOutros" type="number" min="0" step="0.0001" value="0"></div>
-          <div class="campo"><label for="consV1Juros">Juros / encargos (%)</label><input id="consV1Juros" type="number" min="0" step="0.0001" value="0"><small>Opcional. Informe somente se existir no contrato.</small></div>
-        </div>
-
-        <div class="cons-v1-calculadora">
-          <div><span>Taxa do consórcio</span><strong id="consV1CalcTaxa">—</strong><small id="consV1CalcTaxaPct">—</small></div>
-          <div><span>Juros / encargos</span><strong id="consV1CalcJuros">—</strong><small id="consV1CalcJurosPct">—</small></div>
-          <div><span>Total estimado do plano</span><strong id="consV1CalcTotal">—</strong><small>Carta atual + custos informados</small></div>
-          <div><span>Parcela média estimada</span><strong id="consV1CalcParcela">—</strong><small id="consV1CalcParcelas">—</small></div>
-          <div><span>Saldo teórico</span><strong id="consV1CalcSaldo">—</strong><small>Estimativa gerencial</small></div>
-        </div>
-
-        <div class="cons-v1-bloco-titulo">Contemplação</div>
-        <div class="form-grid form-grid-3">
-          <div class="campo"><label for="consV1DataContemplacao">Data da contemplação</label><input id="consV1DataContemplacao" type="date"></div>
-          <div class="campo"><label for="consV1Modalidade">Modalidade</label><select id="consV1Modalidade"><option value="">Não informado</option><option value="sorteio">Sorteio</option><option value="lance_livre">Lance livre</option><option value="lance_fixo">Lance fixo</option><option value="outro">Outro</option></select></div>
-          <div class="campo"><label for="consV1Lance">Valor do lance</label><input id="consV1Lance" type="number" min="0" step="0.01"></div>
-          <div class="campo"><label for="consV1CreditoUtilizado">Crédito utilizado</label><input id="consV1CreditoUtilizado" type="number" min="0" step="0.01"></div>
-          <div class="campo campo-span-2"><label for="consV1BemDestino">Bem / finalidade adquirida</label><input id="consV1BemDestino" placeholder="Ex.: Caminhão Volvo FH 540"></div>
-          <div class="campo campo-span-3"><label for="consV1Observacoes">Observações</label><textarea id="consV1Observacoes" rows="3"></textarea></div>
-        </div>
-
-        <div class="form-acoes"><button id="btnCancelarConsorcioV1" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar consórcio</button></div>
-        <p id="mensagemConsorcioV1" class="mensagem-form"></p>
-      </form>
-    </section>
-
-    <section class="lista-card">
-      <div class="lista-cabecalho cons-v1-lista-cabecalho">
-        <div><h3>Carteira de consórcios</h3><p id="consV1Contexto">—</p></div>
-        <div class="cons-v1-filtros">
-          <input id="consV1Busca" placeholder="Buscar administradora, grupo, cota ou bem...">
-          <select id="consV1FiltroStatus"><option value="ativos">Ativos + contemplados</option><option value="todos">Todos</option><option value="ativo">Ativos</option><option value="contemplado">Contemplados</option><option value="encerrado">Encerrados</option><option value="cancelado">Cancelados</option></select>
+        <div class="acoes-cabecalho cons-v1-header-actions">
+          <button id="btnDetalhePdfV1" class="btn-secundario" type="button">PDF da ficha</button>
+          <button id="btnParcelasPdfV1" class="btn-secundario" type="button">PDF parcelas</button>
+          <button id="btnParcelasExcelV1" class="btn-secundario" type="button">Excel parcelas</button>
+          <button id="btnEditarDetalheV1" class="btn-primario" type="button">Editar</button>
         </div>
       </div>
-      <div class="tabela-container"><table class="tabela cons-v1-table"><thead><tr><th>Consórcio</th><th>Status</th><th>Crédito atual</th><th>Parcela atual</th><th>Progresso</th><th>Taxa consórcio</th><th>Saldo teórico</th><th>Próx. vencimento</th><th>Ações</th></tr></thead><tbody id="listaConsorciosV1"></tbody></table></div>
-    </section>`;
+
+      <div id="consV1DetalheStatus" class="cons-v1-detalhe-status"></div>
+
+      <div class="cons-v1-kpis cons-v1-kpis-detalhe">
+        <article class="cons-v1-kpi"><span>Carta atual</span><strong id="consV1DetCredito">—</strong><small id="consV1DetCreditoSub">—</small></article>
+        <article class="cons-v1-kpi"><span>Total estimado</span><strong id="consV1DetTotal">—</strong><small>Carta + custos informados</small></article>
+        <article class="cons-v1-kpi"><span>Pago acumulado</span><strong id="consV1DetPago">—</strong><small>Valor informado</small></article>
+        <article class="cons-v1-kpi"><span>Saldo teórico</span><strong id="consV1DetSaldo">—</strong><small id="consV1DetSaldoSub">—</small></article>
+        <article class="cons-v1-kpi"><span>Parcela atual</span><strong id="consV1DetParcela">—</strong><small id="consV1DetParcelaSub">—</small></article>
+      </div>
+
+      <div class="cons-v1-detail-grid">
+        <section class="lista-card cons-v1-detail-card">
+          <div class="lista-cabecalho"><div><h3>Dados do plano</h3><p>Identificação, prazo e reajuste.</p></div></div>
+          <div id="consV1DadosPlano" class="cons-v1-definition-grid"></div>
+        </section>
+        <section class="lista-card cons-v1-detail-card">
+          <div class="lista-cabecalho"><div><h3>Composição financeira</h3><p>Taxas separadas da carta de crédito.</p></div></div>
+          <div class="tabela-container"><table class="tabela cons-v1-composicao-table"><thead><tr><th>Componente</th><th>Percentual</th><th>Valor estimado</th></tr></thead><tbody id="consV1Composicao"></tbody></table></div>
+        </section>
+      </div>
+
+      <section class="lista-card cons-v1-detail-card">
+        <div class="lista-cabecalho"><div><h3>Contemplação e utilização</h3><p id="consV1ContemplacaoResumo">—</p></div></div>
+        <div id="consV1ContemplacaoDados" class="cons-v1-definition-grid"></div>
+      </section>
+
+      <section class="lista-card cons-v1-detail-card">
+        <div class="lista-cabecalho cons-v1-lista-cabecalho">
+          <div><h3>Cronograma de parcelas</h3><p>Composição teórica média calculada com a carta e as taxas atuais.</p></div>
+          <span class="cons-v1-estimativa-chip">PROJEÇÃO · NÃO É EXTRATO</span>
+        </div>
+        <div class="modulo-aviso cons-v1-aviso-estimativa"><strong>Importante:</strong> este cronograma não cria histórico individual de pagamentos. As parcelas marcadas como pagas refletem apenas a quantidade de parcelas pagas cadastrada; valores efetivos devem ser conferidos no extrato da administradora.</div>
+        <div class="tabela-container"><table id="consV1TabelaParcelas" class="tabela cons-v1-parcelas-table"><thead><tr><th>Parcela</th><th>Competência</th><th>Status</th><th>Crédito</th><th>Taxa adm.</th><th>Fundo reserva</th><th>Seguro/outros</th><th>Juros/encargos</th><th>Parcela teórica</th><th>Referência atual</th></tr></thead><tbody id="consV1ParcelasBody"></tbody></table></div>
+      </section>
+
+      <table id="consV1TabelaRelatorioDetalhe" class="hidden" aria-hidden="true"><tbody></tbody></table>
+    </div>`;
   main.appendChild(s);
   garantirCss();
   $("btnNovoConsorcioV1")?.addEventListener("click",novo);
@@ -144,6 +207,13 @@ function criarPagina(){
   $("formConsorcioV1")?.addEventListener("submit",salvar);
   $("consV1Busca")?.addEventListener("input",render);
   $("consV1FiltroStatus")?.addEventListener("change",render);
+  $("btnVoltarConsorciosV1")?.addEventListener("click",mostrarCarteira);
+  $("btnEditarDetalheV1")?.addEventListener("click",()=>detalheId&&editar(detalheId));
+  $("btnConsorciosPdfV1")?.addEventListener("click",exportarCarteiraPdf);
+  $("btnConsorciosExcelV1")?.addEventListener("click",exportarCarteiraExcel);
+  $("btnDetalhePdfV1")?.addEventListener("click",exportarDetalhePdf);
+  $("btnParcelasPdfV1")?.addEventListener("click",exportarParcelasPdf);
+  $("btnParcelasExcelV1")?.addEventListener("click",exportarParcelasExcel);
   ["consV1CreditoContratado","consV1CreditoAtual","consV1Prazo","consV1ParcelasPagas","consV1ParcelaAtual","consV1ValorPago","consV1TaxaAdm","consV1FundoReserva","consV1SeguroOutros","consV1Juros","consV1CreditoUtilizado"].forEach(id=>$(id)?.addEventListener("input",atualizarCalculadora));
 }
 
@@ -153,6 +223,7 @@ function garantirCss(){
   s.id="cons-v1-css";
   s.textContent=`
     .cons-v1-aviso{margin-bottom:12px}
+    .cons-v1-header-actions{flex-wrap:wrap;justify-content:flex-end}
     .cons-v1-kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px;margin:12px 0 16px}
     .cons-v1-kpi{border:1px solid #e4e7ec;border-radius:12px;padding:13px 14px;background:#fff;min-width:0}
     .cons-v1-kpi span{display:block;font-size:10px;color:#667085;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
@@ -169,6 +240,8 @@ function garantirCss(){
     .cons-v1-filtros input{min-width:280px}
     .cons-v1-table td:first-child{min-width:260px}
     .cons-v1-table td{vertical-align:middle}
+    .cons-v1-table tbody tr[data-cons-v1-open]{cursor:pointer;transition:background .12s ease}
+    .cons-v1-table tbody tr[data-cons-v1-open]:hover{background:#f8fafc}
     .cons-v1-table small{display:block;margin-top:2px;color:#667085;font-size:8px}
     .cons-v1-badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:800;white-space:nowrap}
     .cons-v1-status-ativo{background:#eaf5f3;color:#087a6f}
@@ -180,8 +253,26 @@ function garantirCss(){
     .cons-v1-barra{height:5px;background:#eaecf0;border-radius:99px;overflow:hidden;margin-top:4px}
     .cons-v1-barra>i{display:block;height:100%;background:#0c9488;border-radius:99px}
     .cons-v1-actions{display:flex;gap:5px;flex-wrap:wrap}
-    @media(max-width:1100px){.cons-v1-kpis,.cons-v1-calculadora{grid-template-columns:repeat(2,minmax(150px,1fr))}}
-    @media(max-width:700px){.cons-v1-kpis,.cons-v1-calculadora{grid-template-columns:1fr}.cons-v1-filtros{width:100%;justify-content:stretch}.cons-v1-filtros input,.cons-v1-filtros select{width:100%;min-width:0}}
+    .cons-v1-detalhe-header .btn-voltar{margin-bottom:8px}
+    .cons-v1-detalhe-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-2px 0 10px}
+    .cons-v1-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    .cons-v1-detail-card{margin-bottom:12px}
+    .cons-v1-definition-grid{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr));gap:0;border:1px solid #eaecf0;border-radius:10px;overflow:hidden}
+    .cons-v1-definition-grid>div{padding:10px 12px;border-right:1px solid #eaecf0;border-bottom:1px solid #eaecf0;min-width:0}
+    .cons-v1-definition-grid>div:nth-child(3n){border-right:0}
+    .cons-v1-definition-grid span{display:block;font-size:8px;font-weight:800;text-transform:uppercase;color:#667085;letter-spacing:.04em}
+    .cons-v1-definition-grid strong{display:block;margin-top:4px;font-size:11px;color:#101828;overflow-wrap:anywhere}
+    .cons-v1-composicao-table td:nth-child(2),.cons-v1-composicao-table td:nth-child(3){text-align:right}
+    .cons-v1-composicao-table tr:last-child td{font-weight:850;background:#f8fafc}
+    .cons-v1-estimativa-chip{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;background:#fff7e8;color:#9a6700;font-size:8px;font-weight:850;white-space:nowrap}
+    .cons-v1-aviso-estimativa{margin:0 0 10px;font-size:10px}
+    .cons-v1-parcelas-table{font-size:10px}
+    .cons-v1-parcelas-table th,.cons-v1-parcelas-table td{white-space:nowrap}
+    .cons-v1-parcelas-table td:nth-child(n+4){text-align:right}
+    .cons-v1-parcela-paga{color:#087a6f;font-weight:750}
+    .cons-v1-parcela-futura{color:#475467}
+    @media(max-width:1100px){.cons-v1-kpis,.cons-v1-calculadora{grid-template-columns:repeat(2,minmax(150px,1fr))}.cons-v1-detail-grid{grid-template-columns:1fr}.cons-v1-definition-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.cons-v1-definition-grid>div:nth-child(3n){border-right:1px solid #eaecf0}.cons-v1-definition-grid>div:nth-child(2n){border-right:0}}
+    @media(max-width:700px){.cons-v1-kpis,.cons-v1-calculadora{grid-template-columns:1fr}.cons-v1-filtros{width:100%;justify-content:stretch}.cons-v1-filtros input,.cons-v1-filtros select{width:100%;min-width:0}.cons-v1-definition-grid{grid-template-columns:1fr}.cons-v1-definition-grid>div{border-right:0!important}.cons-v1-header-actions{width:100%;justify-content:stretch}.cons-v1-header-actions button{flex:1 1 140px}}
   `;
   document.head.appendChild(s);
 }
@@ -266,9 +357,18 @@ function preencherForm(c=null){
   setTimeout(()=>$("consV1Descricao")?.focus(),20);
 }
 
+function mostrarCarteira(){
+  detalheId=null;
+  $("consV1DetalheView")?.classList.add("hidden");
+  $("consV1CarteiraView")?.classList.remove("hidden");
+  const t=$("tituloPagina");if(t)t.textContent="Consórcios";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
 function novo(){
   if(!podeEditar())return alert("Seu perfil não possui permissão para gerenciar consórcios.");
   if(!contextoNovoOk())return alert("Para cadastrar um consórcio, selecione apenas uma empresa no cabeçalho.");
+  mostrarCarteira();
   editId=null;
   preencherForm();
 }
@@ -277,6 +377,7 @@ function editar(id){
   if(!podeEditar())return;
   const c=consorcios.find(x=>x.id===id);
   if(!c)return;
+  mostrarCarteira();
   editId=id;
   preencherForm(c);
 }
@@ -345,7 +446,7 @@ function render(){
     const r=calc(c),parcela=r.valorParcelaAtual>0?r.valorParcelaAtual:r.parcelaMediaEstimada;
     const complemento=[c.grupo?`Grupo ${c.grupo}`:"",c.cota?`Cota ${c.cota}`:"",c.empresaId?nomeEmpresa(c.empresaId):""].filter(Boolean).join(" · ");
     const contemplacao=c.status==="contemplado"&&c.dataContemplacao?`Contemplado em ${dataBr(c.dataContemplacao)}${c.modalidadeContemplacao?` · ${MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao}`:""}`:"";
-    return `<tr>
+    return `<tr data-cons-v1-open="${esc(c.id)}" tabindex="0" aria-label="Abrir detalhes de ${esc(c.descricao||"consórcio")}">
       <td><strong>${esc(c.descricao||"Consórcio")}</strong><small>${esc(c.administradora||"—")}${complemento?` · ${esc(complemento)}`:""}</small>${contemplacao?`<small>${esc(contemplacao)}</small>`:""}</td>
       <td>${badgeStatus(c.status)}</td>
       <td><strong>${moeda(r.creditoBase)}</strong><small>Contratada ${moeda(r.creditoContratado)}</small></td>
@@ -354,11 +455,115 @@ function render(){
       <td><strong>${pct(r.taxaConsorcioPct)}</strong><small>${moeda(r.taxaConsorcioValor)}${r.jurosEncargosPct>0?` · + ${pct(r.jurosEncargosPct)} encargos`:""}</small></td>
       <td><strong>${moeda(r.saldoTeorico)}</strong><small>${r.valorPagoAcumulado>0?`Pago acumulado ${moeda(r.valorPagoAcumulado)}`:`${r.parcelasRestantes} parcela(s) restantes`}</small></td>
       <td>${c.proximoVencimento?dataBr(c.proximoVencimento):"—"}${c.dataFimPrevista?`<small>Fim ${dataBr(c.dataFimPrevista)}</small>`:""}</td>
-      <td>${podeEditar()?`<div class="cons-v1-actions"><button class="btn-acao destaque" type="button" data-cons-v1-edit="${esc(c.id)}">Editar</button></div>`:'<span class="acao-propria">Consulta</span>'}</td>
+      <td class="nao-exportar"><div class="cons-v1-actions"><button class="btn-acao" type="button" data-cons-v1-detail="${esc(c.id)}">Detalhes</button>${podeEditar()?`<button class="btn-acao destaque" type="button" data-cons-v1-edit="${esc(c.id)}">Editar</button>`:""}</div></td>
     </tr>`;
   }).join("");
-  document.querySelectorAll("[data-cons-v1-edit]").forEach(b=>b.addEventListener("click",()=>editar(b.dataset.consV1Edit)));
+  document.querySelectorAll("[data-cons-v1-open]").forEach(tr=>{
+    tr.addEventListener("click",e=>{if(e.target.closest("button"))return;mostrarDetalhe(tr.dataset.consV1Open)});
+    tr.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();mostrarDetalhe(tr.dataset.consV1Open)}});
+  });
+  document.querySelectorAll("[data-cons-v1-detail]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();mostrarDetalhe(b.dataset.consV1Detail)}));
+  document.querySelectorAll("[data-cons-v1-edit]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();editar(b.dataset.consV1Edit)}));
 }
+
+function definicao(label,valor){return `<div><span>${esc(label)}</span><strong>${esc(valor??"—")}</strong></div>`}
+
+function montarRelatorioDetalhe(c,r){
+  const tb=$("consV1TabelaRelatorioDetalhe")?.querySelector("tbody");if(!tb)return;
+  const linhas=[
+    ["Campo","Informação"],
+    ["Descrição",c.descricao||"—"],
+    ["Empresa",nomeEmpresa(c.empresaId)],
+    ["Administradora",c.administradora||"—"],
+    ["Grupo",c.grupo||"—"],["Cota",c.cota||"—"],["Categoria",CATEGORIAS[c.categoria]||c.categoria||"—"],["Status",textoStatus(c.status)],
+    ["Início",c.dataInicio?dataBr(c.dataInicio):"—"],["Fim previsto",c.dataFimPrevista?dataBr(c.dataFimPrevista):"—"],["Próximo vencimento",c.proximoVencimento?dataBr(c.proximoVencimento):"—"],
+    ["Carta contratada",moeda(r.creditoContratado)],["Carta atual",moeda(r.creditoBase)],["Índice de reajuste",c.indiceReajuste||"—"],
+    ["Prazo",`${r.prazoMeses} meses`],["Parcelas pagas",`${r.parcelasPagas}`],["Parcelas restantes",`${r.parcelasRestantes}`],
+    ["Parcela atual informada",r.valorParcelaAtual>0?moeda(r.valorParcelaAtual):"Não informada"],["Parcela média teórica",moeda(r.parcelaMediaEstimada)],
+    ["Valor pago acumulado",moeda(r.valorPagoAcumulado)],["Saldo teórico",moeda(r.saldoTeorico)],
+    ["Taxa de administração",`${pct(r.taxaAdministracaoPct)} · ${moeda(r.taxaAdministracaoValor)}`],
+    ["Fundo de reserva",`${pct(r.fundoReservaPct)} · ${moeda(r.fundoReservaValor)}`],
+    ["Seguro / outros",`${pct(r.seguroOutrosPct)} · ${moeda(r.seguroOutrosValor)}`],
+    ["Taxa total do consórcio",`${pct(r.taxaConsorcioPct)} · ${moeda(r.taxaConsorcioValor)}`],
+    ["Juros / encargos",`${pct(r.jurosEncargosPct)} · ${moeda(r.jurosEncargosValor)}`],
+    ["Total estimado do plano",moeda(r.totalEstimadoPlano)],
+    ["Contemplação",c.dataContemplacao?dataBr(c.dataContemplacao):"Não informada"],["Modalidade",MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao||"—"],["Lance",moeda(c.lanceValor||0)],
+    ["Crédito utilizado",moeda(r.creditoUtilizado)],["Saldo da carta",moeda(r.saldoCarta)],["Bem / finalidade",c.bemDestino||"—"],["Observações",c.observacoes||"—"]
+  ];
+  tb.innerHTML=linhas.map((l,i)=>`<tr><${i===0?"th":"td"}>${esc(l[0])}</${i===0?"th":"td"}><${i===0?"th":"td"}>${esc(l[1])}</${i===0?"th":"td"}></tr>`).join("");
+}
+
+function renderDetalhe(c){
+  const r=calc(c),cronograma=gerarCronogramaConsorcio(c);
+  $("consV1DetalheTitulo").textContent=c.descricao||"Consórcio";
+  $("consV1DetalheSubtitulo").textContent=[c.administradora,c.grupo?`Grupo ${c.grupo}`:"",c.cota?`Cota ${c.cota}`:"",nomeEmpresa(c.empresaId)].filter(Boolean).join(" · ")||"—";
+  $("consV1DetalheStatus").innerHTML=`${badgeStatus(c.status)}<span class="cons-v1-estimativa-chip">${esc(CATEGORIAS[c.categoria]||c.categoria||"Consórcio")}</span>`;
+  $("consV1DetCredito").textContent=moeda(r.creditoBase);
+  $("consV1DetCreditoSub").textContent=`Contratada ${moeda(r.creditoContratado)}${c.indiceReajuste?` · ${c.indiceReajuste}`:""}`;
+  $("consV1DetTotal").textContent=moeda(r.totalEstimadoPlano);
+  $("consV1DetPago").textContent=moeda(r.valorPagoAcumulado);
+  $("consV1DetSaldo").textContent=moeda(r.saldoTeorico);
+  $("consV1DetSaldoSub").textContent=`${r.parcelasRestantes} parcela(s) restantes`;
+  $("consV1DetParcela").textContent=moeda(r.parcelaReferencia);
+  $("consV1DetParcelaSub").textContent=r.valorParcelaAtual>0?`Atual informada · média teórica ${moeda(r.parcelaMediaEstimada)}`:"Média teórica do plano";
+  $("consV1DadosPlano").innerHTML=[
+    definicao("Empresa",nomeEmpresa(c.empresaId)),definicao("Administradora",c.administradora||"—"),definicao("Grupo / Cota",`${c.grupo||"—"} / ${c.cota||"—"}`),
+    definicao("Início",c.dataInicio?dataBr(c.dataInicio):"—"),definicao("Fim previsto",c.dataFimPrevista?dataBr(c.dataFimPrevista):"—"),definicao("Próximo vencimento",c.proximoVencimento?dataBr(c.proximoVencimento):"—"),
+    definicao("Prazo",`${r.prazoMeses} meses`),definicao("Parcelas pagas",`${r.parcelasPagas} de ${r.prazoMeses}`),definicao("Progresso",`${numero(r.percentualParcelasPagas,1)}%`)
+  ].join("");
+  $("consV1Composicao").innerHTML=`
+    <tr><td>Carta de crédito atual</td><td>100,00%</td><td>${moeda(r.creditoBase)}</td></tr>
+    <tr><td>Taxa de administração</td><td>${pct(r.taxaAdministracaoPct)}</td><td>${moeda(r.taxaAdministracaoValor)}</td></tr>
+    <tr><td>Fundo de reserva</td><td>${pct(r.fundoReservaPct)}</td><td>${moeda(r.fundoReservaValor)}</td></tr>
+    <tr><td>Seguro / outros</td><td>${pct(r.seguroOutrosPct)}</td><td>${moeda(r.seguroOutrosValor)}</td></tr>
+    <tr><td>Taxa total do consórcio</td><td>${pct(r.taxaConsorcioPct)}</td><td>${moeda(r.taxaConsorcioValor)}</td></tr>
+    <tr><td>Juros / encargos</td><td>${pct(r.jurosEncargosPct)}</td><td>${moeda(r.jurosEncargosValor)}</td></tr>
+    <tr><td>Total estimado do plano</td><td>${pct(100+r.custoAdicionalPct)}</td><td>${moeda(r.totalEstimadoPlano)}</td></tr>`;
+  $("consV1ContemplacaoResumo").textContent=c.dataContemplacao?`Contemplado em ${dataBr(c.dataContemplacao)}${c.modalidadeContemplacao?` por ${MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao}`:""}.`:"Nenhuma contemplação registrada.";
+  $("consV1ContemplacaoDados").innerHTML=[
+    definicao("Data",c.dataContemplacao?dataBr(c.dataContemplacao):"—"),definicao("Modalidade",MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao||"—"),definicao("Lance",moeda(c.lanceValor||0)),
+    definicao("Crédito utilizado",moeda(r.creditoUtilizado)),definicao("Saldo da carta",moeda(r.saldoCarta)),definicao("Bem / finalidade",c.bemDestino||"—"),
+    definicao("Observações",c.observacoes||"—")
+  ].join("");
+  $("consV1ParcelasBody").innerHTML=cronograma.map(p=>`<tr>
+    <td>${p.numero}</td><td>${esc(p.competencia||"—")}</td><td class="${p.status==="paga"?"cons-v1-parcela-paga":"cons-v1-parcela-futura"}">${p.status==="paga"?"Paga (contagem)":"A vencer"}</td>
+    <td>${moeda(p.credito)}</td><td>${moeda(p.taxaAdministracao)}</td><td>${moeda(p.fundoReserva)}</td><td>${moeda(p.seguroOutros)}</td><td>${moeda(p.jurosEncargos)}</td><td>${moeda(p.valorTeorico)}</td><td>${moeda(p.valorReferencia)}</td>
+  </tr>`).join("");
+  montarRelatorioDetalhe(c,r);
+  $("btnEditarDetalheV1")?.classList.toggle("hidden",!podeEditar());
+}
+
+function mostrarDetalhe(id){
+  const c=consorcios.find(x=>x.id===id);if(!c)return;
+  detalheId=id;
+  fecharForm();
+  renderDetalhe(c);
+  $("consV1CarteiraView")?.classList.add("hidden");
+  $("consV1DetalheView")?.classList.remove("hidden");
+  const t=$("tituloPagina");if(t)t.textContent="Consórcios · Detalhamento";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function relatorioSeguro(fn){return async()=>{try{await fn()}catch(e){console.error(e);alert(e?.message==="popup-bloqueado"?"O navegador bloqueou a janela do relatório. Libere pop-ups para o SIG e tente novamente.":"Não foi possível gerar o relatório.")}}}
+
+const exportarCarteiraPdf=relatorioSeguro(async()=>{
+  await exportarTabelaPdf($("consV1TabelaCarteira"),{nome:"consorcios_carteira",titulo:"Carteira de Consórcios",meta:[`Filtro: ${$("consV1FiltroStatus")?.selectedOptions?.[0]?.text||"Todos"}`,`Gerado em ${new Date().toLocaleString("pt-BR")}`]});
+});
+const exportarCarteiraExcel=relatorioSeguro(async()=>{
+  exportarTabelaXls($("consV1TabelaCarteira"),{nome:"consorcios_carteira",titulo:"Carteira de Consórcios",meta:[`Filtro: ${$("consV1FiltroStatus")?.selectedOptions?.[0]?.text||"Todos"}`,`Gerado em ${new Date().toLocaleString("pt-BR")}`]});
+});
+const exportarDetalhePdf=relatorioSeguro(async()=>{
+  const c=consorcios.find(x=>x.id===detalheId);if(!c)throw new Error("consorcio-nao-encontrado");
+  await exportarTabelaPdf($("consV1TabelaRelatorioDetalhe"),{nome:nomeArquivo(c,"ficha"),titulo:`Ficha do Consórcio — ${c.descricao||c.cota||"Consórcio"}`,meta:metaRelatorio(c)});
+});
+const exportarParcelasPdf=relatorioSeguro(async()=>{
+  const c=consorcios.find(x=>x.id===detalheId);if(!c)throw new Error("consorcio-nao-encontrado");
+  await exportarTabelaPdf($("consV1TabelaParcelas"),{nome:nomeArquivo(c,"parcelas"),titulo:`Cronograma Teórico de Parcelas — ${c.descricao||c.cota||"Consórcio"}`,meta:[...metaRelatorio(c),"Projeção na base atual; não substitui extrato da administradora"]});
+});
+const exportarParcelasExcel=relatorioSeguro(async()=>{
+  const c=consorcios.find(x=>x.id===detalheId);if(!c)throw new Error("consorcio-nao-encontrado");
+  exportarTabelaXls($("consV1TabelaParcelas"),{nome:nomeArquivo(c,"parcelas"),titulo:`Cronograma Teórico de Parcelas — ${c.descricao||c.cota||"Consórcio"}`,meta:[...metaRelatorio(c),"Projeção na base atual; não substitui extrato da administradora"]});
+});
 
 function atualizarContexto(){
   const ids=empresasSelecionadasIds();
@@ -375,6 +580,7 @@ async function carregar(){
   try{
     consorcios=await listarDocumentos("consorcios");
     atualizarContexto();render();
+    if(detalheId){const atual=consorcios.find(x=>x.id===detalheId);if(atual)renderDetalhe(atual);else mostrarCarteira()}
   }catch(e){
     console.error(e);consorcios=[];atualizarKpis();
     if(lista)lista.innerHTML=`<tr><td colspan="9">${esc(mensagemErroDados(e,"Consórcios"))}</td></tr>`;
@@ -385,7 +591,7 @@ export async function abrir(){
   criarPagina();
   if(!podeVisualizar())return alert("Seu perfil não possui permissão para visualizar consórcios.");
   abrirPagina("ctrl-consorcios-v1");
-  const t=$("tituloPagina");if(t)t.textContent="Consórcios";
+  mostrarCarteira();
   atualizarContexto();
   await carregar();
 }
