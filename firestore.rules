@@ -195,7 +195,7 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
       allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if false;
+      allow delete: if fpaPlano() && documentoAcessivel(resource.data);
     }
 
     match /imobilizados/{id} {
