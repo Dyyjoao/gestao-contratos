@@ -1,0 +1,42 @@
+name: SIG Permissions Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'chatgpt/**'
+      - 'hotfix/**'
+  pull_request:
+    branches: [main]
+
+jobs:
+  permissions-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Controladoria permission contract
+        run: |
+          set -e
+          node --check js/profiles.js
+          node --check js/controllership-router.js
+
+          # DRE e Balanço precisam ser permissões explícitas de perfil.
+          grep -q '\["dre","Visualizar DRE Gerencial"\]' js/profiles.js
+          grep -q '\["balanco","Visualizar Balanço Patrimonial"\]' js/profiles.js
+
+          # Perfis legados com apenas Visualizar mantêm acesso até serem salvos novamente.
+          grep -q 'legadoVisualizar:true' js/controllership-router.js
+          grep -q '\["dre","balanco"\].*p?.controladoria?.visualizar' js/profiles.js
+
+          # O submenu deve ser recalculado a cada login/página e nunca ficar herdado do usuário anterior.
+          grep -q 'aplicarPermissoesSubmenu' js/controllership-router.js
+          grep -q 'window.addEventListener("sig:ready"' js/controllership-router.js
+          grep -q 'classList.toggle("hidden",!ok)' js/controllership-router.js
+
+          # A própria ação precisa bloquear abertura sem permissão, não apenas esconder o botão.
+          grep -q 'validarPermissao(chave)' js/controllership-router.js
+          grep -q 'Seu perfil não possui permissão' js/controllership-router.js
+
+          # Imports dinâmicos não podem reutilizar a mesma instância entre usuários/perfis.
+          grep -q 'state.usuario?.id' js/controllership-router.js
+          grep -q 'state.perfil?.id' js/controllership-router.js
