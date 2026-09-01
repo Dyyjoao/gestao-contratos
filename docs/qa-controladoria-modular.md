@@ -2,7 +2,7 @@
 
 Checklist mínimo antes de merge/publicação de mudança estrutural.
 
-**Baseline:** 01/09/2026 — Plano de Contas v6 + permissões modulares.
+**Baseline:** 01/09/2026 — Plano de Contas v6 + permissões modulares + visões gerenciais do Balanço.
 
 ## 1. Automático
 
@@ -77,12 +77,25 @@ Cada N1 deve permitir novas N2 independentes.
 - [ ] N2 consolida somente suas Analíticas descendentes;
 - [ ] N1 consolida todas as N2/Analíticas descendentes;
 - [ ] Ativo/Passivo usam posição de fechamento, sem somar meses;
+- [ ] primeira coluna permanece delimitada e não ocupa desnecessariamente a maior parte da tela;
+- [ ] mês isolado mostra apenas a competência escolhida;
+- [ ] trimestre mostra os três meses e uma coluna final `Total Tn`;
+- [ ] `Total Tn` é igual à posição do último mês do trimestre, nunca à soma dos três meses;
+- [ ] exercício completo mostra Jan–Dez e `Total Ano` ao final;
+- [ ] `Total Ano` é igual à posição de dezembro, nunca à soma dos doze meses;
+- [ ] Excel e PDF preservam as colunas de fechamento exibidas na tela;
+- [ ] visão **Comparativo anual** mostra Ano atual, Last Year, Variação R$ e Variação %;
+- [ ] Ano atual e Last Year usam posição de dezembro dos respectivos exercícios;
+- [ ] Variação R$ = Atual − LY;
+- [ ] Variação % usa o módulo de LY como base;
+- [ ] LY zero + Atual diferente de zero mostra percentual não aplicável (`—`), evitando divisão artificial;
+- [ ] comparativo anual inclui contas vigentes no ano atual ou no ano anterior, preservando histórico de contas inativadas;
 - [ ] contas redutoras são apresentadas pelo multiplicador;
 - [ ] Imobilizado substitui saldo manual nas contas automáticas;
 - [ ] consolidação multiempresa agrupa Analíticas pelo código;
 - [ ] Sintética ausente pode ser reconstruída para reconciliação;
 - [ ] legado ainda preservado participa da raiz;
-- [ ] diferença Ativo − Passivo/PL continua sendo calculada.
+- [ ] diferença Ativo − Passivo/PL continua sendo calculada nas duas visões.
 
 ## 5. DRE
 
