@@ -1,0 +1,67 @@
+name: SIG Firebase Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'audit/**'
+      - 'hotfix/**'
+    paths:
+      - 'firestore.rules'
+      - 'storage.rules'
+      - 'firebase.json'
+      - '.firebaserc'
+      - 'js/shared.js'
+      - 'js/asset-depreciation.js'
+      - 'js/ctrl-assets-v1.js'
+      - 'js/ctrl-chart-accounts-v5.js'
+      - 'docs/SIG-FIREBASE-DEPLOY-E-RULES.md'
+      - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
+      - 'docs/SIG-MANUAL-MESTRE.md'
+      - 'docs/SIG-GUIA-DE-CONTINUIDADE.md'
+      - 'docs/release-controladoria-modular.md'
+      - '.github/workflows/firebase-contract-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  firebase-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Firebase release contract
+        run: |
+          set -e
+
+          test -s firebase.json
+          test -s .firebaserc
+          test -s firestore.rules
+          test -s storage.rules
+
+          grep -q '"firestore"' firebase.json
+          grep -q '"rules": "firestore.rules"' firebase.json
+          grep -q '"storage"' firebase.json
+          grep -q '"rules": "storage.rules"' firebase.json
+          grep -q 'gestao-de-contratos-b266b' .firebaserc
+
+          grep -q 'function fpaImobilizado' firestore.rules
+          grep -q 'match /imobilizados/' firestore.rules
+          grep -q "permissao('controladoria','imobilizado')" firestore.rules
+
+          grep -q 'errosColecoes' js/shared.js
+          grep -q 'exigirColecaoDisponivel' js/shared.js
+          grep -q 'mensagemErroDados' js/shared.js
+          grep -q 'exigirColecaoDisponivel("imobilizados")' js/asset-depreciation.js
+          grep -q 'exigirColecaoDisponivel("imobilizados")' js/ctrl-chart-accounts-v5.js
+          grep -q 'mensagemErroDados' js/ctrl-assets-v1.js
+
+          grep -q 'GitHub Pages' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
+          grep -q 'firebase deploy --only firestore:rules,storage' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
+          grep -q 'fail-closed' docs/SIG-DOSSIE-DE-CONTINUIDADE.md
+          grep -q '01/09/2026' docs/SIG-MANUAL-MESTRE.md
+          grep -q '01/09/2026' docs/SIG-GUIA-DE-CONTINUIDADE.md
+
+          node --check js/shared.js
+          node --check js/asset-depreciation.js
+          node --check js/ctrl-assets-v1.js
+          node --check js/ctrl-chart-accounts-v5.js
