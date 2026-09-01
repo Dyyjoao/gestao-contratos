@@ -6,6 +6,7 @@ on:
       - main
       - 'audit/**'
       - 'hotfix/**'
+      - 'feature/**'
     paths:
       - 'firestore.rules'
       - 'storage.rules'
@@ -14,7 +15,7 @@ on:
       - 'js/shared.js'
       - 'js/asset-depreciation.js'
       - 'js/ctrl-assets-v1.js'
-      - 'js/ctrl-chart-accounts-v5.js'
+      - 'js/ctrl-chart-accounts-v6.js'
       - 'docs/SIG-FIREBASE-DEPLOY-E-RULES.md'
       - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
       - 'docs/SIG-MANUAL-MESTRE.md'
@@ -47,12 +48,16 @@ jobs:
           grep -q 'function fpaImobilizado' firestore.rules
           grep -q 'match /imobilizados/' firestore.rules
           grep -q "permissao('controladoria','imobilizado')" firestore.rules
+          grep -q 'match /planoContasGerencial/' firestore.rules
+          grep -q 'allow delete: if fpaPlano() && documentoAcessivel(resource.data);' firestore.rules
 
           grep -q 'errosColecoes' js/shared.js
           grep -q 'exigirColecaoDisponivel' js/shared.js
           grep -q 'mensagemErroDados' js/shared.js
           grep -q 'exigirColecaoDisponivel("imobilizados")' js/asset-depreciation.js
-          grep -q 'exigirColecaoDisponivel("imobilizados")' js/ctrl-chart-accounts-v5.js
+          grep -q 'exigirColecaoDisponivel("imobilizados")' js/ctrl-chart-accounts-v6.js
+          grep -q 'usosParaExclusao' js/ctrl-chart-accounts-v6.js
+          grep -q 'batch.delete' js/ctrl-chart-accounts-v6.js
           grep -q 'mensagemErroDados' js/ctrl-assets-v1.js
 
           grep -q 'GitHub Pages' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
@@ -64,4 +69,4 @@ jobs:
           node --check js/shared.js
           node --check js/asset-depreciation.js
           node --check js/ctrl-assets-v1.js
-          node --check js/ctrl-chart-accounts-v5.js
+          node --check js/ctrl-chart-accounts-v6.js
