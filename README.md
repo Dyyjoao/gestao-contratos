@@ -2,7 +2,7 @@
 
 WebApp/PWA empresarial com frontend modular em JavaScript e backend gerenciado por Firebase Authentication + Cloud Firestore.
 
-**Baseline documental atual:** 01/09/2026.
+**Baseline documental atual:** 01/09/2026 — Plano de Contas v6.
 
 ## Escopo ativo
 
@@ -15,86 +15,69 @@ WebApp/PWA empresarial com frontend modular em JavaScript e backend gerenciado p
 
 Módulos antigos podem continuar no repositório por histórico/compatibilidade, mas não são considerados ativos sem rota explícita.
 
+## Plano de Contas vigente
+
+Módulo ativo: `js/ctrl-chart-accounts-v6.js`.
+
+Máscara:
+
+`#.##.##.####`
+
+Hierarquia:
+
+`Raiz → Sintética N1 (#.##) → Sintética N2 (#.##.##) → Analítica (#.##.##.####)`.
+
+Exemplo:
+
+`1 → 1.01 Ativo Circulante → 1.01.01 Disponibilidades → 1.01.01.0001 Caixa`.
+
+O Plano v6 possui árvore expansível, filtro Ativas/Inativas/Todas, inativação por exercício, reativação e exclusão segura de cadastros sem histórico.
+
 ## Documentação oficial
 
 Leia nesta ordem:
 
 1. `AGENTS.md` — contrato para agentes/desenvolvedores;
 2. `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` — estado funcional e arquitetural completo;
-3. `docs/SIG-MANUAL-MESTRE.md` — invariantes que não podem ser quebradas;
+3. `docs/SIG-MANUAL-MESTRE.md` — invariantes;
 4. `docs/SIG-GUIA-DE-CONTINUIDADE.md` — retomada, release e rollback;
-5. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md` — contrato de backend, deploy e diagnóstico de Rules;
-6. `SECURITY.md` — política de segurança;
-7. `docs/qa-controladoria-modular.md` — QA funcional/contábil;
-8. `docs/release-controladoria-modular.md` — checklist de promoção.
+5. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md` — backend, Rules e deploy;
+6. `SECURITY.md` — segurança;
+7. `docs/controladoria-arquitetura.md` — mapa modular;
+8. `docs/qa-controladoria-modular.md` — QA;
+9. `docs/release-controladoria-modular.md` — promoção.
 
-Não existem documentos obrigatórios ocultos fora dessa lista.
+## Arquitetura de Controladoria
 
-## Controladoria & FP&A
+A fonte de verdade das rotas é `js/controllership-router.js`.
 
-A rota ativa é definida em `js/controllership-router.js`.
+Módulos atuais incluem DRE v6, Balanço v1, Input v6, Budget v7, Forecast v5, Plano v6, Premissas v4, Imobilizado v1, Centros v2, Fechamento v3, Caixa e Prestação.
 
-Núcleo atual inclui:
+Natureza contábil, raízes, máscara e multiplicadores são centralizados em `js/account-mask.js`.
 
-- DRE Gerencial;
-- Balanço Patrimonial;
-- Input Mensal;
-- Budget;
-- Forecast;
-- Fluxo de Caixa;
-- Prestação de Contas;
-- Fechamento;
-- Premissas;
-- Imobilizado & CAPEX;
-- Plano de Contas;
-- Centros de Custo;
-- Configurações.
+## Firebase
 
-O Plano vigente usa máscara fixa:
+GitHub Pages publica somente o frontend. `firestore.rules` e `storage.rules` precisam ser publicadas separadamente no Firebase quando alteradas.
 
-```text
-1 Ativo
-2 Passivo
-3 Receita
-4 Despesa
-9 Estatística
+A baseline v6 altera a Rule de `planoContasGerencial` para permitir exclusão a usuários com permissão de Plano e acesso ao documento. A aplicação bloqueia o delete se houver referências/histórico.
 
-#.##       Sintética
-#.##.####  Analítica
-```
+Projeto configurado em `.firebaserc`: `gestao-de-contratos-b266b`.
 
-Natureza e multiplicadores são centralizados em `js/account-mask.js`. Multiplicadores nunca regravam saldo bruto.
+## QA
 
-`js/financial-reporting.js` centraliza a interpretação financeira compartilhada por relatórios gerenciais.
+Workflows principais:
 
-A coleção `imobilizados` é dependência crítica das integrações patrimoniais e de depreciação. Erro de leitura dessa coleção não pode ser tratado como “nenhum bem cadastrado”; cálculos e ações dependentes devem falhar de forma fechada.
+- `SIG Quality Check`;
+- `SIG Firebase Contract Check`;
+- Pages build/deployment.
 
-## Arquitetura
+Mudanças estruturais só devem chegar à `main` depois do HEAD final verde.
 
-- `index.html` + `app.js`;
-- ES Modules em `js/`;
-- carregamento sob demanda para módulos pesados;
-- Firebase Authentication;
-- Cloud Firestore;
-- Firebase Storage;
-- `firestore.rules` e `storage.rules` como barreiras reais de dados/arquivos;
-- `.firebaserc` + `firebase.json` como contrato de deploy Firebase;
-- GitHub Pages como hospedagem atual do frontend.
+## Regra de dados
 
-Frontend e banco são independentes: trocar de host/domínio não apaga o Firestore se o mesmo projeto Firebase continuar sendo usado.
-
-**Importante:** GitHub Pages publica HTML/CSS/JavaScript, mas não publica Firestore/Storage Rules. Se uma versão alterar Rules, o deploy Firebase é uma etapa separada e obrigatória antes de considerar a release concluída.
-
-## Segurança
-
-`SECURITY.md` é obrigatório para qualquer alteração de autenticação, permissões, persistência, domínio ou armazenamento.
-
-Nunca colocar Service Account, chave privada, token administrativo ou outro segredo no frontend/repositório.
-
-## Qualidade
-
-GitHub Actions executa o `SIG Quality Check`, incluindo validações de sintaxe, contratos arquiteturais e browser smoke dos módulos da Controladoria.
-
-Há também contrato específico de Firebase para garantir presença de configuração, Rules do Imobilizado e travas fail-closed das dependências críticas.
-
-Mudança estrutural só é considerada completa quando código, QA, Rules aplicáveis, **deploy das Rules quando necessário** e documentação estão coerentes.
+- Sintética nunca recebe lançamento;
+- Analítica é folha lançável;
+- saldo bruto persistido não é regravado para ajustar apresentação;
+- conta com histórico deve ser inativada, não apagada;
+- exclusão física serve apenas para cadastro de teste/erro sem referências;
+- base contábil crítica indisponível deve falhar de forma fechada.
