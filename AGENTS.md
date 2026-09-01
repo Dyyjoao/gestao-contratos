@@ -12,7 +12,7 @@ Trate como contrato arquitetural:
 4. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`
 5. `SECURITY.md`
 6. `app.js`
-7. `js/controllership-router.js` quando envolver Controladoria/FP&A
+7. `js/controllership-router.js` quando envolver Controladoria/FP&A ou o roteamento atual de Consórcios
 8. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc` quando houver persistência/permissões/backend
 9. `.github/workflows/` antes de mudar arquitetura/testes
 
@@ -50,7 +50,8 @@ Não dependa de memória de conversa para interpretar o produto.
 - Fim da depreciação não baixa automaticamente o bem.
 - CAPEX ainda não gera desembolso automático no Fluxo de Caixa.
 - Consórcios ativo: `js/ctrl-consorcios-v1.js`; matemática: `js/consortium-calculations.js`; coleção: `consorcios`.
-- Consórcios usa permissões próprias `consorciosVisualizar` e `consorciosEditar`.
+- **Consórcios é módulo de primeiro nível no menu principal, logo após Contratos; não pertence ao submenu Controladoria & FP&A.**
+- Consórcios usa permissões próprias `consorciosVisualizar` e `consorciosEditar` dentro do contrato de permissões vigente.
 - Consórcios v1 é gestão independente: não alimenta DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado.
 - Taxa de Consórcio e juros/encargos permanecem conceitos separados.
 - Ficha de Consórcio não é apagada na v1; usar Encerrado/Cancelado para preservar histórico.
@@ -83,6 +84,8 @@ Revisar em conjunto:
 - `firestore.rules`;
 - `SIG Consorcios Contract Check`;
 - documentação.
+
+Não recolocar Consórcios dentro do submenu de Controladoria sem decisão arquitetural explícita.
 
 Não criar integração automática com contabilidade/caixa/planejamento sem decisão explícita e atualização dos contratos arquiteturais.
 
