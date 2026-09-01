@@ -1,7 +1,7 @@
 # SIG — Dossiê de Continuidade do Projeto
 
 **Sistema Integrado de Gestão (SIG)**  
-**Baseline funcional:** 01/09/2026 — Plano de Contas v6  
+**Baseline funcional:** 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1  
 **Repositório:** `Dyyjoao/gestao-contratos`  
 **Produção:** `main`
 
@@ -67,6 +67,8 @@ Toda persistência empresarial deve respeitar:
 
 Telas monoempresa não podem escolher silenciosamente a primeira empresa de um contexto múltiplo. Fluxo de Caixa e Prestação de Contas exigem exatamente uma empresa.
 
+Consórcios pode ser consultado em contexto multiempresa para visão de carteira, mas novo cadastro exige exatamente uma empresa selecionada.
+
 ---
 
 # 3. Controladoria & FP&A — módulos ativos
@@ -84,11 +86,23 @@ A rota vigente está em `js/controllership-router.js`.
 - Permutas — `js/permutas.js`;
 - Premissas — `js/ctrl-premises-v4.js`;
 - Imobilizado & CAPEX — `js/ctrl-assets-v1.js`;
+- Consórcios — `js/ctrl-consorcios-v1.js`;
 - Plano de Contas — `js/ctrl-chart-accounts-v6.js`;
 - Centros de Custo — `js/ctrl-cost-centers-v2.js`;
 - Configurações — `js/ctrl-settings.js`.
 
 `fpa.js` e gerações anteriores não são fonte de verdade da Controladoria atual.
+
+## 3.1 Permissões explícitas
+
+Além de `controladoria.visualizar`, submódulos sensíveis possuem ações próprias.
+
+- `controladoria.dre` — visualizar DRE;
+- `controladoria.balanco` — visualizar Balanço;
+- `controladoria.consorciosVisualizar` — consultar Consórcios;
+- `controladoria.consorciosEditar` — criar/editar Consórcios.
+
+DRE/Balanço preservam fallback temporário para perfis legados sem as novas chaves. Consórcios não possui fallback legado e exige permissão explícita ou Administração FP&A.
 
 ---
 
@@ -138,42 +152,19 @@ A mesma estrutura é suportada nas raízes 1, 2, 3, 4 e 9 para manter um motor h
 
 Inativação é histórica por exercício por meio de `inativaAPartirExercicio`.
 
-Uma conta/ramo só pode ser inativado depois da verificação de uso atual/futuro em:
-
-- Realizado;
-- Budget;
-- Forecast;
-- detalhamentos;
-- Premissas;
-- Imobilizado/CAPEX.
+Uma conta/ramo só pode ser inativado depois da verificação de uso atual/futuro em Realizado, Budget, Forecast, detalhamentos, Premissas, Imobilizado/CAPEX e demais vínculos controlados pelo módulo.
 
 Quando a conta está inativa, a ação correspondente deve ser **Reativar**. Reativar remove a inativação programada (`inativaAPartirExercicio = 0`) e restaura `status: ativo`. Em Sintéticas, a ação abrange o ramo.
 
 ## 4.5 Exclusão
 
-Exclusão física existe apenas para corrigir cadastro de teste/erro sem histórico.
+Exclusão física existe apenas para corrigir cadastro de teste/erro sem histórico. Antes de excluir, o frontend verifica referências nas bases contábeis e de planejamento conhecidas. Se existir referência, a exclusão é bloqueada e a conta deve ser inativada para preservar rastreabilidade.
 
-Antes de excluir, o frontend verifica referências em:
-
-- `realizadoMensal`;
-- `budgetLinhas`;
-- `forecastLinhas`;
-- `planejamentoDetalhes`;
-- `premissasPlanejamento`;
-- `imobilizados`;
-- `centrosCusto.contasPermitidas`;
-- `classificacoesContas`;
-- `planejamentoMensal`.
-
-Se existir referência, a exclusão deve ser bloqueada e a conta deve permanecer/inativar-se para preservar rastreabilidade.
-
-A Rule de `planoContasGerencial` permite delete somente a quem possui `fpaPlano()` e acesso ao documento. A checagem de referências é responsabilidade adicional do aplicativo.
+A Rule de `planoContasGerencial` permite delete somente a quem possui `fpaPlano()` e acesso ao documento.
 
 ## 4.6 Legado v5 e testes
 
 Contas anteriores à v6 não são migradas automaticamente. O Plano v6 identifica como **Legado/teste** os registros fora do contrato v6 e oferece limpeza segura.
-
-`Limpar legado/testes` remove somente contas antigas sem qualquer referência conhecida. Não usar exclusão para histórico real.
 
 ---
 
@@ -208,13 +199,18 @@ A matriz de Centro de Custo trabalha por IDs de contas Analíticas e não depend
 
 Balanço representa **posição de fechamento**, não fluxo. Meses não são somados entre si.
 
-Na v6, o Balanço apresenta:
-
-`Raiz → Sintética N1 → Sintética N2 → Analítica`.
+Na v6, o Balanço apresenta `Raiz → Sintética N1 → Sintética N2 → Analítica`.
 
 Na consolidação multiempresa, Analíticas são consolidadas por código. Sintéticas podem ser reconstruídas pelos prefixos do código quando necessário. Contas patrimoniais legadas continuam participando da reconciliação até serem removidas com segurança.
 
 Imobilizado integrado substitui o saldo manual das contas patrimoniais mapeadas.
+
+Visões vigentes:
+
+1. **Evolução mensal + fechamento:** mês isolado mostra a competência; trimestre mostra os três meses + `Total Tn`; ano mostra Jan–Dez + `Total Ano`. O total é sempre a posição do último mês do período, nunca soma dos meses.
+2. **Comparativo anual:** posição do ano atual x `Last Year`, com `Variação R$` e `Variação %`. Ambos usam dezembro dos respectivos exercícios e a estrutura preserva contas vigentes no atual ou no ano anterior.
+
+A primeira coluna tem largura delimitada para equilibrar descrição e valores.
 
 ---
 
@@ -247,25 +243,63 @@ CAPEX ainda não gera automaticamente desembolso no Fluxo de Caixa. O cadastro a
 
 ---
 
-# 10. Persistência e Firebase
+# 10. Consórcios v1
+
+Coleção: `consorcios`.
+
+Objetivo: gestão operacional/financeira da carteira de consórcios sem gerar lançamentos automáticos nesta fase.
+
+Cadastro vigente inclui:
+
+- descrição, administradora, grupo, cota e categoria;
+- status `ativo`, `contemplado`, `encerrado`, `cancelado`;
+- datas de início, fim previsto, próximo vencimento e contemplação;
+- carta contratada e carta atual/reajustada;
+- índice/critério de reajuste;
+- prazo, parcelas pagas, valor da parcela atual e valor pago acumulado;
+- taxa de administração, fundo de reserva, seguro/outros e juros/encargos opcionais;
+- modalidade de contemplação, lance, crédito utilizado e bem/finalidade.
+
+`js/consortium-calculations.js` centraliza a matemática:
+
+- base = carta atual, ou contratada quando a atual não foi informada;
+- taxa do consórcio = administração + fundo de reserva + seguro/outros;
+- juros/encargos são separados da taxa do consórcio;
+- total estimado = carta base + custos informados;
+- parcela média = total estimado / prazo;
+- saldo teórico usa valor pago acumulado quando disponível, senão usa parcela média × parcelas restantes;
+- parcela atual real permanece separada da média estimada.
+
+A tela apresenta KPIs de carteira ativa, contemplados, crédito atual, parcela mensal e saldo teórico. Consulta pode consolidar empresas selecionadas; cadastro novo é monoempresa.
+
+**Decisão arquitetural:** Consórcios v1 não alimenta DRE, Balanço, Fluxo de Caixa, Budget, Forecast ou Imobilizado. Integração futura exige desenho contábil próprio antes de qualquer automação.
+
+Não há delete físico em `consorcios`; usar Encerrado/Cancelado para preservar histórico.
+
+---
+
+# 11. Persistência e Firebase
 
 Arquivo versionado de regras: `firestore.rules`.
 
 Mudanças desta baseline que exigem Rules publicadas no Firebase:
 
 1. coleção `imobilizados` com leitura/escrita por permissões de Controladoria;
-2. `delete` em `planoContasGerencial` autorizado somente por `fpaPlano()` e `documentoAcessivel(resource.data)`.
+2. `delete` em `planoContasGerencial` autorizado somente por `fpaPlano()` e `documentoAcessivel(resource.data)`;
+3. coleção `consorcios`, com leitura por `consorciosVisualizar`/`consorciosEditar`, escrita por `consorciosEditar`, sempre limitada a grupo/empresa e sem delete.
 
 O release só está completo quando frontend e Rules compatíveis estiverem publicados.
 
 ---
 
-# 11. QA e release
+# 12. QA e release
 
 Workflows relevantes:
 
 - `SIG Quality Check`;
 - `SIG Firebase Contract Check`;
+- `SIG Permissions Contract Check`;
+- `SIG Consorcios Contract Check`;
 - GitHub Pages build/deploy.
 
 O QA deve verificar, no mínimo:
@@ -273,29 +307,31 @@ O QA deve verificar, no mínimo:
 - sintaxe de todos os JS;
 - imports dos módulos atuais;
 - `abrir()` real de módulos críticos em navegador headless;
-- rota ativa do Plano v6;
-- máscara `#.##.##.####`;
-- dois níveis sintéticos;
+- rota ativa do Plano v6 e Consórcios v1;
+- máscara `#.##.##.####` e hierarquia;
 - filtro/reação de inativação/reativação;
-- exclusão segura;
-- Balanço e DRE adaptados à nova hierarquia;
+- exclusão segura de contas;
+- Balanço/DRE adaptados à hierarquia;
+- matemática e permissões de Consórcios;
 - contrato de Firestore Rules.
 
 Não promover pacote estrutural pela metade.
 
 ---
 
-# 12. Limitações e decisões abertas
+# 13. Limitações e decisões abertas
 
 - exclusão de conta é ferramenta de limpeza, não política de retenção de histórico;
 - contas v5 não são migradas automaticamente para v6;
 - migração futura de histórico deve ser projeto separado, com rollback;
 - baixa/venda de ativo ainda não fecha automaticamente ganho/perda de alienação na DRE;
 - CAPEX ainda não integra desembolso de caixa automaticamente;
+- Consórcios ainda não integra automaticamente demonstrativos, caixa ou planejamento;
+- cálculo de Consórcios é gerencial e depende dos percentuais/valores contratuais informados; reajustes reais devem ser atualizados na carta/parcela atual;
 - módulos legados no repositório não devem ser reativados sem decisão explícita.
 
 ---
 
 ## Estado desta baseline
 
-A arquitetura alvo da Controladoria passa a usar Plano de Contas v6 com máscara `#.##.##.####`, árvore de quatro níveis, reativação, filtros e exclusão segura de cadastros de teste/legado. A publicação definitiva desta versão exige QA verde, promoção do frontend e republicação das Firestore Rules quando o pacote chegar à `main`.
+A arquitetura vigente combina Plano de Contas v6, Balanço com visão evolutiva e comparativo anual, permissões modulares e Consórcios v1 independente. A publicação definitiva de uma versão que altere `firestore.rules` exige QA verde, promoção do frontend e republicação das Firestore Rules compatíveis no Firebase.
