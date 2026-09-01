@@ -128,7 +128,7 @@ jobs:
           grep -q 'financial-reporting.js' js/dashboard-executive.js
           grep -q 'financial-reporting.js' js/accountability.js
 
-          # Telas monoempresa: proteção também quando contexto muda com tela aberta
+          # Telas monoempresa
           grep -q 'contextoUnico' js/cashflow.js
           grep -q 'empresaUnicaSelecionadaId' js/cashflow.js
           grep -q 'Fluxo de Caixa é monoempresa' js/cashflow.js
@@ -147,7 +147,7 @@ jobs:
           grep -q 'complianceProgramasAuditoria' js/governance.js
           grep -q 'jspdf@2.5.2' js/accountability-pdf.js
 
-          # Escopo ativo: módulos operacionais antigos não voltam por acidente
+          # Escopo ativo
           grep -q './js/contracts.js' app.js
           ! grep -q './js/fleet.js' app.js
           ! grep -q './js/inventory.js' app.js
@@ -223,10 +223,25 @@ jobs:
             catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">'+m+' :: '+String(e.stack||e)+'</pre>');return}
           }
           try{
+            const mask=await import('./js/account-mask.js');
+            if(mask.MASCARA_PLANO!=='#.##.##.####')throw new Error('Máscara v6 divergente');
+            if(mask.proximoCodigoSintetico([], '1')!=='1.01')throw new Error('Falha ao gerar Sintética N1');
+            if(mask.proximoCodigoSintetico([{codigo:'1.01'},{codigo:'1.02'}], '1')!=='1.03')throw new Error('Falha na sequência N1');
+            if(mask.proximoCodigoSintetico([{codigo:'1.01.01'}], '1.01')!=='1.01.02')throw new Error('Falha na sequência N2');
+            if(mask.proximoCodigoAnalitico([], '1.01.01')!=='1.01.01.0001')throw new Error('Falha ao gerar Analítica v6');
+            if(!mask.codigoSinteticoNivel1Valido('1.01')||!mask.codigoSinteticoNivel2Valido('1.01.01'))throw new Error('Validador sintético v6 falhou');
+            if(!mask.codigoAnaliticoValido('1.01.01.0001'))throw new Error('Analítica v6 deveria ser válida');
+            if(mask.codigoAnaliticoValido('1.01.0001'))throw new Error('Analítica v5 não pode ser válida como v6');
+            const pref=mask.prefixosSinteticosCodigo('1.01.01.0001');
+            if(pref.length!==2||pref[0]!=='1.01'||pref[1]!=='1.01.01')throw new Error('Prefixos N1/N2 divergentes');
+
             const plano=await import('./js/ctrl-chart-accounts-v6.js');
             plano.abrir();
             const pp=document.getElementById('pagina-ctrl-plano-v6');
             if(!pp||pp.classList.contains('hidden'))throw new Error('Plano abrir() não exibiu pagina-ctrl-plano-v6');
+            if(!document.getElementById('contaV6FiltroStatus'))throw new Error('Filtro Ativas/Inativas ausente no Plano v6');
+            if(!document.getElementById('btnLimparLegadoV6'))throw new Error('Limpeza segura de legado ausente no Plano v6');
+
             const budget=await import('./js/ctrl-budget-v7.js');
             budget.abrir();
             const pb=document.getElementById('pagina-ctrl-budget-v7');
