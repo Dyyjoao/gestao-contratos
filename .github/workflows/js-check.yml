@@ -6,6 +6,7 @@ on:
       - main
       - 'chatgpt/**'
       - 'hotfix/**'
+      - 'feature/**'
   pull_request:
     branches: [main]
 
@@ -35,7 +36,8 @@ jobs:
           grep -q 'ctrl-input-v6.js' js/controllership-router.js
           grep -q 'ctrl-budget-v7.js' js/controllership-router.js
           grep -q 'ctrl-forecast-v5.js' js/controllership-router.js
-          grep -q 'ctrl-chart-accounts-v5.js' js/controllership-router.js
+          grep -q 'ctrl-chart-accounts-v6.js' js/controllership-router.js
+          ! grep -q 'ctrl-chart-accounts-v5.js' js/controllership-router.js
           grep -q 'ctrl-premises-v4.js' js/controllership-router.js
           grep -q 'ctrl-cost-centers-v2.js' js/controllership-router.js
           grep -q 'ctrl-assets-v1.js' js/controllership-router.js
@@ -51,14 +53,24 @@ jobs:
           grep -q 'SIG_ABRIR_CTRL?.(chave)' js/ctrl-settings.js
           ! grep -q 'SIG_ABRIR_CTRL_LEGADO?.(chave)' js/ctrl-settings.js
 
-          # Plano, máscara e natureza contábil
+          # Plano v6, máscara e natureza contábil
           grep -q 'RAIZES_CONTABEIS' js/account-mask.js
+          grep -q 'MASCARA_PLANO="#.##.##.####"' js/account-mask.js
+          grep -q 'VERSAO_MASCARA_PLANO="v6"' js/account-mask.js
+          grep -q 'codigoSinteticoNivel1Valido' js/account-mask.js
+          grep -q 'codigoSinteticoNivel2Valido' js/account-mask.js
+          grep -q 'prefixosSinteticosCodigo' js/account-mask.js
           grep -q 'multiplicadorApresentacao' js/account-mask.js
           grep -q 'multiplicadorResultado' js/account-mask.js
           grep -q 'contaRedutora' js/account-mask.js
-          grep -q 'pagina-ctrl-plano-v5' js/ctrl-chart-accounts-v5.js
-          grep -q 'Natureza contábil' js/ctrl-chart-accounts-v5.js
-          grep -q 'contaAtivaNoExercicio' js/ctrl-chart-accounts-v5.js
+          grep -q 'pagina-ctrl-plano-v6' js/ctrl-chart-accounts-v6.js
+          grep -q 'Sintética N1' js/ctrl-chart-accounts-v6.js
+          grep -q 'Sintética N2' js/ctrl-chart-accounts-v6.js
+          grep -q 'contaV6FiltroStatus' js/ctrl-chart-accounts-v6.js
+          grep -q 'data-v6-reativar' js/ctrl-chart-accounts-v6.js
+          grep -q 'batch.delete' js/ctrl-chart-accounts-v6.js
+          grep -q 'Limpar legado/testes' js/ctrl-chart-accounts-v6.js
+          grep -q 'contaAtivaNoExercicio' js/ctrl-chart-accounts-v6.js
 
           # Centros técnicos e hierarquia
           grep -q 'CC_ESTATISTICO_ID' js/statistical-center.js
@@ -78,6 +90,8 @@ jobs:
           grep -q 'duplicadoArquivado' js/ctrl-input-v6.js
           grep -q 'pagina-ctrl-balanco-v1' js/ctrl-balance-sheet-v1.js
           grep -q 'posição de fechamento' js/ctrl-balance-sheet-v1.js
+          grep -q 'prefixosSinteticosCodigo' js/ctrl-balance-sheet-v1.js
+          grep -q 'codigoSinteticoNivel2Valido' js/ctrl-balance-sheet-v1.js
           grep -q 'multiplicadorApresentacao' js/ctrl-balance-sheet-v1.js
 
           # Budget / Forecast / Premissas / Imobilizado
@@ -104,6 +118,8 @@ jobs:
           # DRE e núcleo financeiro compartilhado
           grep -q 'pagina-ctrl-dre-v6' js/ctrl-dre-v6.js
           grep -q 'Expandir tudo' js/ctrl-dre-v6.js
+          grep -q 'prefixosSinteticosCodigo' js/ctrl-dre-v6.js
+          grep -q 'dre-v6-sint-n2' js/ctrl-dre-v6.js
           grep -q 'Exportar Excel' js/ctrl-dre-v6.js
           grep -q 'multiplicadorResultado' js/ctrl-dre-v6.js
           grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v6.js
@@ -142,6 +158,8 @@ jobs:
           # Segurança e persistência
           grep -q 'match /imobilizados/' firestore.rules
           grep -q 'fpaImobilizado' firestore.rules
+          grep -q 'match /planoContasGerencial/' firestore.rules
+          grep -q 'allow delete: if fpaPlano()' firestore.rules
           grep -q 'configuracoesControladoria' firestore.rules
           grep -q 'match /permutas/' firestore.rules
           grep -q 'match /permutaMovimentos/' firestore.rules
@@ -193,7 +211,7 @@ jobs:
             'account-mask.js','account-validity.js','premise-validity.js',
             'statistical-center.js','balance-center.js','account-tree.js',
             'asset-depreciation.js','asset-planning.js','financial-reporting.js',
-            'ctrl-chart-accounts-v5.js','ctrl-cost-centers-v2.js','ctrl-premises-v4.js',
+            'ctrl-chart-accounts-v6.js','ctrl-cost-centers-v2.js','ctrl-premises-v4.js',
             'ctrl-input-v6.js','ctrl-balance-sheet-v1.js','ctrl-assets-v1.js',
             'ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js',
             'ctrl-dre-v6.js','closing-v3.js','cashflow.js','accountability.js'
@@ -205,6 +223,10 @@ jobs:
             catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">'+m+' :: '+String(e.stack||e)+'</pre>');return}
           }
           try{
+            const plano=await import('./js/ctrl-chart-accounts-v6.js');
+            plano.abrir();
+            const pp=document.getElementById('pagina-ctrl-plano-v6');
+            if(!pp||pp.classList.contains('hidden'))throw new Error('Plano abrir() não exibiu pagina-ctrl-plano-v6');
             const budget=await import('./js/ctrl-budget-v7.js');
             budget.abrir();
             const pb=document.getElementById('pagina-ctrl-budget-v7');
