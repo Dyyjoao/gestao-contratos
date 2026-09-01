@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'audit/**'
+      - 'chatgpt/**'
       - 'hotfix/**'
       - 'feature/**'
     paths:
@@ -15,6 +16,8 @@ on:
       - 'js/shared.js'
       - 'js/asset-depreciation.js'
       - 'js/ctrl-assets-v1.js'
+      - 'js/ctrl-consorcios-v1.js'
+      - 'js/consortium-calculations.js'
       - 'js/ctrl-chart-accounts-v6.js'
       - 'docs/SIG-FIREBASE-DEPLOY-E-RULES.md'
       - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
@@ -51,6 +54,15 @@ jobs:
           grep -q 'match /planoContasGerencial/' firestore.rules
           grep -q 'allow delete: if fpaPlano() && documentoAcessivel(resource.data);' firestore.rules
 
+          grep -q 'function consorciosVisualizar' firestore.rules
+          grep -q 'function consorciosEditar' firestore.rules
+          grep -q 'match /consorcios/' firestore.rules
+          grep -q "permissao('controladoria','consorciosVisualizar')" firestore.rules
+          grep -q "permissao('controladoria','consorciosEditar')" firestore.rules
+          grep -q 'listarDocumentos("consorcios")' js/ctrl-consorcios-v1.js
+          grep -q 'criarDocumento("consorcios"' js/ctrl-consorcios-v1.js
+          grep -q 'atualizarDocumento("consorcios"' js/ctrl-consorcios-v1.js
+
           grep -q 'errosColecoes' js/shared.js
           grep -q 'exigirColecaoDisponivel' js/shared.js
           grep -q 'mensagemErroDados' js/shared.js
@@ -59,6 +71,7 @@ jobs:
           grep -q 'usosParaExclusao' js/ctrl-chart-accounts-v6.js
           grep -q 'batch.delete' js/ctrl-chart-accounts-v6.js
           grep -q 'mensagemErroDados' js/ctrl-assets-v1.js
+          grep -q 'mensagemErroDados' js/ctrl-consorcios-v1.js
 
           grep -q 'GitHub Pages' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
           grep -q 'firebase deploy --only firestore:rules,storage' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
@@ -69,4 +82,6 @@ jobs:
           node --check js/shared.js
           node --check js/asset-depreciation.js
           node --check js/ctrl-assets-v1.js
+          node --check js/consortium-calculations.js
+          node --check js/ctrl-consorcios-v1.js
           node --check js/ctrl-chart-accounts-v6.js
