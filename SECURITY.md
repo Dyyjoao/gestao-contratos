@@ -2,7 +2,7 @@
 
 Este documento define as regras mínimas de segurança do **SIG — Sistema Integrado de Gestão**.
 
-**Baseline:** 01/09/2026 — Plano de Contas v6.
+**Baseline:** 01/09/2026 — Plano de Contas v6 + Consórcios v1.
 
 ---
 
@@ -17,7 +17,7 @@ Este documento define as regras mínimas de segurança do **SIG — Sistema Inte
 7. **Rule versionada não significa Rule publicada.** GitHub Pages não publica Firebase Rules.
 8. **Dados não são corrigidos para compensar bug visual.**
 9. **Base crítica indisponível não é base vazia.** Cálculo dependente deve falhar de forma fechada.
-10. **Histórico contábil é preservado.** Exclusão física só é admitida para cadastro de teste/erro sem referências.
+10. **Histórico empresarial é preservado.** Exclusão física só é admitida onde houver regra explícita e justificativa funcional.
 
 ---
 
@@ -98,22 +98,24 @@ Consumidores contábeis devem tratar falha da coleção como erro crítico, não
 - create/update: `fpaPlano()` + documento acessível;
 - delete: `fpaPlano()` + documento acessível.
 
-A permissão de delete foi introduzida para limpar cadastro incorreto/teste. Ela não autoriza apagar histórico empresarial indiscriminadamente.
+A permissão de delete existe para limpar cadastro incorreto/teste. Ela não autoriza apagar histórico empresarial indiscriminadamente.
 
-O frontend `ctrl-chart-accounts-v6.js` deve verificar referências antes de executar delete em:
+O frontend `ctrl-chart-accounts-v6.js` deve verificar referências antes do delete. Se houver vínculo, a conta deve ser inativada.
 
-- Realizado;
-- Budget;
-- Forecast;
-- detalhamentos;
-- Premissas;
-- Imobilizado/CAPEX;
-- Centros de Custo;
-- classificações/planejamento legados relacionados.
+### 5.4 Consórcios v1
 
-Se qualquer referência existir, excluir é proibido funcionalmente e a conta deve ser inativada.
+`consorcios`:
 
-Não criar endpoint, botão ou rotina de limpeza que ignore essa validação.
+- read: `consorciosVisualizar()` + documento acessível;
+- create/update: `consorciosEditar()` + documento acessível;
+- `grupoId` e `empresaId` não podem ser trocados em update;
+- delete: bloqueado.
+
+`consorciosVisualizar()` aceita Administração FP&A, `controladoria.consorciosVisualizar` ou `controladoria.consorciosEditar`. `consorciosEditar()` aceita Administração FP&A ou `controladoria.consorciosEditar`.
+
+A tela pode ocultar ações de edição, mas isso é somente UX; a Rule continua sendo a barreira efetiva.
+
+Consórcios v1 é gerencial e independente: não deve criar lançamentos em coleções contábeis/planejamento como efeito colateral.
 
 ---
 
@@ -136,12 +138,7 @@ Máscara v6: `#.##.##.####`.
 
 `storage.rules` é independente de `firestore.rules`.
 
-Todo novo caminho de upload deve definir:
-
-- quem lê;
-- quem grava;
-- vínculo com Grupo/Empresa quando aplicável;
-- limites de tamanho/tipo quando necessários.
+Todo novo caminho de upload deve definir quem lê, quem grava, vínculo com Grupo/Empresa e limites quando necessários.
 
 Não presumir que permissão de Firestore automaticamente vale no Storage.
 
@@ -162,7 +159,7 @@ Quando `firestore.rules` ou `storage.rules` forem alteradas:
 - publicar Rules no Firebase;
 - testar com usuário autenticado e permissões reais.
 
-Para esta baseline, o delete do Plano v6 só funcionará depois da Rule correspondente estar publicada no Firebase.
+Para a baseline com Consórcios v1, o módulo só estará funcional para usuários reais depois da Rule de `consorcios` estar publicada no Firebase.
 
 ---
 
@@ -173,9 +170,12 @@ Antes de release estrutural:
 - [ ] usuário sem acesso à empresa continua bloqueado;
 - [ ] usuário sem permissão de Plano não consegue criar/editar/excluir conta;
 - [ ] conta com referência não é excluída pela aplicação;
-- [ ] conta de teste sem referência pode ser excluída somente por usuário autorizado;
 - [ ] Grupo/Empresa permanecem imutáveis em update;
 - [ ] Imobilizado falha fechado se a Rule estiver ausente;
+- [ ] usuário sem permissão de Consórcios não lê a coleção;
+- [ ] usuário apenas com `consorciosVisualizar` não grava a coleção;
+- [ ] usuário com `consorciosEditar` grava somente em empresa acessível;
+- [ ] delete de Consórcios permanece bloqueado;
 - [ ] Rules ativas no Firebase correspondem à versão do frontend;
 - [ ] nenhum segredo foi adicionado ao repositório.
 
