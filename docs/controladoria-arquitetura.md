@@ -1,6 +1,8 @@
 # Controladoria & FP&A — Arquitetura Modular Vigente
 
-Este arquivo é um mapa operacional curto. Para regras completas, ler `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`.
+**Baseline:** 01/09/2026.
+
+Este arquivo é um mapa operacional curto. Para regras completas, ler `docs/SIG-DOSSIE-DE-CONTINUIDADE.md` e `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`.
 
 ## Rotas atuais
 
@@ -28,9 +30,10 @@ Arquivos antigos podem permanecer no repositório, mas não devem ser considerad
 - módulos pesados são carregados sob demanda;
 - telas de consulta evitam recarregar base a cada alteração pequena de contexto;
 - DRE/Balanço podem consolidar empresas;
-- Input, Fluxo de Caixa e Prestação exigem empresa única conforme sua função;
+- Input, Fluxo de Caixa, Prestação e Imobilizado exigem empresa única conforme sua função;
 - Budget/Forecast compartilham motor de planejamento;
-- Dashboard/Prestação devem usar o núcleo comum `financial-reporting.js` para interpretação financeira.
+- Dashboard/Prestação usam o núcleo comum `financial-reporting.js` para interpretação financeira;
+- Budget e Forecast têm teste de abertura real no browser, não apenas teste de importação.
 
 ### Shell compartilhado de Caixa e Prestação
 
@@ -68,6 +71,8 @@ Raízes:
 
 Sintética nunca recebe lançamento. Analítica é folha lançável.
 
+Inativação verifica uso futuro em Realizado, Budget, Forecast, detalhes, premissas e Imobilizado. Se a coleção `imobilizados` não puder ser validada, a inativação é bloqueada.
+
 ## Natureza
 
 `js/account-mask.js` centraliza natureza contábil e multiplicadores.
@@ -92,19 +97,50 @@ Não aparecem como Centros operacionais normais.
 - meses não são somados;
 - consolidação multiempresa por código;
 - Imobilizado pode alimentar contas automaticamente;
-- diferença Ativo − Passivo/PL fica explícita.
+- diferença Ativo − Passivo/PL fica explícita;
+- falha de leitura de `imobilizados` bloqueia a integração automática em vez de assumir posição zero.
 
 ## Budget / Forecast / Premissas
 
 - Budget anual e versionado;
 - Forecast = Realizado fechado + futuro;
 - premissas respeitam vigência mês a mês;
-- depreciação automática do Imobilizado substitui projeção manual equivalente.
+- depreciação automática do Imobilizado substitui projeção manual equivalente;
+- falha de `imobilizados` bloqueia o cálculo automático de depreciação em vez de ser convertida em zero.
+
+## Imobilizado & CAPEX
+
+Coleção persistente: `imobilizados`.
+
+A coleção é usada por:
+
+- ficha de Imobilizado/CAPEX;
+- Balanço;
+- Input patrimonial;
+- Budget;
+- Forecast;
+- DRE projetada;
+- proteção de inativação do Plano de Contas.
+
+Ela é uma dependência crítica. O núcleo de dados registra erro de coleção, e integrações contábeis devem operar em modo **fail-closed**.
 
 ## Contexto monoempresa
 
 Fluxo de Caixa e Prestação devem bloquear imediatamente se o contexto mudar para várias empresas enquanto a tela estiver aberta.
 
-## Segurança
+Imobilizado e lançamentos de planejamento também exigem identidade empresarial inequívoca.
 
-Qualquer nova coleção/padrão de escrita exige revisão de `firestore.rules`. A política completa está em `SECURITY.md`.
+## Segurança e deploy
+
+Qualquer nova coleção/padrão de escrita exige revisão de `firestore.rules`.
+
+A configuração de deploy do Firebase está em:
+
+- `.firebaserc`;
+- `firebase.json`;
+- `firestore.rules`;
+- `storage.rules`.
+
+**GitHub Pages publica somente o frontend.** Alteração de Rules exige deploy Firebase separado e teste autenticado.
+
+A política completa está em `SECURITY.md` e `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`.
