@@ -6,6 +6,7 @@ on:
       - main
       - 'chatgpt/**'
       - 'hotfix/**'
+      - 'feature/**'
   pull_request:
     branches: [main]
 
@@ -29,8 +30,9 @@ jobs:
           grep -q 'consorciosVisualizar' js/controllership-router.js
           grep -q 'consorciosEditar' js/controllership-router.js
           grep -q 'menuConsorcios' js/controllership-router.js
-          grep -q 'garantirMenuConsorcios' js/controllership-router.js
-          grep -q 'contratos.insertAdjacentElement("afterend",menu)' js/controllership-router.js
+          grep -q 'garantirMenusOperacionais' js/controllership-router.js
+          grep -q 'id:"menuConsorcios"' js/controllership-router.js
+          grep -q 'depoisDe:"menuContratos"' js/controllership-router.js
           if grep -Fq '["consorcios","Consórcios"]' js/controllership-router.js; then
             echo 'Consórcios não pode voltar ao submenu da Controladoria.' >&2
             exit 1
@@ -81,20 +83,8 @@ jobs:
 
           node --input-type=module <<'NODE'
           import { calcularConsorcio, gerarCronogramaConsorcio, statusConsorcioAtivo } from './js/consortium-calculations.js';
-          const base={
-            creditoContratado:100000,
-            creditoAtual:100000,
-            prazoMeses:60,
-            parcelasPagas:12,
-            taxaAdministracaoPct:15,
-            fundoReservaPct:2,
-            seguroOutrosPct:1,
-            jurosEncargosPct:0,
-            valorParcelaAtual:2100,
-            dataInicio:'2026-01-10'
-          };
-          const r=calcularConsorcio(base);
-          const perto=(a,b)=>Math.abs(a-b)<0.01;
+          const base={creditoContratado:100000,creditoAtual:100000,prazoMeses:60,parcelasPagas:12,taxaAdministracaoPct:15,fundoReservaPct:2,seguroOutrosPct:1,jurosEncargosPct:0,valorParcelaAtual:2100,dataInicio:'2026-01-10'};
+          const r=calcularConsorcio(base),perto=(a,b)=>Math.abs(a-b)<0.01;
           if(!perto(r.taxaConsorcioValor,18000))throw new Error('Taxa do consórcio divergente');
           if(!perto(r.totalEstimadoPlano,118000))throw new Error('Total estimado divergente');
           if(!perto(r.parcelaMediaEstimada,118000/60))throw new Error('Parcela média divergente');
