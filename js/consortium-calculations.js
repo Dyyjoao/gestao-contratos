@@ -69,3 +69,36 @@ export function calcularConsorcio(dados={}){
     saldoCarta
   };
 }
+
+function competenciaParcela(dataInicio,indice){
+  const m=String(dataInicio||"").match(/^(\d{4})-(\d{2})/);
+  if(!m)return"";
+  const base=Number(m[1])*12+(Number(m[2])-1)+Math.max(0,indice);
+  const ano=Math.floor(base/12),mes=base%12+1;
+  return`${String(mes).padStart(2,"0")}/${ano}`;
+}
+
+export function gerarCronogramaConsorcio(dados={}){
+  const r=calcularConsorcio(dados);
+  const prazo=r.prazoMeses;
+  const porParcela={
+    credito:r.creditoBase/prazo,
+    taxaAdministracao:r.taxaAdministracaoValor/prazo,
+    fundoReserva:r.fundoReservaValor/prazo,
+    seguroOutros:r.seguroOutrosValor/prazo,
+    jurosEncargos:r.jurosEncargosValor/prazo,
+    total:r.totalEstimadoPlano/prazo
+  };
+  return Array.from({length:prazo},(_,i)=>({
+    numero:i+1,
+    competencia:competenciaParcela(dados.dataInicio,i),
+    status:i<r.parcelasPagas?"paga":"a_vencer",
+    credito:porParcela.credito,
+    taxaAdministracao:porParcela.taxaAdministracao,
+    fundoReserva:porParcela.fundoReserva,
+    seguroOutros:porParcela.seguroOutros,
+    jurosEncargos:porParcela.jurosEncargos,
+    valorTeorico:porParcela.total,
+    valorReferencia:i>=r.parcelasPagas&&r.valorParcelaAtual>0?r.valorParcelaAtual:porParcela.total
+  }));
+}
