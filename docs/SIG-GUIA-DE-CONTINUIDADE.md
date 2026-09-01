@@ -38,6 +38,10 @@ Consórcios ativo: `js/ctrl-consorcios-v1.js`. A matemática fica em `js/consort
 
 **Consórcios é um módulo de primeiro nível no menu principal, posicionado logo após Contratos. Não deve aparecer dentro do submenu Controladoria & FP&A.** O roteamento lazy atual ainda é mantido em `js/controllership-router.js` por compatibilidade estrutural.
 
+A carteira de Consórcios funciona como visão resumida. Ao abrir uma ficha, o módulo exibe detalhamento do plano, composição financeira, contemplação e cronograma teórico de parcelas. A carteira pode ser exportada em PDF/Excel; a ficha possui PDF próprio e o cronograma pode ser exportado em PDF/Excel.
+
+O cronograma de parcelas é **projeção calculada na base atual**, não histórico de pagamentos nem extrato da administradora. Parcelas marcadas como pagas refletem a quantidade cadastrada em `parcelasPagas`; valores históricos individuais não são inventados.
+
 ---
 
 ## 3. Como retomar desenvolvimento
@@ -56,6 +60,7 @@ Mudança de Consórcios exige revisar:
 
 - `js/ctrl-consorcios-v1.js`;
 - `js/consortium-calculations.js`;
+- `js/export-utils.js` quando alterar relatórios;
 - `js/controllership-router.js`;
 - `js/profiles.js`;
 - `firestore.rules`;
@@ -65,6 +70,8 @@ Mudança de Consórcios exige revisar:
 **Não recolocar Consórcios no submenu da Controladoria sem decisão arquitetural explícita.**
 
 **Não integrar Consórcios a DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado sem decisão arquitetural explícita.** A v1 é independente.
+
+**Não apresentar cronograma teórico como histórico real de parcelas.** Histórico real futuro deve possuir persistência própria e fonte documental/auditável.
 
 ---
 
@@ -113,7 +120,12 @@ Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de co
 - o item deve aparecer no menu principal imediatamente após Contratos;
 - o item não deve aparecer dentro do submenu Controladoria & FP&A;
 - ao abrir Consórcios, Controladoria não deve permanecer marcada como menu ativo;
-- perfil somente consulta visualiza a carteira sem ação de edição;
+- clicar na linha da carteira deve abrir a ficha detalhada;
+- a ficha deve mostrar carta atual/contratada, total estimado, pago, saldo, parcela, prazo e progresso;
+- composição deve separar administração, fundo de reserva, seguro/outros e juros/encargos;
+- cronograma deve gerar exatamente a quantidade de parcelas do prazo;
+- cronograma deve ser identificado como projeção e não como extrato/histórico;
+- perfil somente consulta visualiza a carteira e a ficha sem ação de edição;
 - perfil de gestão cria e edita ficha;
 - novo cadastro exige uma empresa;
 - visão da carteira pode consolidar empresas selecionadas;
@@ -123,6 +135,9 @@ Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de co
 - parcela atual permanece separada da média estimada;
 - valor pago acumulado altera o saldo teórico;
 - contemplação registra data, modalidade e lance;
+- PDF/Excel da carteira devem excluir a coluna de ações;
+- PDF da ficha deve conter identificação, valores, taxas e contemplação;
+- PDF/Excel de parcelas devem registrar que são projeção na base atual;
 - nenhum valor do módulo deve aparecer automaticamente em DRE, Balanço, Caixa ou Planejamento.
 
 ### Firebase
@@ -160,4 +175,5 @@ Se já houver dados persistidos no formato novo, tratar rollback como migração
 - módulo independente não gera lançamentos sem desenho aprovado;
 - arquivos legados não definem comportamento ativo;
 - histórico real não é apagado;
+- projeção não é apresentada como histórico realizado;
 - merge somente depois de QA do HEAD final.
