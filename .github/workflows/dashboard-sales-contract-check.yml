@@ -114,8 +114,8 @@ jobs:
           grep -q 'function vendasVendedores' firestore.rules
           grep -q 'function vendasComissoes' firestore.rules
           grep -q 'allow delete: if false;' firestore.rules
-          grep -q 'snapshot' docs/dashboard-v2-vendas.md
-          grep -q 'não alimenta DRE' docs/dashboard-v2-vendas.md
+          grep -qi 'snapshot' docs/dashboard-v2-vendas.md
+          grep -q 'Vendas não altera DRE/Balanço/Caixa automaticamente' docs/dashboard-v2-vendas.md
 
   browser-smoke:
     runs-on: ubuntu-latest
