@@ -16,6 +16,8 @@ on:
       - 'js/shared.js'
       - 'js/permutas.js'
       - 'js/profiles.js'
+      - 'js/governance-security.js'
+      - 'js/ctrl-delinquency-v1.js'
       - 'js/asset-depreciation.js'
       - 'js/ctrl-assets-v1.js'
       - 'js/ctrl-consorcios-v1.js'
@@ -65,6 +67,27 @@ jobs:
           grep -q 'criarDocumento("consorcios"' js/ctrl-consorcios-v1.js
           grep -q 'atualizarDocumento("consorcios"' js/ctrl-consorcios-v1.js
 
+          # Governança Antifraude usa a base existente de compliance, com escopo por empresa/grupo.
+          grep -q "permissao('governanca','antifraude')" firestore.rules
+          grep -q 'complianceObrigacoes' firestore.rules
+          grep -q 'complianceRiscos' firestore.rules
+          grep -q 'complianceProgramasAuditoria' firestore.rules
+          grep -q 'complianceCiclosAuditoria' firestore.rules
+          grep -q 'listarDocumentos("configuracoesControladoria")' js/governance-security.js
+          grep -q 'categoria:CAT' js/governance-security.js
+
+          # Inadimplência possui coleção e permissões próprias; exclusão física é proibida.
+          grep -q 'function inadimplenciaVisualizar' firestore.rules
+          grep -q 'function inadimplenciaEditar' firestore.rules
+          grep -q "permissao('controladoria','inadimplencia')" firestore.rules
+          grep -q "permissao('controladoria','inadimplenciaEditar')" firestore.rules
+          grep -q 'match /inadimplenciaTitulos/' firestore.rules
+          grep -q 'allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);' firestore.rules
+          grep -q 'allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data);' firestore.rules
+          grep -q 'listarDocumentos("inadimplenciaTitulos")' js/ctrl-delinquency-v1.js
+          grep -q 'criarDocumento("inadimplenciaTitulos"' js/ctrl-delinquency-v1.js
+          grep -q 'atualizarDocumento("inadimplenciaTitulos"' js/ctrl-delinquency-v1.js
+
           # Permutas v2 é módulo operacional com coleção de fechamentos e ações separadas.
           grep -q 'function permutasVisualizar' firestore.rules
           grep -q 'function permutasCadastrar' firestore.rules
@@ -106,6 +129,8 @@ jobs:
           node --check js/shared.js
           node --check js/permutas.js
           node --check js/profiles.js
+          node --check js/governance-security.js
+          node --check js/ctrl-delinquency-v1.js
           node --check js/asset-depreciation.js
           node --check js/ctrl-assets-v1.js
           node --check js/consortium-calculations.js
