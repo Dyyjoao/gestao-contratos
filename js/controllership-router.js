@@ -1,24 +1,19 @@
 import { $, abrirPagina, permite, admin, state } from "./core.js";
 import { empresasSelecionadasIds } from "./shared.js";
 
-const modulos=new Map();const MODULO_VERSAO="20260902governancainadv1";
+const modulos=new Map();const MODULO_VERSAO="20260902dashboardv2salesv1";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function prepararShellCompartilhado(){const p=paginaControladoria();if(!p)return false;if(!p.querySelector(".fpa-tabs"))p.innerHTML='<nav class="fpa-tabs" aria-label="Áreas internas da Controladoria"></nav>';esconderTabsInternas();return true}
 function marcarAtivo(chave){
   document.querySelectorAll(".ctrl-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.ctrl===chave));
-  ["menuConsorcios","menuPermutas"].forEach(id=>$(id)?.classList.remove("ativo"));
-  if(chave==="consorcios"){
-    $("menuControladoria")?.classList.remove("ativo");
-    $("menuConsorcios")?.classList.add("ativo");
-  }else if(chave==="permutas"){
-    $("menuControladoria")?.classList.remove("ativo");
-    $("menuPermutas")?.classList.add("ativo");
-  }else{
-    $("menuControladoria")?.classList.add("ativo");
-  }
+  ["menuConsorcios","menuPermutas","menuVendas"].forEach(id=>$(id)?.classList.remove("ativo"));
+  if(chave==="consorcios"){$("menuControladoria")?.classList.remove("ativo");$("menuConsorcios")?.classList.add("ativo")}
+  else if(chave==="permutas"){$("menuControladoria")?.classList.remove("ativo");$("menuPermutas")?.classList.add("ativo")}
+  else if(chave==="vendas"){$("menuControladoria")?.classList.remove("ativo");$("menuVendas")?.classList.add("ativo")}
+  else $("menuControladoria")?.classList.add("ativo");
 }
-function nomeModulo(chave){return({dre:"DRE Gerencial",balanco:"Balanço Patrimonial",inadimplencia:"Inadimplência & Aging",input:"Input Mensal",budget:"Budget",forecast:"Forecast",caixa:"Fluxo de Caixa",prestacao:"Prestação de Contas",fechamento:"Cockpit de Fechamento",permutas:"Permutas",premissas:"Premissas",imobilizado:"Imobilizado & CAPEX",consorcios:"Consórcios",plano:"Plano de Contas",centros:"Centros de Custo",config:"Configurações"})[chave]||"módulo"}
+function nomeModulo(chave){return({dre:"DRE Gerencial",balanco:"Balanço Patrimonial",inadimplencia:"Inadimplência & Aging",input:"Input Mensal",budget:"Budget",forecast:"Forecast",caixa:"Fluxo de Caixa",prestacao:"Prestação de Contas",fechamento:"Cockpit de Fechamento",permutas:"Permutas",vendas:"Vendas & Comissões",premissas:"Premissas",imobilizado:"Imobilizado & CAPEX",consorcios:"Consórcios",plano:"Plano de Contas",centros:"Centros de Custo",config:"Configurações"})[chave]||"módulo"}
 function erroModulo(chave,e){console.error(`Falha ao abrir ${chave}:`,e);const detalhe=e?.code||e?.message||"erro-desconhecido";const texto=`Não foi possível abrir ${nomeModulo(chave)}. Atualize a página e tente novamente. Se persistir, informe o detalhe técnico: ${detalhe}.`;const atual=document.querySelector(".pagina:not(.hidden) .modulo-aviso");if(atual)atual.textContent=texto;else alert(texto)}
 function exigeEmpresaUnica(chave){return chave==="caixa"||chave==="prestacao"}
 function validarContexto(chave){if(exigeEmpresaUnica(chave)&&empresasSelecionadasIds().length!==1){alert(`${nomeModulo(chave)} exige uma única empresa selecionada no cabeçalho para evitar mistura de dados entre empresas.`);return false}return true}
@@ -38,6 +33,7 @@ function podeAbrir(chave){
     case"prestacao":return ctrlAcao("prestacao")||ctrlAcao("prestacaoComentar");
     case"fechamento":return ctrlAcao("fechamento")||ctrlAcao("fecharCompetencia");
     case"permutas":return moduloAcao("permutas",["visualizar","cadastrar","editar","movimentar","estornar","fechar","inativar"]);
+    case"vendas":return moduloAcao("vendas",["visualizar","lancar","editar","vendedores","comissoes"]);
     case"premissas":return ctrlAcao("premissas");
     case"imobilizado":return ctrlAcao("imobilizado");
     case"consorcios":return moduloAcao("consorcios",["visualizar","editar"])||ctrlAcao("consorciosVisualizar")||ctrlAcao("consorciosEditar");
@@ -51,56 +47,19 @@ function validarPermissao(chave){if(podeAbrir(chave))return true;alert(`Seu perf
 function chaveSessaoModulo(){return`${MODULO_VERSAO}:${state.usuario?.id||"anon"}:${state.perfil?.id||"sem-perfil"}`}
 async function importar(chave,arquivo){if(!modulos.has(chave)){const versao=encodeURIComponent(chaveSessaoModulo());const p=import(`${arquivo}?v=${versao}`).catch(e=>{modulos.delete(chave);throw e});modulos.set(chave,p)}return modulos.get(chave)}
 async function abrirModuloCompartilhado(chave,arquivo,tabId){if(!validarPermissao(chave)||!validarContexto(chave))return;try{marcarAtivo(chave);if(!prepararShellCompartilhado())throw new Error("shell-controladoria-ausente");await importar(chave,arquivo);abrirPagina("controladoria");esconderTabsInternas();requestAnimationFrame(()=>$(tabId)?.click())}catch(e){erroModulo(chave,e)}}
-async function abrirTela(chave,arquivo){
-  if(!validarPermissao(chave)||!validarContexto(chave))return;
-  try{
-    marcarAtivo(chave);
-    const m=await importar(chave,arquivo);
-    if(typeof m.abrir!=="function")throw new Error("modulo-sem-funcao-abrir");
-    await m.abrir();
-    marcarAtivo(chave);
-    if(chave==="consorcios"){
-      const eyebrow=$("pagina-ctrl-consorcios-v1")?.querySelector(".eyebrow");
-      if(eyebrow)eyebrow.textContent="CONSÓRCIOS";
-    }
-  }catch(e){erroModulo(chave,e)}
-}
+async function abrirTela(chave,arquivo){if(!validarPermissao(chave)||!validarContexto(chave))return;try{marcarAtivo(chave);const m=await importar(chave,arquivo);if(typeof m.abrir!=="function")throw new Error("modulo-sem-funcao-abrir");await m.abrir();marcarAtivo(chave);if(chave==="consorcios"){const eyebrow=$("pagina-ctrl-consorcios-v1")?.querySelector(".eyebrow");if(eyebrow)eyebrow.textContent="CONSÓRCIOS"}}catch(e){erroModulo(chave,e)}}
 async function abrirPermutas(){if(!validarPermissao("permutas"))return;await abrirTela("permutas","./permutas.js")}
 
 const ACOES={
-  dre:()=>abrirTela("dre","./ctrl-dre-v6.js"),
-  balanco:()=>abrirTela("balanco","./ctrl-balance-sheet-v1.js"),
-  inadimplencia:()=>abrirTela("inadimplencia","./ctrl-delinquency-v1.js"),
-  input:()=>abrirTela("input","./ctrl-input-v6.js"),
-  budget:()=>abrirTela("budget","./ctrl-budget-v7.js"),
-  forecast:()=>abrirTela("forecast","./ctrl-forecast-v5.js"),
-  caixa:()=>abrirModuloCompartilhado("caixa","./cashflow.js","tabFluxoCaixa"),
-  prestacao:()=>abrirModuloCompartilhado("prestacao","./accountability.js","tabPrestacaoContas"),
-  fechamento:()=>abrirTela("fechamento","./closing-v3.js"),
-  permutas:abrirPermutas,
-  premissas:()=>abrirTela("premissas","./ctrl-premises-v4.js"),
-  imobilizado:()=>abrirTela("imobilizado","./ctrl-assets-v1.js"),
-  consorcios:()=>abrirTela("consorcios","./ctrl-consorcios-v1.js"),
-  plano:()=>abrirTela("plano","./ctrl-chart-accounts-v6.js"),
-  centros:()=>abrirTela("centros","./ctrl-cost-centers-v2.js"),
-  config:()=>abrirTela("config","./ctrl-settings.js")
+  dre:()=>abrirTela("dre","./ctrl-dre-v6.js"),balanco:()=>abrirTela("balanco","./ctrl-balance-sheet-v1.js"),inadimplencia:()=>abrirTela("inadimplencia","./ctrl-delinquency-v1.js"),input:()=>abrirTela("input","./ctrl-input-v6.js"),budget:()=>abrirTela("budget","./ctrl-budget-v7.js"),forecast:()=>abrirTela("forecast","./ctrl-forecast-v5.js"),caixa:()=>abrirModuloCompartilhado("caixa","./cashflow.js","tabFluxoCaixa"),prestacao:()=>abrirModuloCompartilhado("prestacao","./accountability.js","tabPrestacaoContas"),fechamento:()=>abrirTela("fechamento","./closing-v3.js"),permutas:abrirPermutas,vendas:()=>abrirTela("vendas","./sales.js"),premissas:()=>abrirTela("premissas","./ctrl-premises-v4.js"),imobilizado:()=>abrirTela("imobilizado","./ctrl-assets-v1.js"),consorcios:()=>abrirTela("consorcios","./ctrl-consorcios-v1.js"),plano:()=>abrirTela("plano","./ctrl-chart-accounts-v6.js"),centros:()=>abrirTela("centros","./ctrl-cost-centers-v2.js"),config:()=>abrirTela("config","./ctrl-settings.js")
 };
 const ITENS=[["dre","DRE Gerencial"],["balanco","Balanço Patrimonial"],["inadimplencia","Inadimplência & Aging"],["input","Input Mensal"],["budget","Budget"],["forecast","Forecast"],["caixa","Fluxo de Caixa"],["prestacao","Prestação de Contas"],["fechamento","Cockpit de Fechamento"],["premissas","Premissas"],["imobilizado","Imobilizado & CAPEX"],["plano","Plano de Contas"],["centros","Centros de Custo"],["config","Configurações"]];
 
 function css(){if($("ctrl-submenu-css"))return;const s=document.createElement("style");s.id="ctrl-submenu-css";s.textContent=`.ctrl-menu-wrap{display:none;margin:-4px 0 7px 12px;padding:5px 0 5px 10px;border-left:1px solid rgba(255,255,255,.14)}.ctrl-menu-wrap.aberto{display:grid;gap:2px}.ctrl-subitem{border:0;background:transparent;color:rgba(255,255,255,.72);text-align:left;padding:7px 9px;border-radius:7px;font-size:11px;cursor:pointer}.ctrl-subitem:hover,.ctrl-subitem.ativo{background:rgba(25,211,190,.12);color:#fff}.menu-item.ctrl-expansivel::after{content:'▾';float:right;opacity:.7}.menu-item.ctrl-expansivel.fechado::after{content:'▸'}.fpa-contexto-chip{min-height:36px;display:flex;align-items:center;padding:0 10px;border:1px solid #d0d5dd;border-radius:8px;background:#f8fafc;color:#475467;font-size:11px}.budget-inline{padding:12px;background:#f8fafc;border-left:3px solid #0c9488}.budget-inline .tabela input{min-width:82px}.dre-centro td{background:#f7f9fb;font-weight:750}.dre-centro td:first-child{border-left:3px solid #9fb8c7}.dre-filha td:first-child{font-weight:500}.conta-acoes-inline{display:flex;align-items:center;gap:6px}.linha-fechada{opacity:.8}`;document.head.appendChild(s)}
 function aplicarPermissoesSubmenu(){document.querySelectorAll("#ctrlSubmenu .ctrl-subitem").forEach(b=>{const ok=podeAbrir(b.dataset.ctrl);b.classList.toggle("hidden",!ok);if(!ok)b.classList.remove("ativo")})}
-function garantirMenuOperacional({id,label,chave,depoisDe}){
-  let menu=$(id);
-  if(!menu){const ref=$(depoisDe)||document.querySelector(".sidebar-menu .menu-separador");if(!ref)return;menu=document.createElement("button");menu.id=id;menu.className="menu-item hidden";menu.dataset.pagina=chave;menu.type="button";menu.textContent=label;if(ref.matches?.(".menu-separador"))ref.before(menu);else ref.insertAdjacentElement("afterend",menu)}
-  const ok=podeAbrir(chave);menu.classList.toggle("hidden",!ok);if(!ok)menu.classList.remove("ativo");
-  if(menu.dataset.sigOperacionalBound!=="1"){menu.dataset.sigOperacionalBound="1";menu.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();ACOES[chave]?.()},true)}
-}
-function garantirMenusOperacionais(){garantirMenuOperacional({id:"menuConsorcios",label:"Consórcios",chave:"consorcios",depoisDe:"menuContratos"});garantirMenuOperacional({id:"menuPermutas",label:"Permutas",chave:"permutas",depoisDe:"menuConsorcios"})}
-function montar(){
-  css();garantirMenusOperacionais();const menu=$("menuControladoria");if(!menu)return;let box=$("ctrlSubmenu");
-  if(!box){menu.classList.add("ctrl-expansivel","fechado");menu.textContent="Controladoria & FP&A";box=document.createElement("div");box.id="ctrlSubmenu";box.className="ctrl-menu-wrap";ITENS.forEach(([chave,label])=>{const b=document.createElement("button");b.type="button";b.className="ctrl-subitem";b.dataset.ctrl=chave;b.textContent=label;b.addEventListener("click",e=>{e.stopPropagation();ACOES[chave]?.()});box.appendChild(b)});menu.insertAdjacentElement("afterend",box);menu.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();const aberto=!box.classList.contains("aberto");box.classList.toggle("aberto",aberto);menu.classList.toggle("fechado",!aberto)},true)}
-  aplicarPermissoesSubmenu();
-}
+function garantirMenuOperacional({id,label,chave,depoisDe}){let menu=$(id);if(!menu){const ref=$(depoisDe)||document.querySelector(".sidebar-menu .menu-separador");if(!ref)return;menu=document.createElement("button");menu.id=id;menu.className="menu-item hidden";menu.dataset.pagina=chave;menu.type="button";menu.textContent=label;if(ref.matches?.(".menu-separador"))ref.before(menu);else ref.insertAdjacentElement("afterend",menu)}const ok=podeAbrir(chave);menu.classList.toggle("hidden",!ok);if(!ok)menu.classList.remove("ativo");if(menu.dataset.sigOperacionalBound!=="1"){menu.dataset.sigOperacionalBound="1";menu.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();ACOES[chave]?.()},true)}}
+function garantirMenusOperacionais(){garantirMenuOperacional({id:"menuConsorcios",label:"Consórcios",chave:"consorcios",depoisDe:"menuContratos"});garantirMenuOperacional({id:"menuPermutas",label:"Permutas",chave:"permutas",depoisDe:"menuConsorcios"});garantirMenuOperacional({id:"menuVendas",label:"Vendas & Comissões",chave:"vendas",depoisDe:"menuPermutas"})}
+function montar(){css();garantirMenusOperacionais();const menu=$("menuControladoria");if(!menu)return;let box=$("ctrlSubmenu");if(!box){menu.classList.add("ctrl-expansivel","fechado");menu.textContent="Controladoria & FP&A";box=document.createElement("div");box.id="ctrlSubmenu";box.className="ctrl-menu-wrap";ITENS.forEach(([chave,label])=>{const b=document.createElement("button");b.type="button";b.className="ctrl-subitem";b.dataset.ctrl=chave;b.textContent=label;b.addEventListener("click",e=>{e.stopPropagation();ACOES[chave]?.()});box.appendChild(b)});menu.insertAdjacentElement("afterend",box);menu.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();const aberto=!box.classList.contains("aberto");box.classList.toggle("aberto",aberto);menu.classList.toggle("fechado",!aberto)},true)}aplicarPermissoesSubmenu()}
 document.addEventListener("click",e=>{const b=e.target.closest?.("#btnConfigurarContasCentro");if(!b)return;e.preventDefault();e.stopImmediatePropagation();ACOES.centros?.()},true);
 export async function abrirLegado(chave){return ACOES[chave]?.()}
 window.SIG_ABRIR_CTRL_LEGADO=abrirLegado;window.SIG_ABRIR_CTRL=chave=>ACOES[chave]?.();
