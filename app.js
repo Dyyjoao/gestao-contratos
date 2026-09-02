@@ -11,6 +11,7 @@ import "./js/contracts.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js";
 import "./js/governance.js";
+import "./js/governance-security.js";
 import "./js/dashboard-financial.js";
 import "./js/dashboard-executive.js";
 import "./js/accountability-pdf.js";
