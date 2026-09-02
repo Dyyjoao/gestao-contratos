@@ -93,7 +93,23 @@ function abrirExclusao(tipoEx,id){if(!admin())return alert("Exclusão física é
 function fecharExclusao(){deleteCtx=null;$("modalExcluirPermuta")?.classList.add("hidden");if($("senhaExcluirPermuta"))$("senhaExcluirPermuta").value="";msg($("mensagemExcluirPermuta"),"")}
 async function refsRelacionadasPermuta(p){const ids=[p.id,...(p.espelhoPermutaId?[p.espelhoPermutaId]:[])],refs=[];for(const pid of ids){for(const col of ["permutaMovimentos","permutaFechamentos"]){const s=await getDocs(query(collection(db,col),where("grupoId","==",grupoAtualId()),where("permutaId","==",pid)));s.forEach(x=>refs.push(x.ref))}refs.push(doc(db,"permutas",pid))}return refs}
 async function apagarRefs(refs){for(let i=0;i<refs.length;i+=400){const lote=writeBatch(db);refs.slice(i,i+400).forEach(r=>lote.delete(r));await lote.commit()}}
-async function confirmarExclusao(){if(!deleteCtx||!admin())return;const senha=$("senhaExcluirPermuta")?.value||"";if(!senha)return msg($("mensagemExcluirPermuta"),"Informe a senha do Administrador.");try{msg($("mensagemExcluirPermuta"),"Validando Administrador...");if(!auth.currentUser?.email)throw new Error("usuario-sem-email");await reauthenticateWithCredential(auth.currentUser,EmailAuthProvider.credential(auth.currentUser.email,senha));if(deleteCtx.tipo==="movimento"){const m=movimentos.find(x=>x.id===deleteCtx.id),refs=[doc(db,"permutaMovimentos",deleteCtx.id)];if(m?.espelhoMovimentoId)refs.push(doc(db,"permutaMovimentos",m.espelhoMovimentoId));await apagarRefs(refs)}else{const p=permutas.find(x=>x.id===deleteCtx.id);if(!p)throw new Error("permuta-nao-encontrada");await apagarRefs(await refsRelacionadasPermuta(p))}fecharExclusao();await carregar();emitirAlteracao("permutas")}catch(e){console.error(e);msg($("mensagemExcluirPermuta"),["auth/invalid-credential","auth/wrong-password"].includes(e.code)?"Senha incorreta.":"Não foi possível concluir a exclusão.")}}
+function sincronizarExclusaoLocal(ctx){
+  if(ctx.tipo==="movimento"){
+    const m=movimentos.find(x=>x.id===ctx.id),ids=new Set([ctx.id,...(m?.espelhoMovimentoId?[m.espelhoMovimentoId]:[])]);
+    movimentos=movimentos.filter(x=>!ids.has(x.id));
+  }else{
+    const p=permutas.find(x=>x.id===ctx.id);if(!p)return;
+    const ids=new Set([p.id,...(p.espelhoPermutaId?[p.espelhoPermutaId]:[])]);
+    permutas=permutas.filter(x=>!ids.has(x.id));
+    movimentos=movimentos.filter(x=>!ids.has(x.permutaId));
+    fechamentos=fechamentos.filter(x=>!ids.has(x.permutaId));
+    if(ids.has(detalheId)){detalheId="";$("permutaDetalhe")?.classList.add("hidden")}
+    if(ids.has(fechamentoId)){fechamentoId="";$("permutaFechamento")?.classList.add("hidden")}
+    if(ids.has(editId)){editId="";$("formPermutaContainer")?.classList.add("hidden")}
+  }
+  render();
+}
+async function confirmarExclusao(){if(!deleteCtx||!admin())return;const ctx={...deleteCtx},senha=$("senhaExcluirPermuta")?.value||"";if(!senha)return msg($("mensagemExcluirPermuta"),"Informe a senha do Administrador.");try{msg($("mensagemExcluirPermuta"),"Validando Administrador...");if(!auth.currentUser?.email)throw new Error("usuario-sem-email");await reauthenticateWithCredential(auth.currentUser,EmailAuthProvider.credential(auth.currentUser.email,senha));if(ctx.tipo==="movimento"){const m=movimentos.find(x=>x.id===ctx.id),refs=[doc(db,"permutaMovimentos",ctx.id)];if(m?.espelhoMovimentoId)refs.push(doc(db,"permutaMovimentos",m.espelhoMovimentoId));await apagarRefs(refs)}else{const p=permutas.find(x=>x.id===ctx.id);if(!p)throw new Error("permuta-nao-encontrada");await apagarRefs(await refsRelacionadasPermuta(p))}sincronizarExclusaoLocal(ctx);fecharExclusao();await carregar();emitirAlteracao("permutas")}catch(e){console.error(e);msg($("mensagemExcluirPermuta"),["auth/invalid-credential","auth/wrong-password"].includes(e.code)?"Senha incorreta.":"Não foi possível concluir a exclusão.")}}
 
 async function carregar(){criarPagina();if(carregando||!podeVer())return;carregando=true;const b=$("btnAtualizarPermutas");if(b){b.disabled=true;b.textContent="Atualizando..."}try{[permutas,movimentos,fechamentos]=await Promise.all([listarDocumentos("permutas"),listarDocumentos("permutaMovimentos"),listarDocumentos("permutaFechamentos")]);$("permutaAviso")?.classList.add("hidden");render()}catch(e){console.error("Permutas v2:",e);aviso(`Não foi possível carregar Permutas. ${e?.code||e?.message||"Verifique as regras do Firestore."}`)}finally{carregando=false;if(b){b.disabled=false;b.textContent="Atualizar"}}}
 function aviso(t){const a=$("permutaAviso");if(a){a.classList.remove("hidden");a.textContent=t}}
