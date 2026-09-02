@@ -1,0 +1,111 @@
+name: SIG Permutas Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+    paths:
+      - 'js/permutas.js'
+      - 'js/shared.js'
+      - 'js/profiles.js'
+      - 'js/controllership-router.js'
+      - 'firestore.rules'
+      - '.github/workflows/permutas-contract-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  permutas-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Permutas v2 contract
+        run: |
+          set -e
+          node --check js/permutas.js
+          node --check js/shared.js
+          node --check js/profiles.js
+          node --check js/controllership-router.js
+
+          # Identidade operacional e menu próprio.
+          grep -q 'OPERAÇÕES' js/permutas.js
+          grep -q 'menuPermutas' js/controllership-router.js
+          grep -q 'depoisDe:"menuConsorcios"' js/controllership-router.js
+          if grep -Fq '["permutas","Permutas"]' js/controllership-router.js; then
+            echo 'Permutas não pode retornar ao submenu da Controladoria.' >&2
+            exit 1
+          fi
+
+          # CPF/CNPJ padronizado no núcleo do SIG.
+          grep -q 'export function formatarCpfCnpj' js/shared.js
+          grep -q 'export function validarCpfCnpj' js/shared.js
+          grep -q 'contraparteDocumentoNumeros' js/permutas.js
+          grep -q 'Informe CPF ou CNPJ válido' js/permutas.js
+
+          # Ciclo de vida, filtros, detalhe e relatórios.
+          grep -q 'permutaFiltroStatus' js/permutas.js
+          grep -q 'permutaDataInicio' js/permutas.js
+          grep -q 'permutaDataFim' js/permutas.js
+          grep -q 'permutaDetalhe' js/permutas.js
+          grep -q 'exportarTabelaPdf' js/permutas.js
+          grep -q 'exportarTabelaXls' js/permutas.js
+          grep -q 'Novos lançamentos serão bloqueados' js/permutas.js
+
+          # Estorno é auditável e não apaga o lançamento.
+          grep -q 'motivoEstorno' js/permutas.js
+          grep -q 'estornadoPor' js/permutas.js
+          grep -q 'permuta-estornada' js/permutas.js
+          grep -q 'O motivo do estorno é obrigatório' js/permutas.js
+
+          # Fechamento ignora estornos, permite zerador e novo ciclo.
+          grep -q 'permutaFechamentos' js/permutas.js
+          grep -q 'fechamentoZerar' js/permutas.js
+          grep -q 'fechamentoFinalizar' js/permutas.js
+          grep -q 'fechamento_zerador' js/permutas.js
+          grep -q 'saldoAberturaCiclo' js/permutas.js
+          grep -q 'cicloInicio' js/permutas.js
+
+          # Exclusão física somente Admin + reautenticação.
+          grep -q 'if(!admin())return alert("Exclusão física é exclusiva do Administrador.' js/permutas.js
+          grep -q 'reauthenticateWithCredential' js/permutas.js
+          grep -q 'type="password"' js/permutas.js
+          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
+
+          # Permissões próprias e regras por ação.
+          grep -q '\["permutas","Permutas"' js/profiles.js
+          grep -q 'function permutasVisualizar' firestore.rules
+          grep -q 'function permutasMovimentar' firestore.rules
+          grep -q 'function permutasEstornar' firestore.rules
+          grep -q 'function permutasFechar' firestore.rules
+          grep -q 'match /permutaFechamentos/' firestore.rules
+
+      - name: Browser smoke Permutas v2
+        run: |
+          set -e
+          python3 -m http.server 8000 >/tmp/sig-permutas-server.log 2>&1 &
+          sleep 2
+          cp index.html permutas-smoke.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('permutas-smoke.html')
+          s=p.read_text()
+          test="""<script type=\"module\">(async()=>{try{const m=await import('./js/permutas.js');m.abrir();const p=document.getElementById('pagina-permutas');if(!p||p.classList.contains('hidden'))throw new Error('Permutas não abriu');for(const id of ['permutaDocumento','permutaFiltroStatus','permutaDetalhe','formFechamentoPermuta','senhaExcluirPermuta'])if(!document.getElementById(id))throw new Error('Ausente '+id);document.documentElement.setAttribute('data-permutas-v2','ok')}catch(e){document.documentElement.setAttribute('data-permutas-v2','fail');document.body.insertAdjacentHTML('beforeend','<pre id=\"permutas-error\">'+String(e.stack||e).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</pre>')}})();</script>"""
+          s=s.replace('</body>',test+'</body>')
+          p.write_text(s)
+          PY
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          set +e
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8000/permutas-smoke.html > /tmp/permutas-dom.html
+          CHROME_EXIT=$?
+          set -e
+          echo "Chrome exit code: $CHROME_EXIT"
+          if ! grep -q 'data-permutas-v2="ok"' /tmp/permutas-dom.html; then
+            echo '=== ERRO DO BROWSER SMOKE DE PERMUTAS ===' >&2
+            grep -A20 -B3 'id="permutas-error"' /tmp/permutas-dom.html >&2 || true
+            echo '=== TRECHO FINAL DO DOM ===' >&2
+            tail -n 80 /tmp/permutas-dom.html >&2 || true
+            echo '=== FIM DO ERRO ===' >&2
+            exit 1
+          fi

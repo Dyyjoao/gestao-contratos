@@ -6,6 +6,7 @@ on:
       - main
       - 'chatgpt/**'
       - 'hotfix/**'
+      - 'feature/**'
   pull_request:
     branches: [main]
 
@@ -19,38 +20,40 @@ jobs:
           set -e
           node --check js/profiles.js
           node --check js/controllership-router.js
+          node --check js/permutas.js
 
           # DRE e Balanço precisam ser permissões explícitas de perfil.
           grep -q '\["dre","Visualizar DRE Gerencial"\]' js/profiles.js
           grep -q '\["balanco","Visualizar Balanço Patrimonial"\]' js/profiles.js
 
-          # Todo módulo navegável novo deve possuir bloco próprio na grade de Perfis.
-          # Consórcios é módulo de primeiro nível e não pode continuar exposto como ação visual da Controladoria.
+          # Consórcios é módulo de primeiro nível.
           grep -q '\["consorcios","Consórcios",\[\["visualizar","Visualizar"\],\["editar","Gerir consórcios"\]\]\]' js/profiles.js
           if grep -Fq '["consorciosVisualizar","Visualizar consórcios"]' js/profiles.js; then
             echo 'Permissão visual de Consórcios não pode permanecer no bloco visível da Controladoria.' >&2
             exit 1
           fi
-          if grep -Fq '["consorciosEditar","Gerir consórcios"]' js/profiles.js; then
-            echo 'Permissão de gestão de Consórcios não pode permanecer no bloco visível da Controladoria.' >&2
-            exit 1
-          fi
-
-          # Compatibilidade temporária: ao salvar o novo bloco, espelhar as chaves legadas
-          # usadas pelo roteador/Rules atuais para não retirar acesso de perfis existentes.
-          grep -q 'consorciosVisualizar:cons.visualizar===true||cons.editar===true' js/profiles.js
-          grep -q 'consorciosEditar:cons.editar===true' js/profiles.js
-          grep -q 'c.dataset.modulo==="consorcios"' js/profiles.js
-          grep -q 'p?.controladoria?.consorciosVisualizar' js/profiles.js
-          grep -q 'p?.controladoria?.consorciosEditar' js/profiles.js
-
-          # Consórcios permanece fora do submenu da Controladoria e o roteador continua protegido.
-          grep -q 'case"consorcios"' js/controllership-router.js
-          grep -q 'ctrlAcao("consorciosVisualizar")||ctrlAcao("consorciosEditar")' js/controllership-router.js
-          grep -q 'ctrl-consorcios-v1.js' js/controllership-router.js
           grep -q 'menuConsorcios' js/controllership-router.js
           if grep -Fq '["consorcios","Consórcios"]' js/controllership-router.js; then
             echo 'Consórcios não pode ficar no submenu da Controladoria.' >&2
+            exit 1
+          fi
+
+          # Permutas é módulo operacional próprio, fora da Controladoria.
+          grep -q '\["permutas","Permutas"' js/profiles.js
+          grep -q '\["visualizar","Visualizar"\]' js/profiles.js
+          grep -q '\["movimentar","Registrar movimentações"\]' js/profiles.js
+          grep -q '\["estornar","Estornar lançamentos"\]' js/profiles.js
+          grep -q '\["fechar","Realizar fechamentos"\]' js/profiles.js
+          grep -q '\["inativar","Inativar/Reativar"\]' js/profiles.js
+          grep -q 'Exclusão física: somente Administrador' js/profiles.js
+          grep -q 'menuPermutas' js/controllership-router.js
+          grep -q 'moduloAcao("permutas"' js/controllership-router.js
+          if grep -Fq '["permutas","Permutas"]' js/controllership-router.js; then
+            echo 'Permutas não pode ficar no submenu da Controladoria.' >&2
+            exit 1
+          fi
+          if grep -q 'case"permutas":return permite("controladoria"' js/controllership-router.js; then
+            echo 'Permutas não pode depender da permissão de Controladoria.' >&2
             exit 1
           fi
 
@@ -58,15 +61,15 @@ jobs:
           grep -q 'legadoVisualizar:true' js/controllership-router.js
           grep -q '\["dre","balanco"\].*p?.controladoria?.visualizar' js/profiles.js
 
-          # O submenu deve ser recalculado a cada login/página e nunca ficar herdado do usuário anterior.
+          # O submenu deve ser recalculado a cada login/página.
           grep -q 'aplicarPermissoesSubmenu' js/controllership-router.js
           grep -q 'window.addEventListener("sig:ready"' js/controllership-router.js
           grep -q 'classList.toggle("hidden",!ok)' js/controllership-router.js
 
-          # A própria ação precisa bloquear abertura sem permissão, não apenas esconder o botão.
+          # A própria ação precisa bloquear abertura sem permissão.
           grep -q 'validarPermissao(chave)' js/controllership-router.js
           grep -q 'Seu perfil não possui permissão' js/controllership-router.js
 
-          # Imports dinâmicos não podem reutilizar a mesma instância entre usuários/perfis.
+          # Imports dinâmicos não podem reutilizar instância entre usuários/perfis.
           grep -q 'state.usuario?.id' js/controllership-router.js
           grep -q 'state.perfil?.id' js/controllership-router.js

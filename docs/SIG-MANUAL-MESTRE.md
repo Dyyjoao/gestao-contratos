@@ -1,7 +1,7 @@
 # SIG — Manual Mestre de Arquitetura e Regras
 
 > Documento de invariantes do Sistema Integrado de Gestão (SIG).  
-> Atualizado em: 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1.
+> Atualizado em: 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1 + Permutas v2.
 
 O estado funcional completo está em `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`. Aqui ficam as regras que uma evolução não pode quebrar silenciosamente.
 
@@ -32,6 +32,8 @@ Memória de conversa não substitui nenhuma dessas fontes.
 - GitHub Pages não publica Firestore/Storage Rules;
 - Rule alterada exige deploy Firebase separado;
 - base crítica indisponível não pode ser convertida silenciosamente em `[]` ou zero.
+
+**Regra de novos módulos:** toda nova aba/módulo navegável deve nascer, no mesmo pacote, com revisão da grade de Perfis de Acesso, bloqueio real da rota/ação, Rules quando aplicável e QA de permissões. Esconder menu não substitui autorização.
 
 ---
 
@@ -159,11 +161,12 @@ Falha de leitura de `imobilizados` deve interromper cálculos dependentes de for
 
 A coleção `consorcios` é independente das bases contábeis nesta versão.
 
-Permissões:
+Permissões visíveis no grid próprio de Consórcios:
 
-- `controladoria.consorciosVisualizar` — consulta;
-- `controladoria.consorciosEditar` — criação/edição;
-- Administração FP&A também autoriza o módulo.
+- `consorcios.visualizar` — consulta;
+- `consorcios.editar` — gestão.
+
+Enquanto durar a compatibilidade de backend, o salvamento de Perfis espelha essas autorizações nas chaves legadas da Controladoria. O módulo, porém, é de primeiro nível e não pertence ao submenu de FP&A.
 
 Regras funcionais:
 
@@ -185,7 +188,47 @@ Regras funcionais:
 
 ---
 
-## 9. Release
+## 9. Permutas v2
+
+Permutas é um **módulo operacional de primeiro nível**, posicionado com Contratos e Consórcios. Não pertence à Controladoria/FP&A.
+
+Coleções:
+
+- `permutas` — cadastro, status e ciclo atual;
+- `permutaMovimentos` — razão operacional;
+- `permutaFechamentos` — memória imutável dos fechamentos.
+
+Permissões próprias:
+
+- `permutas.visualizar`;
+- `permutas.cadastrar`;
+- `permutas.editar`;
+- `permutas.movimentar`;
+- `permutas.estornar`;
+- `permutas.fechar`;
+- `permutas.inativar`.
+
+**Exclusão não é delegável:** delete físico de permuta, movimento ou fechamento é exclusivo do perfil Administrador e exige reautenticação pela senha do usuário administrativo logado.
+
+Regras funcionais:
+
+- CPF/CNPJ de contraparte usa `formatarCpfCnpj()` e `validarCpfCnpj()` de `js/shared.js`;
+- CPF/CNPJ mascarado é padrão do SIG; quando aplicável, persistir também a versão somente com dígitos;
+- permuta inativa permanece visível no histórico/relatórios, mas não aceita novos movimentos;
+- estorno nunca apaga o movimento: grava `estornado`, motivo, usuário e data/hora; a linha permanece visível e riscada;
+- totais, saldo e fechamento desconsideram movimentos estornados;
+- relatórios devem aceitar intervalo exato de datas além do período global do cabeçalho;
+- a carteira consolidada deve permitir abrir a ficha individual da permuta;
+- ficha individual mostra cadastro, saldo, movimentos válidos/estornados e histórico de fechamentos;
+- fechamento usa somente o ciclo corrente e movimentos válidos;
+- fechamento pode gerar lançamento zerador ou preservar saldo;
+- se não finalizar, inicia novo ciclo; sem zerador, o saldo de fechamento vira saldo de abertura do ciclo seguinte; com zerador, o novo ciclo começa em zero;
+- fechamento pode finalizar a permuta, bloqueando novas movimentações;
+- para permutas entre empresas do grupo, status, estorno e movimentos espelhados devem manter simetria entre os dois lados sempre que houver referência de espelho.
+
+---
+
+## 10. Release
 
 Nenhuma versão estrutural deve chegar à `main` enquanto:
 
@@ -195,6 +238,7 @@ Nenhuma versão estrutural deve chegar à `main` enquanto:
 - `SIG Firebase Contract Check` não estiver verde;
 - `SIG Permissions Contract Check` não estiver verde quando permissões mudarem;
 - `SIG Consorcios Contract Check` não estiver verde enquanto Consórcios fizer parte da baseline;
+- `SIG Permutas Contract Check` não estiver verde enquanto Permutas v2 fizer parte da baseline;
 - Rules necessárias não estiverem versionadas;
 - não houver plano claro para publicar as Rules no Firebase.
 
