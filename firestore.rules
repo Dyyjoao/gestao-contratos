@@ -59,6 +59,8 @@ service cloud.firestore {
     function fpaPlano() { return fpaEditar() || permissao('controladoria','planoContas'); }
     function fpaCentros() { return fpaEditar() || permissao('controladoria','centrosCusto'); }
     function fpaImobilizado() { return fpaEditar() || permissao('controladoria','imobilizado'); }
+    function inadimplenciaVisualizar() { return fpaEditar() || permissao('controladoria','inadimplencia') || permissao('controladoria','inadimplenciaEditar'); }
+    function inadimplenciaEditar() { return fpaEditar() || permissao('controladoria','inadimplenciaEditar'); }
     function consorciosVisualizar() { return fpaEditar() || permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar'); }
     function consorciosEditar() { return fpaEditar() || permissao('controladoria','consorciosEditar'); }
 
@@ -91,6 +93,7 @@ service cloud.firestore {
 
     function governancaVisualizar() {
       return permissao('governanca','visualizar') ||
+        permissao('governanca','antifraude') ||
         permissao('governanca','auditar') ||
         permissao('governanca','planoAcao') ||
         permissao('governanca','validar') ||
@@ -254,6 +257,15 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaRealizado() && documentoAcessivel(request.resource.data);
       allow update: if fpaRealizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /inadimplenciaTitulos/{id} {
+      allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if inadimplenciaEditar() && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
