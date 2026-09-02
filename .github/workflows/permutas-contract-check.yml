@@ -96,10 +96,16 @@ jobs:
           p.write_text(s)
           PY
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          set +e
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8000/permutas-smoke.html > /tmp/permutas-dom.html
+          CHROME_EXIT=$?
+          set -e
+          echo "Chrome exit code: $CHROME_EXIT"
           if ! grep -q 'data-permutas-v2="ok"' /tmp/permutas-dom.html; then
             echo '=== ERRO DO BROWSER SMOKE DE PERMUTAS ===' >&2
             grep -A20 -B3 'id="permutas-error"' /tmp/permutas-dom.html >&2 || true
+            echo '=== TRECHO FINAL DO DOM ===' >&2
+            tail -n 80 /tmp/permutas-dom.html >&2 || true
             echo '=== FIM DO ERRO ===' >&2
             exit 1
           fi
