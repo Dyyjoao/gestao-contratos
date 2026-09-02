@@ -21,10 +21,26 @@ jobs:
           node --check js/profiles.js
           node --check js/controllership-router.js
           node --check js/permutas.js
+          node --check js/governance-security.js
+          node --check js/ctrl-delinquency-v1.js
 
           # DRE e Balanço precisam ser permissões explícitas de perfil.
           grep -q '\["dre","Visualizar DRE Gerencial"\]' js/profiles.js
           grep -q '\["balanco","Visualizar Balanço Patrimonial"\]' js/profiles.js
+
+          # Antifraude & TI tem acesso próprio no perfil e ações de gestão continuam segregadas.
+          grep -q '\["antifraude","Visualizar Cockpit Antifraude & TI"\]' js/profiles.js
+          grep -q 'permite("governanca","antifraude")' js/governance-security.js
+          grep -q 'permite("governanca","configurar")' js/governance-security.js
+          grep -q 'permite("governanca","auditar")' js/governance-security.js
+
+          # Inadimplência tem consulta e gestão separadas e fica dentro da Controladoria.
+          grep -q '\["inadimplencia","Visualizar Inadimplência & Aging"\]' js/profiles.js
+          grep -q '\["inadimplenciaEditar","Gerir carteira de inadimplência"\]' js/profiles.js
+          grep -q 'case"inadimplencia":return ctrlAcao("inadimplencia")||ctrlAcao("inadimplenciaEditar")' js/controllership-router.js
+          grep -q 'ctrl-delinquency-v1.js' js/controllership-router.js
+          grep -q '\["inadimplencia","Inadimplência & Aging"\]' js/controllership-router.js
+          grep -q 'permite("controladoria","inadimplenciaEditar")' js/ctrl-delinquency-v1.js
 
           # Consórcios é módulo de primeiro nível.
           grep -q '\["consorcios","Consórcios",\[\["visualizar","Visualizar"\],\["editar","Gerir consórcios"\]\]\]' js/profiles.js
