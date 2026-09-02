@@ -1,7 +1,7 @@
 # SIG — Manual Mestre de Arquitetura e Regras
 
 > Documento de invariantes do Sistema Integrado de Gestão (SIG).  
-> Atualizado em: 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1 + Permutas v2.
+> Atualizado em: 02/09/2026 — Plano v6 + Balanço + Consórcios + Permutas v2 + Governança/Antifraude + Inadimplência + Dashboard v2 + Vendas.
 
 O estado funcional completo está em `docs/SIG-DOSSIE-DE-CONTINUIDADE.md`. Aqui ficam as regras que uma evolução não pode quebrar silenciosamente.
 
@@ -228,7 +228,117 @@ Regras funcionais:
 
 ---
 
-## 10. Release
+## 10. Governança, Antifraude e Inadimplência
+
+Governança & Compliance possui visão especializada de **Antifraude & TI** sobre a base auditável já existente de riscos, obrigações, programas/ciclos de auditoria e planos de ação.
+
+- o cockpit antifraude não cria uma segunda base paralela de compliance;
+- controles incluem MFA, proteção de endpoint, atualizações, bloqueio de tela, backup, revisão de privilégios, credenciais e validação independente de alterações financeiras;
+- achados devem poder virar plano de ação com responsável/prazo;
+- ocorrência de fraude deve preservar exposição, perda efetiva, resposta e histórico.
+
+Inadimplência fica na Controladoria, com coleção própria `inadimplenciaTitulos` e permissões separadas de consulta/gestão. Delete físico é proibido; recebido/cancelado preserva histórico.
+
+---
+
+## 11. Dashboard Gerencial v2
+
+O Dashboard v2 é **cockpit de leitura e decisão**, não ledger, razão, DRE ou submódulo de origem.
+
+Arquivos ativos:
+
+- `js/dashboard-v2.js` — ponto de entrada;
+- `js/dashboard-cockpit-v2.js` — implementação;
+- `dashboard-v2.css` — layout.
+
+Princípios:
+
+- não exibir “Atalhos de Gestão” redundantes;
+- cada KPI relevante deve buscar contexto por meta, Budget, Forecast, período anterior ou Last Year quando aplicável;
+- widgets visíveis dependem das permissões do módulo de origem;
+- clique em resumo deve levar ao detalhe quando existir rota;
+- preferências de ordem/visibilidade são pessoais e persistidas em `dashboardPreferencias/{uid}`;
+- usuário só pode acessar sua própria preferência no Firestore;
+- esconder um widget não altera autorização de dados;
+- Balanço no dashboard é posição de fechamento, não soma de meses;
+- Consórcios, Permutas e Vendas podem aparecer no cockpit sem gerar integração contábil automática.
+
+O Dashboard pode mostrar: DRE/resultado, evolução mensal, Balanço, Caixa, Inadimplência, Consórcios, Permutas, Vendas e desvios vs Budget.
+
+---
+
+## 12. Vendas & Comissões
+
+Vendas é um **módulo comercial de primeiro nível**, depois de Permutas. Não pertence à Controladoria & FP&A.
+
+Coleções:
+
+- `vendedores`;
+- `vendas`.
+
+Permissões:
+
+- `vendas.visualizar`;
+- `vendas.lancar`;
+- `vendas.editar`;
+- `vendas.vendedores`;
+- `vendas.comissoes`.
+
+Cadastro do vendedor define:
+
+- meta mensal;
+- taxa padrão de comissão;
+- base da comissão: `venda` ou `faturamento`;
+- status.
+
+### 12.1 Snapshot da comissão
+
+Cada venda preserva a regra usada no momento da operação. Alterar vendedor depois não pode recalcular silenciosamente histórico anterior.
+
+Campos centrais do snapshot:
+
+- `baseComissao`;
+- `comissaoPct`;
+- `comissaoBaseValor`;
+- `comissaoValor`;
+- `comissaoStatus`.
+
+### 12.2 Venda x faturamento
+
+- vendedor com base `venda`: comissão sobre venda confirmada;
+- vendedor com base `faturamento`: comissão sobre valor efetivamente faturado;
+- faturamento parcial é permitido;
+- valor faturado nunca pode superar valor da venda;
+- sem faturamento, comissão por faturamento fica `aguardando_faturamento`;
+- status financeiros seguintes: `provisionada`, `aprovada`, `paga`.
+
+Quem somente registra venda não pode definir no backend taxa/base diferente do vendedor. A interface também bloqueia taxa/status financeiro sem `vendas.comissoes`, mas a Rule é a barreira efetiva.
+
+Venda cancelada permanece em histórico. Delete físico de venda e vendedor é bloqueado; vendedor deve ser inativado.
+
+### 12.3 Performance por vendedor
+
+`js/sales-performance.js` adiciona cockpit comparativo por vendedor com:
+
+- Venda;
+- Faturamento;
+- Meta;
+- atingimento;
+- Faturado/Venda;
+- ticket médio;
+- comissão;
+- líder de vendas;
+- maior atingimento;
+- maior gap venda x faturamento;
+- maior comissão.
+
+Clicar na linha de performance filtra a carteira detalhada do vendedor.
+
+**Invariante:** Vendas não alimenta DRE, Balanço, Caixa, Budget ou Forecast automaticamente. Integração futura exige desenho contábil e atualização de Rules/QA/documentação.
+
+---
+
+## 13. Release
 
 Nenhuma versão estrutural deve chegar à `main` enquanto:
 
@@ -237,9 +347,10 @@ Nenhuma versão estrutural deve chegar à `main` enquanto:
 - `SIG Quality Check` não estiver verde;
 - `SIG Firebase Contract Check` não estiver verde;
 - `SIG Permissions Contract Check` não estiver verde quando permissões mudarem;
-- `SIG Consorcios Contract Check` não estiver verde enquanto Consórcios fizer parte da baseline;
-- `SIG Permutas Contract Check` não estiver verde enquanto Permutas v2 fizer parte da baseline;
+- contratos específicos dos módulos alterados não estiverem verdes;
 - Rules necessárias não estiverem versionadas;
 - não houver plano claro para publicar as Rules no Firebase.
 
 Após merge, confirmar GitHub Pages e, quando houver alteração de Rules, republicar Firebase e testar autenticado.
+
+Para detalhes de Dashboard v2 e Vendas, consultar `docs/dashboard-v2-vendas.md`.

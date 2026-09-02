@@ -18,6 +18,11 @@ on:
       - 'js/profiles.js'
       - 'js/governance-security.js'
       - 'js/ctrl-delinquency-v1.js'
+      - 'js/dashboard-v2.js'
+      - 'js/dashboard-cockpit-v2.js'
+      - 'js/sales.js'
+      - 'js/sales-guard.js'
+      - 'js/sales-performance.js'
       - 'js/asset-depreciation.js'
       - 'js/ctrl-assets-v1.js'
       - 'js/ctrl-consorcios-v1.js'
@@ -27,6 +32,7 @@ on:
       - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
       - 'docs/SIG-MANUAL-MESTRE.md'
       - 'docs/SIG-GUIA-DE-CONTINUIDADE.md'
+      - 'docs/dashboard-v2-vendas.md'
       - 'docs/release-controladoria-modular.md'
       - '.github/workflows/firebase-contract-check.yml'
   pull_request:
@@ -104,6 +110,30 @@ jobs:
           grep -q 'listarDocumentos("permutaFechamentos")' js/permutas.js
           grep -q 'reauthenticateWithCredential' js/permutas.js
 
+          # Dashboard v2: preferência pertence ao próprio usuário e não é compartilhada entre usuários.
+          grep -q 'match /dashboardPreferencias/{usuarioId}' firestore.rules
+          grep -q 'request.auth.uid == usuarioId' firestore.rules
+          grep -q 'dashboardPreferencias' js/dashboard-cockpit-v2.js
+          grep -q 'setDoc(doc(db,"dashboardPreferencias",state.usuario.id)' js/dashboard-cockpit-v2.js
+
+          # Vendas: coleção própria, perfil próprio e comissão protegida por regra do vendedor.
+          grep -q 'function vendasVisualizar' firestore.rules
+          grep -q 'function vendasLancar' firestore.rules
+          grep -q 'function vendasEditar' firestore.rules
+          grep -q 'function vendasVendedores' firestore.rules
+          grep -q 'function vendasComissoes' firestore.rules
+          grep -q 'function regraComissaoPadraoValida' firestore.rules
+          grep -q 'function calculoComissaoValido' firestore.rules
+          grep -q 'match /vendedores/{id}' firestore.rules
+          grep -q 'match /vendas/{id}' firestore.rules
+          grep -q 'allow delete: if false;' firestore.rules
+          grep -q 'listarDocumentos("vendedores")' js/sales.js
+          grep -q 'listarDocumentos("vendas")' js/sales.js
+          grep -q 'criarDocumento("vendedores"' js/sales.js
+          grep -q 'criarDocumento("vendas"' js/sales.js
+          grep -q 'baseComissao' js/sales.js
+          grep -q 'valorFaturado' js/sales.js
+
           # Permutas pode consultar CC e plano apenas como lookup operacional.
           grep -q 'permutasVisualizar();' firestore.rules
           grep -q "permissao('controladoria','visualizar') || permutasVisualizar()" firestore.rules
@@ -123,14 +153,19 @@ jobs:
           grep -q 'GitHub Pages' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
           grep -q 'firebase deploy --only firestore:rules,storage' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
           grep -q 'fail-closed' docs/SIG-DOSSIE-DE-CONTINUIDADE.md
-          grep -q '01/09/2026' docs/SIG-MANUAL-MESTRE.md
-          grep -q '01/09/2026' docs/SIG-GUIA-DE-CONTINUIDADE.md
+          grep -q '02/09/2026' docs/SIG-MANUAL-MESTRE.md
+          grep -q '02/09/2026' docs/SIG-GUIA-DE-CONTINUIDADE.md
+          test -s docs/dashboard-v2-vendas.md
 
           node --check js/shared.js
           node --check js/permutas.js
           node --check js/profiles.js
           node --check js/governance-security.js
           node --check js/ctrl-delinquency-v1.js
+          node --check js/dashboard-cockpit-v2.js
+          node --check js/sales.js
+          node --check js/sales-guard.js
+          node --check js/sales-performance.js
           node --check js/asset-depreciation.js
           node --check js/ctrl-assets-v1.js
           node --check js/consortium-calculations.js

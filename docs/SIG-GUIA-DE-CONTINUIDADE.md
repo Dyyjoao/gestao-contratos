@@ -1,7 +1,7 @@
 # SIG — Guia Operacional de Continuidade
 
 **Finalidade:** retomar o SIG em outra conversa, IA, equipe, computador, repositório ou hospedagem sem depender de memória informal.  
-**Data-base:** 01/09/2026 — Plano de Contas v6 + Balanço gerencial + Consórcios v1.
+**Data-base:** 02/09/2026 — Plano v6 + Balanço + Consórcios + Permutas v2 + Governança/Antifraude + Inadimplência + Dashboard v2 + Vendas.
 
 ---
 
@@ -13,11 +13,12 @@
 4. este Guia;
 5. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`;
 6. `SECURITY.md`;
-7. `app.js`;
-8. `js/controllership-router.js`;
-9. `js/profiles.js` quando houver módulos, abas ou autorizações;
-10. `firestore.rules`, `storage.rules`, `firebase.json`, `.firebaserc`;
-11. `.github/workflows/`.
+7. `docs/dashboard-v2-vendas.md` quando a mudança envolver Dashboard ou Vendas;
+8. `app.js`;
+9. `js/controllership-router.js`;
+10. `js/profiles.js` quando houver módulos, abas ou autorizações;
+11. `firestore.rules`, `storage.rules`, `firebase.json`, `.firebaserc`;
+12. `.github/workflows/`.
 
 Na Controladoria, nunca deduzir o módulo ativo pelo nome do arquivo: conferir o roteador.
 
@@ -35,15 +36,96 @@ O Plano oferece árvore expansível, filtro Ativas/Inativas/Todas, inativação,
 
 Balanço atual possui visão mensal com fechamento final do trimestre/ano e comparativo anual Atual x Last Year.
 
-Consórcios ativo: `js/ctrl-consorcios-v1.js`. A matemática fica em `js/consortium-calculations.js`. Persistência: coleção `consorcios`.
+### Módulos de primeiro nível relevantes
 
-**Consórcios é um módulo de primeiro nível no menu principal, posicionado logo após Contratos. Não deve aparecer dentro do submenu Controladoria & FP&A.** O roteamento lazy atual ainda é mantido em `js/controllership-router.js` por compatibilidade estrutural.
+Ordem lógica atual na área gerencial/operacional:
 
-Na grade de **Perfis de Acesso**, Consórcios aparece como módulo próprio com as autorizações `visualizar` e `editar/Gerir consórcios`. As antigas chaves internas da Controladoria não devem mais aparecer para o administrador na grade. Durante a migração, `js/profiles.js` mantém um espelho técnico nas chaves legadas para preservar compatibilidade com o roteador e com as Rules já publicadas.
+- Dashboard;
+- Contratos;
+- Consórcios;
+- Permutas;
+- Vendas & Comissões;
+- Controladoria & FP&A;
+- Governança & Compliance;
+- Administração conforme permissão.
 
-A carteira de Consórcios funciona como visão resumida. Ao abrir uma ficha, o módulo exibe detalhamento do plano, composição financeira, contemplação e cronograma teórico de parcelas. A carteira pode ser exportada em PDF/Excel; a ficha possui PDF próprio e o cronograma pode ser exportado em PDF/Excel.
+Consórcios, Permutas e Vendas **não pertencem ao submenu da Controladoria**.
 
-O cronograma de parcelas é **projeção calculada na base atual**, não histórico de pagamentos nem extrato da administradora. Parcelas marcadas como pagas refletem a quantidade cadastrada em `parcelasPagas`; valores históricos individuais não são inventados.
+### Consórcios
+
+Consórcios ativo: `js/ctrl-consorcios-v1.js`. Matemática: `js/consortium-calculations.js`. Persistência: `consorcios`.
+
+A grade de Perfis exibe Consórcios como módulo próprio (`visualizar` / `editar`). As chaves legadas de Controladoria continuam apenas como espelho técnico de compatibilidade enquanto roteador/Rules ainda as reconhecerem.
+
+A carteira é resumo; a ficha mostra composição financeira, contemplação e cronograma teórico. Cronograma é projeção, nunca extrato real.
+
+### Permutas
+
+Permutas v2 usa:
+
+- `permutas`;
+- `permutaMovimentos`;
+- `permutaFechamentos`.
+
+Possui CPF/CNPJ padronizado, ficha individual, intervalo exato de relatório, estorno com justificativa, inativação, fechamento por ciclo e delete físico exclusivo de Administrador com reautenticação.
+
+Movimento estornado continua visível e não compõe saldo/fechamento.
+
+### Governança, Antifraude e Inadimplência
+
+Governança reaproveita a estrutura auditável existente de compliance e possui cockpit Antifraude & TI.
+
+Inadimplência fica na Controladoria em `js/ctrl-delinquency-v1.js`, coleção `inadimplenciaTitulos`, com consulta e gestão separadas por permissão. Não há delete físico de título.
+
+### Dashboard Gerencial v2
+
+Entrada:
+
+- `js/dashboard-v2.js`;
+- `js/dashboard-cockpit-v2.js`;
+- `dashboard-v2.css`.
+
+O Dashboard v2 é configurável por usuário e persiste ordem/visibilidade em `dashboardPreferencias/{uid}`.
+
+Não existe bloco **Atalhos de Gestão**: o menu é curto e continua sendo a navegação primária.
+
+O cockpit pode combinar, conforme permissões:
+
+- Receita/OPEX/Resultado/Margem;
+- evolução mensal;
+- Budget/Forecast e desvios;
+- Balanço e evolução patrimonial;
+- Caixa D+30/D+60/D+90;
+- Inadimplência/Aging;
+- Consórcios;
+- Permutas;
+- Vendas & Comissões.
+
+**Dashboard é consumidor, não fonte.** Exibir dado operacional/comercial nele não cria integração contábil automática.
+
+### Vendas & Comissões
+
+Arquivos:
+
+- `js/sales.js`;
+- `js/sales-guard.js`;
+- `js/sales-performance.js`;
+- `sales.css`;
+- `sales-performance.css`.
+
+Coleções:
+
+- `vendedores`;
+- `vendas`.
+
+Cadastro do vendedor possui meta, taxa padrão e flag de base de comissão:
+
+- `venda` — venda confirmada;
+- `faturamento` — valor efetivamente faturado.
+
+Faturamento parcial é permitido. A venda guarda snapshot da regra da comissão e alteração posterior do vendedor não reescreve histórico.
+
+O cockpit comercial exibe Venda x Faturamento x Meta por vendedor, atingimento, Faturado/Venda, ticket médio, comissão e exceções gerenciais.
 
 ---
 
@@ -61,31 +143,31 @@ O cronograma de parcelas é **projeção calculada na base atual**, não histór
 
 Mudança de Plano exige revisar máscara, árvore, Balanço, DRE, Input, Budget/Forecast, Centros, Rules e QA.
 
-Mudança de Consórcios exige revisar:
+Mudança de Consórcios exige revisar módulo, cálculo, exportação, roteador, Perfis, Rules quando aplicável, QA e documentação.
 
-- `js/ctrl-consorcios-v1.js`;
-- `js/consortium-calculations.js`;
-- `js/export-utils.js` quando alterar relatórios;
-- `js/controllership-router.js`;
-- `js/profiles.js`;
-- `firestore.rules` quando mudar o contrato efetivo de autorização;
-- `SIG Permissions Contract Check`;
-- `SIG Consorcios Contract Check`;
-- documentação.
+Mudança de Dashboard exige revisar `dashboard-v2.js`, `dashboard-cockpit-v2.js`, CSS, fontes oficiais consumidas, permissões dos widgets, Rules de preferência e documentação.
 
-**Não recolocar Consórcios no submenu da Controladoria sem decisão arquitetural explícita.**
+Mudança de Vendas exige revisar `sales.js`, `sales-guard.js`, `sales-performance.js`, roteador, Perfis, Rules, QA e documentação.
 
-**Não integrar Consórcios a DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado sem decisão arquitetural explícita.** A v1 é independente.
+**Não recolocar Consórcios, Permutas ou Vendas no submenu da Controladoria sem decisão arquitetural explícita.**
 
-**Não apresentar cronograma teórico como histórico real de parcelas.** Histórico real futuro deve possuir persistência própria e fonte documental/auditável.
+**Não integrar Consórcios, Permutas ou Vendas a DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado sem decisão arquitetural explícita.**
+
+**Não apresentar projeção como histórico real.**
 
 ---
 
-## 4. Histórico
+## 4. Histórico e exclusão
 
 Plano de Contas: conta que teve vida real deve ser inativada; exclusão é apenas para teste/erro sem referência.
 
-Consórcios: não existe exclusão física na v1. Usar `Encerrado` para plano concluído e `Cancelado` para plano cancelado.
+Consórcios: usar Encerrado/Cancelado para preservar histórico.
+
+Permutas: estorno preserva lançamento; delete físico só Administrador + senha.
+
+Inadimplência: recebido/cancelado preserva título; delete bloqueado.
+
+Vendas: venda incorreta deve ser cancelada; vendedor deve ser inativado; delete físico de vendedor/venda é bloqueado.
 
 ---
 
@@ -93,30 +175,30 @@ Consórcios: não existe exclusão física na v1. Usar `Encerrado` para plano co
 
 GitHub Pages publica frontend, mas não publica `firestore.rules` nem `storage.rules`.
 
-A baseline atual contém Rules para:
+A baseline atual deve conter Rules para, entre outras:
 
 - `imobilizados`;
-- delete seguro de `planoContasGerencial`;
-- `consorcios`.
+- `planoContasGerencial`;
+- `consorcios`;
+- `permutas`, `permutaMovimentos`, `permutaFechamentos`;
+- `inadimplenciaTitulos`;
+- `dashboardPreferencias`;
+- `vendedores`;
+- `vendas`.
 
-Na interface de Perfis, Consórcios usa autorização própria:
+### Dashboard
 
-- `permissoes.consorcios.visualizar` para consulta;
-- `permissoes.consorcios.editar` para gestão.
+`dashboardPreferencias/{uid}` pertence exclusivamente ao usuário autenticado correspondente ao ID do documento. Preferência não pode virar canal de leitura/escrita entre usuários.
 
-Por compatibilidade com o contrato backend vigente, ao salvar um perfil o frontend também espelha tecnicamente:
+### Vendas
 
-- `controladoria.consorciosVisualizar` = visualizar ou editar;
-- `controladoria.consorciosEditar` = editar.
-
-Esse espelho não deve voltar a aparecer como opção visual dentro do bloco Controladoria. Ele existe apenas para que perfis antigos e Rules publicadas continuem funcionando durante a migração.
-
-Para Consórcios:
-
-- leitura depende da autorização de consulta/gestão e do escopo de grupo/empresa;
-- criação/edição depende da autorização de gestão;
-- grupo e empresa devem permanecer dentro do escopo permitido;
-- exclusão física é bloqueada.
+- `vendas.visualizar` e demais ações concedem consulta conforme perfil;
+- `vendas.lancar` permite criação dentro do escopo de empresa/grupo;
+- sem `vendas.comissoes`, Rule valida taxa/base contra o vendedor cadastrado;
+- `vendas.vendedores` gere vendedor/meta/regra;
+- `vendas.comissoes` controla camada financeira da comissão;
+- cálculo de comissão deve permanecer coerente com base e percentual;
+- delete físico de vendedor/venda é bloqueado.
 
 Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de considerar a release encerrada.
 
@@ -135,38 +217,66 @@ Quando `firestore.rules` mudar, publicar a Rule completa no Firebase antes de co
 
 ### Consórcios
 
-- o item deve aparecer no menu principal imediatamente após Contratos;
-- o item não deve aparecer dentro do submenu Controladoria & FP&A;
-- a grade de Perfis deve possuir bloco próprio `Consórcios`;
-- o bloco Controladoria não deve exibir as antigas opções `Visualizar consórcios` e `Gerir consórcios`;
-- perfil somente consulta visualiza a carteira e a ficha sem ação de edição;
-- perfil de gestão cria e edita ficha;
-- ao abrir Consórcios, Controladoria não deve permanecer marcada como menu ativo;
-- clicar na linha da carteira deve abrir a ficha detalhada;
-- a ficha deve mostrar carta atual/contratada, total estimado, pago, saldo, parcela, prazo e progresso;
-- composição deve separar administração, fundo de reserva, seguro/outros e juros/encargos;
-- cronograma deve gerar exatamente a quantidade de parcelas do prazo;
-- cronograma deve ser identificado como projeção e não como extrato/histórico;
-- novo cadastro exige uma empresa;
-- visão da carteira pode consolidar empresas selecionadas;
-- carta atual substitui a carta contratada como base quando informada;
-- taxa do consórcio soma administração + reserva + seguro/outros;
-- juros/encargos permanecem separados;
-- parcela atual permanece separada da média estimada;
-- valor pago acumulado altera o saldo teórico;
-- contemplação registra data, modalidade e lance;
-- PDF/Excel da carteira devem excluir a coluna de ações;
-- PDF da ficha deve conter identificação, valores, taxas e contemplação;
-- PDF/Excel de parcelas devem registrar que são projeção na base atual;
-- nenhum valor do módulo deve aparecer automaticamente em DRE, Balanço, Caixa ou Planejamento.
+- menu principal após Contratos;
+- fora do submenu Controladoria;
+- bloco próprio em Perfis;
+- consulta e gestão segregadas;
+- ficha e cronograma abrem;
+- cronograma identificado como projeção;
+- nenhuma integração automática com contabilidade/caixa/planejamento.
+
+### Permutas
+
+- menu de primeiro nível;
+- permissões próprias;
+- CPF/CNPJ mascarado;
+- estorno exige motivo e preserva linha;
+- fechamento ignora estornos;
+- inativa não aceita novo movimento;
+- delete só Administrador reautenticado;
+- exclusão deve refletir imediatamente na UI.
+
+### Governança / Inadimplência
+
+- cockpit Antifraude carrega conforme perfil;
+- ciclo mensal/planos de ação permanecem auditáveis;
+- Inadimplência calcula aging e índice;
+- consulta e gestão respeitam permissões diferentes.
+
+### Dashboard v2
+
+- nenhum “Atalhos de Gestão”;
+- abrir Configurar dashboard;
+- ocultar/exibir widget;
+- subir/descer ordem;
+- salvar e recarregar preferência do mesmo usuário;
+- outro usuário não herda configuração;
+- Balanço mostra posição, equação e LY;
+- gráficos mensais carregam;
+- clicar em resumo abre detalhe correspondente;
+- Consórcios/Permutas/Vendas aparecem somente com permissão;
+- Dashboard não cria lançamentos em módulos de origem.
+
+### Vendas & Comissões
+
+- menu após Permutas e fora de Controladoria;
+- bloco próprio em Perfis;
+- vendedor base Venda calcula comissão sobre venda;
+- vendedor base Faturamento aguarda faturamento e calcula sobre valor faturado;
+- faturamento parcial funciona;
+- mudança posterior da regra do vendedor não altera snapshot antigo;
+- usuário sem `vendas.comissoes` não consegue alterar taxa/status financeiro;
+- aprovação/pagamento respeitam permissão;
+- venda cancelada sai dos totais sem ser apagada;
+- mapa por vendedor mostra Venda/Faturamento/Meta e indicadores;
+- clique no vendedor filtra a tabela detalhada.
 
 ### Firebase
 
-- Imobilizado continua carregando;
-- delete seguro do Plano continua funcionando;
-- Consórcios carrega com Rules publicadas;
-- perfil somente consulta não grava Consórcios;
-- exclusão de Consórcios permanece bloqueada.
+- Rules correspondem ao SHA da `main`;
+- coleções novas não retornam `permission-denied` para perfis autorizados;
+- perfis não autorizados permanecem bloqueados;
+- publicação de Pages e publicação de Rules são verificadas separadamente.
 
 ---
 
@@ -194,6 +304,7 @@ Se já houver dados persistidos no formato novo, tratar rollback como migração
 - dados contábeis não são alterados para mascarar bug visual;
 - integração crítica é fail-closed;
 - módulo independente não gera lançamentos sem desenho aprovado;
+- Dashboard cruza visões sem virar fonte de lançamento;
 - arquivos legados não definem comportamento ativo;
 - histórico real não é apagado;
 - projeção não é apresentada como histórico realizado;

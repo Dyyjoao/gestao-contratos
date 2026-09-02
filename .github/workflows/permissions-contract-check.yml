@@ -23,6 +23,10 @@ jobs:
           node --check js/permutas.js
           node --check js/governance-security.js
           node --check js/ctrl-delinquency-v1.js
+          node --check js/sales.js
+          node --check js/sales-guard.js
+          node --check js/sales-performance.js
+          node --check js/dashboard-cockpit-v2.js
 
           # DRE e Balanço precisam ser permissões explícitas de perfil.
           grep -q '\["dre","Visualizar DRE Gerencial"\]' js/profiles.js
@@ -56,7 +60,6 @@ jobs:
 
           # Permutas é módulo operacional próprio, fora da Controladoria.
           grep -q '\["permutas","Permutas"' js/profiles.js
-          grep -q '\["visualizar","Visualizar"\]' js/profiles.js
           grep -q '\["movimentar","Registrar movimentações"\]' js/profiles.js
           grep -q '\["estornar","Estornar lançamentos"\]' js/profiles.js
           grep -q '\["fechar","Realizar fechamentos"\]' js/profiles.js
@@ -72,6 +75,30 @@ jobs:
             echo 'Permutas não pode depender da permissão de Controladoria.' >&2
             exit 1
           fi
+
+          # Vendas & Comissões é módulo de primeiro nível, com segregação de ações.
+          grep -q '\["vendas","Vendas & Comissões"' js/profiles.js
+          grep -q '\["lancar","Registrar vendas"\]' js/profiles.js
+          grep -q '\["editar","Editar/Cancelar vendas"\]' js/profiles.js
+          grep -q '\["vendedores","Gerir vendedores, metas e regras"\]' js/profiles.js
+          grep -q '\["comissoes","Aprovar e marcar comissões como pagas"\]' js/profiles.js
+          grep -q 'menuVendas' js/controllership-router.js
+          grep -q 'moduloAcao("vendas"' js/controllership-router.js
+          grep -q 'vendas:()=>abrirTela("vendas","./sales.js")' js/controllership-router.js
+          grep -q 'depoisDe:"menuPermutas"' js/controllership-router.js
+          if grep -Fq '["vendas","Vendas & Comissões"]' js/controllership-router.js; then
+            echo 'Vendas não pode ficar no submenu da Controladoria.' >&2
+            exit 1
+          fi
+          grep -q 'permite("vendas","comissoes")' js/sales-guard.js
+          grep -q 'salesPct' js/sales-guard.js
+          grep -q 'salesComStatus' js/sales-guard.js
+
+          # Dashboard v2 exibe apenas widgets permitidos e não reintroduz atalhos redundantes.
+          grep -q 'dashboard-cockpit-v2.js' js/dashboard-v2.js
+          grep -q 'Configurar dashboard' js/dashboard-cockpit-v2.js
+          grep -q 'dashboardPreferencias' js/dashboard-cockpit-v2.js
+          ! grep -q 'Atalhos de gestão' js/management-shell.js
 
           # Perfis legados com apenas Visualizar mantêm acesso a DRE/Balanço até serem salvos novamente.
           grep -q 'legadoVisualizar:true' js/controllership-router.js

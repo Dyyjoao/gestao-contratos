@@ -12,10 +12,11 @@ Trate como contrato arquitetural:
 4. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`
 5. `SECURITY.md`
 6. `app.js`
-7. `js/controllership-router.js` quando envolver Controladoria/FP&A ou o roteamento atual de Consórcios
+7. `js/controllership-router.js` quando envolver Controladoria/FP&A ou módulos de primeiro nível roteados por ele
 8. `js/profiles.js` e `.github/workflows/permissions-contract-check.yml` sempre que houver nova aba, novo módulo navegável ou mudança de autorização
 9. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc` quando houver persistência/permissões/backend
 10. `.github/workflows/` antes de mudar arquitetura/testes
+11. `docs/dashboard-v2-vendas.md` quando envolver Dashboard ou Vendas & Comissões
 
 Não dependa de memória de conversa para interpretar o produto.
 
@@ -59,6 +60,18 @@ Não dependa de memória de conversa para interpretar o produto.
 - Consórcios v1 é gestão independente: não alimenta DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado.
 - Taxa de Consórcio e juros/encargos permanecem conceitos separados.
 - Ficha de Consórcio não é apagada na v1; usar Encerrado/Cancelado para preservar histórico.
+- **Permutas é módulo de primeiro nível após Consórcios, fora de Controladoria.** Estorno preserva trilha; fechamento preserva histórico; delete físico é exclusivamente Administrador + reautenticação.
+- **Dashboard v2 é cockpit de leitura, não fonte contábil.** Não gerar lançamentos na DRE/Balanço/Caixa a partir dos cartões do Dashboard.
+- O Dashboard v2 não deve reintroduzir “Atalhos de Gestão”; o menu é a navegação primária.
+- Widgets do Dashboard respeitam a permissão do módulo de origem e preferências são pessoais em `dashboardPreferencias/{uid}`.
+- **Vendas & Comissões é módulo de primeiro nível após Permutas e não pertence à Controladoria.**
+- Vendas usa coleções `vendedores` e `vendas`; delete físico é bloqueado e histórico deve ser preservado.
+- Comissão do vendedor pode ser gerada por `venda` ou `faturamento`; faturamento parcial é permitido.
+- Cada venda grava snapshot da regra: `baseComissao`, `comissaoPct`, `comissaoBaseValor`, `comissaoValor`, `comissaoStatus`.
+- Alterar regra do vendedor não recalcula vendas antigas.
+- Usuário com apenas `vendas.lancar` não pode definir taxa/base divergente do vendedor; `firestore.rules` é a barreira efetiva.
+- Comissão aprovada/paga não deve ser silenciosamente alterada por edição operacional.
+- Vendas não alimenta DRE, Balanço, Caixa, Budget ou Forecast automaticamente.
 
 ## Mudança de máscara/hierarquia
 
@@ -94,6 +107,36 @@ Não recolocar Consórcios dentro do submenu de Controladoria sem decisão arqui
 
 Não criar integração automática com contabilidade/caixa/planejamento sem decisão explícita e atualização dos contratos arquiteturais.
 
+## Mudança no Dashboard v2
+
+Revisar em conjunto:
+
+- `js/dashboard-v2.js`;
+- `js/dashboard-cockpit-v2.js`;
+- `dashboard-v2.css`;
+- permissões dos módulos consumidos;
+- `firestore.rules` se mudar `dashboardPreferencias`;
+- QA específico;
+- `docs/dashboard-v2-vendas.md` e documentação mestre.
+
+Não duplicar fórmula oficial de DRE/Balanço se houver helper compartilhado. O Dashboard deve ser consumidor, não segunda fonte de regra.
+
+## Mudança em Vendas & Comissões
+
+Revisar em conjunto:
+
+- `js/sales.js`;
+- `js/sales-guard.js`;
+- `js/sales-performance.js`;
+- `sales.css` / `sales-performance.css`;
+- `js/controllership-router.js` para menu/rota de primeiro nível;
+- `js/profiles.js`;
+- `firestore.rules`;
+- Permissions/Firebase/Quality QA e contrato específico;
+- documentação.
+
+Não mover Vendas para Controladoria sem decisão arquitetural explícita.
+
 ## Exclusão de conta
 
 A Rule de `planoContasGerencial` pode autorizar delete para `fpaPlano()`, mas a segurança funcional exige validação de referências no aplicativo. Não criar atalho que pule essa validação.
@@ -102,7 +145,7 @@ A Rule de `planoContasGerencial` pode autorizar delete para `fpaPlano()`, mas a 
 
 ## Módulos legados
 
-Arquivo existir não significa módulo ativo. Não reativar `fpa.js`, versões antigas do Plano ou módulos operacionais sem decisão explícita e atualização do roteador/documentação.
+Arquivo existir não significa módulo ativo. Não reativar `fpa.js`, dashboards antigos, versões antigas do Plano ou módulos operacionais sem decisão explícita e atualização do roteador/documentação.
 
 ## Release
 

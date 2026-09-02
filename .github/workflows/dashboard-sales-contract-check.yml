@@ -1,0 +1,149 @@
+name: SIG Dashboard Sales Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'chatgpt/**'
+    paths:
+      - 'app.js'
+      - 'js/dashboard-v2.js'
+      - 'js/dashboard-cockpit-v2.js'
+      - 'dashboard-v2.css'
+      - 'js/sales.js'
+      - 'js/sales-guard.js'
+      - 'js/sales-performance.js'
+      - 'sales.css'
+      - 'sales-performance.css'
+      - 'js/management-shell.js'
+      - 'js/controllership-router.js'
+      - 'js/profiles.js'
+      - 'firestore.rules'
+      - 'docs/dashboard-v2-vendas.md'
+      - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
+      - 'docs/SIG-MANUAL-MESTRE.md'
+      - 'docs/SIG-GUIA-DE-CONTINUIDADE.md'
+      - 'AGENTS.md'
+      - '.github/workflows/dashboard-sales-contract-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Dashboard v2 and Sales architecture
+        run: |
+          set -e
+          node --check app.js
+          node --check js/dashboard-v2.js
+          node --check js/dashboard-cockpit-v2.js
+          node --check js/sales.js
+          node --check js/sales-guard.js
+          node --check js/sales-performance.js
+          node --check js/controllership-router.js
+          node --check js/profiles.js
+
+          test -s dashboard-v2.css
+          test -s sales.css
+          test -s sales-performance.css
+          test -s docs/dashboard-v2-vendas.md
+
+          # Dashboard v2 substitui a visão fixa e não deve desperdiçar espaço com atalhos redundantes.
+          grep -q './js/dashboard-v2.js' app.js
+          grep -q 'dashboard-cockpit-v2.js' js/dashboard-v2.js
+          grep -q 'Configurar dashboard' js/dashboard-cockpit-v2.js
+          grep -q 'dashboardPreferencias' js/dashboard-cockpit-v2.js
+          grep -q 'Análise patrimonial' js/dashboard-cockpit-v2.js
+          grep -q 'Inadimplência & Aging' js/dashboard-cockpit-v2.js
+          grep -q 'Posição de consórcios' js/dashboard-cockpit-v2.js
+          grep -q 'Posição de permutas' js/dashboard-cockpit-v2.js
+          grep -q 'Vendas & Comissões' js/dashboard-cockpit-v2.js
+          grep -q 'Maiores desvios vs Budget' js/dashboard-cockpit-v2.js
+          ! grep -q 'Atalhos de gestão' js/management-shell.js
+          ! grep -q 'Atalhos de Gestão' js/management-shell.js
+
+          # Preferência é pessoal.
+          grep -q 'match /dashboardPreferencias/{usuarioId}' firestore.rules
+          grep -q 'request.auth.uid == usuarioId' firestore.rules
+
+          # Vendas é primeiro nível e independente de Controladoria.
+          grep -q '\["vendas","Vendas & Comissões"' js/profiles.js
+          grep -q 'menuVendas' js/controllership-router.js
+          grep -q 'depoisDe:"menuPermutas"' js/controllership-router.js
+          grep -q 'vendas:()=>abrirTela("vendas","./sales.js")' js/controllership-router.js
+          if grep -Fq '["vendas","Vendas & Comissões"]' js/controllership-router.js; then
+            echo 'Vendas não pode entrar no submenu Controladoria.' >&2
+            exit 1
+          fi
+
+          # Cadastro do vendedor preserva base Venda x Faturamento.
+          grep -q 'salesVendBase' js/sales.js
+          grep -q 'value="venda">Venda confirmada' js/sales.js
+          grep -q 'value="faturamento">Faturamento' js/sales.js
+          grep -q 'valorFaturado' js/sales.js
+          grep -q 'dataFaturamento' js/sales.js
+          grep -q 'baseComissao' js/sales.js
+          grep -q 'comissaoBaseValor' js/sales.js
+          grep -q 'aguardando_faturamento' js/sales.js
+
+          # Operador de venda não controla taxa/status financeiro apenas por UI.
+          grep -q 'permite("vendas","comissoes")' js/sales-guard.js
+          grep -q 'taxa.disabled=!pode' js/sales-guard.js
+          grep -q 'status.disabled=!pode' js/sales-guard.js
+          grep -q 'regraComissaoPadraoValida' firestore.rules
+          grep -q 'calculoComissaoValido' firestore.rules
+
+          # Cockpit por vendedor: venda, faturamento, meta e leitura gerencial.
+          grep -q 'Mapa de performance comercial' js/sales-performance.js
+          grep -q 'Líder de vendas' js/sales-performance.js
+          grep -q 'Maior atingimento' js/sales-performance.js
+          grep -q 'Maior gap venda × faturamento' js/sales-performance.js
+          grep -q 'Maior comissão no período' js/sales-performance.js
+          grep -q 'Faturado/Venda' js/sales-performance.js
+          grep -q 'Ticket médio' js/sales-performance.js
+          grep -q 'data-sales-focus' js/sales-performance.js
+          grep -q './js/sales-performance.js' app.js
+
+          # Persistência e histórico.
+          grep -q 'match /vendedores/{id}' firestore.rules
+          grep -q 'match /vendas/{id}' firestore.rules
+          grep -q 'function vendasVendedores' firestore.rules
+          grep -q 'function vendasComissoes' firestore.rules
+          grep -q 'allow delete: if false;' firestore.rules
+          grep -qi 'snapshot' docs/dashboard-v2-vendas.md
+          grep -q 'Vendas não altera DRE/Balanço/Caixa automaticamente' docs/dashboard-v2-vendas.md
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/tmp/sig-dash-sales-server.log 2>&1 &
+          sleep 2
+      - name: Validate dashboard and sales DOM in headless Chrome
+        run: |
+          set -e
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=6000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dash-dom.html || true
+          grep -q 'id="btnDashV2Config"' /tmp/sig-dash-dom.html
+          grep -q 'data-widget="balanco"' /tmp/sig-dash-dom.html
+          grep -q 'data-widget="inadimplencia"' /tmp/sig-dash-dom.html
+          ! grep -qi 'Atalhos de Gestão' /tmp/sig-dash-dom.html
+
+          cp index.html sales-smoke.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sales-smoke.html')
+          s=p.read_text()
+          marker='</body>'
+          test='''<script type="module">(async()=>{try{const core=await import('./js/core.js');core.state.usuario={id:'smoke',grupoId:'g',empresaId:'e'};core.state.perfil={id:'administrador',acessoTotal:true,ativo:true};const sales=await import('./js/sales.js');const pg=document.getElementById('pagina-vendas');if(!pg)throw new Error('pagina-vendas ausente');pg.classList.remove('hidden');await import('./js/sales-performance.js');await new Promise(r=>setTimeout(r,250));if(!document.getElementById('salesVendBase'))throw new Error('flag base comissão ausente');if(!document.getElementById('salesPerfV2'))throw new Error('cockpit por vendedor ausente');document.documentElement.setAttribute('data-sales-dashboard-smoke','ok')}catch(e){document.documentElement.setAttribute('data-sales-dashboard-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="sales-dashboard-error">'+String(e.stack||e)+'</pre>')}})();</script>'''
+          p.write_text(s.replace(marker,test+marker))
+          PY
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8000/sales-smoke.html > /tmp/sig-sales-dom.html || true
+          grep -q 'data-sales-dashboard-smoke="ok"' /tmp/sig-sales-dom.html || { grep -A8 -B2 'sales-dashboard-error' /tmp/sig-sales-dom.html || true; exit 1; }
