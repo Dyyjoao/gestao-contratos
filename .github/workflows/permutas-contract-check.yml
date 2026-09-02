@@ -91,11 +91,16 @@ jobs:
           from pathlib import Path
           p=Path('permutas-smoke.html')
           s=p.read_text()
-          test="""<script type=\"module\">(async()=>{try{const m=await import('./js/permutas.js');m.abrir();const p=document.getElementById('pagina-permutas');if(!p||p.classList.contains('hidden'))throw new Error('Permutas não abriu');for(const id of ['permutaDocumento','permutaFiltroStatus','permutaDetalhe','formFechamentoPermuta','senhaExcluirPermuta'])if(!document.getElementById(id))throw new Error('Ausente '+id);document.documentElement.setAttribute('data-permutas-v2','ok')}catch(e){document.body.insertAdjacentHTML('beforeend','<pre id=\"permutas-error\">'+String(e.stack||e)+'</pre>')}})();</script>"""
+          test="""<script type=\"module\">(async()=>{try{const m=await import('./js/permutas.js');m.abrir();const p=document.getElementById('pagina-permutas');if(!p||p.classList.contains('hidden'))throw new Error('Permutas não abriu');for(const id of ['permutaDocumento','permutaFiltroStatus','permutaDetalhe','formFechamentoPermuta','senhaExcluirPermuta'])if(!document.getElementById(id))throw new Error('Ausente '+id);document.documentElement.setAttribute('data-permutas-v2','ok')}catch(e){document.documentElement.setAttribute('data-permutas-v2','fail');document.body.insertAdjacentHTML('beforeend','<pre id=\"permutas-error\">'+String(e.stack||e).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</pre>')}})();</script>"""
           s=s.replace('</body>',test+'</body>')
           p.write_text(s)
           PY
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8000/permutas-smoke.html > /tmp/permutas-dom.html
-          grep -q 'data-permutas-v2="ok"' /tmp/permutas-dom.html
+          if ! grep -q 'data-permutas-v2="ok"' /tmp/permutas-dom.html; then
+            echo '=== ERRO DO BROWSER SMOKE DE PERMUTAS ===' >&2
+            grep -A20 -B3 'id="permutas-error"' /tmp/permutas-dom.html >&2 || true
+            echo '=== FIM DO ERRO ===' >&2
+            exit 1
+          fi
           ! grep -q 'id="permutas-error"' /tmp/permutas-dom.html
