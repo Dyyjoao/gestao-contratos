@@ -80,6 +80,56 @@ service cloud.firestore {
     function permutasFechar() { return permissao('permutas','fechar'); }
     function permutasInativar() { return permissao('permutas','inativar'); }
 
+    function vendasVisualizar() {
+      return permissao('vendas','visualizar') ||
+        permissao('vendas','lancar') ||
+        permissao('vendas','editar') ||
+        permissao('vendas','vendedores') ||
+        permissao('vendas','comissoes');
+    }
+    function vendasLancar() { return permissao('vendas','lancar'); }
+    function vendasEditar() { return permissao('vendas','editar'); }
+    function vendasVendedores() { return permissao('vendas','vendedores'); }
+    function vendasComissoes() { return permissao('vendas','comissoes'); }
+    function vendedorRef(vendedorId) { return /databases/$(database)/documents/vendedores/$(vendedorId); }
+    function vendedorValidoParaVenda(dados) {
+      return exists(vendedorRef(dados.vendedorId)) &&
+        get(vendedorRef(dados.vendedorId)).data.grupoId == dados.grupoId &&
+        get(vendedorRef(dados.vendedorId)).data.empresaId == dados.empresaId &&
+        get(vendedorRef(dados.vendedorId)).data.status != 'inativo';
+    }
+    function regraComissaoPadraoValida(dados) {
+      return vendedorValidoParaVenda(dados) &&
+        dados.baseComissao == get(vendedorRef(dados.vendedorId)).data.baseComissao &&
+        dados.comissaoPct == get(vendedorRef(dados.vendedorId)).data.comissaoPct;
+    }
+    function calculoComissaoValido(dados) {
+      return dados.valor > 0 && dados.valorFaturado >= 0 && dados.valorFaturado <= dados.valor &&
+        dados.comissaoPct >= 0 && dados.comissaoPct <= 100 &&
+        dados.comissaoBaseValor == (dados.baseComissao == 'faturamento' ? dados.valorFaturado : dados.valor) &&
+        dados.comissaoValor == dados.comissaoBaseValor * dados.comissaoPct / 100;
+    }
+    function statusComissaoInicialValido(dados) {
+      return (dados.baseComissao == 'faturamento' && dados.valorFaturado <= 0 && dados.comissaoStatus == 'aguardando_faturamento') ||
+        ((dados.baseComissao != 'faturamento' || dados.valorFaturado > 0) && dados.comissaoStatus == 'provisionada');
+    }
+    function vendaOperacionalValida(novo, antigo) {
+      return calculoComissaoValido(novo) && (
+        vendasComissoes() || (
+          novo.vendedorId == antigo.vendedorId &&
+          novo.vendedorNome == antigo.vendedorNome &&
+          novo.baseComissao == antigo.baseComissao &&
+          novo.comissaoPct == antigo.comissaoPct &&
+          novo.comissaoStatus == antigo.comissaoStatus &&
+          ((antigo.comissaoStatus != 'aprovada' && antigo.comissaoStatus != 'paga') || (
+            novo.valor == antigo.valor &&
+            novo.valorFaturado == antigo.valorFaturado &&
+            novo.dataFaturamento == antigo.dataFaturamento
+          ))
+        )
+      );
+    }
+
     function caixaVisualizar() {
       return permissao('controladoria','visualizar') ||
         permissao('controladoria','caixaVisualizar');
@@ -122,6 +172,20 @@ service cloud.firestore {
         (permissao('usuarios','editar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','perfilId','empresaId','acessoGlobal','empresasAcesso','atualizadoEm'])) ||
         (permissao('usuarios','inativar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']))
       );
+      allow delete: if false;
+    }
+
+    match /dashboardPreferencias/{usuarioId} {
+      allow read: if usuarioAtivo() && request.auth.uid == usuarioId && resource.data.grupoId == usuario().data.grupoId;
+      allow create: if usuarioAtivo() && request.auth.uid == usuarioId &&
+        request.resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.grupoId == usuario().data.grupoId;
+      allow update: if usuarioAtivo() && request.auth.uid == usuarioId &&
+        resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.usuarioId == resource.data.usuarioId &&
+        resource.data.grupoId == usuario().data.grupoId &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ordem','ocultos','atualizadoEm']);
       allow delete: if false;
     }
 
@@ -208,6 +272,41 @@ service cloud.firestore {
       allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
         permissao('cotacoes','editar') || permissao('cotacoes','cotacao') || permissao('cotacoes','aprovar') || permissao('cotacoes','anexar')
       );
+      allow delete: if false;
+    }
+
+    match /vendedores/{id} {
+      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.baseComissao in ['venda','faturamento'] &&
+        request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
+      allow update: if vendasVendedores() && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.baseComissao in ['venda','faturamento'] &&
+        request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
+      allow delete: if false;
+    }
+
+    match /vendas/{id} {
+      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if vendasLancar() && documentoAcessivel(request.resource.data) &&
+        vendedorValidoParaVenda(request.resource.data) &&
+        calculoComissaoValido(request.resource.data) &&
+        (vendasComissoes() || (
+          regraComissaoPadraoValida(request.resource.data) &&
+          statusComissaoInicialValido(request.resource.data)
+        ));
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          (vendasEditar() && vendaOperacionalValida(request.resource.data, resource.data)) ||
+          (vendasComissoes() &&
+            calculoComissaoValido(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'comissaoPct','comissaoBaseValor','comissaoValor','comissaoStatus','atualizadoEm'
+            ]))
+        );
       allow delete: if false;
     }
 
