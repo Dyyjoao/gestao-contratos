@@ -6,6 +6,7 @@ const DEF=[
  ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
  ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
  ["permutas","Permutas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar cadastro"],["movimentar","Registrar movimentações"],["estornar","Estornar lançamentos"],["fechar","Realizar fechamentos"],["inativar","Inativar/Reativar"]]],
+ ["vendas","Vendas & Comissões",[["visualizar","Visualizar"],["lancar","Registrar vendas"],["editar","Editar/Cancelar vendas"],["vendedores","Gerir vendedores, metas e regras"],["comissoes","Aprovar e marcar comissões como pagas"]]],
  ["prestadores","Prestadores & Oficinas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["avaliar","Avaliar"],["excluir","Excluir"]]],
  ["frota","Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"],["excluir","Excluir"]]],
  ["almoxarifado","Almoxarifado",[["visualizar","Visualizar"],["cadastrar","Cadastrar item"],["solicitar","Solicitar"],["movimentar","Entregar/receber"],["prorrogar","Autorizar prorrogação"],["editar","Editar"],["ajustar","Ajustar saldo"],["excluir","Excluir"]]],
