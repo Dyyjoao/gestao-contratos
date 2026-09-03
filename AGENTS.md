@@ -17,6 +17,7 @@ Trate como contrato arquitetural:
 9. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc` quando houver persistência/permissões/backend
 10. `.github/workflows/` antes de mudar arquitetura/testes
 11. `docs/dashboard-v2-vendas.md` quando envolver Dashboard ou Vendas & Comissões
+12. `docs/SIG-IMPORTACOES.md` quando envolver alimentação em lote, arquivos externos, parsers ou integração de dados por importação
 
 Não dependa de memória de conversa para interpretar o produto.
 
@@ -31,6 +32,9 @@ Não dependa de memória de conversa para interpretar o produto.
 - Nova coleção/caminho Storage exige Rule, QA e documentação no mesmo pacote.
 - Base contábil crítica indisponível deve operar fail-closed.
 - Tela monoempresa não pode usar silenciosamente a primeira empresa de um contexto múltiplo.
+- **Importação não é atalho de autorização:** deve usar as permissões do módulo, preservar grupo/empresa, validar antes da gravação, detectar duplicidade e manter rastreabilidade da fonte.
+- Arquivo bruto de importação deve ser processado localmente quando não houver necessidade funcional de armazená-lo; não enviar arquivo inteiro ao Firebase apenas para fazer parsing.
+- Importador novo deve reutilizar `js/import-center.js` para capacidades genéricas e manter parser/regra específica fora do núcleo.
 - Plano ativo: `js/ctrl-chart-accounts-v6.js`.
 - Máscara vigente: `#.##.##.####`.
 - Hierarquia: Raiz → `#.##` Sintética N1 → `#.##.##` Sintética N2 → `#.##.##.####` Analítica.
@@ -72,6 +76,7 @@ Não dependa de memória de conversa para interpretar o produto.
 - Usuário com apenas `vendas.lancar` não pode definir taxa/base divergente do vendedor; `firestore.rules` é a barreira efetiva.
 - Comissão aprovada/paga não deve ser silenciosamente alterada por edição operacional.
 - Vendas não alimenta DRE, Balanço, Caixa, Budget ou Forecast automaticamente.
+- Importação Pangéia em Vendas deve preservar número da venda, C.I., vendedor/taxa da fonte, comissão impressa e chave de importação; reprocessamento não pode duplicar a mesma venda.
 
 ## Mudança de máscara/hierarquia
 
@@ -128,14 +133,33 @@ Revisar em conjunto:
 - `js/sales.js`;
 - `js/sales-guard.js`;
 - `js/sales-performance.js`;
-- `sales.css` / `sales-performance.css`;
+- `js/sales-pangeia-import.js` e `js/import-center.js` quando houver importação;
+- `sales.css` / `sales-performance.css` / `sales-import.css`;
 - `js/controllership-router.js` para menu/rota de primeiro nível;
 - `js/profiles.js`;
 - `firestore.rules`;
-- Permissions/Firebase/Quality QA e contrato específico;
-- documentação.
+- Permissions/Firebase/Quality QA e contratos específicos;
+- `docs/dashboard-v2-vendas.md`, `docs/SIG-IMPORTACOES.md` e documentação mestre.
 
 Não mover Vendas para Controladoria sem decisão arquitetural explícita.
+
+## Mudança em importações
+
+Todo importador novo deve seguir o contrato comum:
+
+1. arquivo ou conteúdo é lido antes da gravação;
+2. parser específico converte a fonte em registros estruturados;
+3. usuário recebe prévia, erros, totais e duplicidades;
+4. fonte e chave de importação são preservadas para auditoria;
+5. gravação respeita escopo e permissões do módulo;
+6. falha parcial deve permitir reprocessamento sem duplicação silenciosa;
+7. nova coleção ou novo poder de escrita exige revisão de Firestore Rules;
+8. parser e tela devem ter QA automatizado;
+9. atualizar `docs/SIG-IMPORTACOES.md` e documentação de continuidade.
+
+Não colocar regra específica de Pangéia, OFX, CSV ou outro fornecedor dentro do núcleo `js/import-center.js`.
+
+Importar dados de um módulo não autoriza integração automática com outro módulo. Ex.: importar Vendas não cria lançamento na DRE ou Caixa por consequência implícita.
 
 ## Exclusão de conta
 
