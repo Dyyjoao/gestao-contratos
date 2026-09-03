@@ -1,0 +1,93 @@
+name: SIG Sales Import Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'chatgpt/**'
+    paths:
+      - 'app.js'
+      - 'js/import-center.js'
+      - 'js/sales-pangeia-import.js'
+      - 'sales-import.css'
+      - 'js/sales.js'
+      - 'firestore.rules'
+      - 'docs/SIG-IMPORTACOES.md'
+      - '.github/workflows/sales-import-contract-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate reusable import and Pangeia adapter
+        run: |
+          set -e
+          node --check app.js
+          node --check js/import-center.js
+          node --check js/sales-pangeia-import.js
+          test -s sales-import.css
+          test -s docs/SIG-IMPORTACOES.md
+
+          grep -q './js/sales-pangeia-import.js' app.js
+          grep -q 'lerArquivoTexto' js/import-center.js
+          grep -q 'windows-1252' js/import-center.js
+          grep -q 'executarEmLotes' js/import-center.js
+          grep -q 'parseRelatorioPangeia' js/sales-pangeia-import.js
+          grep -q 'Importar Pangéia' js/sales-pangeia-import.js
+          grep -q 'Comissão por Vendedor' js/sales-pangeia-import.js
+          grep -q 'importacaoChave' js/sales-pangeia-import.js
+          grep -q 'origemImportacao' js/sales-pangeia-import.js
+          grep -q 'comissaoRelatorio' js/sales-pangeia-import.js
+          grep -q 'percentualRelatorio' js/sales-pangeia-import.js
+          grep -q 'vendedorOrigem' js/sales-pangeia-import.js
+          grep -q 'duplicada' js/sales-pangeia-import.js
+          grep -q 'permite("vendas","lancar")' js/sales-pangeia-import.js
+          grep -q 'permite("vendas","vendedores")' js/sales-pangeia-import.js
+          grep -q 'permite("vendas","comissoes")' js/sales-pangeia-import.js
+          grep -q 'arquivo bruto não' docs/SIG-IMPORTACOES.md
+          grep -q 'reutilizar `js/import-center.js`' docs/SIG-IMPORTACOES.md
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/tmp/sig-sales-import-server.log 2>&1 &
+          sleep 2
+      - name: Parse wrapped Pangeia sample in headless Chrome
+        run: |
+          set -e
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          cp index.html sales-import-smoke.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sales-import-smoke.html')
+          s=p.read_text()
+          marker='</body>'
+          test=r'''<script type="module">(async()=>{try{
+            const core=await import('./js/core.js');
+            core.state.usuario={id:'smoke',grupoId:'g',empresaId:'e'};
+            core.state.perfil={id:'administrador',acessoTotal:true,ativo:true};
+            await import('./js/sales.js');
+            const imp=await import('./js/sales-pangeia-import.js');
+            const sample=`COMISSÃO POR VENDEDOR\n\nEMPRESA TESTE\n-----------------------------------\nVenda Cliente Data C.I. Líquido Comissão\n-----------------------------------\nVendedor: AP-AMANDAPEREIRA           Comissão:   1,00%\n 123109 DAVIDGARCIANASCIMENTO        03/08/26               690,00      6,90\n 123139 IU.07EMPREENDIMENTOIMOBILIARIO\n                                        04/08/26\n                                         S                   5.982,00     59,82\n TotaldoVendedor: 6.672,00 66,72\n ComissãoLíquida: 66,72`;
+            const r=imp.parseRelatorioPangeia(sample);
+            if(r.linhas.length!==2)throw new Error('quantidade '+r.linhas.length);
+            if(r.vendedores.length!==1)throw new Error('vendedores '+r.vendedores.length);
+            if(r.linhas[1].ci!=='S')throw new Error('CI '+r.linhas[1].ci);
+            if(r.linhas[1].venda!=='123139')throw new Error('venda quebrada');
+            if(Math.abs(r.totalLiquido-6672)>0.001)throw new Error('total líquido '+r.totalLiquido);
+            if(!document.getElementById('btnSalesImportar'))throw new Error('botão importação ausente');
+            document.documentElement.setAttribute('data-sales-import-smoke','ok');
+          }catch(e){document.documentElement.setAttribute('data-sales-import-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="sales-import-error">'+String(e.stack||e)+'</pre>')}})();</script>'''
+          p.write_text(s.replace(marker,test+marker))
+          PY
+          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8000/sales-import-smoke.html > /tmp/sig-sales-import-dom.html || true
+          grep -q 'data-sales-import-smoke="ok"' /tmp/sig-sales-import-dom.html || { grep -A10 -B2 'sales-import-error' /tmp/sig-sales-import-dom.html || true; exit 1; }

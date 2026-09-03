@@ -15,6 +15,7 @@ import "./js/governance-security.js";
 import "./js/dashboard-v2.js";
 import "./js/sales-guard.js";
 import "./js/sales-performance.js";
+import "./js/sales-pangeia-import.js";
 import "./js/accountability-pdf.js";
 import "./js/permission-ui.js";
 import "./js/polish.js";
