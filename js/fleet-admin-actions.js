@@ -1,9 +1,8 @@
-import { admin, state } from "./core.js";
+import { admin, state, permite } from "./core.js";
 import { $, esc, listarDocumentos, serverTimestamp, emitirAlteracao } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria, excluirComAuditoria } from "./admin-actions.js";
 
 let timer=null,busy=false,observer=null;
-const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 
 function agendar(){clearTimeout(timer);timer=setTimeout(decorar,80)}
 async function base(){
@@ -42,20 +41,29 @@ async function excluirVeiculo(id){
   await excluirComAuditoria({colecao:"veiculos",id,empresaId:v.empresaId,modulo:"frota",motivo:ok.motivo,resumo:`Exclusão física do veículo ${v.placa||id}`,snapshotAntes:v});recarregar()
 }
 
-function addBtn(td,texto,classe,fn,marca){if(!td||td.querySelector(`[data-${marca}]`))return;const b=document.createElement("button");b.type="button";b.className=`btn-acao ${classe||""}`.trim();b.textContent=texto;b.dataset[marca]="1";b.addEventListener("click",fn);td.appendChild(b)}
+function addBtn(td,texto,classe,fn,marca){
+  if(!td||td.querySelector(`[data-admin-action="${marca}"]`))return;
+  const b=document.createElement("button");b.type="button";b.className=`btn-acao ${classe||""}`.trim();b.textContent=texto;b.dataset.adminAction=marca;b.addEventListener("click",fn);td.appendChild(b)
+}
+
+function aplicarGuardaConsulta(){
+  if(admin()||permite("frota","obrigacoes")||permite("frota","editar"))return;
+  document.querySelectorAll("[data-fc]").forEach(b=>b.remove());
+}
 
 async function decorar(){
+  aplicarGuardaConsulta();
   if(!admin()||busy)return;
   const tv=$("listaVeiculos"),to=$("listaObrigacoes"),tm=$("listaManutencoes");if(!tv&&!to&&!tm)return;
   busy=true;
   try{
     const b=await base();
-    tv?.querySelectorAll("[data-fc]").forEach(btn=>{const id=btn.dataset.fc,td=btn.closest("td");addBtn(td,"Excluir","perigo",()=>excluirVeiculo(id),"adminExcluirVeiculo")});
-    tm?.querySelectorAll("[data-me]").forEach(btn=>{const id=btn.dataset.me,m=b.mmap.get(id),td=btn.closest("td"),tr=btn.closest("tr");if(!m)return;if(m.estornado===true){tr?.classList.add("sig-admin-estornado");btn.remove();const c=tr?.querySelector("td:nth-child(2)");if(c&&!c.querySelector(".sig-admin-estorno-info"))c.insertAdjacentHTML("beforeend",`<span class="sig-admin-estorno-info">Estornada · ${esc(m.motivoEstorno||"")}</span>`)}else addBtn(td,"Estornar","",()=>estornarManutencao(id),"adminEstornarManut");addBtn(td,"Excluir","perigo",()=>excluirManutencao(id),"adminExcluirManut")});
+    tv?.querySelectorAll("[data-fc]").forEach(btn=>{const id=btn.dataset.fc,td=btn.closest("td");addBtn(td,"Excluir","perigo",()=>excluirVeiculo(id),`excluir-veiculo-${id}`)});
+    tm?.querySelectorAll("[data-me]").forEach(btn=>{const id=btn.dataset.me,m=b.mmap.get(id),td=btn.closest("td"),tr=btn.closest("tr");if(!m)return;if(m.estornado===true){tr?.classList.add("sig-admin-estornado");btn.remove();const c=tr?.querySelector("td:nth-child(2)");if(c&&!c.querySelector(".sig-admin-estorno-info"))c.insertAdjacentHTML("beforeend",`<span class="sig-admin-estorno-info">Estornada · ${esc(m.motivoEstorno||"")}</span>`)}else addBtn(td,"Estornar","",()=>estornarManutencao(id),`estornar-manut-${id}`);addBtn(td,"Excluir","perigo",()=>excluirManutencao(id),`excluir-manut-${id}`)});
     if(to){
       const filtro=$("filtroObrigTipo")?.value||"",flat=[];
       b.veiculos.forEach(v=>obrigacoes(v).forEach(o=>{if(!filtro||o.tipo===filtro)flat.push({...o,veiculoId:v.id,veiculo:v})}));flat.sort((a,c)=>String(a.vencimento||"").localeCompare(String(c.vencimento||"")));
-      [...to.querySelectorAll("tr")].forEach((tr,i)=>{const o=flat[i];if(!o)return;const td=tr.lastElementChild;if(o.estornado===true){tr.classList.add("sig-admin-estornado");const c=tr.querySelector("td:nth-child(3)");if(c&&!c.querySelector(".sig-admin-estorno-info"))c.insertAdjacentHTML("beforeend",`<span class="sig-admin-estorno-info">Estornada · ${esc(o.motivoEstorno||"")}</span>`)}else addBtn(td,"Estornar","",()=>estornarObrigacao(o.veiculoId,o.id),"adminEstornarObrig");addBtn(td,"Excluir","perigo",()=>excluirObrigacao(o.veiculoId,o.id),"adminExcluirObrig")})
+      [...to.querySelectorAll("tr")].forEach((tr,i)=>{const o=flat[i];if(!o)return;const td=tr.lastElementChild;if(o.estornado===true){tr.classList.add("sig-admin-estornado");const c=tr.querySelector("td:nth-child(3)");if(c&&!c.querySelector(".sig-admin-estorno-info"))c.insertAdjacentHTML("beforeend",`<span class="sig-admin-estorno-info">Estornada · ${esc(o.motivoEstorno||"")}</span>`)}else addBtn(td,"Estornar","",()=>estornarObrigacao(o.veiculoId,o.id),`estornar-obrig-${o.veiculoId}-${o.id}`);addBtn(td,"Excluir","perigo",()=>excluirObrigacao(o.veiculoId,o.id),`excluir-obrig-${o.veiculoId}-${o.id}`)})
     }
   }catch(e){console.warn("Ações administrativas da Frota indisponíveis",e)}finally{busy=false}
 }
