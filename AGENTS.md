@@ -18,6 +18,8 @@ Trate como contrato arquitetural:
 10. `.github/workflows/` antes de mudar arquitetura/testes
 11. `docs/dashboard-v2-vendas.md` quando envolver Dashboard ou Vendas & Comissões
 12. `docs/SIG-IMPORTACOES.md` quando envolver alimentação em lote, arquivos externos, parsers ou integração de dados por importação
+13. `docs/SIG-CORRECOES-ADMINISTRATIVAS.md` quando envolver input persistente, estorno, cancelamento corretivo, exclusão física ou reautenticação administrativa
+14. `docs/frota-v1.md` quando envolver Gestão de Frota
 
 Não dependa de memória de conversa para interpretar o produto.
 
@@ -32,6 +34,10 @@ Não dependa de memória de conversa para interpretar o produto.
 - Nova coleção/caminho Storage exige Rule, QA e documentação no mesmo pacote.
 - Base contábil crítica indisponível deve operar fail-closed.
 - Tela monoempresa não pode usar silenciosamente a primeira empresa de um contexto múltiplo.
+- **Todo módulo que cria input persistente deve definir um caminho auditável de correção.** Para registros que já impactaram histórico/cálculo, estorno é preferencial; exclusão física, quando admitida, é ação administrativa excepcional, com reautenticação do Administrador atual, justificativa e verificação de dependências.
+- A reautenticação compartilhada usa `js/admin-actions.js`. Nunca persistir senha, nunca pedir senha de outro usuário e nunca afirmar que Firestore Rules comprovam uma reautenticação recente: Rules validam o papel Administrador; a senha fresca é camada adicional do Firebase Authentication no frontend.
+- A coleção `auditoriaAdministrativa` é append-only. Não criar tela/atalho que permita editar ou apagar essa trilha.
+- Cadastro mestre com dependências não deve ser apagado fisicamente apenas porque o usuário é Administrador; usar baixa/inativação/estorno quando a exclusão produzir órfãos ou perda de rastreabilidade.
 - **Importação não é atalho de autorização:** deve usar as permissões do módulo, preservar grupo/empresa, validar antes da gravação, detectar duplicidade e manter rastreabilidade da fonte.
 - Arquivo bruto de importação deve ser processado localmente quando não houver necessidade funcional de armazená-lo; não enviar arquivo inteiro ao Firebase apenas para fazer parsing.
 - Importador novo deve reutilizar `js/import-center.js` para capacidades genéricas e manter parser/regra específica fora do núcleo.
@@ -77,6 +83,10 @@ Não dependa de memória de conversa para interpretar o produto.
 - Comissão aprovada/paga não deve ser silenciosamente alterada por edição operacional.
 - Vendas não alimenta DRE, Balanço, Caixa, Budget ou Forecast automaticamente.
 - Importação Pangéia em Vendas deve preservar número da venda, C.I., vendedor/taxa da fonte, comissão impressa e chave de importação; reprocessamento não pode duplicar a mesma venda.
+- **Gestão de Frota é módulo operacional de primeiro nível, fora da Controladoria.** A permissão de Frota não concede poder contábil; sincronização com `imobilizados` exige também autorização de Imobilizado/FP&A.
+- Frota controla veículos, IPVA/licenciamento/multas, manutenção por data/KM e consulta oficial assistida. Automação Senatran real exige backend/autorização oficial; não inserir credenciais no PWA.
+- Veículo vinculado a Imobilizado, manutenção ou obrigação não deve ser apagado fisicamente. Usar baixa/inativação e corrigir dependências por estorno.
+- Fluxo de Caixa usa estorno administrativo para retirar lançamento do cálculo preservando histórico; usuário comum não deve transformar lançamento em `cancelado` como atalho de correção.
 
 ## Mudança de máscara/hierarquia
 
@@ -142,6 +152,39 @@ Revisar em conjunto:
 - `docs/dashboard-v2-vendas.md`, `docs/SIG-IMPORTACOES.md` e documentação mestre.
 
 Não mover Vendas para Controladoria sem decisão arquitetural explícita.
+
+## Mudança em Gestão de Frota
+
+Revisar em conjunto:
+
+- `js/fleet.js`;
+- `js/fleet-admin-actions.js`;
+- `fleet.css`;
+- `sidebar-layout.css` quando houver impacto na navegação;
+- `js/management-shell.js`;
+- `js/profiles.js`;
+- `firestore.rules`;
+- integração com `imobilizados` e Plano de Contas;
+- `SIG Fleet Contract Check`;
+- `SIG Admin Correction Contract Check` quando houver input/estorno/delete;
+- `docs/frota-v1.md`, README e documentação mestre.
+
+Não mover Frota para Controladoria. Não conceder integração patrimonial apenas pela permissão operacional de Frota.
+
+## Mudança em correções administrativas
+
+Revisar em conjunto:
+
+- `js/admin-actions.js`;
+- adaptador do módulo (`cashflow-admin-actions.js`, `fleet-admin-actions.js` ou equivalente);
+- Firestore Rules da coleção afetada;
+- `auditoriaAdministrativa`;
+- efeitos do estorno nos cálculos;
+- dependências antes de delete físico;
+- `.github/workflows/admin-correction-contract-check.yml`;
+- `docs/SIG-CORRECOES-ADMINISTRATIVAS.md` e documentação mestre.
+
+Ações destrutivas não devem aceitar uma “senha de administrador qualquer”. A reautenticação é da **conta Administrador atualmente logada**.
 
 ## Mudança em importações
 
