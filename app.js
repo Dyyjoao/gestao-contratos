@@ -20,6 +20,7 @@ import "./js/fleet.js";
 import "./js/cashflow-admin-actions.js";
 import "./js/fleet-admin-actions.js";
 import "./js/input-admin-actions.js";
+import "./js/master-admin-actions.js";
 import "./js/accountability-pdf.js";
 import "./js/permission-ui.js";
 import "./js/polish.js";
