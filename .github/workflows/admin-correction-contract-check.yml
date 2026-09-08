@@ -13,6 +13,8 @@ on:
       - 'js/fleet-admin-actions.js'
       - 'js/input-admin-actions.js'
       - 'js/master-admin-actions.js'
+      - 'js/workflow-admin-actions.js'
+      - 'js/contracts-refresh.js'
       - 'js/permutas.js'
       - 'js/cashflow.js'
       - 'js/fleet.js'
@@ -40,6 +42,8 @@ jobs:
           node --check js/fleet-admin-actions.js
           node --check js/input-admin-actions.js
           node --check js/master-admin-actions.js
+          node --check js/workflow-admin-actions.js
+          node --check js/contracts-refresh.js
 
           # Reautenticação é centralizada no usuário Administrador atualmente logado.
           grep -Fq 'reauthenticateWithCredential' js/admin-actions.js
@@ -55,6 +59,8 @@ jobs:
           grep -Fq 'import "./js/fleet-admin-actions.js"' app.js
           grep -Fq 'import "./js/input-admin-actions.js"' app.js
           grep -Fq 'import "./js/master-admin-actions.js"' app.js
+          grep -Fq 'import "./js/workflow-admin-actions.js"' app.js
+          grep -Fq 'import "./js/contracts-refresh.js"' app.js
 
           # Fluxo de Caixa: estorno auditável + exclusão física administrativa nos lançamentos.
           grep -Fq 'Estornar lançamento do Fluxo de Caixa' js/cashflow-admin-actions.js
@@ -85,6 +91,14 @@ jobs:
           grep -Fq 'referenciasPlano' js/master-admin-actions.js
           grep -Fq 'confirmarAcaoAdministrativa' js/master-admin-actions.js
 
+          # Workflows gerenciais também precisam de correção auditável.
+          grep -Fq 'estornarPlanoAcao' js/workflow-admin-actions.js
+          grep -Fq 'estornarTarefaFechamento' js/workflow-admin-actions.js
+          grep -Fq 'estornarPrestacao' js/workflow-admin-actions.js
+          grep -Fq 'modeloInativo:true' js/workflow-admin-actions.js
+          grep -Fq 'executarCorrecoesComAuditoria' js/workflow-admin-actions.js
+          grep -Fq 'snapshotAntes:{cabecalhos:cab,comentarios:com}' js/workflow-admin-actions.js
+
           # Frota segue o mesmo contrato nas entradas históricas.
           grep -Fq 'estornarManutencao' js/fleet-admin-actions.js
           grep -Fq 'estornarObrigacao' js/fleet-admin-actions.js
@@ -114,5 +128,8 @@ jobs:
           grep -Fq 'auditoriaAdministrativa' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
           grep -Fq 'Input Mensal' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
           grep -Fq 'Budget / Forecast' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
+          grep -Fq 'Planos de Ação' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
+          grep -Fq 'Cockpit de Fechamento' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
+          grep -Fq 'Prestação de Contas' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
           grep -Fq 'SIG-CORRECOES-ADMINISTRATIVAS.md' README.md
           grep -Fq 'SIG-CORRECOES-ADMINISTRATIVAS.md' AGENTS.md
