@@ -1,0 +1,82 @@
+name: SIG Admin Correction Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'chatgpt/**'
+    paths:
+      - 'js/admin-actions.js'
+      - 'js/cashflow-admin-actions.js'
+      - 'js/fleet-admin-actions.js'
+      - 'js/permutas.js'
+      - 'js/cashflow.js'
+      - 'js/fleet.js'
+      - 'app.js'
+      - 'firestore.rules'
+      - 'README.md'
+      - 'AGENTS.md'
+      - 'docs/SIG-CORRECOES-ADMINISTRATIVAS.md'
+      - 'docs/SIG-MANUAL-MESTRE.md'
+      - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
+      - '.github/workflows/admin-correction-contract-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  admin-correction-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate administrative correction contract
+        run: |
+          set -e
+          node --check js/admin-actions.js
+          node --check js/cashflow-admin-actions.js
+          node --check js/fleet-admin-actions.js
+
+          # Reautenticação é centralizada no usuário Administrador atualmente logado.
+          grep -Fq 'reauthenticateWithCredential' js/admin-actions.js
+          grep -Fq 'EmailAuthProvider.credential(auth.currentUser.email' js/admin-actions.js
+          grep -Fq 'type="password"' js/admin-actions.js
+          grep -Fq 'Informe a justificativa da ação.' js/admin-actions.js
+          grep -Fq 'auditoriaAdministrativa' js/admin-actions.js
+          grep -Fq 'writeBatch' js/admin-actions.js
+
+          # Fluxo de Caixa: estorno auditável + exclusão física administrativa.
+          grep -Fq 'import "./js/cashflow-admin-actions.js"' app.js
+          grep -Fq 'Estornar lançamento do Fluxo de Caixa' js/cashflow-admin-actions.js
+          grep -Fq 'motivoEstorno' js/cashflow-admin-actions.js
+          grep -Fq 'estornadoPorNome' js/cashflow-admin-actions.js
+          grep -Fq 'excluirComAuditoria' js/cashflow-admin-actions.js
+          grep -Fq 'option[value="cancelado"]' js/cashflow-admin-actions.js
+          grep -Fq 'const ativo=l=>l.status!=="cancelado"' js/cashflow.js
+
+          # Frota segue o mesmo contrato nas entradas históricas.
+          grep -Fq 'import "./js/fleet-admin-actions.js"' app.js
+          grep -Fq 'estornarManutencao' js/fleet-admin-actions.js
+          grep -Fq 'estornarObrigacao' js/fleet-admin-actions.js
+          grep -Fq 'excluirManutencao' js/fleet-admin-actions.js
+          grep -Fq 'excluirObrigacao' js/fleet-admin-actions.js
+          grep -Fq 'excluirVeiculo' js/fleet-admin-actions.js
+
+          # Permutas preserva seu contrato já consolidado de reautenticação/estorno.
+          grep -Fq 'reauthenticateWithCredential' js/permutas.js
+          grep -Fq 'motivoEstorno' js/permutas.js
+
+          # Rules: role Admin no backend; senha fresca é camada adicional do frontend.
+          grep -Fq 'match /auditoriaAdministrativa/' firestore.rules
+          grep -Fq 'allow create: if administrador() && documentoAcessivel(request.resource.data)' firestore.rules
+          grep -Fq 'match /fluxoCaixaLancamentos/' firestore.rules
+          grep -Fq "request.resource.data.status != 'cancelado'" firestore.rules
+          grep -Fq 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
+          grep -Fq 'match /manutencoesFrota/' firestore.rules
+
+          # Política precisa permanecer explícita e não pode prometer que Rules validam senha fresca.
+          grep -Fq 'Todo módulo que cria input persistente' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
+          grep -Fq 'Rules não comprovam' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
+          grep -Fq 'auditoriaAdministrativa' docs/SIG-CORRECOES-ADMINISTRATIVAS.md
+          grep -Fq 'SIG-CORRECOES-ADMINISTRATIVAS.md' README.md
+          grep -Fq 'SIG-CORRECOES-ADMINISTRATIVAS.md' AGENTS.md
