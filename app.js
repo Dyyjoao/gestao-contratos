@@ -8,6 +8,7 @@ import "./js/users.js";
 import "./js/profiles.js";
 import "./js/group.js";
 import "./js/contracts.js";
+import "./js/contracts-refresh.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js";
 import "./js/governance.js";
