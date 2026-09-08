@@ -86,11 +86,13 @@ A Gestão de Frota possui cockpit próprio; sua inclusão no Dashboard executivo
 
 # Contratos
 
-Módulo operacional de gestão contratual com segregação por grupo/empresa e permissões de consulta, cadastro, edição, anexos e exclusão conforme perfil.
+Módulo operacional de gestão contratual com segregação por grupo/empresa e permissões de consulta, cadastro, edição e anexos.
 
 Coleção principal:
 
 - `contratos`.
+
+A exclusão física é uma correção administrativa excepcional: somente Administrador, com reautenticação, justificativa e `auditoriaAdministrativa`. A Firestore Rule também exige `administrador()`.
 
 Contratos não devem gerar efeitos contábeis ou financeiros automáticos sem decisão arquitetural explícita.
 
@@ -118,6 +120,8 @@ Principais capacidades:
 - ficha individual;
 - cronograma projetado;
 - relatórios PDF/Excel.
+
+Correção de cadastro indevido utiliza estorno administrativo para `cancelado`, preservando histórico. Delete físico permanece bloqueado.
 
 O cronograma é **projeção**, não histórico de pagamentos realizados.
 
@@ -188,7 +192,7 @@ Fluxo:
 
 `Aguardando faturamento → Provisionada → Aprovada → Paga`
 
-Venda cancelada permanece no histórico e sai dos totais. Delete físico de venda/vendedor é bloqueado; vendedor deve ser inativado.
+Venda cancelada permanece no histórico e sai dos totais. Delete físico de venda/vendedor é bloqueado. A correção administrativa de venda grava `estornado: true` e `status: cancelada`; vendedor incorreto pode ser inativado por estorno administrativo sem alterar snapshots históricos.
 
 ## Performance comercial
 
@@ -214,6 +218,7 @@ Módulo operacional de primeiro nível, fora da Controladoria.
 Arquivos principais:
 
 - `js/fleet.js`;
+- `js/fleet-admin-actions.js`;
 - `fleet.css`;
 - `sidebar-layout.css` — correção estrutural de rolagem da sidebar;
 - `docs/frota-v1.md` — contrato funcional e técnico.
@@ -252,7 +257,7 @@ Cadastro inclui:
 - observações;
 - mapeamento contábil quando autorizado.
 
-Status previstos: ativo, em manutenção, inativo e baixado/vendido. A v1 **não expõe delete físico de veículo**; baixa/inativação preserva histórico.
+Status previstos: ativo, em manutenção, inativo e baixado/vendido. Baixa/inativação é o ciclo normal. Exclusão física existe apenas como ação administrativa excepcional e é bloqueada quando houver Imobilizado, manutenção ou obrigação vinculada.
 
 ## IPVA, licenciamento, multas e infrações
 
@@ -291,6 +296,8 @@ Controle preventivo/corretivo por:
 - próxima revisão por data/KM.
 
 Manutenção é considerada vencida se a data passou **ou** o KM limite foi alcançado. Fica em alerta preventivo quando faltam até 30 dias ou até 1.000 km.
+
+Manutenções e obrigações históricas possuem estorno e exclusão administrativa protegidos por reautenticação.
 
 ## Plano de Contas e Imobilizado
 
@@ -385,7 +392,7 @@ Regras fundamentais:
 - natureza, raízes, redutoras e multiplicadores são centralizados em `js/account-mask.js`;
 - saldo bruto persistido nunca é regravado apenas para ajustar apresentação;
 - conta com histórico deve ser inativada;
-- exclusão física é restrita a cadastro de erro/teste sem referências.
+- exclusão física é restrita a cadastro de erro/teste sem referências, somente por Administrador, com reautenticação e auditoria.
 
 Centros técnicos:
 
@@ -398,7 +405,17 @@ Balanço representa **posição de fechamento**, não fluxo. Meses não são som
 
 DRE usa os multiplicadores gerenciais centralizados. Budget é anual/versionado. Forecast combina realizado fechado e projeção futura. Premissas respeitam vigência/competência.
 
+Sublinhas persistidas de Budget/Forecast possuem estorno administrativo: o detalhe é inativado e a linha agregada é recalculada no mesmo batch com auditoria.
+
 `js/financial-reporting.js` concentra base compartilhada para evitar fórmulas paralelas.
+
+## Input Mensal
+
+A correção administrativa de Realizado é feita por Empresa × competência × Centro/bloco. O estorno zera somente o mês selecionado nos documentos afetados, preserva os demais meses e grava snapshot dos valores anteriores em `auditoriaAdministrativa`.
+
+## Fluxo de Caixa
+
+Lançamentos possuem estorno e exclusão física administrativa. Contas bancárias e compromissos fixos usam inativação auditada para preservar vínculos históricos.
 
 ## Imobilizado & CAPEX
 
@@ -412,7 +429,7 @@ Integrações atuais:
 - Budget/Forecast — despesa de depreciação automática por Conta x Centro de Custo;
 - Frota — veículos mapeados podem gerar/atualizar ficha patrimonial, respeitando permissão de Imobilizado.
 
-Fim da vida útil não baixa automaticamente o bem. CAPEX ainda não gera desembolso automático no Caixa.
+Fim da vida útil não baixa automaticamente o bem. CAPEX ainda não gera desembolso automático no Caixa. Estorno administrativo de ficha indevida cancela o cadastro e desliga as integrações; baixa real continua sendo tratada pelo status `baixado`.
 
 ## Inadimplência & Aging
 
@@ -428,7 +445,7 @@ Indicadores:
 - exposição acima de 90 dias;
 - aging a vencer / 1–30 / 31–60 / 61–90 / >90 dias.
 
-Visualização e gestão são permissões separadas. Delete físico é bloqueado.
+Visualização e gestão são permissões separadas. Delete físico é bloqueado. Correção administrativa usa estorno para `cancelado`, mantendo o título no histórico.
 
 ---
 
@@ -494,6 +511,31 @@ Princípios:
 - módulo novo/reposicionado atualiza grid de Perfis e Permissions Contract;
 - módulo operacional não herda automaticamente poderes contábeis.
 
+## Correções administrativas
+
+**Todo módulo que cria input persistente deve possuir um caminho explícito e auditável de correção.**
+
+Contrato vigente:
+
+- estorno é preferido quando há histórico, saldo, cálculo ou efeito operacional;
+- delete físico é excepcional;
+- ação administrativa exige perfil Administrador, senha atual e justificativa;
+- reautenticação usa Firebase Authentication no frontend;
+- `auditoriaAdministrativa` preserva a trilha e é append-only;
+- correções multi-registro usam batch atômico;
+- Firestore Rules exigem `administrador()` para deletes físicos permitidos;
+- falha na validação de dependências bloqueia exclusão (**fail-closed**).
+
+Adaptadores:
+
+- `js/admin-actions.js` — helper central;
+- `js/cashflow-admin-actions.js` — lançamentos de Caixa;
+- `js/fleet-admin-actions.js` — Frota;
+- `js/input-admin-actions.js` — inputs operacionais/FP&A;
+- `js/master-admin-actions.js` — cadastros mestres e deletes físicos protegidos.
+
+Política completa: [`docs/SIG-CORRECOES-ADMINISTRATIVAS.md`](docs/SIG-CORRECOES-ADMINISTRATIVAS.md).
+
 ## Frota
 
 Permissões existentes:
@@ -503,7 +545,7 @@ Permissões existentes:
 - `frota.editar`;
 - `frota.manutencao`;
 - `frota.obrigacoes`;
-- `frota.excluir` permanece como chave legada, mas a Frota v1 não expõe delete físico na UI.
+- `frota.excluir` permanece como chave legada; exclusão física efetiva é governada pelo contrato administrativo e pela Rule de Administrador.
 
 A integração patrimonial exige, adicionalmente, autorização de Imobilizado/Controladoria.
 
@@ -529,7 +571,8 @@ Coleções críticas incluem:
 - `vendedores`;
 - `vendas`;
 - `veiculos`;
-- `manutencoesFrota`.
+- `manutencoesFrota`;
+- `auditoriaAdministrativa`.
 
 ## Deploy: atenção
 
@@ -578,6 +621,7 @@ Workflows principais:
 - **SIG Dashboard Sales Contract Check**;
 - **SIG Sales Import Contract Check**;
 - **SIG Fleet Contract Check**;
+- **SIG Admin Correction Contract Check**;
 - **GitHub Pages build/deployment**.
 
 Os contratos cobrem sintaxe, arquivos críticos, rotas, permissões, Rules, invariantes, browser smoke e rastreabilidade.
@@ -629,6 +673,11 @@ Regras:
 │   ├── sales-pangeia-import.js
 │   ├── import-center.js
 │   ├── fleet.js
+│   ├── admin-actions.js
+│   ├── cashflow-admin-actions.js
+│   ├── fleet-admin-actions.js
+│   ├── input-admin-actions.js
+│   ├── master-admin-actions.js
 │   ├── governance.js
 │   ├── governance-security.js
 │   ├── permutas.js
@@ -638,6 +687,7 @@ Regras:
 │   ├── SIG-MANUAL-MESTRE.md
 │   ├── SIG-GUIA-DE-CONTINUIDADE.md
 │   ├── SIG-FIREBASE-DEPLOY-E-RULES.md
+│   ├── SIG-CORRECOES-ADMINISTRATIVAS.md
 │   ├── SIG-IMPORTACOES.md
 │   ├── dashboard-v2-vendas.md
 │   ├── governanca-antifraude-inadimplencia.md
@@ -658,20 +708,22 @@ Ordem recomendada:
 3. [`docs/SIG-MANUAL-MESTRE.md`](docs/SIG-MANUAL-MESTRE.md) — invariantes;
 4. [`docs/SIG-GUIA-DE-CONTINUIDADE.md`](docs/SIG-GUIA-DE-CONTINUIDADE.md) — retomada/release/rollback;
 5. [`docs/SIG-FIREBASE-DEPLOY-E-RULES.md`](docs/SIG-FIREBASE-DEPLOY-E-RULES.md) — backend/Rules;
-6. [`SECURITY.md`](SECURITY.md) — segurança;
-7. [`docs/dashboard-v2-vendas.md`](docs/dashboard-v2-vendas.md) — Dashboard/Vendas;
-8. [`docs/frota-v1.md`](docs/frota-v1.md) — Gestão de Frota;
-9. [`docs/governanca-antifraude-inadimplencia.md`](docs/governanca-antifraude-inadimplencia.md) — Governança/Antifraude/Inadimplência;
-10. [`docs/SIG-IMPORTACOES.md`](docs/SIG-IMPORTACOES.md) — importações;
-11. [`docs/controladoria-arquitetura.md`](docs/controladoria-arquitetura.md) — Controladoria;
-12. [`docs/qa-controladoria-modular.md`](docs/qa-controladoria-modular.md) — QA;
-13. [`docs/release-controladoria-modular.md`](docs/release-controladoria-modular.md) — promoção.
+6. [`docs/SIG-CORRECOES-ADMINISTRATIVAS.md`](docs/SIG-CORRECOES-ADMINISTRATIVAS.md) — estorno, reautenticação, auditoria e delete físico;
+7. [`SECURITY.md`](SECURITY.md) — segurança;
+8. [`docs/dashboard-v2-vendas.md`](docs/dashboard-v2-vendas.md) — Dashboard/Vendas;
+9. [`docs/frota-v1.md`](docs/frota-v1.md) — Gestão de Frota;
+10. [`docs/governanca-antifraude-inadimplencia.md`](docs/governanca-antifraude-inadimplencia.md) — Governança/Antifraude/Inadimplência;
+11. [`docs/SIG-IMPORTACOES.md`](docs/SIG-IMPORTACOES.md) — importações;
+12. [`docs/controladoria-arquitetura.md`](docs/controladoria-arquitetura.md) — Controladoria;
+13. [`docs/qa-controladoria-modular.md`](docs/qa-controladoria-modular.md) — QA;
+14. [`docs/release-controladoria-modular.md`](docs/release-controladoria-modular.md) — promoção.
 
 Fontes técnicas de verdade:
 
 - `app.js` — imports globais;
 - `js/controllership-router.js` — Controladoria;
 - `js/profiles.js` — permissões;
+- `js/admin-actions.js` e adaptadores administrativos — correções protegidas;
 - `firestore.rules` / `storage.rules` — barreira de dados;
 - `.github/workflows/` — contratos automatizados.
 
@@ -688,6 +740,7 @@ Toda nova tela, módulo ou mudança estrutural revisa, quando aplicável:
 - guardas reais de abertura/ação;
 - Firestore/Storage Rules;
 - escopo `grupoId` / `empresaId`;
+- política de correção administrativa;
 - coleções/modelo de auditoria;
 - QA automatizado;
 - documentação de continuidade;
@@ -715,6 +768,6 @@ Toda nova tela, módulo ou mudança estrutural revisa, quando aplicável:
 
 ## Estado da baseline
 
-O SIG combina **Controladoria modular, gestão operacional, Gestão de Frota, Governança/Antifraude, Inadimplência, Dashboard configurável, Vendas & Comissões, Consórcios, Permutas e arquitetura reutilizável de importações**.
+O SIG combina **Controladoria modular, gestão operacional, Gestão de Frota, Governança/Antifraude, Inadimplência, Dashboard configurável, Vendas & Comissões, Consórcios, Permutas, arquitetura reutilizável de importações e correções administrativas auditáveis**.
 
 A prioridade arquitetural continua sendo crescer com **módulos independentes, permissões explícitas, trilha auditável e integração intencional**, evitando acoplamento automático que transforme o sistema em um ERP monolítico difícil de manter.
