@@ -256,7 +256,7 @@ service cloud.firestore {
         (permissao('empresas','editar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['razaoSocial','nomeFantasia','cnpj','cnpjNumeros','atualizadoEm'])) ||
         (permissao('empresas','inativar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']))
       );
-      allow delete: if mesmoGrupo(resource.data.grupoId) && permissao('empresas','excluir');
+      allow delete: if administrador() && mesmoGrupo(resource.data.grupoId);
     }
 
     match /contratos/{id} {
@@ -266,14 +266,14 @@ service cloud.firestore {
         permissao('contratos','editar') ||
         (permissao('contratos','anexar') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['arquivoPrincipal','documentos','atualizadoEm']))
       );
-      allow delete: if permissao('contratos','excluir') && documentoAcessivel(resource.data);
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /prestadores/{id} {
       allow read: if permissao('prestadores','visualizar') && documentoAcessivel(resource.data);
       allow create: if permissao('prestadores','cadastrar') && documentoAcessivel(request.resource.data);
       allow update: if (permissao('prestadores','editar') || permissao('prestadores','avaliar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if permissao('prestadores','excluir') && documentoAcessivel(resource.data);
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /veiculos/{id} {
@@ -313,7 +313,7 @@ service cloud.firestore {
       allow update: if documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && (
         permissao('almoxarifado','editar') || permissao('almoxarifado','ajustar') || permissao('almoxarifado','movimentar') || permissao('almoxarifado','prorrogar')
       );
-      allow delete: if permissao('almoxarifado','excluir') && documentoAcessivel(resource.data);
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /movimentacoesEstoque/{id} {
@@ -384,7 +384,7 @@ service cloud.firestore {
       allow read: if (permissao('controladoria','visualizar') || permutasVisualizar() || frotaVisualizar()) && documentoAcessivel(resource.data);
       allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
       allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if fpaPlano() && documentoAcessivel(resource.data);
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /imobilizados/{id} {
