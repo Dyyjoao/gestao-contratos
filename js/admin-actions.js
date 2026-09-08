@@ -123,3 +123,24 @@ export async function excluirComAuditoria({colecao,id,empresaId,modulo,acao="exc
   await batch.commit();
   return aud.id;
 }
+
+export async function executarCorrecoesComAuditoria({
+  operacoes=[],empresaId,modulo,acao="correcao_administrativa",colecao="",documentoId="",
+  motivo,resumo,snapshotAntes
+}={}){
+  if(!admin())throw new Error("acao-administrativa-negada");
+  if(!Array.isArray(operacoes)||!operacoes.length)throw new Error("operacoes-administrativas-vazias");
+  if(operacoes.length>450)throw new Error("limite-operacoes-administrativas");
+  const batch=writeBatch(db);
+  for(const op of operacoes){
+    if(!op?.colecao||!op?.id)throw new Error("operacao-administrativa-invalida");
+    const alvo=doc(db,op.colecao,op.id);
+    if(op.tipo==="delete")batch.delete(alvo);
+    else if(op.tipo==="set")batch.set(alvo,op.dados||{},op.merge===false?{}:{merge:true});
+    else batch.update(alvo,{...(op.alteracoes||{}),...(op.semAtualizadoEm?{}:{atualizadoEm:serverTimestamp()})});
+  }
+  const aud=doc(collection(db,"auditoriaAdministrativa"));
+  batch.set(aud,auditoriaBase({empresaId,modulo,acao,colecao,documentoId,motivo,resumo,snapshotAntes}));
+  await batch.commit();
+  return aud.id;
+}
