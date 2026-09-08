@@ -206,9 +206,9 @@ Importar dados de um módulo não autoriza integração automática com outro m�
 
 ## Exclusão de conta
 
-A Rule de `planoContasGerencial` pode autorizar delete para `fpaPlano()`, mas a segurança funcional exige validação de referências no aplicativo. Não criar atalho que pule essa validação.
+A Rule de `planoContasGerencial` autoriza delete físico **somente para Administrador**. A interface deve exigir reautenticação da conta Administrador atualmente logada, justificativa obrigatória, auditoria e validação fail-closed de referências antes de remover uma conta ou ramo. Não criar atalho que pule nenhuma dessas camadas.
 
-`Limpar legado/testes` nunca deve remover conta com histórico/vínculo.
+`Limpar legado/testes` segue o mesmo contrato administrativo e nunca deve remover conta com histórico/vínculo.
 
 ## Módulos legados
 
