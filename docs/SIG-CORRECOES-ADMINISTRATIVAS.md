@@ -150,6 +150,9 @@ Na baseline de 08/09/2026, as Rules antigas de delete físico de **Empresas, Con
 | Centros de Custo | Estorno Admin = inativação auditada; vínculos e histórico permanecem |
 | Plano de Contas | Inativação é o caminho normal com histórico; exclusão física de conta/ramo sem referências exige Admin + senha + motivo + auditoria |
 | Contratos | Exclusão física é interceptada pelo contrato administrativo e exige Admin + senha + motivo + auditoria |
+| Planos de Ação | Estorno Admin altera o plano para `cancelado`, preserva a ficha e retira a ação das pendências abertas/vencidas |
+| Cockpit de Fechamento / etapas | Estorno Admin marca a etapa como inativa/cancelada no checklist da competência; o documento permanece para auditoria |
+| Prestação de Contas / comentários | Estorno Admin da competência limpa resumo, ações e justificativas da versão ativa em batch, preservando todo o conteúdo anterior no snapshot da auditoria |
 
 Módulos antigos que permanecem fisicamente no repositório, mas não fazem parte do escopo ativo da navegação, não devem ser usados como precedente arquitetural. Suas Rules de delete físico foram endurecidas quando necessário para impedir bypass por API.
 
@@ -233,7 +236,45 @@ Cadastros mestres como Centro de Custo, vendedor, conta bancária e compromisso 
 
 ---
 
-## 11. Checklist para qualquer módulo novo
+## 11. Workflows gerenciais
+
+### Planos de Ação
+
+Planos persistidos em `planosAcao` podem ser corrigidos administrativamente sem delete físico. O estorno:
+
+- exige Administrador + reautenticação + motivo;
+- altera `status` para `cancelado`;
+- grava os campos de estorno;
+- preserva responsável, prazo, origem e conteúdo original no documento/auditoria;
+- retira o plano das filas de ações abertas e vencidas.
+
+Cancelamento operacional comum e estorno administrativo não são a mesma coisa: o flag `estornado` identifica a correção excepcional.
+
+### Cockpit de Fechamento
+
+Etapas persistidas em `fechamentoTarefas` não são apagadas. Quando uma etapa foi criada indevidamente, o estorno administrativo:
+
+- marca `modeloInativo: true`;
+- marca `status: cancelado`;
+- preserva o documento e o snapshot anterior;
+- faz a etapa deixar de compor o checklist ativo daquela competência.
+
+Concluir, reabrir ou alterar prazo/responsável continuam sendo ações normais do ciclo de fechamento, não estorno.
+
+### Prestação de Contas
+
+A Prestação persiste cabeçalho executivo em `prestacaoContas` e justificativas de desvios em `prestacaoComentarios`. O estorno é contextual por **Empresa × competência × Centro de Custo/consolidado**.
+
+A correção:
+
+- limpa da versão ativa `resumoExecutivo`, `acoes` e `comentario` dos registros da competência;
+- não altera Realizado, Budget, Caixa ou Imobilizado;
+- preserva os textos anteriores integralmente no snapshot de `auditoriaAdministrativa`;
+- executa todas as alterações e a auditoria no mesmo batch.
+
+---
+
+## 12. Checklist para qualquer módulo novo
 
 Antes de liberar uma tela que grava dados:
 
@@ -251,7 +292,7 @@ Antes de liberar uma tela que grava dados:
 
 ---
 
-## 12. Fonte técnica de verdade
+## 13. Fonte técnica de verdade
 
 Arquivos centrais:
 
@@ -260,6 +301,7 @@ Arquivos centrais:
 - `js/fleet-admin-actions.js` — Frota;
 - `js/input-admin-actions.js` — Vendas, Consórcios, Inadimplência, Premissas, Imobilizado, Input Mensal e Budget/Forecast;
 - `js/master-admin-actions.js` — cadastros mestres e exclusões físicas protegidas de Contratos/Plano de Contas;
+- `js/workflow-admin-actions.js` — Planos de Ação, Cockpit de Fechamento e Prestação de Contas;
 - `js/permutas.js` — contrato próprio já existente;
 - `firestore.rules` — barreira de dados;
 - `.github/workflows/admin-correction-contract-check.yml` — contrato automatizado.
