@@ -17,6 +17,8 @@ import "./js/sales-guard.js";
 import "./js/sales-performance.js";
 import "./js/sales-pangeia-import.js";
 import "./js/fleet.js";
+import "./js/cashflow-admin-actions.js";
+import "./js/fleet-admin-actions.js";
 import "./js/accountability-pdf.js";
 import "./js/permission-ui.js";
 import "./js/polish.js";
