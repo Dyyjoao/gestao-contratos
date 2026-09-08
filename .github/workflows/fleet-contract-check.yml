@@ -9,6 +9,8 @@ on:
       - 'chatgpt/**'
     paths:
       - 'js/fleet.js'
+      - 'js/fleet-admin-actions.js'
+      - 'js/admin-actions.js'
       - 'fleet.css'
       - 'sidebar-layout.css'
       - 'js/management-shell.js'
@@ -33,11 +35,14 @@ jobs:
           set -e
 
           node --check js/fleet.js
+          node --check js/fleet-admin-actions.js
+          node --check js/admin-actions.js
           node --check js/management-shell.js
           node --check js/profiles.js
 
           # Frota é módulo operacional de primeiro nível e deve estar ativa no bundle.
           grep -Fq 'import "./js/fleet.js"' app.js
+          grep -Fq 'import "./js/fleet-admin-actions.js"' app.js
           grep -Fq 'Gestão de Frota' js/fleet.js
           grep -Fq 'menuFrota' js/fleet.js
           grep -Fq 'pagina-frota' js/fleet.js
@@ -57,12 +62,17 @@ jobs:
           fi
           grep -Fq 'OPERACIONAIS_LEGADOS=["prestadores","almoxarifado","cotacoes"]' js/management-shell.js
 
-          # Perfil próprio e poderes separados.
-          grep -Fq '["frota","Frota"' js/profiles.js
+          # Perfil próprio e poderes separados. Exclusão física não é checkbox delegável.
+          grep -Fq '["frota","Gestão de Frota"' js/profiles.js
           grep -Fq '["visualizar","Visualizar"]' js/profiles.js
           grep -Fq '["cadastrar","Cadastrar"]' js/profiles.js
           grep -Fq '["manutencao","Registrar manutenção"]' js/profiles.js
           grep -Fq '["obrigacoes","Gerir IPVA/licenciamento/multas"]' js/profiles.js
+          if grep -Fq '["frota","Gestão de Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"],["excluir"' js/profiles.js; then
+            echo 'Exclusão física da Frota não pode ser permissão de perfil.' >&2
+            exit 1
+          fi
+          grep -Fq 'Exclusão física: somente Administrador' js/profiles.js
 
           # Cockpit, manutenção, obrigações e vínculo patrimonial.
           grep -Fq 'frotaKpiSaude' js/fleet.js
@@ -76,11 +86,13 @@ jobs:
           grep -Fq 'ultimaConsultaOficialEm' js/fleet.js
           grep -Fq 'portalservicos.senatran.serpro.gov.br' js/fleet.js
 
-          # Nenhum delete físico de veículo deve ser exposto na v1.
-          if grep -Fq 'excluirDocumento("veiculos"' js/fleet.js; then
-            echo 'Frota v1 não deve expor delete físico de veículo.' >&2
-            exit 1
-          fi
+          # Correções administrativas usam senha atual e deixam auditoria.
+          grep -Fq 'reauthenticateWithCredential' js/admin-actions.js
+          grep -Fq 'auditoriaAdministrativa' js/admin-actions.js
+          grep -Fq 'estornarManutencao' js/fleet-admin-actions.js
+          grep -Fq 'estornarObrigacao' js/fleet-admin-actions.js
+          grep -Fq 'excluirVeiculo' js/fleet-admin-actions.js
+          grep -Fq 'imobilizadoId||relacionados||obs' js/fleet-admin-actions.js
 
           # Sidebar precisa suportar submenu grande sem vazar do fundo.
           grep -Fq 'height:100dvh' sidebar-layout.css
@@ -88,12 +100,15 @@ jobs:
           grep -Fq 'overflow-x:hidden' sidebar-layout.css
           grep -Fq 'sidebar-layout.css?v=1' js/management-shell.js
 
-          # Firebase mantém barreira das três bases envolvidas.
+          # Firebase mantém barreira das bases envolvidas e delete só para Admin.
+          grep -q 'function frotaVisualizar' firestore.rules
+          grep -q 'function frotaObrigacaoUpdateValida' firestore.rules
+          grep -q 'function frotaKmUpdateValida' firestore.rules
           grep -q 'match /veiculos/' firestore.rules
           grep -q 'match /manutencoesFrota/' firestore.rules
           grep -q 'match /imobilizados/' firestore.rules
-          grep -q "permissao('frota','obrigacoes')" firestore.rules
-          grep -q "permissao('frota','manutencao')" firestore.rules
+          grep -q 'match /auditoriaAdministrativa/' firestore.rules
+          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
           grep -q 'fpaImobilizado()' firestore.rules
 
           # Documentação acompanha a feature.
