@@ -141,6 +141,39 @@ service cloud.firestore {
     function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
     function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
 
+    function frotaVisualizar() {
+      return permissao('frota','visualizar') || permissao('frota','cadastrar') ||
+        permissao('frota','editar') || permissao('frota','manutencao') || permissao('frota','obrigacoes');
+    }
+    function frotaEditar() { return permissao('frota','editar'); }
+    function frotaManutencao() { return permissao('frota','manutencao') || frotaEditar(); }
+    function frotaObrigacoes() { return permissao('frota','obrigacoes') || frotaEditar(); }
+    function frotaUpdateEscopoValido() {
+      return documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId;
+    }
+    function frotaFichaOperacionalValida() {
+      return frotaEditar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'placa','renavam','marca','modelo','anoModelo','status','quilometragemAtual','dataAquisicao','valorAquisicao',
+        'responsavel','centroCustoDescricao','observacoes','ultimaConsultaOficialEm','proximaConsultaOficialEm','atualizadoEm'
+      ]);
+    }
+    function frotaObrigacaoUpdateValida() {
+      return frotaObrigacoes() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'obrigacoes','ultimaConsultaOficialEm','proximaConsultaOficialEm','atualizadoEm'
+      ]);
+    }
+    function frotaKmUpdateValida() {
+      return frotaManutencao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quilometragemAtual','atualizadoEm']);
+    }
+    function frotaPatrimonioUpdateValido() {
+      return fpaImobilizado() && frotaEditar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'contaAtivoId','contaDepreciacaoAcumuladaId','contaDepreciacaoId','vidaUtilMeses','dataDisponivelUso',
+        'integrarPlanejamento','imobilizadoId','atualizadoEm'
+      ]);
+    }
+
     function governancaVisualizar() {
       return permissao('governanca','visualizar') ||
         permissao('governanca','antifraude') ||
@@ -158,7 +191,7 @@ service cloud.firestore {
         permissao('contratos','visualizar') ||
         permissao('almoxarifado','visualizar') ||
         permissao('cotacoes','visualizar') ||
-        permissao('frota','visualizar') ||
+        frotaVisualizar() ||
         permutasVisualizar();
     }
 
@@ -187,6 +220,12 @@ service cloud.firestore {
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ordem','ocultos','atualizadoEm']);
       allow delete: if false;
+    }
+
+    match /auditoriaAdministrativa/{id} {
+      allow read: if documentoAcessivel(resource.data) && (administrador() || governancaAuditar());
+      allow create: if administrador() && documentoAcessivel(request.resource.data) && request.resource.data.usuarioId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     match /perfisAcesso/{perfilId} {
@@ -238,17 +277,34 @@ service cloud.firestore {
     }
 
     match /veiculos/{id} {
-      allow read: if permissao('frota','visualizar') && documentoAcessivel(resource.data);
-      allow create: if permissao('frota','cadastrar') && documentoAcessivel(request.resource.data);
-      allow update: if (permissao('frota','editar') || permissao('frota','obrigacoes') || permissao('frota','manutencao')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
+      allow read: if frotaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if permissao('frota','cadastrar') && documentoAcessivel(request.resource.data) && (
+        administrador() || fpaImobilizado() || (
+          request.resource.data.contaAtivoId == '' &&
+          request.resource.data.contaDepreciacaoAcumuladaId == '' &&
+          request.resource.data.contaDepreciacaoId == '' &&
+          request.resource.data.imobilizadoId == '' &&
+          request.resource.data.integrarPlanejamento == false
+        )
+      );
+      allow update: if frotaUpdateEscopoValido() && (
+        administrador() || frotaFichaOperacionalValida() || frotaObrigacaoUpdateValida() || frotaKmUpdateValida() || frotaPatrimonioUpdateValido()
+      );
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /manutencoesFrota/{id} {
-      allow read: if permissao('frota','visualizar') && documentoAcessivel(resource.data);
-      allow create: if (permissao('frota','manutencao') || permissao('frota','editar')) && documentoAcessivel(request.resource.data);
-      allow update: if (permissao('frota','manutencao') || permissao('frota','editar')) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if permissao('frota','excluir') && documentoAcessivel(resource.data);
+      allow read: if frotaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if frotaManutencao() && documentoAcessivel(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          administrador() || (frotaManutencao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'veiculoId','veiculoPlaca','tipo','status','descricao','oficina','dataPrevista','kmPrevisto','custoPrevisto',
+            'dataRealizada','kmRealizado','custoReal','proximaData','proximoKm','observacoes','atualizadoEm'
+          ]))
+        );
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /itensAlmoxarifado/{id} {
@@ -325,14 +381,14 @@ service cloud.firestore {
     }
 
     match /planoContasGerencial/{id} {
-      allow read: if (permissao('controladoria','visualizar') || permutasVisualizar()) && documentoAcessivel(resource.data);
+      allow read: if (permissao('controladoria','visualizar') || permutasVisualizar() || frotaVisualizar()) && documentoAcessivel(resource.data);
       allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
       allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if fpaPlano() && documentoAcessivel(resource.data);
     }
 
     match /imobilizados/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow read: if (permissao('controladoria','visualizar') || fpaImobilizado()) && documentoAcessivel(resource.data);
       allow create: if fpaImobilizado() && documentoAcessivel(request.resource.data);
       allow update: if fpaImobilizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
@@ -405,9 +461,19 @@ service cloud.firestore {
 
     match /fluxoCaixaLancamentos/{id} {
       allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
-      allow create: if caixaLancar() && documentoAcessivel(request.resource.data);
-      allow update: if caixaLancar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if false;
+      allow create: if caixaLancar() && documentoAcessivel(request.resource.data) && request.resource.data.status != 'cancelado';
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          administrador() || (
+            caixaLancar() && resource.data.status != 'cancelado' && request.resource.data.status != 'cancelado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','natureza','status','contaBancariaId','classe','centroCustoId','categoria','descricao','valor','observacao',
+              'origem','origemFixoId','competencia','atualizadoEm'
+            ])
+          )
+        );
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /fluxoCaixaFixos/{id} {
