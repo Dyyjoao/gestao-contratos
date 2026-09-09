@@ -9,7 +9,6 @@ import "./js/profiles.js";
 import "./js/group.js";
 import "./js/contracts.js";
 import "./js/contracts-refresh.js";
-import "./js/contracts-storage.js";
 import "./js/account-reduced-code-ui.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js";
