@@ -54,8 +54,16 @@ jobs:
           grep -Fq 'Totalizadores não são contas' js/account-dre-classification-ui.js
           grep -Fq 'não lançável' js/planning-dre-totalizers.js
 
-          # A mesma base alimenta DRE, Budget e Forecast.
+          # DRE final: duas visões, detalhamento das contas e estrutura do plano opcional.
           grep -Fq 'Societária · CPC 51' js/dre-dual-view.js
+          grep -Fq 'dreClassDetalhar' js/dre-dual-view.js
+          grep -Fq 'Detalhar contas' js/dre-dual-view.js
+          grep -Fq 'Estrutura do plano' js/dre-dual-view.js
+          grep -Fq 'detalhesAgrupados' js/dre-dual-view.js
+          grep -Fq 'Conta analítica' js/dre-dual-view.js
+          grep -Fq 'Totalizador automático · não lançável' js/dre-dual-view.js
+
+          # A mesma base alimenta DRE, Budget e Forecast.
           grep -Fq 'pagina-ctrl-budget-v7' js/planning-dre-totalizers.js
           grep -Fq 'pagina-ctrl-forecast-v5' js/planning-dre-totalizers.js
           grep -Fq 'agregarClassificacao' js/dre-dual-view.js
