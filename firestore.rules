@@ -405,7 +405,7 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaPremissas() && documentoAcessivel(request.resource.data);
       allow update: if fpaPremissas() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     match /realizadoMensal/{id} {
