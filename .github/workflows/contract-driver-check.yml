@@ -1,0 +1,40 @@
+name: SIG Contract Drivers Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - 'js/contract-driver-sync.js'
+      - 'js/dre-view-navigation.js'
+      - 'js/contracts.js'
+      - 'app.js'
+      - '.github/workflows/contract-driver-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract-drivers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Contracts to FP&A and Cash Flow integration
+        run: |
+          set -e
+          node --check js/contract-driver-sync.js
+          node --check js/dre-view-navigation.js
+          grep -Fq 'fluxoCaixaAtivo' js/contracts.js
+          grep -Fq 'planejamentoAtivo' js/contracts.js
+          grep -Fq 'origem:"contrato"' js/contract-driver-sync.js
+          grep -Fq 'fluxoCaixaLancamentos' js/contract-driver-sync.js
+          grep -Fq 'planejamentoDetalhes' js/contract-driver-sync.js
+          grep -Fq 'budgetLinhas' js/contract-driver-sync.js
+          grep -Fq 'forecastLinhas' js/contract-driver-sync.js
+          grep -Fq 'Contrato automático' js/contract-driver-sync.js
+          grep -Fq 'status:"cancelado"' js/contract-driver-sync.js
+          grep -Fq 'DRE Gerencial · padrão' js/dre-view-navigation.js
+          grep -Fq 'DRE Societária · CPC 51' js/dre-view-navigation.js
+          grep -Fq 'Outras visualizações' js/dre-view-navigation.js
+          grep -Fq 'import "./js/contract-driver-sync.js"' app.js
+          grep -Fq 'import "./js/dre-view-navigation.js"' app.js
