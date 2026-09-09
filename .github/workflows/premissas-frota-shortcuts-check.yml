@@ -1,0 +1,41 @@
+name: SIG Premissas + Frota Shortcut Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - 'fix/**'
+    paths:
+      - 'js/input-admin-actions.js'
+      - 'js/fleet-detran-es.js'
+      - 'app.js'
+      - 'firestore.rules'
+      - '.github/workflows/premissas-frota-shortcuts-check.yml'
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate premise deletion audit and Detran ES shortcut
+        run: |
+          set -e
+          node --check js/input-admin-actions.js
+          node --check js/fleet-detran-es.js
+
+          # Premissas: estorno continua existindo; delete físico é excepcional, auditado e Admin-only.
+          grep -Fq 'estornarPremissa' js/input-admin-actions.js
+          grep -Fq 'excluirPremissa' js/input-admin-actions.js
+          grep -Fq 'dependenciasPremissa' js/input-admin-actions.js
+          grep -Fq 'excluirComAuditoria' js/input-admin-actions.js
+          grep -Fq 'Exclusão física foi bloqueada' js/input-admin-actions.js
+          grep -Fq 'Excluir ADM' js/input-admin-actions.js
+          awk '/match \/premissasPlanejamento\//,/^    }/' firestore.rules | grep -Fq 'allow delete: if administrador() && documentoAcessivel(resource.data);'
+
+          # O atalho do Detran ES deve ficar dentro da Gestão de Frota e abrir fonte oficial.
+          grep -Fq 'import "./js/fleet-detran-es.js"' app.js
+          grep -Fq 'Detran ES · IPVA/Licenciamento' js/fleet-detran-es.js
+          grep -Fq 'https://detran.es.gov.br/veiculos' js/fleet-detran-es.js
+          grep -Fq 'noopener,noreferrer' js/fleet-detran-es.js
