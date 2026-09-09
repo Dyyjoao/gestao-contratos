@@ -1,9 +1,9 @@
 # SIG — Sistema Integrado de Gestão
 
-WebApp/PWA empresarial voltado a **operação, controladoria, governança e decisão gerencial**, com frontend modular em JavaScript e backend gerenciado por Firebase Authentication + Cloud Firestore.
+WebApp/PWA empresarial voltado a **operação, controladoria, governança, segurança e decisão gerencial**, com frontend modular em JavaScript e backend gerenciado por Firebase Authentication + Cloud Firestore.
 
 > **Documentação revisada em:** 08/09/2026  
-> **Baseline executável de produção:** `main` @ `76f4fabeed2eb893868db6a5a1b65551f1a058fe`  
+> **Produção:** branch `main` — consulte o SHA atual no GitHub; o README não fixa SHA para não ficar obsoleto a cada merge documental  
 > **Projeto Firebase:** `gestao-de-contratos-b266b`
 
 O SIG não deve evoluir como uma coleção de telas isoladas. Cada módulo novo precisa nascer integrado à navegação, permissões, Rules, QA e documentação, preservando a separação entre **fonte operacional**, **fonte contábil/gerencial** e **visões executivas**.
@@ -14,8 +14,8 @@ O SIG não deve evoluir como uma coleção de telas isoladas. Cada módulo novo 
 
 O SIG combina quatro camadas:
 
-1. **Operação** — Contratos, Consórcios, Permutas, Vendas & Comissões e outros fluxos operacionais;
-2. **Controladoria & FP&A** — DRE, Balanço, Budget, Forecast, Caixa, Fechamento, Inadimplência e estruturas gerenciais;
+1. **Operação** — Contratos, Consórcios, Permutas, Vendas & Comissões, Gestão de Frota e fluxos operacionais;
+2. **Controladoria & FP&A** — DRE, Balanço, Budget, Forecast, Caixa, Fechamento, Inadimplência, Imobilizado e estruturas gerenciais;
 3. **Governança & Compliance** — riscos, obrigações, auditorias, Antifraude & TI e Planos de Ação;
 4. **Gestão executiva** — Dashboard Gerencial configurável e Minha Mesa.
 
@@ -25,7 +25,7 @@ O Dashboard cruza informações de várias fontes, mas **não se torna uma nova 
 
 ## Escopo ativo
 
-### Gestão e navegação principal
+### Navegação principal
 
 - **Dashboard Gerencial v2**;
 - **Minha Mesa**;
@@ -33,10 +33,13 @@ O Dashboard cruza informações de várias fontes, mas **não se torna uma nova 
 - **Consórcios**;
 - **Permutas**;
 - **Vendas & Comissões**;
+- **Gestão de Frota**;
 - **Controladoria & FP&A**;
 - **Governança & Compliance**;
 - **Planos de Ação**;
 - **Administração** de grupo empresarial, empresas, usuários e perfis.
+
+Consórcios, Permutas, Vendas e Frota são módulos de primeiro nível e **não pertencem ao submenu da Controladoria**.
 
 Módulos antigos podem continuar fisicamente no repositório por histórico ou compatibilidade, mas **não são considerados ativos sem rota/import explícito**.
 
@@ -64,7 +67,7 @@ O Dashboard deixou de ser um resumo fixo de DRE + Caixa e passou a ser um **cock
 
 ## Visões gerenciais
 
-A baseline contempla ou prevê no cockpit:
+A baseline contempla:
 
 - Receita, OPEX, Resultado e Margem;
 - evolução mensal dos principais indicadores;
@@ -77,15 +80,19 @@ A baseline contempla ou prevê no cockpit:
 - Vendas, Faturamento, Meta e Comissões;
 - maiores desvios Realizado x Budget.
 
+A Gestão de Frota possui cockpit próprio; sua inclusão no Dashboard executivo deve acontecer somente quando os indicadores forem incorporados explicitamente à configuração de widgets.
+
 ---
 
 # Contratos
 
-Módulo operacional de gestão contratual com segregação por grupo/empresa e permissões de consulta, cadastro, edição, anexos e exclusão conforme perfil.
+Módulo operacional de gestão contratual com segregação por grupo/empresa e permissões de consulta, cadastro, edição e anexos.
 
 Coleção principal:
 
 - `contratos`.
+
+A exclusão física é uma correção administrativa excepcional: somente Administrador, com reautenticação, justificativa e `auditoriaAdministrativa`. A Firestore Rule também exige `administrador()`.
 
 Contratos não devem gerar efeitos contábeis ou financeiros automáticos sem decisão arquitetural explícita.
 
@@ -113,6 +120,8 @@ Principais capacidades:
 - ficha individual;
 - cronograma projetado;
 - relatórios PDF/Excel.
+
+Correção de cadastro indevido utiliza estorno administrativo para `cancelado`, preservando histórico. Delete físico permanece bloqueado.
 
 O cronograma é **projeção**, não histórico de pagamentos realizados.
 
@@ -168,58 +177,150 @@ Coleções:
 - `vendedores`;
 - `vendas`.
 
-## Vendedores
+## Vendedores e comissão
 
-O cadastro centraliza:
+O cadastro centraliza nome/e-mail, empresa, meta mensal, comissão padrão, base de comissão e status.
 
-- nome/e-mail;
-- empresa;
-- meta mensal;
-- comissão padrão (%);
-- base da comissão;
-- status ativo/inativo.
+A comissão pode ser gerada por:
 
-### Base da comissão
+- **Venda** — base na venda confirmada;
+- **Faturamento** — base no valor efetivamente faturado, inclusive parcial.
 
-O vendedor pode ser configurado como:
+Cada venda grava snapshot da regra aplicada (`baseComissao`, `comissaoPct`, `comissaoBaseValor`, `comissaoValor`, `comissaoStatus`) para impedir recálculo retroativo.
 
-- **Venda** — comissão gerada sobre a venda confirmada;
-- **Faturamento** — comissão gerada sobre o valor efetivamente faturado.
-
-Faturamento parcial é permitido.
-
-Cada venda grava um **snapshot da regra aplicada** (`baseComissao`, `comissaoPct`, `comissaoBaseValor`, `comissaoValor`, `comissaoStatus`) para impedir recálculo retroativo caso a regra do vendedor seja alterada no futuro.
-
-Fluxo da comissão:
+Fluxo:
 
 `Aguardando faturamento → Provisionada → Aprovada → Paga`
 
-Venda cancelada permanece no histórico e sai dos totais. Delete físico de venda/vendedor é bloqueado; vendedor deve ser inativado.
+Venda cancelada permanece no histórico e sai dos totais. Delete físico de venda/vendedor é bloqueado. A correção administrativa de venda grava `estornado: true` e `status: cancelada`; vendedor incorreto pode ser inativado por estorno administrativo sem alterar snapshots históricos.
 
 ## Performance comercial
 
 O cockpit por vendedor trabalha com:
 
 - Venda x Faturamento x Meta;
-- atingimento da meta;
-- relação Faturado/Vendido;
+- atingimento;
+- Faturado/Vendido;
 - ticket médio;
 - comissão;
-- liderança e participação no total;
-- maior atingimento;
+- liderança e participação;
 - maior gap Venda x Faturamento;
-- maior comissão;
 - leituras gerenciais de exceção.
-
-Clicar no vendedor permite aprofundar a carteira correspondente.
 
 **Vendas não alimenta automaticamente DRE, Balanço, Caixa, Budget ou Forecast.**
 
 ---
 
+# Gestão de Frota v1
+
+Módulo operacional de primeiro nível, fora da Controladoria.
+
+Arquivos principais:
+
+- `js/fleet.js`;
+- `js/fleet-admin-actions.js`;
+- `fleet.css`;
+- `sidebar-layout.css` — correção estrutural de rolagem da sidebar;
+- `docs/frota-v1.md` — contrato funcional e técnico.
+
+Bases utilizadas:
+
+- `veiculos`;
+- `manutencoesFrota`;
+- `imobilizados` somente quando houver sincronização patrimonial autorizada.
+
+## Cockpit
+
+Indicadores centrais:
+
+- frota ativa;
+- obrigações vencidas;
+- vencimentos/revisões nos próximos 30 dias;
+- manutenções abertas;
+- custo operacional dos últimos 12 meses;
+- score de saúde da frota.
+
+A posição por veículo mostra placa, status, KM, próximo vencimento, situação de manutenção, custo 12 meses e situação do vínculo patrimonial.
+
+## Veículos
+
+Cadastro inclui:
+
+- empresa;
+- placa;
+- RENAVAM;
+- marca/modelo e ano;
+- status;
+- quilometragem;
+- aquisição e valor;
+- responsável/condutor principal;
+- observações;
+- mapeamento contábil quando autorizado.
+
+Status previstos: ativo, em manutenção, inativo e baixado/vendido. Baixa/inativação é o ciclo normal. Exclusão física existe apenas como ação administrativa excepcional e é bloqueada quando houver Imobilizado, manutenção ou obrigação vinculada.
+
+## IPVA, licenciamento, multas e infrações
+
+A ficha do veículo mantém obrigações auditáveis de:
+
+- IPVA;
+- licenciamento;
+- multa/infração;
+- seguro;
+- recall;
+- outros vencimentos.
+
+Campos incluem vencimento, exercício/parcela, valor, status, pagamento, auto/referência, órgão autuador, pontos, condutor e observação.
+
+A interface identifica automaticamente situação vencida pela data e destaca os próximos 30 dias.
+
+## Consulta oficial e automação
+
+A v1 possui **consulta assistida**: o usuário abre o Portal de Serviços SENATRAN pelo SIG e a ficha registra a data da última conferência e a próxima revisão.
+
+Existe possibilidade de integração oficial para pessoa jurídica por serviços Senatran/Serpro. Qualquer automação real deve seguir:
+
+`SIG → backend seguro/Cloud Function → serviço oficial → validação/diferenças → atualização`
+
+Nunca devem existir certificado, senha, token ou segredo de integração dentro do JavaScript público do PWA.
+
+## Manutenções
+
+Controle preventivo/corretivo por:
+
+- data;
+- quilometragem;
+- serviço e oficina;
+- custo previsto/realizado;
+- data/KM realizados;
+- próxima revisão por data/KM.
+
+Manutenção é considerada vencida se a data passou **ou** o KM limite foi alcançado. Fica em alerta preventivo quando faltam até 30 dias ou até 1.000 km.
+
+Manutenções e obrigações históricas possuem estorno e exclusão administrativa protegidos por reautenticação.
+
+## Plano de Contas e Imobilizado
+
+Cada veículo pode receber manualmente contas já cadastradas:
+
+- conta patrimonial do Ativo;
+- depreciação acumulada;
+- despesa de depreciação;
+- vida útil e data disponível para uso.
+
+A conta patrimonial só pode ser escolhida entre contas analíticas válidas do Plano de Contas.
+
+**Segregação obrigatória:** permissão de Frota não concede poder contábil. Somente usuário que também possua autorização de Imobilizado/Administração FP&A pode sincronizar a ficha com `imobilizados`.
+
+Quando sincronizado, o registro patrimonial recebe `origem: "frota"` e `veiculoId`, evitando duplicidade conceitual entre ficha operacional e ficha contábil.
+
+Documentação detalhada: [`docs/frota-v1.md`](docs/frota-v1.md).
+
+---
+
 # Importações
 
-O SIG possui um núcleo reutilizável para importações:
+Núcleo reutilizável:
 
 - `js/import-center.js`.
 
@@ -231,7 +332,7 @@ O arquivo bruto não deve ser enviado ao Firebase quando não houver necessidade
 
 ## Pangéia → Vendas
 
-Primeiro adaptador ativo:
+Adaptador ativo:
 
 - `js/sales-pangeia-import.js`.
 
@@ -240,35 +341,21 @@ Fonte suportada:
 - relatório TXT **Comissão por Vendedor** do Pangéia/Pangéia Lite;
 - conteúdo textual colado manualmente.
 
-A importação reconhece e preserva, entre outros:
+A importação reconhece vendedor, percentual, número da venda, cliente, data, C.I., valor líquido, comissão da origem, totais e chave de duplicidade. Antes da gravação existe prévia, vinculação/cadastro de vendedor, validação de duplicidades e conferência de totais.
 
-- vendedor;
-- percentual de comissão;
-- número da venda;
-- cliente;
-- data;
-- C.I.;
-- valor líquido;
-- comissão informada na origem;
-- totais por vendedor;
-- identificação do arquivo/fonte;
-- chave de duplicidade.
+A importação é reiniciável: registros já gravados devem ser reconhecidos como duplicados.
 
-Antes da gravação existe prévia, vinculação/cadastro de vendedor, validação de duplicidades e conferência de totais.
-
-A importação é reiniciável: registros já gravados devem ser reconhecidos como duplicados na tentativa seguinte.
-
-Documentação detalhada: [`docs/SIG-IMPORTACOES.md`](docs/SIG-IMPORTACOES.md).
+Documentação: [`docs/SIG-IMPORTACOES.md`](docs/SIG-IMPORTACOES.md).
 
 ---
 
 # Controladoria & FP&A
 
-A fonte de verdade das rotas é:
+Fonte de verdade das rotas:
 
 - `js/controllership-router.js`.
 
-Módulos ativos da baseline:
+Módulos ativos:
 
 - **DRE Gerencial v6** — `js/ctrl-dre-v6.js`;
 - **Balanço Patrimonial v1** — `js/ctrl-balance-sheet-v1.js`;
@@ -287,8 +374,6 @@ Módulos ativos da baseline:
 
 Arquivos legados (`fpa.js` e versões antigas) não são fonte de verdade da Controladoria vigente.
 
----
-
 ## Plano de Contas v6
 
 Máscara canônica:
@@ -297,11 +382,7 @@ Máscara canônica:
 
 Hierarquia:
 
-`Raiz → Sintética N1 (#.##) → Sintética N2 (#.##.##) → Analítica (#.##.##.####)`
-
-Exemplo:
-
-`1 → 1.01 Ativo Circulante → 1.01.01 Disponibilidades → 1.01.01.0001 Caixa`
+`Raiz → Sintética N1 → Sintética N2 → Analítica`
 
 Regras fundamentais:
 
@@ -310,44 +391,31 @@ Regras fundamentais:
 - `contaPaiId` preserva a hierarquia;
 - natureza, raízes, redutoras e multiplicadores são centralizados em `js/account-mask.js`;
 - saldo bruto persistido nunca é regravado apenas para ajustar apresentação;
-- conta com histórico deve ser inativada, não apagada;
-- exclusão física é restrita a cadastro de erro/teste sem referências.
+- conta com histórico deve ser inativada;
+- exclusão física é restrita a cadastro de erro/teste sem referências, somente por Administrador, com reautenticação e auditoria.
 
 Centros técnicos:
 
 - Estatísticas: `__cc_estatistico__`;
 - Balanço: `__cc_balanco__`.
 
----
-
 ## DRE, Balanço, Budget e Forecast
 
-### Balanço
+Balanço representa **posição de fechamento**, não fluxo. Meses não são somados entre si.
 
-Balanço representa **posição de fechamento**, não fluxo.
+DRE usa os multiplicadores gerenciais centralizados. Budget é anual/versionado. Forecast combina realizado fechado e projeção futura. Premissas respeitam vigência/competência.
 
-- meses não são somados entre si;
-- trimestre mostra meses + posição final do trimestre;
-- ano mostra Jan–Dez + posição de dezembro;
-- comparativo anual usa posição de fechamento correspondente.
+Sublinhas persistidas de Budget/Forecast possuem estorno administrativo: o detalhe é inativado e a linha agregada é recalculada no mesmo batch com auditoria.
 
-### DRE
+`js/financial-reporting.js` concentra base compartilhada para evitar fórmulas paralelas.
 
-Utiliza raízes e multiplicadores gerenciais definidos centralmente. A base compartilhada de reporting é mantida em `js/financial-reporting.js`.
+## Input Mensal
 
-### Budget
+A correção administrativa de Realizado é feita por Empresa × competência × Centro/bloco. O estorno zera somente o mês selecionado nos documentos afetados, preserva os demais meses e grava snapshot dos valores anteriores em `auditoriaAdministrativa`.
 
-Planejamento anual/versionado.
+## Fluxo de Caixa
 
-### Forecast
-
-Combina realizado fechado e projeção futura conforme o contrato vigente.
-
-### Premissas
-
-Devem respeitar vigência e competência.
-
----
+Lançamentos possuem estorno e exclusão física administrativa. Contas bancárias e compromissos fixos usam inativação auditada para preservar vínculos históricos.
 
 ## Imobilizado & CAPEX
 
@@ -358,13 +426,10 @@ Coleção:
 Integrações atuais:
 
 - Balanço — custo e depreciação acumulada;
-- Budget/Forecast — despesa de depreciação automática por Conta x Centro de Custo.
+- Budget/Forecast — despesa de depreciação automática por Conta x Centro de Custo;
+- Frota — veículos mapeados podem gerar/atualizar ficha patrimonial, respeitando permissão de Imobilizado.
 
-Fim da vida útil não baixa automaticamente o bem. CAPEX ainda não gera desembolso automático no Fluxo de Caixa.
-
-Falha de leitura de base crítica deve operar em **fail-closed** nos cálculos dependentes.
-
----
+Fim da vida útil não baixa automaticamente o bem. CAPEX ainda não gera desembolso automático no Caixa. Estorno administrativo de ficha indevida cancela o cadastro e desliga as integrações; baixa real continua sendo tratada pelo status `baixado`.
 
 ## Inadimplência & Aging
 
@@ -372,20 +437,15 @@ Coleção:
 
 - `inadimplenciaTitulos`.
 
-Principais indicadores:
+Indicadores:
 
 - carteira em aberto;
 - valor vencido;
 - índice de inadimplência (`vencido ÷ carteira em aberto`);
 - exposição acima de 90 dias;
-- aging:
-  - a vencer;
-  - 1–30 dias;
-  - 31–60 dias;
-  - 61–90 dias;
-  - acima de 90 dias.
+- aging a vencer / 1–30 / 31–60 / 61–90 / >90 dias.
 
-Permissões segregam **visualização** e **gestão da carteira**. Delete físico é bloqueado para preservar histórico.
+Visualização e gestão são permissões separadas. Delete físico é bloqueado. Correção administrativa usa estorno para `cancelado`, mantendo o título no histórico.
 
 ---
 
@@ -396,50 +456,35 @@ Arquivos principais:
 - `js/governance.js`;
 - `js/governance-security.js`.
 
-A estrutura consolida:
+Estrutura:
 
 - riscos;
 - obrigações;
-- programas e ciclos de auditoria;
+- programas/ciclos de auditoria;
 - achados;
-- planos de ação;
-- cockpit Antifraude & Segurança de TI.
+- Planos de Ação;
+- Cockpit Antifraude & Segurança de TI.
 
-## Antifraude & TI
+Baseline Antifraude & TI:
 
-O cockpit trabalha com controles simples e executáveis, sem tentar transformar o SIG em SIEM, antivírus ou plataforma GRC complexa.
-
-Baseline de controles:
-
-- validação independente de alteração bancária de fornecedor;
-- conferência de beneficiário/CNPJ/CPF/banco em boleto ou Pix;
-- MFA em acessos críticos;
-- antivírus/EDR ativo e atualizado;
-- patches de sistema operacional, navegadores e softwares críticos;
+- validação independente de alteração bancária;
+- conferência de beneficiário/CNPJ/CPF/banco em boleto/Pix;
+- MFA;
+- antivírus/EDR;
+- patches;
 - bloqueio automático de tela;
-- backup e teste de restauração;
-- revisão de administradores e ex-colaboradores;
-- treinamento contra phishing e fraude financeira;
-- revisão de credenciais e sinais de comprometimento.
+- backup/teste de restauração;
+- revisão de acessos privilegiados;
+- treinamento contra phishing;
+- revisão de credenciais/sinais de comprometimento.
 
-Achados da auditoria podem gerar **Planos de Ação** e acompanhamento mensal.
-
-Documentação detalhada: [`docs/governanca-antifraude-inadimplencia.md`](docs/governanca-antifraude-inadimplencia.md).
+Documentação: [`docs/governanca-antifraude-inadimplencia.md`](docs/governanca-antifraude-inadimplencia.md).
 
 ---
 
 # Minha Mesa e Planos de Ação
 
-Minha Mesa concentra pendências e responsabilidades do usuário.
-
-Planos de Ação preservam:
-
-- responsável;
-- criador;
-- empresa/grupo;
-- status;
-- conclusão;
-- trilha de atualização.
+Minha Mesa concentra pendências e responsabilidades do usuário. Planos de Ação preservam responsável, criador, empresa/grupo, status, conclusão e trilha de atualização.
 
 Reatribuição, edição e conclusão respeitam permissões próprias.
 
@@ -447,26 +492,62 @@ Reatribuição, edição e conclusão respeitam permissões próprias.
 
 # Permissões e segurança
 
-A autenticação é feita pelo Firebase Authentication, mas **autenticação não é autorização**.
-
-A autorização é aplicada em camadas:
+Autenticação não é autorização. A autorização é aplicada em camadas:
 
 1. menu/visibilidade;
-2. roteador/abertura do módulo;
+2. rota/abertura do módulo;
 3. guardas de ação na interface;
 4. Firestore/Storage Rules como barreira de dados.
 
-Perfis são definidos em:
+Perfis:
 
 - `js/profiles.js`.
 
 Princípios:
 
 - ocultar botão/menu não substitui Rule;
-- toda leitura/gravação empresarial deve respeitar `grupoId` e `empresaId` quando aplicável;
-- administrador possui acesso total, mas ações destrutivas críticas podem exigir confirmação adicional;
-- módulo novo ou reposicionado deve atualizar o grid de Perfis e o Permissions Contract;
-- nenhuma permissão deve ser concedida apenas por conveniência de frontend.
+- toda leitura/gravação empresarial respeita `grupoId` e `empresaId` quando aplicável;
+- administrador possui acesso total, mas ações críticas podem exigir confirmação adicional;
+- módulo novo/reposicionado atualiza grid de Perfis e Permissions Contract;
+- módulo operacional não herda automaticamente poderes contábeis.
+
+## Correções administrativas
+
+**Todo módulo que cria input persistente deve possuir um caminho explícito e auditável de correção.**
+
+Contrato vigente:
+
+- estorno é preferido quando há histórico, saldo, cálculo ou efeito operacional;
+- delete físico é excepcional;
+- ação administrativa exige perfil Administrador, senha atual e justificativa;
+- reautenticação usa Firebase Authentication no frontend;
+- `auditoriaAdministrativa` preserva a trilha e é append-only;
+- correções multi-registro usam batch atômico;
+- Firestore Rules exigem `administrador()` para deletes físicos permitidos;
+- falha na validação de dependências bloqueia exclusão (**fail-closed**).
+
+Adaptadores:
+
+- `js/admin-actions.js` — helper central;
+- `js/cashflow-admin-actions.js` — lançamentos de Caixa;
+- `js/fleet-admin-actions.js` — Frota;
+- `js/input-admin-actions.js` — inputs operacionais/FP&A;
+- `js/master-admin-actions.js` — cadastros mestres e deletes físicos protegidos.
+
+Política completa: [`docs/SIG-CORRECOES-ADMINISTRATIVAS.md`](docs/SIG-CORRECOES-ADMINISTRATIVAS.md).
+
+## Frota
+
+Permissões existentes:
+
+- `frota.visualizar`;
+- `frota.cadastrar`;
+- `frota.editar`;
+- `frota.manutencao`;
+- `frota.obrigacoes`;
+- `frota.excluir` permanece como chave legada; exclusão física efetiva é governada pelo contrato administrativo e pela Rule de Administrador.
+
+A integração patrimonial exige, adicionalmente, autorização de Imobilizado/Controladoria.
 
 ---
 
@@ -479,42 +560,58 @@ Arquivos versionados:
 - `firestore.rules`;
 - `storage.rules`.
 
-Coleções críticas da baseline incluem, entre outras:
+Coleções críticas incluem:
 
 - `imobilizados`;
 - `planoContasGerencial`;
 - `consorcios`;
-- `permutas`;
-- `permutaMovimentos`;
-- `permutaFechamentos`;
+- `permutas`, `permutaMovimentos`, `permutaFechamentos`;
 - `inadimplenciaTitulos`;
 - `dashboardPreferencias`;
 - `vendedores`;
-- `vendas`.
+- `vendas`;
+- `veiculos`;
+- `manutencoesFrota`;
+- `auditoriaAdministrativa`.
 
 ## Deploy: atenção
 
-**GitHub Pages publica somente o frontend.**
+**GitHub Pages publica somente o frontend.** Alterar `firestore.rules` ou `storage.rules` no GitHub **não publica essas Rules no Firebase**.
 
-Alterar `firestore.rules` ou `storage.rules` no GitHub **não publica essas Rules no Firebase**.
-
-Quando uma release alterar Rules, o release só deve ser considerado completo após:
+Quando uma release alterar Rules, o release só está completo após:
 
 1. QA verde no commit final;
 2. promoção do frontend para `main`;
 3. GitHub Pages concluído;
-4. publicação manual/automatizada da Rule correspondente ao mesmo SHA no Firebase;
+4. publicação da Rule correspondente ao mesmo SHA no Firebase;
 5. teste funcional pós-publicação.
 
 Nunca misturar Rule de um SHA com frontend de outro SHA.
 
-Guia detalhado: [`docs/SIG-FIREBASE-DEPLOY-E-RULES.md`](docs/SIG-FIREBASE-DEPLOY-E-RULES.md).
+Guia: [`docs/SIG-FIREBASE-DEPLOY-E-RULES.md`](docs/SIG-FIREBASE-DEPLOY-E-RULES.md).
+
+---
+
+# CSS e navegação lateral
+
+A sidebar possui altura fixa à viewport para permanecer disponível durante a navegação. Como o submenu da Controladoria cresceu, uma sidebar sem `overflow-y` fazia itens ultrapassarem o fundo azul e aparecerem sobre a área clara.
+
+Correção vigente:
+
+- `sidebar-layout.css`;
+- `100dvh` em navegadores compatíveis;
+- rolagem vertical própria;
+- overflow horizontal bloqueado;
+- scrollbar discreta;
+- comportamento mobile preservado.
+
+A solução **não reduz fonte nem esconde opções para fazê-las caber**.
 
 ---
 
 # QA automatizado
 
-Workflows principais da baseline:
+Workflows principais:
 
 - **SIG Quality Check**;
 - **SIG Firebase Contract Check**;
@@ -523,20 +620,13 @@ Workflows principais da baseline:
 - **SIG Permutas Contract Check**;
 - **SIG Dashboard Sales Contract Check**;
 - **SIG Sales Import Contract Check**;
+- **SIG Fleet Contract Check**;
+- **SIG Admin Correction Contract Check**;
 - **GitHub Pages build/deployment**.
 
-Os contratos cobrem, conforme o módulo:
+Os contratos cobrem sintaxe, arquivos críticos, rotas, permissões, Rules, invariantes, browser smoke e rastreabilidade.
 
-- sintaxe JavaScript;
-- presença de arquivos críticos;
-- rotas ativas;
-- permissões;
-- Rules;
-- invariantes de cálculo;
-- browser smoke em Chrome headless;
-- contratos de importação e rastreabilidade.
-
-Mudança estrutural não deve chegar à `main` com HEAD vermelho ou com apenas parte do pacote validada.
+Mudança estrutural não deve chegar à `main` com HEAD vermelho ou pacote incompleto.
 
 ---
 
@@ -544,7 +634,7 @@ Mudança estrutural não deve chegar à `main` com HEAD vermelho ou com apenas p
 
 Fluxo preferencial:
 
-`branch → implementação → QA → comparação com main → PR → merge/promoção → QA em main → Pages → Rules (quando houver) → teste funcional`
+`branch → implementação → QA → comparação com main → PR → merge → QA em main → Pages → Rules (quando houver) → teste funcional`
 
 Regras:
 
@@ -552,9 +642,9 @@ Regras:
 - não aplicar patch cego em arquivo que possa ter avançado;
 - evitar force em produção;
 - não usar Contents API para simular movimentação de branch;
-- mudanças que alterem dados/autorização devem revisar Rules;
+- mudanças de dados/autorização revisam Rules;
 - frontend publicado não significa backend atualizado;
-- rollback deve considerar frontend e Rules separadamente.
+- rollback considera frontend e Rules separadamente.
 
 ---
 
@@ -567,9 +657,10 @@ Regras:
 ├── firestore.rules
 ├── storage.rules
 ├── firebase.json
-├── AGENTS.md
-├── SECURITY.md
 ├── README.md
+├── SECURITY.md
+├── sidebar-layout.css
+├── fleet.css
 ├── js/
 │   ├── core.js
 │   ├── shared.js
@@ -581,6 +672,12 @@ Regras:
 │   ├── sales-performance.js
 │   ├── sales-pangeia-import.js
 │   ├── import-center.js
+│   ├── fleet.js
+│   ├── admin-actions.js
+│   ├── cashflow-admin-actions.js
+│   ├── fleet-admin-actions.js
+│   ├── input-admin-actions.js
+│   ├── master-admin-actions.js
 │   ├── governance.js
 │   ├── governance-security.js
 │   ├── permutas.js
@@ -590,12 +687,13 @@ Regras:
 │   ├── SIG-MANUAL-MESTRE.md
 │   ├── SIG-GUIA-DE-CONTINUIDADE.md
 │   ├── SIG-FIREBASE-DEPLOY-E-RULES.md
+│   ├── SIG-CORRECOES-ADMINISTRATIVAS.md
 │   ├── SIG-IMPORTACOES.md
 │   ├── dashboard-v2-vendas.md
 │   ├── governanca-antifraude-inadimplencia.md
+│   ├── frota-v1.md
 │   ├── controladoria-arquitetura.md
-│   ├── qa-controladoria-modular.md
-│   └── release-controladoria-modular.md
+│   └── ...
 └── .github/workflows/
 ```
 
@@ -603,28 +701,29 @@ Regras:
 
 # Documentação oficial
 
-Para entender ou retomar o projeto, leia nesta ordem:
+Ordem recomendada:
 
 1. [`AGENTS.md`](AGENTS.md) — contrato para agentes/desenvolvedores;
-2. [`docs/SIG-DOSSIE-DE-CONTINUIDADE.md`](docs/SIG-DOSSIE-DE-CONTINUIDADE.md) — estado funcional e arquitetural consolidado;
-3. [`docs/SIG-MANUAL-MESTRE.md`](docs/SIG-MANUAL-MESTRE.md) — invariantes e regras permanentes;
-4. [`docs/SIG-GUIA-DE-CONTINUIDADE.md`](docs/SIG-GUIA-DE-CONTINUIDADE.md) — retomada, release e rollback;
-5. [`docs/SIG-FIREBASE-DEPLOY-E-RULES.md`](docs/SIG-FIREBASE-DEPLOY-E-RULES.md) — backend, Rules e publicação;
-6. [`SECURITY.md`](SECURITY.md) — segurança;
-7. [`docs/dashboard-v2-vendas.md`](docs/dashboard-v2-vendas.md) — Dashboard e Vendas;
-8. [`docs/governanca-antifraude-inadimplencia.md`](docs/governanca-antifraude-inadimplencia.md) — Governança, Antifraude e Inadimplência;
-9. [`docs/SIG-IMPORTACOES.md`](docs/SIG-IMPORTACOES.md) — arquitetura de importações;
-10. [`docs/controladoria-arquitetura.md`](docs/controladoria-arquitetura.md) — mapa modular da Controladoria;
-11. [`docs/qa-controladoria-modular.md`](docs/qa-controladoria-modular.md) — QA;
-12. [`docs/release-controladoria-modular.md`](docs/release-controladoria-modular.md) — promoção/release.
+2. [`docs/SIG-DOSSIE-DE-CONTINUIDADE.md`](docs/SIG-DOSSIE-DE-CONTINUIDADE.md) — estado funcional/arquitetural;
+3. [`docs/SIG-MANUAL-MESTRE.md`](docs/SIG-MANUAL-MESTRE.md) — invariantes;
+4. [`docs/SIG-GUIA-DE-CONTINUIDADE.md`](docs/SIG-GUIA-DE-CONTINUIDADE.md) — retomada/release/rollback;
+5. [`docs/SIG-FIREBASE-DEPLOY-E-RULES.md`](docs/SIG-FIREBASE-DEPLOY-E-RULES.md) — backend/Rules;
+6. [`docs/SIG-CORRECOES-ADMINISTRATIVAS.md`](docs/SIG-CORRECOES-ADMINISTRATIVAS.md) — estorno, reautenticação, auditoria e delete físico;
+7. [`SECURITY.md`](SECURITY.md) — segurança;
+8. [`docs/dashboard-v2-vendas.md`](docs/dashboard-v2-vendas.md) — Dashboard/Vendas;
+9. [`docs/frota-v1.md`](docs/frota-v1.md) — Gestão de Frota;
+10. [`docs/governanca-antifraude-inadimplencia.md`](docs/governanca-antifraude-inadimplencia.md) — Governança/Antifraude/Inadimplência;
+11. [`docs/SIG-IMPORTACOES.md`](docs/SIG-IMPORTACOES.md) — importações;
+12. [`docs/controladoria-arquitetura.md`](docs/controladoria-arquitetura.md) — Controladoria;
+13. [`docs/qa-controladoria-modular.md`](docs/qa-controladoria-modular.md) — QA;
+14. [`docs/release-controladoria-modular.md`](docs/release-controladoria-modular.md) — promoção.
 
-## Fontes técnicas de verdade
-
-Além da documentação:
+Fontes técnicas de verdade:
 
 - `app.js` — imports globais;
-- `js/controllership-router.js` — módulos ativos da Controladoria;
-- `js/profiles.js` — grid de permissões;
+- `js/controllership-router.js` — Controladoria;
+- `js/profiles.js` — permissões;
+- `js/admin-actions.js` e adaptadores administrativos — correções protegidas;
 - `firestore.rules` / `storage.rules` — barreira de dados;
 - `.github/workflows/` — contratos automatizados.
 
@@ -634,33 +733,34 @@ Conversa, memória de IA ou documento antigo **nunca devem ser a única fonte de
 
 # Regras de evolução do SIG
 
-Toda nova tela, módulo ou mudança estrutural deve revisar, quando aplicável:
+Toda nova tela, módulo ou mudança estrutural revisa, quando aplicável:
 
 - menu e rota;
 - grid de Perfis;
 - guardas reais de abertura/ação;
 - Firestore/Storage Rules;
 - escopo `grupoId` / `empresaId`;
-- coleções e modelo de auditoria;
+- política de correção administrativa;
+- coleções/modelo de auditoria;
 - QA automatizado;
 - documentação de continuidade;
 - README.
 
-**Regra documental:** qualquer release que crie, remova ou reposicione módulo, altere fluxo crítico, introduza nova coleção, mude permissões ou modifique Rules deve atualizar o `README.md` e os documentos específicos da arquitetura no mesmo PR.
+**Regra documental:** qualquer release que crie, remova ou reposicione módulo, altere fluxo crítico, introduza coleção, mude permissões ou modifique Rules atualiza `README.md` e os documentos específicos no mesmo PR.
 
 ---
 
 # Limitações e decisões abertas
-
-Na baseline atual:
 
 - contas antigas não são migradas automaticamente para Plano v6;
 - baixa/venda de ativo ainda não fecha automaticamente ganho/perda na DRE;
 - CAPEX não gera desembolso automático no Caixa;
 - Consórcios não integra automaticamente demonstrativos/caixa/planejamento;
 - Permutas permanece independente da contabilidade automática;
-- Vendas não gera automaticamente Receita, Contas a Receber ou lançamentos de DRE;
+- Vendas não gera automaticamente Receita/Contas a Receber/DRE;
 - faturamento comercial não substitui integração fiscal/ERP;
+- Frota ainda não consome API oficial automaticamente; a v1 usa consulta assistida e deixa integração server-side como evolução;
+- custo de Frota v1 é TCO operacional simplificado, não custo contábil completo;
 - Dashboard cruza fontes, mas não cria nova fonte de verdade;
 - módulos legados não devem ser reativados sem decisão explícita.
 
@@ -668,6 +768,6 @@ Na baseline atual:
 
 ## Estado da baseline
 
-O SIG já combina **Controladoria modular, gestão operacional, Governança/Antifraude, Inadimplência, Dashboard Gerencial configurável, Vendas & Comissões, Consórcios, Permutas e arquitetura reutilizável de importações**.
+O SIG combina **Controladoria modular, gestão operacional, Gestão de Frota, Governança/Antifraude, Inadimplência, Dashboard configurável, Vendas & Comissões, Consórcios, Permutas, arquitetura reutilizável de importações e correções administrativas auditáveis**.
 
 A prioridade arquitetural continua sendo crescer com **módulos independentes, permissões explícitas, trilha auditável e integração intencional**, evitando acoplamento automático que transforme o sistema em um ERP monolítico difícil de manter.

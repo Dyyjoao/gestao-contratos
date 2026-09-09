@@ -62,7 +62,7 @@ jobs:
           grep -q 'match /imobilizados/' firestore.rules
           grep -q "permissao('controladoria','imobilizado')" firestore.rules
           grep -q 'match /planoContasGerencial/' firestore.rules
-          grep -q 'allow delete: if fpaPlano() && documentoAcessivel(resource.data);' firestore.rules
+          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
 
           grep -q 'function consorciosVisualizar' firestore.rules
           grep -q 'function consorciosEditar' firestore.rules

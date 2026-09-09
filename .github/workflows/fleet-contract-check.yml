@@ -1,0 +1,151 @@
+name: SIG Fleet Contract Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'chatgpt/**'
+    paths:
+      - 'js/fleet.js'
+      - 'js/fleet-admin-actions.js'
+      - 'js/admin-actions.js'
+      - 'fleet.css'
+      - 'sidebar-layout.css'
+      - 'js/management-shell.js'
+      - 'js/profiles.js'
+      - 'js/core.js'
+      - 'app.js'
+      - 'firestore.rules'
+      - 'README.md'
+      - 'docs/frota-v1.md'
+      - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
+      - '.github/workflows/fleet-contract-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  fleet-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Fleet v1 contract
+        run: |
+          set -e
+
+          node --check js/fleet.js
+          node --check js/fleet-admin-actions.js
+          node --check js/admin-actions.js
+          node --check js/management-shell.js
+          node --check js/profiles.js
+
+          # Frota é módulo operacional de primeiro nível e deve estar ativa no bundle.
+          grep -Fq 'import "./js/fleet.js"' app.js
+          grep -Fq 'import "./js/fleet-admin-actions.js"' app.js
+          grep -Fq 'Gestão de Frota' js/fleet.js
+          grep -Fq 'menuFrota' js/fleet.js
+          grep -Fq 'pagina-frota' js/fleet.js
+          grep -Fq 'data-fleet-tab="visao"' js/fleet.js
+          grep -Fq 'data-fleet-tab="veiculos"' js/fleet.js
+          grep -Fq 'data-fleet-tab="obrigacoes"' js/fleet.js
+          grep -Fq 'data-fleet-tab="manutencoes"' js/fleet.js
+
+          # O shell não pode voltar a remover Frota nem suas permissões.
+          if grep -Fq '"prestadores","frota","almoxarifado","cotacoes"' js/management-shell.js; then
+            echo 'Frota voltou a ser tratada como módulo legado removível.' >&2
+            exit 1
+          fi
+          if grep -Fq '["menuPrestadores","menuFrota","menuAlmoxarifado","menuCotacoes"]' js/management-shell.js; then
+            echo 'management-shell voltou a remover menuFrota.' >&2
+            exit 1
+          fi
+          grep -Fq 'OPERACIONAIS_LEGADOS=["prestadores","almoxarifado","cotacoes"]' js/management-shell.js
+
+          # Perfil próprio e poderes separados. Exclusão física não é checkbox delegável.
+          grep -Fq '["frota","Gestão de Frota"' js/profiles.js
+          grep -Fq '["visualizar","Visualizar"]' js/profiles.js
+          grep -Fq '["cadastrar","Cadastrar"]' js/profiles.js
+          grep -Fq '["manutencao","Registrar manutenção"]' js/profiles.js
+          grep -Fq '["obrigacoes","Gerir IPVA/licenciamento/multas"]' js/profiles.js
+          if grep -Fq '["frota","Gestão de Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"],["excluir"' js/profiles.js; then
+            echo 'Exclusão física da Frota não pode ser permissão de perfil.' >&2
+            exit 1
+          fi
+          grep -Fq 'Exclusão física: somente Administrador' js/profiles.js
+
+          # Cockpit, manutenção, obrigações e vínculo patrimonial.
+          grep -Fq 'frotaKpiSaude' js/fleet.js
+          grep -Fq 'Custo 12 meses' js/fleet.js
+          grep -Fq 'IPVA, multas & obrigações' js/fleet.js
+          grep -Fq 'kmPrevisto' js/fleet.js
+          grep -Fq 'contaAtivoId' js/fleet.js
+          grep -Fq 'imobilizados' js/fleet.js
+          grep -Fq 'origem:"frota"' js/fleet.js
+          grep -Fq 'podeContabil' js/fleet.js
+          grep -Fq 'ultimaConsultaOficialEm' js/fleet.js
+          grep -Fq 'portalservicos.senatran.serpro.gov.br' js/fleet.js
+
+          # Correções administrativas usam senha atual e deixam auditoria.
+          grep -Fq 'reauthenticateWithCredential' js/admin-actions.js
+          grep -Fq 'auditoriaAdministrativa' js/admin-actions.js
+          grep -Fq 'estornarManutencao' js/fleet-admin-actions.js
+          grep -Fq 'estornarObrigacao' js/fleet-admin-actions.js
+          grep -Fq 'excluirVeiculo' js/fleet-admin-actions.js
+          grep -Fq 'imobilizadoId||relacionados||obs' js/fleet-admin-actions.js
+
+          # Sidebar precisa suportar submenu grande sem vazar do fundo.
+          grep -Fq 'height:100dvh' sidebar-layout.css
+          grep -Fq 'overflow-y:auto' sidebar-layout.css
+          grep -Fq 'overflow-x:hidden' sidebar-layout.css
+          grep -Fq 'sidebar-layout.css?v=1' js/management-shell.js
+
+          # Firebase mantém barreira das bases envolvidas e delete só para Admin.
+          grep -q 'function frotaVisualizar' firestore.rules
+          grep -q 'function frotaObrigacaoUpdateValida' firestore.rules
+          grep -q 'function frotaKmUpdateValida' firestore.rules
+          grep -q 'match /veiculos/' firestore.rules
+          grep -q 'match /manutencoesFrota/' firestore.rules
+          grep -q 'match /imobilizados/' firestore.rules
+          grep -q 'match /auditoriaAdministrativa/' firestore.rules
+          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
+          grep -q 'fpaImobilizado()' firestore.rules
+
+          # Documentação acompanha a feature.
+          grep -Fq 'Gestão de Frota' docs/frota-v1.md
+          grep -Fq 'Serpro' docs/frota-v1.md
+          grep -Fq 'sidebar-layout.css' docs/frota-v1.md
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/tmp/sig-fleet-server.log 2>&1 &
+          echo $! > /tmp/sig-fleet-server.pid
+          sleep 2
+      - name: Open Fleet and validate sidebar containment
+        run: |
+          set -e
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          cp index.html fleet-smoke.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('fleet-smoke.html')
+          s=p.read_text()
+          teste='''<script type="module">(async()=>{try{window.alert=()=>{};const core=await import('./js/core.js');await import('./js/management-shell.js');await import('./js/controllership-router.js');await import('./js/fleet.js');core.state.perfil={id:'smoke',acessoTotal:true,ativo:true,permissoes:{}};core.state.usuario={id:'smoke-user',grupoId:'smoke-group',empresaId:'smoke-company',acessoGlobal:true};core.state.grupo={id:'smoke-group',nome:'Smoke',ativo:true};window.dispatchEvent(new Event('sig:ready'));await new Promise(r=>setTimeout(r,500));const menu=document.getElementById('menuFrota');if(!menu)throw new Error('menuFrota ausente');if(menu.classList.contains('hidden'))throw new Error('menuFrota oculto para Administrador');if(menu.closest('#ctrlSubmenu'))throw new Error('Frota ficou dentro da Controladoria');const pg=document.getElementById('pagina-frota');if(!pg)throw new Error('pagina-frota ausente');['frotaKpiAtivos','frotaKpiVencidas','frotaKpi30','frotaKpiManut','frotaKpiCusto','frotaKpiSaude','frotaAlertas','frotaResumoVeiculos','formVeiculo','formObrigacao','formManut'].forEach(id=>{if(!document.getElementById(id))throw new Error('Elemento Frota ausente: '+id)});menu.click();await new Promise(r=>setTimeout(r,250));if(pg.classList.contains('hidden'))throw new Error('Clique não abriu Gestão de Frota');const cssLink=document.querySelector('link[href^="sidebar-layout.css"]');if(!cssLink)throw new Error('sidebar-layout.css não foi injetado');const side=document.querySelector('.sidebar');let oy='';for(let i=0;i<20;i++){oy=getComputedStyle(side).overflowY;if(['auto','scroll'].includes(oy))break;await new Promise(r=>setTimeout(r,100))}if(!['auto','scroll'].includes(oy))throw new Error('Sidebar sem rolagem vertical após carregar CSS: '+oy);document.documentElement.setAttribute('data-fleet-smoke','ok')}catch(e){document.documentElement.setAttribute('data-fleet-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="fleet-smoke-error">'+String(e.stack||e)+'</pre>')}})()</script>'''
+          s=s.replace('</body>',teste+'</body>')
+          p.write_text(s)
+          PY
+          "$CHROME" --headless --no-sandbox --disable-gpu --window-size=1280,900 --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8000/fleet-smoke.html > /tmp/fleet-smoke-dom.html
+          if ! grep -q 'data-fleet-smoke="ok"' /tmp/fleet-smoke-dom.html; then
+            echo '--- Fleet smoke error ---'
+            grep -A8 -B2 'fleet-smoke-error' /tmp/fleet-smoke-dom.html || true
+            echo '--- DOM tail ---'
+            tail -n 80 /tmp/fleet-smoke-dom.html
+            exit 1
+          fi
+          grep -q 'id="menuFrota"' /tmp/fleet-smoke-dom.html
+          grep -q 'id="pagina-frota"' /tmp/fleet-smoke-dom.html
