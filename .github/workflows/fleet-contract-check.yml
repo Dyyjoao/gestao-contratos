@@ -139,7 +139,7 @@ jobs:
           s=s.replace('</body>',teste+'</body>')
           p.write_text(s)
           PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8000/fleet-smoke.html > /tmp/fleet-smoke-dom.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --window-size=1280,900 --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8000/fleet-smoke.html > /tmp/fleet-smoke-dom.html
           if ! grep -q 'data-fleet-smoke="ok"' /tmp/fleet-smoke-dom.html; then
             echo '--- Fleet smoke error ---'
             grep -A8 -B2 'fleet-smoke-error' /tmp/fleet-smoke-dom.html || true
