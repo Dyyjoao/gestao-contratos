@@ -1,0 +1,158 @@
+name: Temporary contract Storage patch
+
+on:
+  push:
+    branches:
+      - feature/storage-contratos-codigo-reduzido
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/storage-contratos-codigo-reduzido
+          fetch-depth: 0
+      - name: Integrate contracts with Firebase Storage
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('js/contracts.js'); s=p.read_text()
+
+          def rep(old,new):
+              global s
+              if old not in s: raise SystemExit(f'contracts.js fragment not found: {old[:120]!r}')
+              s=s.replace(old,new,1)
+
+          rep('import { SIG_DRIVE_EMPRESAS_URL, metaAnexoDrive, nomeProvider } from "./drive-attachments.js";',
+              'import { nomeProvider } from "./drive-attachments.js";\nimport { uploadArquivo, abrirArquivo, validarArquivoStorage, STORAGE_MAX_BYTES } from "./storage.js";')
+
+          start=s.index('  const arq=document.createElement("div");')
+          end=s.index('\n\n  const integracao=document.createElement("div");', start)
+          novo='''  const arq=document.createElement("div");
+  arq.className="campo campo-span-3";
+  arq.innerHTML=`
+    <label>Anexo do contrato</label>
+    <div class="storage-anexo-card">
+      <div class="storage-anexo-head">
+        <div><strong>Firebase Storage</strong><small>Arquivo vinculado ao contrato e protegido pelas permissões do SIG.</small></div>
+        <span class="status-ativo">Até ${Math.round(STORAGE_MAX_BYTES/1024/1024)} MB</span>
+      </div>
+      <div class="campo"><label for="contratoArquivo">Selecionar arquivo</label><input id="contratoArquivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/jpeg,image/png"></div>
+      <label class="driver-switch storage-remover"><input id="contratoRemoverArquivo" type="checkbox"><span>Remover vínculo do anexo atual</span></label>
+      <small id="contratoArquivoAtual" class="arquivo-atual"></small>
+      <small class="arquivo-atual">PDF, Word, Excel, JPG ou PNG. Remover o vínculo não apaga o objeto físico; exclusão física do Storage é reservada ao Administrador.</small>
+    </div>`;'''
+          s=s[:start]+novo+s[end:]
+
+          rep('style.id="sig-drive-anexo-css";\n  style.textContent=`.drive-anexo-card{border:1px solid #dbe4e8;border-radius:12px;padding:12px;background:#f8fbfb}.drive-anexo-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.drive-anexo-head strong,.drive-anexo-head small{display:block}.drive-anexo-head small,.arquivo-atual{color:#667085;margin-top:3px}.drive-remover{margin-top:8px}.arquivo-atual a{font-weight:800}@media(max-width:720px){.drive-anexo-head{align-items:flex-start;flex-direction:column}}`;',
+              'style.id="sig-storage-anexo-css";\n  style.textContent=`.storage-anexo-card{border:1px solid #dbe4e8;border-radius:12px;padding:12px;background:#f8fbfb}.storage-anexo-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.storage-anexo-head strong,.storage-anexo-head small{display:block}.storage-anexo-head small,.arquivo-atual{color:#667085;margin-top:3px}.storage-remover{margin-top:8px}.arquivo-atual a,.arquivo-atual button{font-weight:800}@media(max-width:720px){.storage-anexo-head{align-items:flex-start;flex-direction:column}}`;')
+
+          rep('const driveUrl=()=>$("contratoDriveUrl");\nconst driveNome=()=>$("contratoDriveNome");', 'const arquivoInput=()=>$("contratoArquivo");')
+
+          old='''function mostrarArquivo(item){
+  if(!arquivoAtual())return;
+  const a=item?.arquivoPrincipal;
+  if(!a?.url){arquivoAtual().innerHTML="Nenhum arquivo vinculado.";return}
+  arquivoAtual().innerHTML=`Arquivo atual: <a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.nome||"Abrir arquivo")}</a> · ${esc(nomeProvider(a)||"Anexo")}`;
+}'''
+          new='''async function abrirAnexo(a){
+  if(!a)return;
+  try{
+    if(a.provider==="firebase_storage"&&a.caminho){await abrirArquivo(a.caminho);return}
+    if(a.url)window.open(a.url,"_blank","noopener,noreferrer");
+  }catch(e){console.error(e);alert("Não foi possível abrir o arquivo. Confirme seu acesso ao Storage.")}
+}
+function mostrarArquivo(item){
+  if(!arquivoAtual())return;
+  const a=item?.arquivoPrincipal;
+  if(!a?.caminho&&!a?.url){arquivoAtual().innerHTML="Nenhum arquivo vinculado.";return}
+  arquivoAtual().innerHTML=`Arquivo atual: <button class="btn-acao" id="btnContratoArquivoAtual" type="button">${esc(a.nome||"Abrir arquivo")}</button> · ${esc(nomeProvider(a)||"Anexo")}`;
+  $("btnContratoArquivoAtual")?.addEventListener("click",()=>abrirAnexo(a));
+}'''
+          rep(old,new)
+
+          rep('  if(driveUrl())driveUrl().value="";\n  if(driveNome())driveNome().value="";', '  if(arquivoInput())arquivoInput().value="";')
+          rep('    if(driveNome())driveNome().value=item.arquivoPrincipal?.nome||"";\n    mostrarArquivo(item);', '    mostrarArquivo(item);')
+
+          rep('.map(x=>`<option value="${x.id}">${esc(x.codigo||"")} · ${esc(x.nome||"")}</option>`).join("");', '.map(x=>`<option value="${x.id}">${esc(x.codigo||"")} · ${esc(x.nome||"")}${x.codigoReduzido?` · Red. ${esc(x.codigoReduzido)}`:""}</option>`).join("");')
+
+          rep('${x.arquivoPrincipal?.provider==="google_drive"?" · Drive":""}', '${x.arquivoPrincipal?.provider==="firebase_storage"?" · Storage":x.arquivoPrincipal?.provider==="google_drive"?" · Drive":""}')
+          rep('${x.arquivoPrincipal?.url?`<a class="btn-acao" href="${esc(x.arquivoPrincipal.url)}" target="_blank" rel="noopener">Arquivo</a>`:""}', '${x.arquivoPrincipal?.caminho||x.arquivoPrincipal?.url?`<button class="btn-acao" data-ctr-arq="${x.id}" type="button">Arquivo</button>`:""}')
+          rep('  document.querySelectorAll("[data-ctr-edit]").forEach(b=>on(b,"click",()=>abrir(dados.find(x=>x.id===b.dataset.ctrEdit))));', '  document.querySelectorAll("[data-ctr-arq]").forEach(b=>on(b,"click",()=>abrirAnexo(dados.find(x=>x.id===b.dataset.ctrArq)?.arquivoPrincipal)));\n  document.querySelectorAll("[data-ctr-edit]").forEach(b=>on(b,"click",()=>abrir(dados.find(x=>x.id===b.dataset.ctrEdit))));')
+
+          old='''  const atual=dados.find(x=>x.id===editId)||null;
+  let anexo=atual?.arquivoPrincipal||null;
+  try{
+    if(removerArquivo()?.checked===true)anexo=null;
+    else if(driveUrl()?.value.trim())anexo=metaAnexoDrive({url:driveUrl().value,nome:driveNome()?.value,anterior:anexo});
+  }catch(e){
+    if(e.message==="drive-url-invalida")return msg(mensagem,"O link do anexo precisa ser um endereço do Google Drive.");
+    throw e;
+  }
+'''
+          new='''  const atual=dados.find(x=>x.id===editId)||null;
+  const arquivoNovo=arquivoInput()?.files?.[0]||null;
+  let anexo=removerArquivo()?.checked===true?null:(atual?.arquivoPrincipal||null);
+  if(arquivoNovo){
+    try{validarArquivoStorage(arquivoNovo)}catch(e){
+      if(e.message==="arquivo-maior-20mb")return msg(mensagem,"O arquivo ultrapassa o limite de 20 MB.");
+      if(e.message==="tipo-arquivo-nao-permitido")return msg(mensagem,"Formato não permitido. Use PDF, Word, Excel, JPG ou PNG.");
+      return msg(mensagem,"Selecione um arquivo válido.");
+    }
+  }
+'''
+          rep(old,new)
+
+          old='''  try{
+    msg(mensagem,"Salvando contrato...");
+    let id=editId;
+    if(editId)await atualizarDocumento("contratos",editId,d);
+    else id=await criarDocumento("contratos",d);
+    msg(mensagem,"Contrato salvo com sucesso.",true);
+    await carregarContratos();
+    emitirAlteracao("contratos");
+    window.dispatchEvent(new CustomEvent("sig:contract-driver-changed",{detail:{contratoId:id}}));
+    setTimeout(()=>fecharBox(box,form,mensagem),500);
+  }catch(e){
+    console.error(e);
+    msg(mensagem,"Não foi possível salvar o contrato.");
+  }'''
+          new='''  let contratoSalvo=false;
+  try{
+    msg(mensagem,"Salvando contrato...");
+    let id=editId;
+    if(editId)await atualizarDocumento("contratos",editId,d);
+    else id=await criarDocumento("contratos",d);
+    contratoSalvo=true;
+    if(arquivoNovo){
+      msg(mensagem,"Contrato salvo. Enviando anexo ao Firebase Storage...");
+      anexo=await uploadArquivo({modulo:"contratos",registroId:id,arquivo:arquivoNovo,pasta:"documentos",empresaId:d.empresaId});
+      await atualizarDocumento("contratos",id,{arquivoPrincipal:anexo});
+    }
+    msg(mensagem,arquivoNovo?"Contrato e anexo salvos com sucesso.":"Contrato salvo com sucesso.",true);
+    await carregarContratos();
+    emitirAlteracao("contratos");
+    window.dispatchEvent(new CustomEvent("sig:contract-driver-changed",{detail:{contratoId:id}}));
+    setTimeout(()=>fecharBox(box,form,mensagem),700);
+  }catch(e){
+    console.error(e);
+    msg(mensagem,contratoSalvo?"Contrato salvo, mas não foi possível enviar/vincular o anexo ao Storage. Tente anexar novamente.":"Não foi possível salvar o contrato.");
+  }'''
+          rep(old,new)
+
+          p.write_text(s)
+          PY
+          node --check js/contracts.js
+          node --check js/storage.js
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/contracts.js
+          git commit -m "feat: store contract attachments in Firebase Storage"
+          git push origin HEAD:feature/storage-contratos-codigo-reduzido
