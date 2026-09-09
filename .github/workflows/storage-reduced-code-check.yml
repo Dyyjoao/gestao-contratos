@@ -1,0 +1,47 @@
+name: SIG Codigo Reduzido Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - 'js/account-reduced-code-ui.js'
+      - 'js/ctrl-chart-accounts-v6.js'
+      - 'js/ctrl-input-v6.js'
+      - 'js/ctrl-dre-v6.js'
+      - 'js/ctrl-balance-sheet-v1.js'
+      - 'js/ctrl-planning-matrix-v2.js'
+      - 'app.js'
+      - '.github/workflows/storage-reduced-code-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Pangeia reduced account code contract
+        run: |
+          set -e
+          node --check js/account-reduced-code-ui.js
+          node --check js/ctrl-chart-accounts-v6.js
+          node --check js/ctrl-input-v6.js
+          node --check js/ctrl-dre-v6.js
+          node --check js/ctrl-balance-sheet-v1.js
+          node --check js/ctrl-planning-matrix-v2.js
+
+          # Código reduzido é metadado paralelo: manual, opcional e nunca substitui codigo/hierarquia.
+          grep -Fq 'contaV6CodigoReduzido' js/ctrl-chart-accounts-v6.js
+          grep -Fq 'codigoReduzido:$("contaV6CodigoReduzido")' js/ctrl-chart-accounts-v6.js
+          grep -Fq '"contaPaiId","codigoReduzido"' js/ctrl-chart-accounts-v6.js
+          grep -Fq 'input-v6-reduzido' js/ctrl-input-v6.js
+          grep -Fq 'dre-v6-reduzido' js/ctrl-dre-v6.js
+          grep -Fq 'Red. diversos' js/ctrl-dre-v6.js
+          grep -Fq 'balanco-v1-reduzido' js/ctrl-balance-sheet-v1.js
+          grep -Fq 'Red. diversos' js/ctrl-balance-sheet-v1.js
+          grep -Fq 'planning-v2-reduzido' js/ctrl-planning-matrix-v2.js
+          grep -Fq 'import "./js/account-reduced-code-ui.js"' app.js
+          grep -Fq 'select option[value]' js/account-reduced-code-ui.js
+          grep -Fq 'codigoReduzido' js/account-reduced-code-ui.js
