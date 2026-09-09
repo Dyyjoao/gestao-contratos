@@ -8,6 +8,8 @@ function css(){
 function removerOperacaoLegada(){
   ["menuPrestadores","menuAlmoxarifado","menuCotacoes"].forEach(id=>$(id)?.remove());
   ["pagina-prestadores","pagina-almoxarifado","pagina-cotacoes"].forEach(id=>$(id)?.remove());
+  const frotaLegada=$("pagina-frota");
+  if(frotaLegada&&!frotaLegada.classList.contains("fleet-page"))frotaLegada.remove();
   document.querySelectorAll(".permissao-modulo").forEach(box=>{const cb=box.querySelector(".checkbox-permissao[data-modulo]");if(cb&&OPERACIONAIS_LEGADOS.includes(cb.dataset.modulo))box.remove()})
 }
 function garantirControladoria(){const sep=document.querySelector(".sidebar-menu .menu-separador");if(!$("menuControladoria")&&sep){const b=document.createElement("button");b.id="menuControladoria";b.className="menu-item hidden";b.type="button";b.textContent="Controladoria & FP&A";sep.before(b)}if(!$("pagina-controladoria")){const main=document.querySelector("main.conteudo");if(main){const s=document.createElement("section");s.id="pagina-controladoria";s.className="pagina hidden";s.innerHTML='<div class="painel-vazio"><h3>Controladoria & FP&A</h3><p>Escolha uma rotina no submenu lateral.</p></div>';main.appendChild(s)}}}
