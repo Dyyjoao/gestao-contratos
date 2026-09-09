@@ -30,7 +30,7 @@ jobs:
           grep -Fq 'excluirPremissa' js/input-admin-actions.js
           grep -Fq 'dependenciasPremissa' js/input-admin-actions.js
           grep -Fq 'excluirComAuditoria' js/input-admin-actions.js
-          grep -Fq 'Exclusão física foi bloqueada' js/input-admin-actions.js
+          grep -Fq 'exclusão física foi bloqueada' js/input-admin-actions.js
           grep -Fq 'Excluir ADM' js/input-admin-actions.js
           awk '/match \/premissasPlanejamento\//,/^    }/' firestore.rules | grep -Fq 'allow delete: if administrador() && documentoAcessivel(resource.data);'
 
