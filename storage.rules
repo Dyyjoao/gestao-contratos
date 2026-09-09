@@ -110,7 +110,7 @@ service firebase.storage {
     match /grupos/{grupoId}/empresas/{empresaId}/{modulo}/{registroId}/{pasta}/{arquivo} {
       allow read: if contextoValido(grupoId, empresaId) && podeLerModulo(modulo);
       allow create, update: if contextoValido(grupoId, empresaId) && podeGravarModulo(modulo) && arquivoPermitido();
-      allow delete: if contextoValido(grupoId, empresaId) && administrador();
+      allow delete: if contextoValido(grupoId, empresaId) && podeGravarModulo(modulo);
     }
 
     match /{allPaths=**} {
