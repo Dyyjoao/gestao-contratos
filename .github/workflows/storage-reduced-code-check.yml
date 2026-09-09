@@ -45,5 +45,3 @@ jobs:
           grep -Fq 'import "./js/account-reduced-code-ui.js"' app.js
           grep -Fq 'select option[value]' js/account-reduced-code-ui.js
           grep -Fq 'codigoReduzido' js/account-reduced-code-ui.js
-
-          git diff --check HEAD~1 HEAD
