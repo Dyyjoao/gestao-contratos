@@ -46,6 +46,7 @@ jobs:
           grep -q 'percentualRelatorio' js/sales-pangeia-import.js
           grep -q 'vendedorOrigem' js/sales-pangeia-import.js
           grep -q 'duplicada' js/sales-pangeia-import.js
+          grep -Eq 'import \{[^}]*msg[^}]*\} from "\./shared\.js"' js/sales-pangeia-import.js
           grep -q 'permite("vendas","lancar")' js/sales-pangeia-import.js
           grep -q 'permite("vendas","vendedores")' js/sales-pangeia-import.js
           grep -q 'permite("vendas","comissoes")' js/sales-pangeia-import.js
@@ -60,7 +61,7 @@ jobs:
         run: |
           python3 -m http.server 8000 >/tmp/sig-sales-import-server.log 2>&1 &
           sleep 2
-      - name: Parse wrapped Pangeia sample in headless Chrome
+      - name: Parse and exercise Pangeia importer in headless Chrome
         run: |
           set -e
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -85,6 +86,15 @@ jobs:
             if(r.linhas[1].venda!=='123139')throw new Error('venda quebrada');
             if(Math.abs(r.totalLiquido-6672)>0.001)throw new Error('total líquido '+r.totalLiquido);
             if(!document.getElementById('btnSalesImportar'))throw new Error('botão importação ausente');
+            const analisar=document.getElementById('btnSalesImportAnalisar');
+            if(!analisar)throw new Error('botão analisar ausente');
+            core.state.usuario.empresaId='';
+            core.state.empresaAtualId='';
+            core.state.empresasSelecionadasIds=[];
+            analisar.click();
+            await new Promise(resolve=>setTimeout(resolve,50));
+            const mensagem=document.getElementById('salesImportMsg')?.textContent||'';
+            if(!mensagem.includes('Selecione uma única empresa'))throw new Error('ação analisar não executou: '+mensagem);
             document.documentElement.setAttribute('data-sales-import-smoke','ok');
           }catch(e){document.documentElement.setAttribute('data-sales-import-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="sales-import-error">'+String(e.stack||e)+'</pre>')}})();</script>'''
           p.write_text(s.replace(marker,test+marker))

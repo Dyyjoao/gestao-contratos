@@ -1,4 +1,4 @@
-import { $, esc, permite, admin, moeda, listarDocumentos, criarDocumento, empresaUnicaSelecionadaId, nomeEmpresa, emitirAlteracao } from "./shared.js";
+import { $, esc, msg, permite, admin, moeda, listarDocumentos, criarDocumento, empresaUnicaSelecionadaId, nomeEmpresa, emitirAlteracao } from "./shared.js";
 import { lerArquivoTexto, normalizarTextoImportacao, numeroBr, dataBrParaIso, normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes } from "./import-center.js";
 
 let textoAtual="",arquivoAtual="",analise=null,vendedores=[],vendas=[],busy=false;
