@@ -23,6 +23,7 @@ import "./js/sales-performance.js";
 import "./js/sales-pangeia-import.js";
 import "./js/fleet.js";
 import "./js/fleet-detran-es.js";
+import "./js/fleet-history-report.js";
 import "./js/cashflow-admin-actions.js";
 import "./js/fleet-admin-actions.js";
 import "./js/input-admin-actions.js";
