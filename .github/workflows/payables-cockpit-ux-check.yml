@@ -8,6 +8,7 @@ on:
     paths:
       - 'js/payables-cockpit-ui.js'
       - 'js/payables-cockpit-controls.js'
+      - 'js/payables-contracts.js'
       - 'app.js'
       - 'preview/contas-pagar-cockpit-v2/**'
       - '.github/workflows/payables-cockpit-ux-check.yml'
@@ -24,6 +25,7 @@ jobs:
           set -e
           node --check js/payables-cockpit-ui.js
           node --check js/payables-cockpit-controls.js
+          node --check js/payables-contracts.js
           grep -Fq 'Cockpit de Pagamentos Fixos' js/payables-cockpit-ui.js
           grep -Fq 'Radar 7 dias' js/payables-cockpit-ui.js
           grep -Fq '+ Novo compromisso fixo' js/payables-cockpit-ui.js
@@ -33,11 +35,18 @@ jobs:
           grep -Fq 'novo.classList.toggle("hidden",!podeCadastrar())' js/payables-cockpit-ui.js
           grep -Fq 'apFiltroInicio' js/payables-cockpit-controls.js
           grep -Fq 'apFiltroFim' js/payables-cockpit-controls.js
+          grep -Fq 'apContaBancariaPrevista' js/payables-cockpit-controls.js
+          grep -Fq 'apFiltroBanco' js/payables-cockpit-controls.js
           grep -Fq 'Imprimir seleção' js/payables-cockpit-controls.js
           grep -Fq 'contasBancarias' js/payables-cockpit-controls.js
           grep -Fq 'contaBancariaIdPagamento' js/payables-cockpit-controls.js
-          grep -Fq 'não cria lançamento financeiro automaticamente' js/payables-cockpit-controls.js
+          grep -Fq 'contaBancariaId:' js/payables-cockpit-controls.js
+          grep -Fq 'contaEfetivaId' js/payables-cockpit-controls.js
           grep -Fq 'podeVincularBanco=()=>admin()' js/payables-cockpit-controls.js
+          grep -Fq 'contaBancariaIdContasPagar' js/payables-contracts.js
+          grep -Fq 'contratoContaBancariaAp' js/payables-contracts.js
+          grep -Fq 'contaBancariaId:x.c.contaBancariaIdContasPagar' js/payables-contracts.js
+          grep -Fq 'independente do Fluxo de Caixa' js/payables-cockpit-controls.js
           grep -Fq 'import "./js/payables-cockpit-ui.js"' app.js
           grep -Fq 'import "./js/payables-cockpit-controls.js"' app.js
           test -s preview/contas-pagar-cockpit-v2/index.html
