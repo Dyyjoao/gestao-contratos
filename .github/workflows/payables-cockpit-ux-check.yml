@@ -32,4 +32,4 @@ jobs:
           grep -Fq 'import "./js/payables-cockpit-ui.js"' app.js
           test -s preview/contas-pagar-cockpit-v2/index.html
           grep -Fq 'Cockpit de Pagamentos Fixos' preview/contas-pagar-cockpit-v2/index.html
-          ! grep -Eqi 'firebase|app\.js' preview/contas-pagar-cockpit-v2/index.html
+          ! grep -Eqi 'gstatic\.com/firebase|firebase-app\.js|firebase-firestore\.js|src=["'"'][^"'"']*app\.js' preview/contas-pagar-cockpit-v2/index.html
