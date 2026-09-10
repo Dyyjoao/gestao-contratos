@@ -22,6 +22,7 @@ import "./js/account-dre-classification-ui.js";
 import "./js/dre-dual-view.js";
 import "./js/dre-view-navigation.js";
 import "./js/planning-dre-totalizers.js";
+import "./js/planning-account-coverage.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js";
 import "./js/governance.js";
