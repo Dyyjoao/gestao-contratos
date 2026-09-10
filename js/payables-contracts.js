@@ -22,7 +22,7 @@ const vigente=(c,a,m0)=>{const alvo=a*12+m0,ini=indiceMes(c.inicio),fim=indiceMe
 const addMeses=(a,m0,q)=>{const d=new Date(Date.UTC(a,m0+q,1));return{ano:d.getUTCFullYear(),mes0:d.getUTCMonth()}};
 function dataVencimento(a,m0,dia){const ultimo=new Date(Date.UTC(a,m0+1,0)).getUTCDate();return`${a}-${String(m0+1).padStart(2,"0")}-${String(Math.min(Math.max(1,dia),ultimo)).padStart(2,"0")}`}
 function docId(cId,competencia){return`ctr_ap_${idSeguro(cId)}_${String(competencia).replace("-","")}`}
-function ativo(c){return c?.status==="ativo"&&c?.contasPagarAtivo===true&&n(c.valorMensal)>0&&n(c.diaVencimento)>=1&&n(c.diaVencimento)<=31&&!!c.contaBancariaIdContasPagar}
+function ativo(c){return c?.status==="ativo"&&c?.contasPagarAtivo===true&&n(c.valorMensal)>0&&n(c.diaVencimento)>=1&&n(c.diaVencimento)<=31}
 
 function montarIntegracao(){
   if(document.getElementById("contratoContasPagarAtivo"))return true;
