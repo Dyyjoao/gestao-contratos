@@ -13,6 +13,7 @@ import "./js/payables.js";
 import "./js/payables-contracts.js";
 import "./js/payables-desk.js";
 import "./js/payables-nav.js";
+import "./js/payables-cockpit-ui.js";
 import "./js/account-reduced-code-ui.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js";
