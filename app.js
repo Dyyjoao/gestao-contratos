@@ -1,7 +1,9 @@
 import "./js/core.js";
 import "./js/company-context.js";
 import "./js/fpa-style.js";
+import "./js/accounts-payable.js";
 import "./js/my-desk.js";
+import "./js/accounts-payable-desk.js";
 import "./js/my-desk-home.js";
 import "./js/companies.js";
 import "./js/users.js";
