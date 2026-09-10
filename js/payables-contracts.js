@@ -51,7 +51,7 @@ async function atualizarCache(){try{contratosCache=await listarDocumentos("contr
 async function sincronizarEmpresa(empresaId){
   if(!empresaId||!podeConfigurar())return{alterados:0};
   const [contratos,contas]=await Promise.all([listarDocumentosEmpresa("contratos",empresaId),listarDocumentosEmpresa(COLECAO,empresaId)]);
-  const agora=new Date(),inicio={ano:agora.getFullYear(),mes0:agora.getMonth()},existentes=contas.filter(x=>x.origem==="contrato"&&x.origemContratoId),map=new Map(existentes.map(x=>[`${x.origemContratoId}|${x.competencia}`,x])),desejados=new Map();
+  const agora=new Date(),inicio={ano:agora.getFullYear(),mes0:agora.getMonth()},inicioComp=comp(agora.getFullYear(),agora.getMonth()),existentes=contas.filter(x=>x.origem==="contrato"&&x.origemContratoId),map=new Map(existentes.map(x=>[`${x.origemContratoId}|${x.competencia}`,x])),desejados=new Map();
   for(const c of contratos){
     if(!ativo(c))continue;
     for(let q=0;q<=HORIZONTE_MESES;q++){
@@ -68,7 +68,7 @@ async function sincronizarEmpresa(empresaId){
     if(!ant){payload.criadoPor=state.usuario?.id||"";payload.criadoEm=serverTimestamp()}
     await setDoc(doc(db,COLECAO,ant?.id||docId(x.c.id,x.competencia)),payload,{merge:true});alterados++;
   }
-  for(const ant of existentes){const k=`${ant.origemContratoId}|${ant.competencia}`;if(desejados.has(k)||["pago","estornado","cancelado"].includes(ant.status))continue;await setDoc(doc(db,COLECAO,ant.id),{status:"cancelado",canceladoAutomatico:true,motivoCancelamento:"Contrato deixou de gerar esta obrigação.",atualizadoEm:serverTimestamp()},{merge:true});alterados++}
+  for(const ant of existentes){const k=`${ant.origemContratoId}|${ant.competencia}`;if(String(ant.competencia||"")<inicioComp)continue;if(desejados.has(k)||["pago","estornado","cancelado"].includes(ant.status))continue;await setDoc(doc(db,COLECAO,ant.id),{status:"cancelado",canceladoAutomatico:true,motivoCancelamento:"Contrato deixou de gerar esta obrigação.",atualizadoEm:serverTimestamp()},{merge:true});alterados++}
   if(alterados)emitirAlteracao("contasPagar");return{alterados};
 }
 async function sincronizarSelecionadas(){const ids=[...new Set(empresasSelecionadasIds().filter(Boolean))];for(const id of ids)await sincronizarEmpresa(id)}
