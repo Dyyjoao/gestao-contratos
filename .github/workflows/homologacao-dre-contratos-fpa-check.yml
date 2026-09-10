@@ -54,6 +54,9 @@ jobs:
         run: |
           set -e
           grep -Fq 'valorContratoNoMes' js/payables-contracts.js
+          grep -Fq 'snapshotReajusteContrato' js/payables-contracts.js
+          grep -Fq 'inicioComp' js/payables-contracts.js
+          grep -Fq 'String(ant.competencia||"")<inicioComp' js/payables-contracts.js
           grep -Fq 'valoresContratoNoAno' js/contract-driver-sync.js
           grep -Fq 'snapshotReajusteContrato' js/contract-driver-sync.js
           grep -Fq 'contaLancavelResultado' js/contract-driver-sync.js
