@@ -5,6 +5,7 @@ const MODULO="contasPagar";
 const podeCadastrar=()=>admin()||permite(MODULO,"cadastrar");
 let filtroInicialAplicado=false;
 
+const texto=(el,valor)=>{if(el&&el.textContent!==valor)el.textContent=valor};
 const addDias=(iso,dias)=>{
   const [a,m,d]=String(iso||"").split("-").map(Number);
   const x=new Date(Date.UTC(a,m-1,d));
@@ -19,10 +20,10 @@ const addMeses=(iso,meses)=>{
   return x.toISOString().slice(0,10);
 };
 
-function setTextoPorFor(id,texto){
+function setTextoPorFor(id,valor){
   const input=document.getElementById(id);
   const label=input?.closest(".campo")?.querySelector(`label[for="${id}"]`);
-  if(label)label.textContent=texto;
+  texto(label,valor);
 }
 
 function dispararFiltro(){
@@ -48,35 +49,26 @@ function aplicarFiltro(tipo){
 function garantirAcoes(){
   const box=document.querySelector("#pagina-contas-pagar .ap-head-actions");
   if(!box||document.getElementById("apCockpitSemana"))return;
-  const todos=document.createElement("button");
-  todos.id="apCockpitTodos";
-  todos.className="btn-secundario";
-  todos.type="button";
-  todos.textContent="Todos pendentes";
-  todos.addEventListener("click",()=>aplicarFiltro("todos"));
-  const venc=document.createElement("button");
-  venc.id="apCockpitVencidos";
-  venc.className="btn-secundario";
-  venc.type="button";
-  venc.textContent="Vencidos";
-  venc.addEventListener("click",()=>aplicarFiltro("vencidos"));
-  const semana=document.createElement("button");
-  semana.id="apCockpitSemana";
-  semana.className="btn-secundario";
-  semana.type="button";
-  semana.textContent="Radar 7 dias";
-  semana.addEventListener("click",()=>aplicarFiltro("semana"));
+  const criar=(id,rotulo,tipo)=>{
+    const b=document.createElement("button");
+    b.id=id;b.className="btn-secundario";b.type="button";b.textContent=rotulo;
+    b.addEventListener("click",()=>aplicarFiltro(tipo));
+    return b;
+  };
   const atualizar=document.getElementById("btnAtualizarContasPagar");
-  if(atualizar){box.insertBefore(todos,atualizar);box.insertBefore(venc,atualizar);box.insertBefore(semana,atualizar)}
+  if(!atualizar)return;
+  box.insertBefore(criar("apCockpitTodos","Todos pendentes","todos"),atualizar);
+  box.insertBefore(criar("apCockpitVencidos","Vencidos","vencidos"),atualizar);
+  box.insertBefore(criar("apCockpitSemana","Radar 7 dias","semana"),atualizar);
 }
 
 function simplificarFormulario(){
   const box=document.getElementById("formContaPagarContainer");
   if(!box)return;
   const titulo=document.getElementById("tituloContaPagar");
-  if(titulo&&titulo.textContent==="Nova conta")titulo.textContent="Novo compromisso fixo";
-  const intro=box.querySelector(".form-card-titulo p");
-  if(intro)intro.textContent="Cadastre um pagamento recorrente ou pontual que precisa entrar no seu radar semanal.";
+  if(titulo?.textContent==="Nova conta")texto(titulo,"Novo compromisso fixo");
+  if(titulo?.textContent==="Editar conta")texto(titulo,"Ajustar compromisso");
+  texto(box.querySelector(".form-card-titulo p"),"Cadastre um pagamento recorrente ou pontual que precisa entrar no seu radar semanal.");
   setTextoPorFor("apFornecedor","Fornecedor / compromisso");
   setTextoPorFor("apVencimento","Próximo vencimento");
   setTextoPorFor("apValor","Valor previsto");
@@ -85,47 +77,39 @@ function simplificarFormulario(){
   ["apDocumento","apCategoria"].forEach(id=>document.getElementById(id)?.closest(".campo")?.classList.add("ap-campo-secundario"));
   const rec=document.getElementById("apRecorrente");
   const recLabel=rec?.closest("label");
-  const strong=recLabel?.querySelector("strong");
-  const small=recLabel?.querySelector("small");
-  if(strong)strong.textContent="Pagamento fixo mensal";
-  if(small)small.textContent="Mantém o compromisso no radar mês a mês. Você pode desmarcar para um vencimento pontual.";
+  texto(recLabel?.querySelector("strong"),"Pagamento fixo mensal");
+  texto(recLabel?.querySelector("small"),"Mantém o compromisso no radar mês a mês. Desmarque apenas para um vencimento pontual.");
 }
 
-function prepararNovoCompromisso(){
-  setTimeout(()=>{
-    const box=document.getElementById("formContaPagarContainer");
-    if(!box||box.classList.contains("hidden"))return;
-    const titulo=document.getElementById("tituloContaPagar");
-    if(titulo?.textContent?.toLowerCase().includes("editar"))return;
-    if(titulo)titulo.textContent="Novo compromisso fixo";
-    const rec=document.getElementById("apRecorrente");
-    const ate=document.getElementById("apRecorrenteAte");
-    const venc=document.getElementById("apVencimento");
-    if(rec&&!rec.disabled){rec.checked=true;rec.dispatchEvent(new Event("change",{bubbles:true}))}
-    if(ate&&!ate.value){const base=venc?.value||hojeIso();ate.value=addMeses(base,18)}
-  },30);
+function prepararNovoCompromisso(tentativa=0){
+  const box=document.getElementById("formContaPagarContainer");
+  if((!box||box.classList.contains("hidden"))&&tentativa<12){setTimeout(()=>prepararNovoCompromisso(tentativa+1),80);return}
+  if(!box||box.classList.contains("hidden"))return;
+  const titulo=document.getElementById("tituloContaPagar");
+  if(titulo?.textContent?.toLowerCase().includes("ajustar")||titulo?.textContent?.toLowerCase().includes("editar"))return;
+  texto(titulo,"Novo compromisso fixo");
+  const rec=document.getElementById("apRecorrente");
+  const ate=document.getElementById("apRecorrenteAte");
+  const venc=document.getElementById("apVencimento");
+  if(rec&&!rec.disabled&&!rec.checked){rec.checked=true;rec.dispatchEvent(new Event("change",{bubbles:true}))}
+  if(ate&&!ate.value){const base=venc?.value||hojeIso();ate.value=addMeses(base,18)}
 }
 
 function renomearAcoesLista(){
-  document.querySelectorAll("#pagina-contas-pagar [data-ap-pagar]").forEach(b=>b.textContent="Marcar pago");
-  document.querySelectorAll("#pagina-contas-pagar [data-ap-editar]").forEach(b=>b.textContent="Ajustar");
+  document.querySelectorAll("#pagina-contas-pagar [data-ap-pagar]").forEach(b=>texto(b,"Marcar pago"));
+  document.querySelectorAll("#pagina-contas-pagar [data-ap-editar]").forEach(b=>texto(b,"Ajustar"));
 }
 
 function aplicarLayout(){
   const p=document.getElementById("pagina-contas-pagar");
   if(!p)return false;
-  const eyebrow=p.querySelector(".pagina-cabecalho .eyebrow");
-  const h2=p.querySelector(".pagina-cabecalho h2");
-  const desc=p.querySelector(".pagina-cabecalho p");
-  if(eyebrow)eyebrow.textContent="RADAR SEMANAL";
-  if(h2)h2.textContent="Cockpit de Pagamentos Fixos";
-  if(desc)desc.textContent="Controle de vencimentos e pagamentos recorrentes para orientar sua semana. Não é um módulo contábil e não alimenta DRE, Budget ou Forecast.";
+  texto(p.querySelector(".pagina-cabecalho .eyebrow"),"RADAR SEMANAL");
+  texto(p.querySelector(".pagina-cabecalho h2"),"Cockpit de Pagamentos Fixos");
+  texto(p.querySelector(".pagina-cabecalho p"),"Controle de vencimentos e pagamentos recorrentes para orientar sua semana. Não é um módulo contábil e não alimenta DRE, Budget ou Forecast.");
   const novo=document.getElementById("btnNovaContaPagar");
-  if(novo){novo.textContent="+ Novo compromisso fixo";novo.classList.toggle("hidden",!podeCadastrar())}
-  const atualizar=document.getElementById("btnAtualizarContasPagar");
-  if(atualizar)atualizar.textContent="Atualizar radar";
-  const listaTitulo=p.querySelector(".lista-card .lista-cabecalho h3");
-  if(listaTitulo)listaTitulo.textContent="Pendências e vencimentos";
+  if(novo){texto(novo,"+ Novo compromisso fixo");novo.classList.toggle("hidden",!podeCadastrar())}
+  texto(document.getElementById("btnAtualizarContasPagar"),"Atualizar radar");
+  texto(p.querySelector(".lista-card .lista-cabecalho h3"),"Pendências e vencimentos");
   simplificarFormulario();
   garantirAcoes();
   renomearAcoesLista();
@@ -166,17 +150,11 @@ function instalarCss(){
   document.head.appendChild(s);
 }
 
-installCss:
 instalarCss();
-
-const obs=new MutationObserver(()=>{
-  if(aplicarLayout())renomearAcoesLista();
-});
+const obs=new MutationObserver(()=>{if(aplicarLayout())renomearAcoesLista()});
 obs.observe(document.body,{childList:true,subtree:true});
 
-document.addEventListener("click",e=>{
-  if(e.target?.closest?.("#btnNovaContaPagar"))prepararNovoCompromisso();
-},true);
+document.addEventListener("click",e=>{if(e.target?.closest?.("#btnNovaContaPagar"))setTimeout(()=>prepararNovoCompromisso(),0)},true);
 window.addEventListener("sig:ready",()=>setTimeout(aplicarLayout,0));
 window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="contas-pagar")setTimeout(aplicarLayout,0)});
 window.addEventListener("sig:data-changed",e=>{if(e.detail?.modulo===MODULO)setTimeout(renomearAcoesLista,80)});
