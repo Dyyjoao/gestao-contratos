@@ -62,6 +62,8 @@ jobs:
           grep -Fq 'detalhesAgrupados' js/dre-dual-view.js
           grep -Fq 'Conta analítica' js/dre-dual-view.js
           grep -Fq 'Totalizador automático · não lançável' js/dre-dual-view.js
+          grep -Fq 'mutacaoRelevante' js/dre-dual-view.js
+          grep -Fq 'closest?.("#dreClassResumo")' js/dre-dual-view.js
 
           # A mesma base alimenta DRE, Budget e Forecast.
           grep -Fq 'pagina-ctrl-budget-v7' js/planning-dre-totalizers.js
