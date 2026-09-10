@@ -91,7 +91,7 @@ async function reconciliarPlanejamentoEmpresa(empresaId,cenario,{versaoForcada="
 function dataMensal(ano,mes1,dia){const ultimo=new Date(Date.UTC(ano,mes1,0)).getUTCDate();return`${ano}-${String(mes1).padStart(2,"0")}-${String(Math.min(Math.max(1,dia),ultimo)).padStart(2,"0")}`}
 function addMeses(ano,mes0,q){const d=new Date(Date.UTC(ano,mes0+q,1));return{ano:d.getUTCFullYear(),mes0:d.getUTCMonth()}}
 function contaNaturezaCaixa(conta){const cl=conta?normalizarClassificacaoDre(conta):null;return cl?.tipo==="receita"?"entrada":"saida"}
-function contaClasseCaixa(conta){const linha=conta?normalizarClassificacaoDre(conta).linha:"";if(linha==="resultado_financeiro")return"financeiro";if(linha==="tributos_lucro")return"tributos";if(linha==="pessoal")return"pessoal";return"operacional"}
+function contaClasseCaixa(conta){const linha=conta?normalizarClassificacaoDre(conta).linha:"";if(linha==="financeiro")return"financeiro";if(linha==="tributos_lucro")return"tributos";if(linha==="pessoal")return"pessoal";return"operacional"}
 function caixaId(contratoId,comp){return`ctr_cash_${idSeguro(contratoId)}_${String(comp).replace("-","")}`}
 
 async function reconciliarCaixaEmpresa(empresaId){
@@ -140,8 +140,9 @@ function instalarValidacao(){
 }
 function decorarMemorias(){
   document.querySelectorAll('tr[data-plan-detail]').forEach(tr=>{
+    if(tr.dataset.contractDriverReadonly==="1")return;
     const desc=String(tr.querySelector("[data-plan-desc]")?.value||"");if(!desc.startsWith("Contrato ·"))return;
-    tr.dataset.contractDriverReadonly="1";tr.querySelectorAll("input,button").forEach(el=>el.disabled=true);const cells=[...tr.cells];if(cells.length>=2)cells[cells.length-2].textContent="Contrato automático";if(cells.length)cells[cells.length-1].innerHTML="🔒";
+    tr.dataset.contractDriverReadonly="1";tr.querySelectorAll("input,button").forEach(el=>el.disabled=true);const cells=[...tr.cells];if(cells.length>=2&&cells[cells.length-2].textContent!=="Contrato automático")cells[cells.length-2].textContent="Contrato automático";if(cells.length&&cells[cells.length-1].textContent!=="🔒")cells[cells.length-1].textContent="🔒";
   });
 }
 function instalarObservador(){const o=new MutationObserver(decorarMemorias);o.observe(document.body,{childList:true,subtree:true});decorarMemorias()}
