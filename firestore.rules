@@ -141,6 +141,16 @@ service cloud.firestore {
     function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
     function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
 
+    function contasPagarVisualizar() {
+      return permissao('contasPagar','visualizar') ||
+        permissao('contasPagar','cadastrar') ||
+        permissao('contasPagar','editar') ||
+        permissao('contasPagar','baixar');
+    }
+    function contasPagarCadastrar() { return permissao('contasPagar','cadastrar') || permissao('contasPagar','editar'); }
+    function contasPagarEditar() { return permissao('contasPagar','editar'); }
+    function contasPagarBaixar() { return permissao('contasPagar','baixar') || contasPagarEditar(); }
+
     function frotaVisualizar() {
       return permissao('frota','visualizar') || permissao('frota','cadastrar') ||
         permissao('frota','editar') || permissao('frota','manutencao') || permissao('frota','obrigacoes');
@@ -480,6 +490,33 @@ service cloud.firestore {
       allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
       allow create: if caixaFixos() && documentoAcessivel(request.resource.data);
       allow update: if caixaFixos() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /contasPagar/{id} {
+      allow read: if contasPagarVisualizar() && documentoAcessivel(resource.data);
+      allow create: if contasPagarCadastrar() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'aberto';
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          administrador() ||
+          (resource.data.status == 'aberto' && request.resource.data.status == 'pago' &&
+            contasPagarBaixar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','dataPagamento','pagoPor','atualizadoEm'
+            ])) ||
+          (resource.data.status == 'aberto' && request.resource.data.status == 'aberto' &&
+            resource.data.origem != 'contrato' && contasPagarEditar() &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'fornecedor','documento','descricao','categoria','valor','responsavel','observacao','vencimento','origem','atualizadoEm'
+            ])) ||
+          (resource.data.origem == 'contrato' && contasPagarCadastrar() &&
+            request.resource.data.status in ['aberto','cancelado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'fornecedor','descricao','documento','categoria','valor','vencimento','responsavel','observacao',
+              'origem','origemContratoId','contratoReferencia','competencia','status','canceladoAutomatico','motivoCancelamento','atualizadoEm'
+            ]))
+        );
       allow delete: if false;
     }
 
