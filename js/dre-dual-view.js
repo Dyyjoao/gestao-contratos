@@ -76,7 +76,13 @@ async function render(){
   }catch(e){console.error("DRE dual view",e);const t=document.getElementById("dreClassTabela");if(t)t.innerHTML='<tbody><tr><td>Não foi possível calcular a DRE. Atualize os dados e tente novamente.</td></tr></tbody>'}finally{busy=false}
 }
 function agendar(){clearTimeout(timer);timer=setTimeout(render,140)}
-function observar(){if(observer)return;observer=new MutationObserver(agendar);observer.observe(document.body,{childList:true,subtree:true});document.addEventListener("change",e=>{if(["dreV6Cenario","dreV6Centro","dreV6Visao","dreV6Conteudo"].includes(e.target?.id))agendar()},true);document.addEventListener("click",e=>{if(e.target?.id==="btnAtualizarDreV6")setTimeout(render,250)},true)}
+function mutacaoRelevante(m){
+  const alvo=m.target?.nodeType===1?m.target:m.target?.parentElement;
+  if(alvo?.closest?.("#dreClassResumo"))return false;
+  if(alvo?.closest?.("#pagina-ctrl-dre-v6"))return true;
+  return [...(m.addedNodes||[])].some(n=>n.nodeType===1&&(n.id==="pagina-ctrl-dre-v6"||n.querySelector?.("#pagina-ctrl-dre-v6")));
+}
+function observar(){if(observer)return;observer=new MutationObserver(ms=>{if(ms.some(mutacaoRelevante))agendar()});observer.observe(document.body,{childList:true,subtree:true});document.addEventListener("change",e=>{if(["dreV6Cenario","dreV6Centro","dreV6Visao","dreV6Conteudo"].includes(e.target?.id))agendar()},true);document.addEventListener("click",e=>{if(e.target?.id==="btnAtualizarDreV6")setTimeout(render,250)},true)}
 window.addEventListener("sig:ready",()=>{observar();setTimeout(render,200)});
 window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="ctrl-dre-v6")setTimeout(render,250)});
 window.addEventListener("sig:empresa-changed",agendar);window.addEventListener("sig:periodo-changed",agendar);window.addEventListener("sig:data-changed",agendar);
