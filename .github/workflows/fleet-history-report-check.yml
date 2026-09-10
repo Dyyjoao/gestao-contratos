@@ -1,0 +1,42 @@
+name: SIG Fleet History Report Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - 'js/fleet-history-report.js'
+      - 'app.js'
+      - '.github/workflows/fleet-history-report-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Fleet history report
+        run: |
+          set -e
+          node --check js/fleet-history-report.js
+
+          grep -Fq 'Relatório / Histórico' js/fleet-history-report.js
+          grep -Fq 'Histórico do veículo no período' js/fleet-history-report.js
+          grep -Fq 'listarDocumentos("veiculos")' js/fleet-history-report.js
+          grep -Fq 'listarDocumentos("manutencoesFrota")' js/fleet-history-report.js
+          grep -Fq 'Array.isArray(v?.obrigacoes)' js/fleet-history-report.js
+          grep -Fq 'Multa / Infração' js/fleet-history-report.js
+          grep -Fq 'IPVA' js/fleet-history-report.js
+          grep -Fq 'Licenciamento' js/fleet-history-report.js
+          grep -Fq 'Seguro' js/fleet-history-report.js
+          grep -Fq 'Recall' js/fleet-history-report.js
+          grep -Fq 'histFrotaInicio' js/fleet-history-report.js
+          grep -Fq 'histFrotaFim' js/fleet-history-report.js
+          grep -Fq 'histFrotaVeiculo' js/fleet-history-report.js
+          grep -Fq 'Incluir estornados/cancelados' js/fleet-history-report.js
+          grep -Fq 'Exportar CSV' js/fleet-history-report.js
+          grep -Fq 'Imprimir / PDF' js/fleet-history-report.js
+          grep -Fq 'Custo realizado' js/fleet-history-report.js
+          grep -Fq 'import "./js/fleet-history-report.js"' app.js

@@ -1,0 +1,77 @@
+import { listarDocumentos, atualizarDocumento, empresaUnicaSelecionadaId, emitirAlteracao } from "./shared.js";
+import { TIPOS_DRE, LINHAS_DRE_GERENCIAL, CATEGORIAS_CPC51, normalizarClassificacaoDre, dadosClassificacaoPersistencia, contaLancavelResultado } from "./dre-classification.js";
+import { raizConta } from "./account-mask.js";
+
+let contas=[];
+let observer=null;
+let busy=false;
+let timer=null;
+let ultimoFormKey="";
+let salvandoClassificacao=false;
+
+const $=id=>document.getElementById(id);
+const optionMap=o=>Object.entries(o).map(([v,n])=>`<option value="${v}">${n}</option>`).join("");
+
+function css(){if($("dre-classificacao-css"))return;const s=document.createElement("style");s.id="dre-classificacao-css";s.textContent=`
+.dre-classificacao-box{grid-column:1/-1;border:1px solid #d9e2e8;border-radius:10px;padding:12px;background:#f8fafb;margin-top:4px}.dre-classificacao-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}.dre-classificacao-head strong{font-size:12px;color:#0b1f33}.dre-classificacao-head small{display:block;color:#667085;margin-top:3px}.dre-classificacao-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.dre-classificacao-chip{border-radius:999px;padding:4px 8px;font-size:9px;background:#eef4ff;color:#3448a8;white-space:nowrap}.dre-classificacao-chip.sugerida{background:#fff3e8;color:#9a4e00}.dre-classificacao-note{grid-column:1/-1;color:#667085;font-size:9px}.dre-classificacao-box.hidden{display:none!important}@media(max-width:800px){.dre-classificacao-grid{grid-template-columns:1fr}}
+`;document.head.appendChild(s)}
+
+function instalarCampos(){
+  const form=$("formContaV6"),grid=form?.querySelector(".form-grid");if(!form||!grid)return false;
+  if(!$("contaV6ClassificacaoBox")){
+    grid.insertAdjacentHTML("beforeend",`<div id="contaV6ClassificacaoBox" class="dre-classificacao-box hidden"><div class="dre-classificacao-head"><div><strong>Classificação da DRE</strong><small>Metadados independentes do código contábil. O mesmo lançamento alimenta a DRE gerencial e a societária.</small></div><span id="contaV6ClassificacaoStatus" class="dre-classificacao-chip">—</span></div><div class="dre-classificacao-grid"><div class="campo"><label for="contaV6TipoDre">Tipo</label><select id="contaV6TipoDre">${optionMap(TIPOS_DRE)}</select></div><div class="campo"><label for="contaV6LinhaDre">Linha da DRE gerencial</label><select id="contaV6LinhaDre">${optionMap(LINHAS_DRE_GERENCIAL)}</select></div><div class="campo"><label for="contaV6CategoriaCpc51">Categoria CPC 51</label><select id="contaV6CategoriaCpc51">${optionMap(CATEGORIAS_CPC51)}</select></div><div class="dre-classificacao-note"><strong>Totalizadores não são contas.</strong> Receita Líquida, Lucro Bruto, Margem de Contribuição, EBITDA, Resultado Operacional e demais subtotais são calculados automaticamente e nunca recebem lançamento.</div></div></div>`);
+    ["contaV6TipoDre","contaV6LinhaDre","contaV6CategoriaCpc51"].forEach(id=>$(id)?.addEventListener("change",()=>{const st=$("contaV6ClassificacaoStatus");if(st){st.textContent="Classificação alterada";st.classList.remove("sugerida")}}));
+    form.addEventListener("submit",capturarClassificacao,true);
+  }
+  return true;
+}
+
+function chaveForm(){return`${empresaUnicaSelecionadaId()}|${$("contaV6Codigo")?.value||""}|${$("contaV6Estrutura")?.value||""}`}
+function contaForm(){const emp=empresaUnicaSelecionadaId(),codigo=String($("contaV6Codigo")?.value||"").trim();return contas.find(c=>c.empresaId===emp&&String(c.codigo||"").trim()===codigo)||null}
+function formEhAnaliticaResultado(){const est=String($("contaV6Estrutura")?.value||"").toLowerCase(),r=String($("contaV6Raiz")?.value||"").trim().charAt(0);return est.includes("anal")&&(r==="3"||r==="4")}
+
+function contaSugerida(){
+  const r=String($("contaV6Raiz")?.value||"").trim().charAt(0),nat=$("contaV6Natureza")?.value||"";
+  return{grupoRaiz:r,tipoEstrutura:"analitica",naturezaContabil:nat,grupoDre:r==="3"?(nat==="devedora"?"deducoes":"receita"):"despesas"};
+}
+
+function preencher(force=false){
+  if(!instalarCampos())return;const box=$("contaV6ClassificacaoBox");if(!box)return;
+  const mostra=formEhAnaliticaResultado();box.classList.toggle("hidden",!mostra);if(!mostra){ultimoFormKey="";return}
+  const key=chaveForm();if(!force&&key===ultimoFormKey)return;ultimoFormKey=key;
+  const c=contaForm(),cl=normalizarClassificacaoDre(c||contaSugerida());
+  $("contaV6TipoDre").value=cl.tipo;$("contaV6LinhaDre").value=cl.linha;$("contaV6CategoriaCpc51").value=cl.categoriaCpc51;
+  const st=$("contaV6ClassificacaoStatus");if(st){st.textContent=cl.explicita?"Classificação gravada":"Sugestão de compatibilidade";st.classList.toggle("sugerida",!cl.explicita)}
+}
+
+async function carregar(){if(busy)return;busy=true;try{contas=await listarDocumentos("planoContasGerencial");preencher(true)}catch(e){console.warn("Classificação DRE: Plano de Contas indisponível",e)}finally{busy=false}}
+
+function capturarClassificacao(ev){
+  if(!formEhAnaliticaResultado()||salvandoClassificacao)return;
+  const empresaId=empresaUnicaSelecionadaId(),codigo=String($("contaV6Codigo")?.value||"").trim();if(!empresaId||!codigo)return;
+  let dados;try{dados=dadosClassificacaoPersistencia({tipo:$("contaV6TipoDre")?.value,linha:$("contaV6LinhaDre")?.value,categoriaCpc51:$("contaV6CategoriaCpc51")?.value})}catch(e){ev.preventDefault();ev.stopImmediatePropagation();alert("Revise a classificação da DRE antes de salvar a conta.");return}
+  aguardarSalvarConta({empresaId,codigo,dados,tentativa:0});
+}
+
+function aguardarSalvarConta(ctx){
+  setTimeout(async()=>{
+    const box=$("formContaV6Box");
+    if(box&&!box.classList.contains("hidden")&&ctx.tentativa<16)return aguardarSalvarConta({...ctx,tentativa:ctx.tentativa+1});
+    try{
+      const arr=await listarDocumentos("planoContasGerencial"),c=arr.find(x=>x.empresaId===ctx.empresaId&&String(x.codigo||"").trim()===ctx.codigo);
+      if(!c){if(ctx.tentativa<20)return aguardarSalvarConta({...ctx,tentativa:ctx.tentativa+1});throw new Error("conta-nao-localizada")}
+      const atual=normalizarClassificacaoDre(c),igual=atual.explicita&&c.tipoDre===ctx.dados.tipoDre&&c.linhaDreGerencial===ctx.dados.linhaDreGerencial&&c.categoriaCpc51===ctx.dados.categoriaCpc51&&c.grupoDre===ctx.dados.grupoDre;
+      if(!igual){salvandoClassificacao=true;await atualizarDocumento("planoContasGerencial",c.id,ctx.dados);emitirAlteracao("planoContas");emitirAlteracao("controladoria")}
+      contas=await listarDocumentos("planoContasGerencial");ultimoFormKey="";preencher(true);
+    }catch(e){console.error("Classificação DRE: falha ao persistir",e);alert("A conta foi salva, mas a classificação da DRE não pôde ser gravada. Abra a conta e tente salvar novamente.")}finally{salvandoClassificacao=false}
+  },180);
+}
+
+function agendar(){clearTimeout(timer);timer=setTimeout(()=>preencher(false),60)}
+function instalar(){if(observer)return;css();observer=new MutationObserver(agendar);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["class","value"]});document.addEventListener("click",e=>{if(e.target.closest?.("[data-v6-edit],[data-v6-add-ana]")){ultimoFormKey="";setTimeout(()=>preencher(true),80)}} ,true);carregar();setTimeout(()=>preencher(true),80)}
+
+window.addEventListener("sig:ready",()=>{instalar();carregar()});
+window.addEventListener("sig:page",e=>{if(String(e.detail?.pagina||"").includes("plano")){ultimoFormKey="";carregar();setTimeout(()=>preencher(true),80)}});
+window.addEventListener("sig:empresa-changed",()=>{ultimoFormKey="";carregar()});
+window.addEventListener("sig:data-changed",e=>{if(["controladoria","planoContas","plano"].includes(e.detail?.modulo))carregar()});
+instalar();

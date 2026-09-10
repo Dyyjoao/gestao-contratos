@@ -1,0 +1,75 @@
+name: SIG DRE Classification Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - 'js/dre-classification.js'
+      - 'js/account-dre-classification-ui.js'
+      - 'js/dre-dual-view.js'
+      - 'js/planning-dre-totalizers.js'
+      - 'app.js'
+      - '.github/workflows/dre-classification-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate DRE classification and subtotal contract
+        run: |
+          set -e
+          node --check js/dre-classification.js
+          node --check js/account-dre-classification-ui.js
+          node --check js/dre-dual-view.js
+          node --check js/planning-dre-totalizers.js
+
+          # Classificação da conta: independente do código, manual e persistida.
+          grep -Fq 'tipoDre' js/dre-classification.js
+          grep -Fq 'linhaDreGerencial' js/dre-classification.js
+          grep -Fq 'categoriaCpc51' js/dre-classification.js
+          grep -Fq 'Categoria CPC 51' js/account-dre-classification-ui.js
+          grep -Fq 'dadosClassificacaoPersistencia' js/account-dre-classification-ui.js
+          grep -Fq 'atualizarDocumento("planoContasGerencial"' js/account-dre-classification-ui.js
+
+          # Cinco categorias CPC 51.
+          grep -Fq 'operacional:"Operacional"' js/dre-classification.js
+          grep -Fq 'investimento:"Investimento"' js/dre-classification.js
+          grep -Fq 'financiamento:"Financiamento"' js/dre-classification.js
+          grep -Fq 'tributos_lucro:"Tributos sobre o lucro"' js/dre-classification.js
+          grep -Fq 'operacoes_descontinuadas:"Operações descontinuadas"' js/dre-classification.js
+
+          # Totalizadores gerenciais são calculados, não documentos/contas lançáveis.
+          grep -Fq 'RECEITA OPERACIONAL BRUTA' js/dre-classification.js
+          grep -Fq 'RECEITA OPERACIONAL LÍQUIDA' js/dre-classification.js
+          grep -Fq 'LUCRO OPERACIONAL BRUTO' js/dre-classification.js
+          grep -Fq 'MARGEM DE CONTRIBUIÇÃO' js/dre-classification.js
+          grep -Fq 'EBITDA GERENCIAL' js/dre-classification.js
+          grep -Fq 'RESULTADO OPERACIONAL LÍQUIDO' js/dre-classification.js
+          grep -Fq 'RESULTADO LÍQUIDO' js/dre-classification.js
+          grep -Fq 'Totalizadores não são contas' js/account-dre-classification-ui.js
+          grep -Fq 'não lançável' js/planning-dre-totalizers.js
+
+          # DRE final: duas visões, detalhamento das contas e estrutura do plano opcional.
+          grep -Fq 'Societária · CPC 51' js/dre-dual-view.js
+          grep -Fq 'dreClassDetalhar' js/dre-dual-view.js
+          grep -Fq 'Detalhar contas' js/dre-dual-view.js
+          grep -Fq 'Estrutura do plano' js/dre-dual-view.js
+          grep -Fq 'detalhesAgrupados' js/dre-dual-view.js
+          grep -Fq 'Conta analítica' js/dre-dual-view.js
+          grep -Fq 'Totalizador automático · não lançável' js/dre-dual-view.js
+          grep -Fq 'mutacaoRelevante' js/dre-dual-view.js
+          grep -Fq 'closest?.("#dreClassResumo")' js/dre-dual-view.js
+
+          # A mesma base alimenta DRE, Budget e Forecast.
+          grep -Fq 'pagina-ctrl-budget-v7' js/planning-dre-totalizers.js
+          grep -Fq 'pagina-ctrl-forecast-v5' js/planning-dre-totalizers.js
+          grep -Fq 'agregarClassificacao' js/dre-dual-view.js
+          grep -Fq 'agregarClassificacao' js/planning-dre-totalizers.js
+          grep -Fq 'import "./js/account-dre-classification-ui.js"' app.js
+          grep -Fq 'import "./js/dre-dual-view.js"' app.js
+          grep -Fq 'import "./js/planning-dre-totalizers.js"' app.js
