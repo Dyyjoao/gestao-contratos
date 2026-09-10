@@ -9,6 +9,7 @@ import "./js/profiles.js";
 import "./js/group.js";
 import "./js/contracts.js";
 import "./js/contracts-refresh.js";
+import "./js/contracts-account-filter.js";
 import "./js/payables.js";
 import "./js/payables-contracts.js";
 import "./js/payables-desk.js";
