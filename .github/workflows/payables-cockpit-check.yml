@@ -9,8 +9,10 @@ on:
       - 'js/payables.js'
       - 'js/payables-contracts.js'
       - 'js/payables-desk.js'
+      - 'js/payables-nav.js'
       - 'js/profiles.js'
       - 'app.js'
+      - 'firestore.rules'
       - 'preview/contas-pagar/**'
       - '.github/workflows/payables-cockpit-check.yml'
   pull_request:
@@ -27,12 +29,13 @@ jobs:
           node --check js/payables.js
           node --check js/payables-contracts.js
           node --check js/payables-desk.js
+          node --check js/payables-nav.js
 
           # Módulo independente e persistência própria.
           grep -Fq 'const COLECAO="contasPagar"' js/payables.js
           grep -Fq 'Contas a Pagar' js/payables.js
           grep -Fq 'Não alimenta DRE, Budget ou Forecast' js/payables.js
-          ! grep -Eq 'budgetLinhas|forecastLinhas|realizadoMensal|planejamentoDetalhes' js/payables.js js/payables-contracts.js js/payables-desk.js
+          ! grep -Eq 'budgetLinhas|forecastLinhas|realizadoMensal|planejamentoDetalhes' js/payables.js js/payables-contracts.js js/payables-desk.js js/payables-nav.js
 
           # Cockpit: vencidos, hoje, 7/30 dias, baixa e recorrência.
           grep -Fq 'apKpiVencido' js/payables.js
@@ -55,17 +58,37 @@ jobs:
           grep -Fq 'origemContratoId' js/payables-contracts.js
           grep -Fq 'competencia' js/payables-contracts.js
 
-          # Minha Mesa recebe alertas do cockpit.
+          # Minha Mesa recebe alertas do cockpit e o menu mantém título próprio.
           grep -Fq 'mesaContasPagarCard' js/payables-desk.js
           grep -Fq 'Vencidos' js/payables-desk.js
           grep -Fq 'Próx. 7 dias' js/payables-desk.js
           grep -Fq 'SIG_ABRIR_CONTAS_PAGAR' js/payables-desk.js
+          grep -Fq 'titulo.textContent="Contas a Pagar"' js/payables-nav.js
+
+          # Firestore: permissão própria, escopo por Grupo/Empresa e sem delete físico.
+          grep -Fq 'function contasPagarVisualizar()' firestore.rules
+          grep -Fq 'function contasPagarCadastrar()' firestore.rules
+          grep -Fq 'function contasPagarEditar()' firestore.rules
+          grep -Fq 'function contasPagarBaixar()' firestore.rules
+          grep -Fq 'match /contasPagar/{id}' firestore.rules
+          grep -Fq 'allow read: if contasPagarVisualizar() && documentoAcessivel(resource.data);' firestore.rules
+          grep -Fq "request.resource.data.status == 'aberto'" firestore.rules
+          grep -Fq "resource.data.origem != 'contrato'" firestore.rules
+          grep -Fq "resource.data.origem == 'contrato'" firestore.rules
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('firestore.rules').read_text()
+          bloco=s.split('match /contasPagar/{id}',1)[1].split('match /prestacaoContas/{id}',1)[0]
+          assert 'allow delete: if false;' in bloco
+          assert 'administrador() ||' in bloco
+          PY
 
           # Permissões e carregamento.
           grep -Fq '["contasPagar","Contas a Pagar"' js/profiles.js
           grep -Fq 'import "./js/payables.js"' app.js
           grep -Fq 'import "./js/payables-contracts.js"' app.js
           grep -Fq 'import "./js/payables-desk.js"' app.js
+          grep -Fq 'import "./js/payables-nav.js"' app.js
 
           # Preview é isolado: nada de Firebase nem app real.
           test -s preview/contas-pagar/index.html
