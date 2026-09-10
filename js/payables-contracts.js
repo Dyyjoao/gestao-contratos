@@ -1,6 +1,6 @@
 import { db, state, admin, permite } from "./core.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { listarDocumentos, listarDocumentosEmpresa, atualizarDocumento, grupoAtualId, emitirAlteracao } from "./shared.js";
+import { listarDocumentos, listarDocumentosEmpresa, atualizarDocumento, grupoAtualId, empresasSelecionadasIds, emitirAlteracao } from "./shared.js";
 
 const COLECAO="contasPagar";
 const HORIZONTE_MESES=18;
@@ -49,7 +49,7 @@ async function sincronizarEmpresa(empresaId){
   for(const ant of existentes){const k=`${ant.origemContratoId}|${ant.competencia}`;if(desejados.has(k)||["pago","estornado","cancelado"].includes(ant.status))continue;await setDoc(doc(db,COLECAO,ant.id),{status:"cancelado",canceladoAutomatico:true,motivoCancelamento:"Contrato deixou de gerar esta obrigação.",atualizadoEm:serverTimestamp()},{merge:true});alterados++}
   if(alterados)emitirAlteracao("contasPagar");return{alterados};
 }
-async function sincronizarSelecionadas(){const ids=[...new Set((state.empresasSelecionadasIds||[]).filter(Boolean))];for(const id of ids)await sincronizarEmpresa(id)}
+async function sincronizarSelecionadas(){const ids=[...new Set(empresasSelecionadasIds().filter(Boolean))];for(const id of ids)await sincronizarEmpresa(id)}
 function agendar(fn=sincronizarSelecionadas,ms=180){clearTimeout(timer);timer=setTimeout(()=>{fila=fila.then(fn).catch(e=>console.warn("Contas a Pagar · contratos:",e))},ms)}
 
 function instalarEventos(){
