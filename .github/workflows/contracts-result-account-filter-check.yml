@@ -1,0 +1,28 @@
+name: SIG Contracts Result Account Filter Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+    paths:
+      - 'js/contracts-account-filter.js'
+      - 'app.js'
+      - '.github/workflows/contracts-result-account-filter-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  contract-account-filter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate analytical result account restriction
+        run: |
+          set -e
+          node --check js/contracts-account-filter.js
+          grep -Fq 'contaAnalitica' js/contracts-account-filter.js
+          grep -Fq 'raiz==="3"||raiz==="4"' js/contracts-account-filter.js
+          grep -Fq 'Somente contas analíticas de resultado' js/contracts-account-filter.js
+          grep -Fq 'conta analítica de resultado — Receita (3) ou Despesa (4)' js/contracts-account-filter.js
+          grep -Fq 'import "./js/contracts-account-filter.js"' app.js
