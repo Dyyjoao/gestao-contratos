@@ -1,0 +1,27 @@
+import { $, on, esc, permite, abrirPagina } from "./core.js";
+import { listarDocumentos, moeda, dataBr, nomeEmpresa } from "./shared.js";
+import { projetarContasPagar, hojeLocal, competenciaDeData, addMesesCompetencia, primeiroDiaCompetencia, ultimoDiaCompetencia } from "./accounts-payable-core.js";
+
+let busy=false,timer=null;
+const podeVer=()=>permite("contasPagar","visualizar")||permite("contasPagar","cadastrar")||permite("contasPagar","editar")||permite("contasPagar","baixar");
+function addDias(iso,q){const [a,m,d]=iso.split("-").map(Number),x=new Date(a,m-1,d+q);return`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`}
+
+function montar(){
+  const pag=$("pagina-minhamesa");if(!pag||$("mesaContasPagarCard"))return !!$("mesaContasPagarCard");
+  const card=document.createElement("section");card.id="mesaContasPagarCard";card.className="lista-card mesa-cockpit-card";card.innerHTML=`<div class="lista-cabecalho"><div><span class="eyebrow">COCKPIT · CONTAS A PAGAR</span><h3>Pagamentos que pedem atenção</h3><p id="mesaCpResumo">Vencidos e próximos vencimentos dos compromissos fixos.</p></div><button id="mesaCpAbrir" class="btn-secundario" type="button">Abrir Contas a Pagar</button></div><div class="kpi-grid kpi-grid-3 mesa-cp-kpis"><div class="kpi-card"><span>Vencidos</span><strong id="mesaCpVencidos">—</strong><small id="mesaCpVencidosQtd">—</small></div><div class="kpi-card"><span>Próximos 7 dias</span><strong id="mesaCp7">—</strong><small id="mesaCp7Qtd">—</small></div><div class="kpi-card"><span>Próximos 30 dias</span><strong id="mesaCp30">—</strong><small id="mesaCp30Qtd">—</small></div></div><div id="mesaCpLista" class="mesa-lista"><div class="mesa-empty">Carregando pagamentos...</div></div>`;
+  const grid=pag.querySelector(".mesa-grid");if(grid)pag.insertBefore(card,grid);else pag.appendChild(card);on($("mesaCpAbrir"),"click",()=>abrirPagina("contasPagar"));
+  if(!$("mesa-contas-pagar-css")){const st=document.createElement("style");st.id="mesa-contas-pagar-css";st.textContent=`.mesa-cockpit-card{margin-top:14px;border-top:3px solid #0b1f33}.mesa-cp-kpis{margin:10px 0}.mesa-cp-item{display:grid;grid-template-columns:100px 1fr auto;gap:10px;align-items:center;border:1px solid #e4e7ec;border-radius:10px;padding:9px 11px}.mesa-cp-item.vencido{border-left:4px solid #d92d20}.mesa-cp-item.proximo{border-left:4px solid #f79009}.mesa-cp-item strong{display:block;color:#0b1f33}.mesa-cp-item span{font-size:10px;color:#667085}.mesa-cp-valor{text-align:right;font-weight:850;color:#0b1f33}@media(max-width:700px){.mesa-cp-item{grid-template-columns:80px 1fr}.mesa-cp-valor{grid-column:2;text-align:left}}`;document.head.appendChild(st)}
+  return true;
+}
+
+async function carregar(){
+  if(!podeVer()||busy||!montar())return;const pag=$("pagina-minhamesa");if(!pag||pag.classList.contains("hidden"))return;busy=true;
+  try{
+    const h=hojeLocal(),de=addDias(h,-60),ate=addDias(h,30),tasks=[listarDocumentos("contasPagarFixos"),listarDocumentos("contasPagarBaixas")];if(permite("contratos","visualizar"))tasks.push(listarDocumentos("contratos"));const r=await Promise.all(tasks),itens=projetarContasPagar({fixos:r[0]||[],baixas:r[1]||[],contratos:permite("contratos","visualizar")?(r[2]||[]):[],de,ate,hoje:h}).filter(x=>x.status!=="pago"),d7=addDias(h,7),d30=addDias(h,30),v=itens.filter(x=>x.vencimento<h),p7=itens.filter(x=>x.vencimento>=h&&x.vencimento<=d7),p30=itens.filter(x=>x.vencimento>=h&&x.vencimento<=d30),soma=a=>a.reduce((s,x)=>s+Number(x.valor||0),0);
+    $("mesaCpVencidos").textContent=moeda(soma(v));$("mesaCpVencidosQtd").textContent=`${v.length} compromisso(s)`;$("mesaCp7").textContent=moeda(soma(p7));$("mesaCp7Qtd").textContent=`${p7.length} compromisso(s)`;$("mesaCp30").textContent=moeda(soma(p30));$("mesaCp30Qtd").textContent=`${p30.length} compromisso(s)`;
+    const lista=[...v,...p30].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i).sort((a,b)=>(a.vencimento<h?0:1)-(b.vencimento<h?0:1)||String(a.vencimento).localeCompare(String(b.vencimento))).slice(0,8),box=$("mesaCpLista");$("mesaCpResumo").textContent=v.length?`${v.length} vencido(s) exigem atenção. Próximos vencimentos também aparecem aqui.`:"Sem vencidos. Acompanhe os próximos 30 dias.";
+    box.innerHTML=lista.length?lista.map(x=>`<div class="mesa-cp-item ${x.vencimento<h?"vencido":"proximo"}"><div><strong>${dataBr(x.vencimento)}</strong><span>${x.vencimento<h?"Vencido":"A vencer"}</span></div><div><strong>${esc(x.fornecedor||"Favorecido")}</strong><span>${esc(x.descricao||"")} · ${esc(nomeEmpresa(x.empresaId))}${x.origem==="contrato"?" · Contrato":""}</span></div><div class="mesa-cp-valor">${moeda(x.valor)}</div></div>`).join(""):'<div class="mesa-empty">Nenhum pagamento vencido ou próximo nos próximos 30 dias.</div>';
+  }catch(e){console.warn("Minha Mesa · Contas a Pagar",e);const box=$("mesaCpLista");if(box)box.innerHTML='<div class="mesa-empty">Não foi possível carregar o cockpit de Contas a Pagar.</div>'}finally{busy=false}
+}
+function agendar(){clearTimeout(timer);timer=setTimeout(carregar,120)}
+window.addEventListener("sig:ready",()=>{if(podeVer()){montar();agendar()}});window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="minhamesa")agendar()});window.addEventListener("sig:data-changed",e=>{if(["contasPagar","contratos"].includes(e.detail?.modulo))agendar()});window.addEventListener("sig:empresa-changed",agendar);
