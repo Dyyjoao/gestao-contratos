@@ -1,0 +1,46 @@
+name: SIG Payables Cockpit UX Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+    paths:
+      - 'js/payables-cockpit-ui.js'
+      - 'js/payables-cockpit-controls.js'
+      - 'app.js'
+      - 'preview/contas-pagar-cockpit-v2/**'
+      - '.github/workflows/payables-cockpit-ux-check.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  cockpit-ux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate weekly fixed-payments cockpit
+        run: |
+          set -e
+          node --check js/payables-cockpit-ui.js
+          node --check js/payables-cockpit-controls.js
+          grep -Fq 'Cockpit de Pagamentos Fixos' js/payables-cockpit-ui.js
+          grep -Fq 'Radar 7 dias' js/payables-cockpit-ui.js
+          grep -Fq '+ Novo compromisso fixo' js/payables-cockpit-ui.js
+          grep -Fq 'Pagamento fixo mensal' js/payables-cockpit-ui.js
+          grep -Fq 'Marcar pago' js/payables-cockpit-ui.js
+          grep -Fq 'grid-template-columns:repeat(4' js/payables-cockpit-ui.js
+          grep -Fq 'novo.classList.toggle("hidden",!podeCadastrar())' js/payables-cockpit-ui.js
+          grep -Fq 'apFiltroInicio' js/payables-cockpit-controls.js
+          grep -Fq 'apFiltroFim' js/payables-cockpit-controls.js
+          grep -Fq 'Imprimir seleção' js/payables-cockpit-controls.js
+          grep -Fq 'contasBancarias' js/payables-cockpit-controls.js
+          grep -Fq 'contaBancariaIdPagamento' js/payables-cockpit-controls.js
+          grep -Fq 'não cria lançamento financeiro automaticamente' js/payables-cockpit-controls.js
+          grep -Fq 'podeVincularBanco=()=>admin()' js/payables-cockpit-controls.js
+          grep -Fq 'import "./js/payables-cockpit-ui.js"' app.js
+          grep -Fq 'import "./js/payables-cockpit-controls.js"' app.js
+          test -s preview/contas-pagar-cockpit-v2/index.html
+          grep -Fq 'Cockpit de Pagamentos Fixos' preview/contas-pagar-cockpit-v2/index.html
+          ! grep -Eqi 'gstatic\.com/firebase|firebase-app\.js|firebase-firestore\.js' preview/contas-pagar-cockpit-v2/index.html
+          ! grep -Eqi 'src=.*app\.js' preview/contas-pagar-cockpit-v2/index.html
