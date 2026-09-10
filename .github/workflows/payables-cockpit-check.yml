@@ -14,6 +14,7 @@ on:
       - 'app.js'
       - 'firestore.rules'
       - 'preview/contas-pagar/**'
+      - 'docs/contas-a-pagar-cockpit.md'
       - '.github/workflows/payables-cockpit-check.yml'
   pull_request:
     branches: [main]
@@ -57,6 +58,7 @@ jobs:
           grep -Fq 'origem:"contrato"' js/payables-contracts.js
           grep -Fq 'origemContratoId' js/payables-contracts.js
           grep -Fq 'competencia' js/payables-contracts.js
+          grep -Fq 'empresasSelecionadasIds()' js/payables-contracts.js
 
           # Minha Mesa recebe alertas do cockpit e o menu mantém título próprio.
           grep -Fq 'mesaContasPagarCard' js/payables-desk.js
