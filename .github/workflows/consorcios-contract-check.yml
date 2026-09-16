@@ -23,22 +23,21 @@ jobs:
           node --check js/ctrl-consorcios-v1.js
           node --check js/profiles.js
           node --check js/controllership-router.js
+          node --check js/area-navigation.js
 
-          # Consórcios continua lazy-loaded, mas é item de primeiro nível.
+          # Consórcios continua lazy-loaded e com módulo/permissões próprios.
+          # O botão-raiz permanece como rota interna de compatibilidade, mas a navegação visível fica em Controladoria.
           grep -q 'ctrl-consorcios-v1.js' js/controllership-router.js
           grep -q 'case"consorcios"' js/controllership-router.js
           grep -q 'consorciosVisualizar' js/controllership-router.js
           grep -q 'consorciosEditar' js/controllership-router.js
           grep -q 'menuConsorcios' js/controllership-router.js
-          grep -q 'garantirMenusOperacionais' js/controllership-router.js
-          grep -q 'id:"menuConsorcios"' js/controllership-router.js
-          grep -q 'depoisDe:"menuContratos"' js/controllership-router.js
-          if grep -Fq '["consorcios","Consórcios"]' js/controllership-router.js; then
-            echo 'Consórcios não pode voltar ao submenu da Controladoria.' >&2
-            exit 1
-          fi
+          grep -q 'consorcios:{label:"Consórcios"' js/area-navigation.js
+          grep -q 'ORDEM_CONTROLADORIA=\["contratos","contasPagar","permutas","consorcios"\]' js/area-navigation.js
+          grep -q 'areaNav-${chave}' js/area-navigation.js
+          grep -q 'ocultarRaizes' js/area-navigation.js
 
-          # A grade de Perfis deve tratar Consórcios como módulo próprio.
+          # A grade de Perfis continua tratando Consórcios como módulo próprio.
           grep -q '\["consorcios","Consórcios",\[\["visualizar","Visualizar"\],\["editar","Gerir consórcios"\]\]\]' js/profiles.js
           if grep -Fq '["consorciosVisualizar","Visualizar consórcios"]' js/profiles.js; then
             echo 'Consórcios não pode voltar como opção visível do bloco Controladoria.' >&2
@@ -88,7 +87,7 @@ jobs:
           if(!perto(r.taxaConsorcioValor,18000))throw new Error('Taxa do consórcio divergente');
           if(!perto(r.totalEstimadoPlano,118000))throw new Error('Total estimado divergente');
           if(!perto(r.parcelaMediaEstimada,118000/60))throw new Error('Parcela média divergente');
-          if(r.parcelasRestantes!==48)throw new Error('Parcelas restantes divergentes');
+          if(r.parcelasRestantes!==48)throw new Error('Parcelas restantes divergente');
           if(!perto(r.saldoTeorico,(118000/60)*48))throw new Error('Saldo teórico divergente');
           if(!statusConsorcioAtivo('ativo')||!statusConsorcioAtivo('contemplado')||statusConsorcioAtivo('encerrado'))throw new Error('Status ativo divergente');
           const cron=gerarCronogramaConsorcio(base);
@@ -108,7 +107,7 @@ jobs:
           python3 -m http.server 8000 >/tmp/sig-consorcios-server.log 2>&1 &
           echo $! > /tmp/sig-consorcios-server.pid
           sleep 2
-      - name: Open Consorcios from main menu
+      - name: Open Consorcios from Controladoria
         run: |
           set -e
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -118,13 +117,13 @@ jobs:
           from pathlib import Path
           p=Path('consorcios-smoke.html')
           s=p.read_text()
-          teste='''<script type="module">(async()=>{try{const core=await import('./js/core.js');await import('./js/controllership-router.js');core.state.perfil={id:'smoke',acessoTotal:true,permissoes:{}};core.state.usuario={id:'smoke-user',grupoId:'',empresaId:''};window.dispatchEvent(new Event('sig:ready'));const menu=document.getElementById('menuConsorcios');if(!menu)throw new Error('Menu Consórcios ausente');if(menu.classList.contains('hidden'))throw new Error('Menu Consórcios permaneceu oculto');if(menu.closest('#ctrlSubmenu'))throw new Error('Consórcios ainda está dentro do submenu da Controladoria');const contratos=document.getElementById('menuContratos');if(contratos?.nextElementSibling!==menu)throw new Error('Consórcios não ficou logo após Contratos');menu.click();await new Promise(r=>setTimeout(r,1500));const pg=document.getElementById('pagina-ctrl-consorcios-v1');if(!pg||pg.classList.contains('hidden'))throw new Error('Clique no menu não abriu Consórcios');if(!menu.classList.contains('ativo'))throw new Error('Menu Consórcios não ficou ativo');if(document.getElementById('menuControladoria')?.classList.contains('ativo'))throw new Error('Controladoria ficou ativa ao abrir Consórcios');if(pg.querySelector('.eyebrow')?.textContent!=='CONSÓRCIOS')throw new Error('Cabeçalho ainda identifica Consórcios como Controladoria');['consV1KpiAtivos','formConsorcioV1','consV1DetalheView','consV1TabelaParcelas','btnConsorciosPdfV1','btnConsorciosExcelV1','btnDetalhePdfV1','btnParcelasPdfV1','btnParcelasExcelV1'].forEach(id=>{if(!document.getElementById(id))throw new Error('Elemento de Consórcios ausente: '+id)});document.documentElement.setAttribute('data-consorcios-smoke','ok')}catch(e){document.documentElement.setAttribute('data-consorcios-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="consorcios-smoke-error">'+String(e.stack||e)+'</pre>')}})()</script>'''
+          teste='''<script type="module">(async()=>{try{const core=await import('./js/core.js');await import('./js/controllership-router.js');await import('./js/area-navigation.js');core.state.perfil={id:'smoke',acessoTotal:true,permissoes:{}};core.state.usuario={id:'smoke-user',grupoId:'',empresaId:''};window.dispatchEvent(new Event('sig:ready'));await new Promise(r=>setTimeout(r,100));const root=document.getElementById('menuConsorcios');if(!root)throw new Error('Rota interna de Consórcios ausente');if(!root.classList.contains('hidden'))throw new Error('Rota interna de Consórcios deveria ficar oculta');const ctrl=document.getElementById('menuControladoria');const item=document.getElementById('areaNav-consorcios');if(!ctrl||!item)throw new Error('Consórcios não foi inserido em Controladoria');if(item.closest('#ctrlSubmenu')==null)throw new Error('Consórcios não está dentro do submenu da Controladoria');item.click();await new Promise(r=>setTimeout(r,1500));const pg=document.getElementById('pagina-ctrl-consorcios-v1');if(!pg||pg.classList.contains('hidden'))throw new Error('Clique no submenu não abriu Consórcios');if(!item.classList.contains('ativo'))throw new Error('Subitem Consórcios não ficou ativo');if(!ctrl.classList.contains('ativo'))throw new Error('Controladoria não ficou ativa ao abrir Consórcios');if(pg.querySelector('.eyebrow')?.textContent!=='CONSÓRCIOS')throw new Error('Cabeçalho ainda identifica Consórcios incorretamente');['consV1KpiAtivos','formConsorcioV1','consV1DetalheView','consV1TabelaParcelas','btnConsorciosPdfV1','btnConsorciosExcelV1','btnDetalhePdfV1','btnParcelasPdfV1','btnParcelasExcelV1'].forEach(id=>{if(!document.getElementById(id))throw new Error('Elemento de Consórcios ausente: '+id)});document.documentElement.setAttribute('data-consorcios-smoke','ok')}catch(e){document.documentElement.setAttribute('data-consorcios-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="consorcios-smoke-error">'+String(e.stack||e)+'</pre>')}})()</script>'''
           s=s.replace('</body>',teste+'</body>')
           p.write_text(s)
           PY
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=8000 --dump-dom http://127.0.0.1:8000/consorcios-smoke.html > /tmp/consorcios-smoke-dom.html
           grep -q 'data-consorcios-smoke="ok"' /tmp/consorcios-smoke-dom.html
-          grep -q 'id="menuConsorcios"' /tmp/consorcios-smoke-dom.html
+          grep -q 'id="areaNav-consorcios"' /tmp/consorcios-smoke-dom.html
           grep -q 'id="pagina-ctrl-consorcios-v1"' /tmp/consorcios-smoke-dom.html
           grep -q 'id="consV1DetalheView"' /tmp/consorcios-smoke-dom.html
           grep -q 'id="consV1TabelaParcelas"' /tmp/consorcios-smoke-dom.html
