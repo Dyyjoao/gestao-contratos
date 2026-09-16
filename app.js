@@ -25,6 +25,7 @@ import "./js/planning-dre-totalizers.js";
 import "./js/planning-account-coverage.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js";
+import "./js/area-navigation.js";
 import "./js/governance.js";
 import "./js/governance-security.js";
 import "./js/dashboard-v2.js";

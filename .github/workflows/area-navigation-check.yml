@@ -1,0 +1,43 @@
+name: Area Navigation Check
+
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'js/area-navigation.js'
+      - 'docs/migracao-script-sig.md'
+      - '.github/workflows/area-navigation-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app.js'
+      - 'js/area-navigation.js'
+      - 'docs/migracao-script-sig.md'
+      - '.github/workflows/area-navigation-check.yml'
+
+jobs:
+  navigation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: node --check js/area-navigation.js
+      - name: Check app import
+        run: grep -F 'import "./js/area-navigation.js";' app.js
+      - name: Check transferred modules
+        run: |
+          grep -F 'contratos:{label:"Contratos"' js/area-navigation.js
+          grep -F 'contasPagar:{label:"Contas a Pagar"' js/area-navigation.js
+          grep -F 'permutas:{label:"Permutas"' js/area-navigation.js
+          grep -F 'consorcios:{label:"Consórcios"' js/area-navigation.js
+          grep -F 'vendas:{label:"Vendas & Comissões"' js/area-navigation.js
+      - name: Guard permission boundaries
+        run: |
+          grep -F 'modulo:"contratos"' js/area-navigation.js
+          grep -F 'modulo:"contasPagar"' js/area-navigation.js
+          grep -F 'modulo:"permutas"' js/area-navigation.js
+          grep -F 'modulo:"consorcios"' js/area-navigation.js
+          grep -F 'modulo:"vendas"' js/area-navigation.js
