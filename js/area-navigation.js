@@ -1,0 +1,155 @@
+import { $, permite, admin } from "./core.js";
+
+const ITENS={
+  contratos:{label:"Contratos",root:"menuContratos",area:"controladoria",modulo:"contratos",acoes:["visualizar","cadastrar","editar","anexar","aprovar","excluir"]},
+  contasPagar:{label:"Contas a Pagar",root:"menuContasPagar",area:"controladoria",modulo:"contasPagar",acoes:["visualizar","cadastrar","editar","baixar"]},
+  permutas:{label:"Permutas",root:"menuPermutas",area:"controladoria",modulo:"permutas",acoes:["visualizar","cadastrar","editar","movimentar","estornar","fechar","inativar"]},
+  consorcios:{label:"Consórcios",root:"menuConsorcios",area:"controladoria",modulo:"consorcios",acoes:["visualizar","editar"]},
+  vendas:{label:"Vendas & Comissões",root:"menuVendas",area:"comercial",modulo:"vendas",acoes:["visualizar","lancar","editar","vendedores","comissoes"]}
+};
+
+let chaveAtiva="";
+let agendado=false;
+
+function permitido(item){
+  if(admin())return true;
+  return item.acoes.some(acao=>permite(item.modulo,acao));
+}
+
+function css(){
+  if($("area-navigation-css"))return;
+  const s=document.createElement("style");
+  s.id="area-navigation-css";
+  s.textContent=`
+    .area-menu-wrap{display:none;margin:-4px 0 7px 12px;padding:5px 0 5px 10px;border-left:1px solid rgba(255,255,255,.14)}
+    .area-menu-wrap.aberto{display:grid;gap:2px}
+    .area-subitem{border:0;background:transparent;color:rgba(255,255,255,.72);text-align:left;padding:7px 9px;border-radius:7px;font-size:11px;cursor:pointer}
+    .area-subitem:hover,.area-subitem.ativo{background:rgba(25,211,190,.12);color:#fff}
+    .menu-item.area-expansivel::after{content:'▾';float:right;opacity:.7}
+    .menu-item.area-expansivel.fechado::after{content:'▸'}
+    .area-divider{height:1px;background:rgba(255,255,255,.08);margin:4px 8px}
+  `;
+  document.head.appendChild(s);
+}
+
+function ocultarRaizes(){
+  Object.values(ITENS).forEach(item=>{
+    const el=$(item.root);
+    if(!el)return;
+    el.classList.add("hidden");
+    el.setAttribute("aria-hidden","true");
+    el.tabIndex=-1;
+  });
+}
+
+function acionar(chave){
+  const item=ITENS[chave];
+  if(!item||!permitido(item))return;
+  chaveAtiva=chave;
+  marcarAtivo(chave);
+  const raiz=$(item.root);
+  if(raiz)raiz.click();
+  else if(window.SIG_ABRIR_CTRL&&["vendas","permutas","consorcios"].includes(chave))window.SIG_ABRIR_CTRL(chave);
+  setTimeout(()=>{ocultarRaizes();marcarAtivo(chave)},0);
+}
+
+function criarSubitem(chave,container,antesDe=null){
+  const id=`areaNav-${chave}`;
+  let b=$(id);
+  if(!b){
+    b=document.createElement("button");
+    b.id=id;
+    b.type="button";
+    b.className="area-subitem";
+    b.dataset.areaChave=chave;
+    b.textContent=ITENS[chave].label;
+    b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();acionar(chave)});
+    if(antesDe)container.insertBefore(b,antesDe);else container.appendChild(b);
+  }
+  const ok=permitido(ITENS[chave]);
+  b.classList.toggle("hidden",!ok);
+  if(!ok)b.classList.remove("ativo");
+  return b;
+}
+
+function garantirComercial(){
+  const sidebar=document.querySelector(".sidebar-menu");
+  if(!sidebar)return;
+  let menu=$("menuComercial");
+  if(!menu){
+    menu=document.createElement("button");
+    menu.id="menuComercial";
+    menu.type="button";
+    menu.className="menu-item area-expansivel fechado hidden";
+    menu.textContent="Comercial";
+    const ref=$("menuControladoria")||sidebar.querySelector(".menu-separador");
+    if(ref)sidebar.insertBefore(menu,ref);else sidebar.appendChild(menu);
+    const box=document.createElement("div");
+    box.id="comercialSubmenu";
+    box.className="area-menu-wrap";
+    menu.insertAdjacentElement("afterend",box);
+    menu.addEventListener("click",e=>{
+      e.preventDefault();e.stopImmediatePropagation();
+      const aberto=!box.classList.contains("aberto");
+      box.classList.toggle("aberto",aberto);
+      menu.classList.toggle("fechado",!aberto);
+    },true);
+  }
+  const box=$("comercialSubmenu");
+  if(!box)return;
+  criarSubitem("vendas",box);
+  menu.classList.toggle("hidden",!permitido(ITENS.vendas));
+}
+
+function garantirControladoriaTransferidos(){
+  const menu=$("menuControladoria"),box=$("ctrlSubmenu");
+  if(!menu||!box)return;
+  const primeiro=box.firstChild;
+  ["consorcios","permutas","contasPagar","contratos"].forEach(chave=>criarSubitem(chave,box,primeiro));
+  if(!$("areaNavCtrlDivider")){
+    const d=document.createElement("div");d.id="areaNavCtrlDivider";d.className="area-divider";
+    const primeiroNativo=box.querySelector(".ctrl-subitem");
+    if(primeiroNativo)box.insertBefore(d,primeiroNativo);else box.appendChild(d);
+  }
+  const temTransferido=["contratos","contasPagar","permutas","consorcios"].some(chave=>permitido(ITENS[chave]));
+  const temNativo=[...box.querySelectorAll(".ctrl-subitem")].some(b=>!b.classList.contains("hidden"));
+  menu.classList.toggle("hidden",!(temTransferido||temNativo));
+}
+
+function marcarAtivo(chave=""){
+  document.querySelectorAll(".area-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.areaChave===chave));
+  const comercial=$("menuComercial"),ctrl=$("menuControladoria");
+  if(comercial)comercial.classList.toggle("ativo",chave==="vendas");
+  if(ctrl&&["contratos","contasPagar","permutas","consorcios"].includes(chave))ctrl.classList.add("ativo");
+  else if(ctrl&&chave==="vendas")ctrl.classList.remove("ativo");
+}
+
+function chavePorPagina(pagina=""){
+  const p=String(pagina||"").toLowerCase();
+  if(p.includes("contas-pagar"))return"contasPagar";
+  if(p.includes("contrat"))return"contratos";
+  if(p.includes("permut"))return"permutas";
+  if(p.includes("consor"))return"consorcios";
+  if(p.includes("venda"))return"vendas";
+  return"";
+}
+
+function aplicar(){
+  css();
+  garantirComercial();
+  garantirControladoriaTransferidos();
+  ocultarRaizes();
+  marcarAtivo(chaveAtiva);
+}
+
+function agendar(){
+  if(agendado)return;agendado=true;
+  requestAnimationFrame(()=>{agendado=false;aplicar()});
+}
+
+aplicar();
+const sidebar=document.querySelector(".sidebar-menu");
+if(sidebar)new MutationObserver(agendar).observe(sidebar,{childList:true});
+window.addEventListener("sig:ready",()=>{chaveAtiva="";agendar()});
+window.addEventListener("sig:page",e=>{const k=chavePorPagina(e.detail?.pagina);if(k)chaveAtiva=k;else if(e.detail?.pagina!=="controladoria")chaveAtiva="";agendar()});
+document.addEventListener("click",e=>{if(e.target.closest?.("#ctrlSubmenu .ctrl-subitem")){chaveAtiva="";setTimeout(()=>marcarAtivo(""),0)}},true);
