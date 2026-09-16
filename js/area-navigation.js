@@ -8,6 +8,7 @@ const ITENS={
   vendas:{label:"Vendas & Comissões",root:"menuVendas",area:"comercial",modulo:"vendas",acoes:["visualizar","lancar","editar","vendedores","comissoes"]}
 };
 
+const ORDEM_CONTROLADORIA=["contratos","contasPagar","permutas","consorcios"];
 let chaveAtiva="";
 let agendado=false;
 
@@ -104,14 +105,14 @@ function garantirComercial(){
 function garantirControladoriaTransferidos(){
   const menu=$("menuControladoria"),box=$("ctrlSubmenu");
   if(!menu||!box)return;
-  const primeiro=box.firstChild;
-  ["consorcios","permutas","contasPagar","contratos"].forEach(chave=>criarSubitem(chave,box,primeiro));
+  const primeiroNativo=box.querySelector(".ctrl-subitem");
+  ORDEM_CONTROLADORIA.forEach(chave=>criarSubitem(chave,box,primeiroNativo));
   if(!$("areaNavCtrlDivider")){
     const d=document.createElement("div");d.id="areaNavCtrlDivider";d.className="area-divider";
-    const primeiroNativo=box.querySelector(".ctrl-subitem");
-    if(primeiroNativo)box.insertBefore(d,primeiroNativo);else box.appendChild(d);
+    const nativo=box.querySelector(".ctrl-subitem");
+    if(nativo)box.insertBefore(d,nativo);else box.appendChild(d);
   }
-  const temTransferido=["contratos","contasPagar","permutas","consorcios"].some(chave=>permitido(ITENS[chave]));
+  const temTransferido=ORDEM_CONTROLADORIA.some(chave=>permitido(ITENS[chave]));
   const temNativo=[...box.querySelectorAll(".ctrl-subitem")].some(b=>!b.classList.contains("hidden"));
   menu.classList.toggle("hidden",!(temTransferido||temNativo));
 }
@@ -120,7 +121,7 @@ function marcarAtivo(chave=""){
   document.querySelectorAll(".area-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.areaChave===chave));
   const comercial=$("menuComercial"),ctrl=$("menuControladoria");
   if(comercial)comercial.classList.toggle("ativo",chave==="vendas");
-  if(ctrl&&["contratos","contasPagar","permutas","consorcios"].includes(chave))ctrl.classList.add("ativo");
+  if(ctrl&&ORDEM_CONTROLADORIA.includes(chave))ctrl.classList.add("ativo");
   else if(ctrl&&chave==="vendas")ctrl.classList.remove("ativo");
 }
 
