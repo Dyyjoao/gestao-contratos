@@ -1,0 +1,11 @@
+#pagina-rh .rh-filter-bar{display:flex;align-items:end;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+#pagina-rh .rh-periodo,#pagina-rh .rh-filter-field,#pagina-rh .rh-day-range label{display:flex;flex-direction:column;gap:6px;color:#526779;font-size:11px;font-weight:700}
+#pagina-rh .rh-periodo{min-width:130px;padding:8px 12px;border:1px solid #dbe8e6;border-radius:10px;background:#f2faf8}
+#pagina-rh .rh-periodo strong{color:#167d70;font-size:13px}
+#pagina-rh .rh-day-range{display:flex;align-items:end;gap:8px}
+#pagina-rh .rh-day-range.hidden{display:none}
+#pagina-rh .rh-filter-bar input,#pagina-rh .rh-filter-bar select{box-sizing:border-box;height:39px;border:1px solid #dbe3ea;border-radius:9px;padding:8px 10px;background:#fff;color:#183247;font:inherit;font-size:13px;font-weight:500}
+#pagina-rh .rh-day-range input{width:74px}
+#pagina-rh .rh-filter-field select{min-width:140px;max-width:210px}
+#pagina-rh .rh-filter-bar :is(input,select):focus{outline:2px solid #20b6a5;outline-offset:1px;border-color:#0d9d8d}
+@media(max-width:800px){#pagina-rh .production-toolbar{align-items:stretch;flex-direction:column}#pagina-rh .rh-filter-bar{justify-content:flex-start}#pagina-rh .rh-filter-field select{max-width:100%}}
