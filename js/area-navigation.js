@@ -13,7 +13,7 @@ const ITENS={
   reclamacoes:{label:"Reclamações",root:"menuReclamacoes",area:"comercial",modulo:"reclamacoes",acoes:["visualizar","registrar","tratar","supervisionar"]},
   pallets:{label:"Pallets",root:"menuPallets",area:"logistica",modulo:"palletMovimentos",acoes:["visualizar","lancar","editar"]},
   ordensservico:{label:"Ordens de Serviço",root:"menuOrdensServico",area:"manutencao",modulo:"ordensServico",acoes:["visualizar","solicitar","executar"]},
-  avaliacoesrh:{label:"Avaliação 360°",root:"menuRhAvaliacoes",area:"rh",modulo:"rhAvaliacoes360",acoes:["visualizar","lancar","editar"]},
+  avaliacoesrh:{label:"Avaliações/feedback",root:"menuRhAvaliacoes",area:"rh",modulo:"rhAvaliacoes360",acoes:["visualizar","lancar","editar"]},
   acoesrh:{label:"Ações de RH",root:"menuRhAcoes",area:"rh",modulo:"rhAcoes",acoes:["visualizar","lancar","editar"]},
   rh:{label:"Indicadores de RH",root:"menurh",area:"rh",modulo:"rhColaboradores",acoes:["visualizar","lancar","editar"]},
   seguranca:{label:"Segurança do Trabalho",root:"menuseguranca",area:"seguranca",modulo:"modincidentes",acoes:["visualizar","lancar","editar"]}
