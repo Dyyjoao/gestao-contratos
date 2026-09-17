@@ -5,7 +5,7 @@ const MODULO='rhCargosCentral';
 let base=null,cargos=[],colaboradores=[],timer=0,observador=null;
 const normaliza=s=>String(s||'').trim().toUpperCase();
 const empresa=()=>empresaUnicaSelecionadaId();
-const funcoesPadrao=['MOTORISTA','VENDEDOR'];
+const funcoesPadrao=['MOTORISTA','VENDEDOR','SUPERVISOR_VENDAS'];
 
 async function carregar(){
   if(!empresa())return;
@@ -70,7 +70,7 @@ async function vincularDepoisDoSalvar(codigo,nome,cargoId){
 
 function garantirPainel(){
   const pagina=$('pagina-rh');if(!pagina||$('rhCargosCentralBox'))return;
-  const box=document.createElement('section');box.id='rhCargosCentralBox';box.className='form-card hidden';box.innerHTML=`<div class="form-card-titulo"><div><h3>Cadastro central de cargos</h3><p>Defina o cargo uma vez e marque quais funções do SIG ele habilita.</p></div></div><form id="rhCargoCadastroForm"><div class="form-grid form-grid-3"><div class="campo"><label for="rhCargoNome">Cargo</label><input id="rhCargoNome" maxlength="80" required placeholder="Ex.: Motorista de carreta"></div><div class="campo"><label>Funções sistêmicas</label><label><input type="checkbox" name="rhCargoFuncao" value="MOTORISTA"> Motorista</label><label><input type="checkbox" name="rhCargoFuncao" value="VENDEDOR"> Vendedor</label></div><div class="campo"><label for="rhCargoExtras">Outras funções</label><input id="rhCargoExtras" placeholder="Ex.: COMPRADOR, GESTOR"><small>Separe por vírgulas.</small></div></div><div class="form-acoes"><button id="rhCargoFechar" class="btn-secundario" type="button">Fechar</button><button class="btn-primario" type="submit">Adicionar cargo</button></div></form><div id="rhCargosLista" class="tabela-container"></div>`;
+  const box=document.createElement('section');box.id='rhCargosCentralBox';box.className='form-card hidden';box.innerHTML=`<div class="form-card-titulo"><div><h3>Cadastro central de cargos</h3><p>Defina o cargo uma vez e marque quais funções do SIG ele habilita.</p></div></div><form id="rhCargoCadastroForm"><div class="form-grid form-grid-3"><div class="campo"><label for="rhCargoNome">Cargo</label><input id="rhCargoNome" maxlength="80" required placeholder="Ex.: Motorista de carreta"></div><div class="campo"><label>Funções sistêmicas</label><label><input type="checkbox" name="rhCargoFuncao" value="MOTORISTA"> Motorista</label><label><input type="checkbox" name="rhCargoFuncao" value="VENDEDOR"> Vendedor</label><label><input type="checkbox" name="rhCargoFuncao" value="SUPERVISOR_VENDAS"> Supervisora de vendas</label></div><div class="campo"><label for="rhCargoExtras">Outras funções</label><input id="rhCargoExtras" placeholder="Ex.: COMPRADOR, GESTOR"><small>Separe por vírgulas.</small></div></div><div class="form-acoes"><button id="rhCargoFechar" class="btn-secundario" type="button">Fechar</button><button class="btn-primario" type="submit">Adicionar cargo</button></div></form><div id="rhCargosLista" class="tabela-container"></div>`;
   const aviso=$('rhAviso');aviso?.insertAdjacentElement('afterend',box);
   $('rhCargoFechar').addEventListener('click',()=>box.classList.add('hidden'));
   $('rhCargoCadastroForm').addEventListener('submit',salvarCargo);
