@@ -701,7 +701,7 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'codigo','nome','setor','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
     match /{colecao}/{id} {
       allow read: if colecao in ['rhAusencias','rhHorasColaboradores'] &&
@@ -724,7 +724,7 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'data','setor','tipo','horas','observacao','horas50','horas100','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if colecao in ['rhAusencias','rhHorasColaboradores'] && administrador() && documentoAcessivel(resource.data);
     }
     function rhAvaliacaoValida(d) {
       return rhMesValido(d.ciclo) && d.avaliadoId is string && d.avaliadorId is string &&
@@ -760,7 +760,7 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'ciclo','avaliadoId','avaliadorId','papel','notas','comentario','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
     function rhAcaoValida(d) {
       return rhMesValido(d.competencia) && rhDataValida(d.prazo) &&
@@ -792,7 +792,7 @@ service cloud.firestore {
               'competencia','prazo','tipo','titulo','descricao','situacao',
                 'participanteIds','participanteUsuarios','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     function moduloIndicador(colecao) {
