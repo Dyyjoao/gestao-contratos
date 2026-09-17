@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { resumoRH } from '../js/hr-metrics.js';
+import { resumoRH, resumoRHDatas } from '../js/hr-metrics.js';
 const pessoas=[
   {id:'a',admissao:'2026-01-10',demissao:'',setor:'PRODUÇÃO',jornadaMensalHoras:220,status:'ativo'},
   {id:'b',admissao:'2026-02-10',demissao:'2026-03-15',setor:'PRODUÇÃO',jornadaMensalHoras:200,status:'ativo'},
@@ -25,3 +25,15 @@ assert.equal(p.horasAusentes,8);
 assert.equal(p.horas50,3);
 assert.equal(p.linhas[1].fechamento,1);
 assert.deepEqual(resumoRH(pessoas,a,h,'2026-03','2026-02').linhas,[]);
+const parcial=resumoRHDatas(pessoas,a,h,'2026-02-11','2026-02-20');
+assert.equal(parcial.abertura,3);
+assert.equal(parcial.admissoes,0);
+assert.equal(parcial.demissoes,0);
+assert.equal(parcial.fechamento,3);
+assert.equal(parcial.horasAusentes,8);
+assert.equal(parcial.horas50,3);
+assert.equal(parcial.horas100,2);
+assert.ok(Math.abs(parcial.previstas-(220+200+160)*10/28)<1e-8);
+assert.equal(resumoRHDatas(pessoas,a,h,'2026-02-13','2026-02-15').horasAusentes,0);
+assert.equal(resumoRHDatas(pessoas,a,h,'2026-02-01','2026-02-28').previstas,feb.previstas);
+assert.equal(resumoRHDatas(pessoas,a,h,'2026-02-29','2026-02-29'),null);
