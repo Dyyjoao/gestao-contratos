@@ -190,7 +190,7 @@ jobs:
           test -n "$CHROME"
           python3 - <<'PYDIAG'
           from pathlib import Path
-          p=Path('index.html');s=p.read_text();s=s.replace('<script type="module" src="app.js?v=12"></script>', '<script>window.addEventListener("error",e=>document.documentElement.setAttribute("data-load-error",e.message||e.target?.src||"error"),true);window.addEventListener("unhandledrejection",e=>document.documentElement.setAttribute("data-load-rejection",String(e.reason)))</script><script type="module" src="app.js?v=12"></script>');p.write_text(s)
+          p=Path('index.html');s=p.read_text();s=s.replace('<script type="module" src="app.js?v=12"></script>', '<script>window.addEventListener("error",e=>document.documentElement.setAttribute("data-load-error",(e.message||e.target?.src||"error")+" @ "+e.filename+":"+e.lineno+":"+e.colno),true);window.addEventListener("unhandledrejection",e=>document.documentElement.setAttribute("data-load-rejection",String(e.reason)))</script><script type="module" src="app.js?v=12"></script>');p.write_text(s)
           PYDIAG
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=6000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dom.html
           grep -q 'id="pagina-contratos"' /tmp/sig-dom.html
