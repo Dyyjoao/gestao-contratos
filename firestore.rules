@@ -303,6 +303,68 @@ service cloud.firestore {
       allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
+    function combustivelVer() {
+      return frotaVisualizar() && (permissao('combustivel','visualizar') ||
+        permissao('combustivel','lancar') || permissao('combustivel','editar'));
+    }
+    function movimentoDieselValido(dados) {
+      return dados.data is string && dados.data.size() == 10 &&
+        dados.placa is string && dados.placa.size() > 0 &&
+        dados.motorista is string && dados.motorista.size() > 0 &&
+        dados.tipo in ['consumo','recebimento'] &&
+        dados.quantidade is int && dados.quantidade > 0 &&
+        (dados.kmAnterior == null || (dados.kmAnterior is int && dados.kmAnterior >= 0)) &&
+        (dados.kmAtual == null || (dados.kmAtual is int && dados.kmAtual >= 0)) &&
+        (dados.kmAnterior == null || dados.kmAtual == null || dados.kmAtual >= dados.kmAnterior) &&
+        dados.veiculoId is string &&
+        exists(/databases/$(database)/documents/veiculos/$(dados.veiculoId)) &&
+        get(/databases/$(database)/documents/veiculos/$(dados.veiculoId)).data.grupoId == dados.grupoId &&
+        get(/databases/$(database)/documents/veiculos/$(dados.veiculoId)).data.empresaId == dados.empresaId &&
+        get(/databases/$(database)/documents/veiculos/$(dados.veiculoId)).data.placa == dados.placa;
+    }
+    match /abastecimentosFrota/{id} {
+      allow read: if combustivelVer() && documentoAcessivel(resource.data);
+      allow create: if permissao('combustivel','lancar') && frotaVisualizar() &&
+        documentoAcessivel(request.resource.data) && request.resource.data.status == 'ativo' &&
+        request.resource.data.registradoPor == request.auth.uid && movimentoDieselValido(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor &&
+        (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('combustivel','editar') && frotaVisualizar() &&
+            request.resource.data.status == 'ativo' && movimentoDieselValido(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','placa','veiculoId','motorista','tipo','quantidade','kmAnterior','kmAtual','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+    match /custosDiesel/{id} {
+      allow read: if combustivelVer() && documentoAcessivel(resource.data);
+      allow create: if permissao('combustivel','lancar') && frotaVisualizar() &&
+        documentoAcessivel(request.resource.data) && request.resource.data.status == 'ativo' &&
+        request.resource.data.registradoPor == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.valor is number && request.resource.data.valor >= 0;
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('combustivel','editar') && frotaVisualizar() &&
+            request.resource.data.status == 'ativo' &&
+            request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+            request.resource.data.valor is number && request.resource.data.valor >= 0 &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data','valor','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+
     match /manutencoesFrota/{id} {
       allow read: if frotaVisualizar() && documentoAcessivel(resource.data);
       allow create: if frotaManutencao() && documentoAcessivel(request.resource.data);
