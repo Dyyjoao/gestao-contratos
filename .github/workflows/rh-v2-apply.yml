@@ -1,28 +1,8 @@
-name: Apply RH v2 patch
+name: RH v2 temporary patch retired
 on:
-  push:
-    branches: ['feature/rh-v2-config-modulos']
-permissions:
-  contents: write
+  workflow_dispatch:
 jobs:
-  apply:
-    if: ${{ !contains(github.event.head_commit.message, 'apply RH v2 generated patch') }}
+  retired:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: feature/rh-v2-config-modulos
-          fetch-depth: 0
-      - name: Apply patch
-        run: python3 tools/apply-rh-v2.py
-      - name: Commit generated changes
-        run: |
-          if git diff --quiet && [ -z "$(git status --porcelain)" ]; then
-            echo 'No changes'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add . ':!.github/workflows/rh-v2-check.yml'
-          git commit -m 'apply RH v2 generated patch'
-          git push origin HEAD:feature/rh-v2-config-modulos
+      - run: echo 'Temporary workflow retired after applying RH v2.'
