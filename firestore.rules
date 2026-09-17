@@ -208,7 +208,7 @@ service cloud.firestore {
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
         request.auth.uid == usuarioId ||
-        ((permissao('usuarios','visualizar') || permissao('planosAcao','reatribuir') || permissao('controladoria','fechamento')) && resource.data.grupoId == usuario().data.grupoId)
+        ((permissao('usuarios','visualizar') || permissao('rhColaboradores','lancar') || permissao('rhColaboradores','editar') || permissao('planosAcao','reatribuir') || permissao('controladoria','fechamento')) && resource.data.grupoId == usuario().data.grupoId)
       );
       allow create: if permissao('usuarios','cadastrar') && request.resource.data.grupoId == usuario().data.grupoId && podeAtribuirPerfil(request.resource.data.perfilId);
       allow update: if resource.data.grupoId == usuario().data.grupoId && request.resource.data.grupoId == resource.data.grupoId && podeAtribuirPerfil(request.resource.data.perfilId) && (
@@ -627,6 +627,159 @@ service cloud.firestore {
               'dataInicio','dataFim','realizado','paradaProducao','trocaPeca',
               'observacao','status','atualizadoEm'
             ]))
+        );
+      allow delete: if false;
+    }
+
+    function rhVer(modulo) { return permissao(modulo,'visualizar') || permissao(modulo,'lancar') || permissao(modulo,'editar'); }
+    function rhSetorValido(setor) { return setor in ['ADM','LAJE','COMERCIAL','LOGISTICA','PRODUÇÃO','MOURÃO','MANUTENÇÃO']; }
+    function rhDataValida(data) { return data is string && data.size() == 10; }
+    function rhMesValido(mes) { return mes is string && mes.size() == 7; }
+    function rhColaboradorRef(id) { return /databases/$(database)/documents/rhColaboradores/$(id); }
+    function rhColaboradorValido(dados) {
+      return dados.codigo is string && dados.codigo.size() > 0 && dados.codigo.size() <= 40 &&
+        dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 120 &&
+        rhSetorValido(dados.setor) && rhDataValida(dados.admissao) &&
+        dados.demissao is string && (dados.demissao == '' || (rhDataValida(dados.demissao) && dados.demissao >= dados.admissao)) &&
+        dados.jornadaMensalHoras is number && dados.jornadaMensalHoras > 0 && dados.jornadaMensalHoras <= 300 &&
+        dados.usuarioId is string && (dados.usuarioId == '' || (
+          exists(/databases/$(database)/documents/usuarios/$(dados.usuarioId)) &&
+          get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data.ativo == true &&
+          get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data.grupoId == dados.grupoId &&
+          (get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data.empresaId == dados.empresaId ||
+            (('acessoGlobal' in get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data) &&
+            get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data.acessoGlobal == true) ||
+            (('empresasAcesso' in get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data) &&
+              dados.empresaId in get(/databases/$(database)/documents/usuarios/$(dados.usuarioId)).data.empresasAcesso))
+        ));
+    }
+    function rhVinculoValido(dados) {
+      return dados.colaboradorId is string && exists(rhColaboradorRef(dados.colaboradorId)) &&
+        get(rhColaboradorRef(dados.colaboradorId)).data.grupoId == dados.grupoId &&
+        get(rhColaboradorRef(dados.colaboradorId)).data.empresaId == dados.empresaId &&
+        get(rhColaboradorRef(dados.colaboradorId)).data.status == 'ativo' &&
+        dados.setor == get(rhColaboradorRef(dados.colaboradorId)).data.setor &&
+        dados.data >= get(rhColaboradorRef(dados.colaboradorId)).data.admissao &&
+        (get(rhColaboradorRef(dados.colaboradorId)).data.demissao == '' ||
+          dados.data <= get(rhColaboradorRef(dados.colaboradorId)).data.demissao);
+    }
+    function rhEventoValido(colecao,dados) {
+      return rhDataValida(dados.data) && rhSetorValido(dados.setor) && rhVinculoValido(dados) && (
+        (colecao == 'rhAusencias' && dados.tipo in ['FALTA','ATESTADO','ATRASO','AFASTAMENTO','OUTROS'] &&
+          dados.horas is number && dados.horas > 0 && dados.horas <= 300 &&
+          dados.observacao is string && dados.observacao.size() <= 200) ||
+        (colecao == 'rhHorasColaboradores' && dados.horas50 is number && dados.horas50 >= 0 &&
+          dados.horas100 is number && dados.horas100 >= 0 &&
+          dados.horas50 + dados.horas100 > 0 && dados.horas50 + dados.horas100 <= 300)
+      );
+    }
+    match /rhColaboradores/{id} {
+      allow read: if rhVer('rhColaboradores') && documentoAcessivel(resource.data);
+      allow create: if permissao('rhColaboradores','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' && request.resource.data.registradoPor == request.auth.uid &&
+        rhColaboradorValido(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('rhColaboradores','editar') && request.resource.data.status == 'ativo' &&
+            rhColaboradorValido(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'codigo','nome','setor','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+    match /{colecao}/{id} {
+      allow read: if colecao in ['rhAusencias','rhHorasColaboradores'] &&
+        rhVer(colecao) && documentoAcessivel(resource.data);
+      allow create: if colecao in ['rhAusencias','rhHorasColaboradores'] &&
+        permissao(colecao,'lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' && request.resource.data.registradoPor == request.auth.uid &&
+        rhEventoValido(colecao,request.resource.data);
+      allow update: if colecao in ['rhAusencias','rhHorasColaboradores'] &&
+        documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor &&
+        request.resource.data.colaboradorId == resource.data.colaboradorId && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao(colecao,'editar') && request.resource.data.status == 'ativo' &&
+            rhEventoValido(colecao,request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','setor','tipo','horas','observacao','horas50','horas100','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+    function rhAvaliacaoValida(d) {
+      return rhMesValido(d.ciclo) && d.avaliadoId is string && d.avaliadorId is string &&
+        exists(rhColaboradorRef(d.avaliadoId)) && exists(rhColaboradorRef(d.avaliadorId)) &&
+        get(rhColaboradorRef(d.avaliadoId)).data.grupoId == d.grupoId &&
+        get(rhColaboradorRef(d.avaliadoId)).data.empresaId == d.empresaId &&
+        get(rhColaboradorRef(d.avaliadorId)).data.grupoId == d.grupoId &&
+        get(rhColaboradorRef(d.avaliadorId)).data.empresaId == d.empresaId &&
+        d.papel in ['AUTOAVALIAÇÃO','LIDERANÇA','PAR','LIDERADO'] &&
+        ((d.papel == 'AUTOAVALIAÇÃO') == (d.avaliadoId == d.avaliadorId)) &&
+        d.notas is list && d.notas.size() == 5 &&
+        d.notas[0] is int && d.notas[0] >= 1 && d.notas[0] <= 5 &&
+        d.notas[1] is int && d.notas[1] >= 1 && d.notas[1] <= 5 &&
+        d.notas[2] is int && d.notas[2] >= 1 && d.notas[2] <= 5 &&
+        d.notas[3] is int && d.notas[3] >= 1 && d.notas[3] <= 5 &&
+        d.notas[4] is int && d.notas[4] >= 1 && d.notas[4] <= 5 &&
+        d.comentario is string && d.comentario.size() <= 1000;
+    }
+    match /rhAvaliacoes360/{id} {
+      allow read: if rhVer('rhAvaliacoes360') && documentoAcessivel(resource.data);
+      allow create: if permissao('rhAvaliacoes360','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' && request.resource.data.registradoPor == request.auth.uid &&
+        rhAvaliacaoValida(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('rhAvaliacoes360','editar') && request.resource.data.status == 'ativo' &&
+            rhAvaliacaoValida(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'ciclo','avaliadoId','avaliadorId','papel','notas','comentario','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+    function rhAcaoValida(d) {
+      return rhMesValido(d.competencia) && rhDataValida(d.prazo) &&
+        d.prazo.matches(d.competencia + '-.*') &&
+        d.tipo in ['ENDOMARKETING','MELHORIA','TREINAMENTO'] &&
+        d.titulo is string && d.titulo.size() > 0 && d.titulo.size() <= 140 &&
+        d.descricao is string && d.descricao.size() <= 1000 &&
+        d.situacao in ['PLANEJADA','EM_ANDAMENTO','CONCLUIDA','CANCELADA'] &&
+        d.participanteIds is list && d.participanteIds.size() <= 100 &&
+        d.participanteUsuarios is list && d.participanteUsuarios.size() <= 100 &&
+        (d.tipo == 'ENDOMARKETING' || d.participanteIds.size() > 0);
+    }
+    match /rhAcoes/{id} {
+      allow read: if documentoAcessivel(resource.data) &&
+        (rhVer('rhAcoes') || request.auth.uid in resource.data.participanteUsuarios);
+      allow create: if permissao('rhAcoes','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' && request.resource.data.registradoPor == request.auth.uid &&
+        rhAcaoValida(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('rhAcoes','editar') && request.resource.data.status == 'ativo' &&
+            rhAcaoValida(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'competencia','prazo','tipo','titulo','descricao','situacao',
+                'participanteIds','participanteUsuarios','atualizadoEm']))
         );
       allow delete: if false;
     }
