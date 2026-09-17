@@ -36,6 +36,7 @@ import "./js/workforce-safety.js";
 import "./js/hr-people.js";
 import "./js/hr-culture.js";
 import "./js/hr-agenda.js";
+import "./js/module-settings.js";
 import "./js/workforce-dashboard.js";
 import "./js/customer-complaints.js";
 import "./js/fleet-fuel.js";
