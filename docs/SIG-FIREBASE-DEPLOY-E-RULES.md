@@ -80,10 +80,16 @@ Quando houver alteração aprovada:
 5. publicar;
 6. testar com perfil autorizado e não autorizado.
 
-CLI, quando disponível:
+CLI, quando somente Firestore Rules mudarem:
 
 ```bash
 firebase deploy --only firestore:rules
+```
+
+Quando Firestore e Storage Rules mudarem juntas e o Storage estiver efetivamente em uso:
+
+```bash
+firebase deploy --only firestore:rules,storage
 ```
 
 Storage só deve ser incluído quando o recurso for efetivamente ativado e a Rule tiver sido aprovada.
