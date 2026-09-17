@@ -134,3 +134,6 @@ Isso ocorre quando apenas GitHub Pages foi publicado. Confirmar a versão ativa 
 Rules são a barreira efetiva de autorização. Botões, filtros e confirmações são proteção adicional de negócio, não substitutos das Rules.
 
 Não colocar Service Account, token administrativo ou segredo no frontend/repositório.
+## Planejamento dos ciclos de avaliação
+
+A coleção `rhCiclosAvaliacao` guarda a competência, modelo 90/180/360/540, colaborador avaliado e avaliadores previstos por perspectiva. As respostas novas de `rhAvaliacoes360` são vinculadas por `cicloId` e `avaliadorChave`; a Rule valida a vinculação. Respostas anteriores sem esse vínculo permanecem legíveis, mas novas avaliações exigem um ciclo planejado. Clientes e fornecedores entram como nome externo no ciclo, sem criar colaborador. O progresso conta respostas individuais previstas por grupo. Publique o `firestore.rules` completo após promover essa versão: GitHub Pages não atualiza as Rules do Firebase.
