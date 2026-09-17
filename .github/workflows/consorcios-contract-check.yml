@@ -110,6 +110,7 @@ jobs:
       - name: Open Consorcios from Controladoria
         run: |
           set -e
+          trap 'echo "Smoke diagnostic:"; for f in /tmp/sig-dom.html /tmp/consorcios-smoke-dom.html /tmp/sig-dash-dom.html /tmp/sig-sales-dom.html; do if test -f "$f"; then echo "$f: $(wc -c < "$f") bytes"; grep -oE "(data-[a-z-]+smoke=|<pre id=|id=\"pagina-frota\"|id=\"ctrlSubmenu\")[^<]{0,400}" "$f" | head -15 || true; fi; done' ERR
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
           cp index.html consorcios-smoke.html
