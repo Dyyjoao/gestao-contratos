@@ -35,6 +35,7 @@ import "./js/service-orders-dashboard.js";
 import "./js/workforce-safety.js";
 import "./js/workforce-dashboard.js";
 import "./js/customer-complaints.js";
+import "./js/fleet-fuel.js";
 import "./js/area-navigation.js";
 import "./js/governance.js";
 import "./js/governance-security.js";
