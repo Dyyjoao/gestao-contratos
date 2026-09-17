@@ -54,6 +54,13 @@ jobs:
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
           "$CHROME" --version
+          python3 - <<'PYHTTP'
+          import urllib.request,hashlib
+          u='http://127.0.0.1:8000/js/hr-performance.js?v=4'
+          r=urllib.request.urlopen(u)
+          b=r.read()
+          print('RH response',r.status,r.headers.get('Content-Type'),len(b),hashlib.sha256(b).hexdigest(),repr(b[:70]))
+          PYHTTP
           cp index.html rh-smoke.html
           python3 - <<'PY'
           from pathlib import Path
