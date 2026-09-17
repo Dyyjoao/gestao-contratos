@@ -7,3 +7,7 @@
 #pagina-rh .rh-filter-field select{min-width:140px;max-width:210px}
 #pagina-rh .rh-filter-bar :is(input,select):focus{outline:2px solid #20b6a5;outline-offset:1px;border-color:#0d9d8d}
 @media(max-width:800px){#pagina-rh .production-toolbar{align-items:stretch;flex-direction:column}#pagina-rh .rh-filter-bar{justify-content:flex-start}#pagina-rh .rh-filter-field select{max-width:100%}}
+
+#pagina-rh .fleet-tabs{display:flex;gap:8px;flex-wrap:wrap}
+#pagina-rh .fleet-tab{border:1px solid #d0d5dd;border-radius:999px;padding:8px 12px;background:#fff;color:#475467;font-size:12px;font-weight:700}
+#pagina-rh .fleet-tab.ativo{background:#15354b;color:#fff;border-color:#15354b}
