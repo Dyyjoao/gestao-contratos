@@ -341,6 +341,49 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /producaoLancamentos/{id} {
+      allow read: if (permissao('producao','visualizar') || permissao('producao','lancar') ||
+        permissao('producao','editar') || permissao('producao','cadastros')) && documentoAcessivel(resource.data);
+      allow create: if permissao('producao','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.recurso is string && request.resource.data.recurso.size() > 0 &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 &&
+        request.resource.data.horasTrabalhadas is number && request.resource.data.horasTrabalhadas >= 0 &&
+        request.resource.data.producaoPorHora is number;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','recurso','quantidade','horasTrabalhadas','producaoPorHora',
+              'item','concretador','atualizadoPor','atualizadoEm','status',
+              'motivoEstorno','estornadoPor','estornadoEm'
+            ])) ||
+          (permissao('producao','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','recurso','quantidade','horasTrabalhadas','producaoPorHora',
+              'item','concretador','atualizadoPor','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
+    match /operacaoCadastros/{id} {
+      allow read: if (permissao('producao','visualizar') || permissao('producao','lancar') ||
+        permissao('producao','editar') || permissao('producao','cadastros')) && documentoAcessivel(resource.data);
+      allow create: if permissao('producao','cadastros') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.tipo in ['recurso','item','concretador'] &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.ativo == true;
+      allow update: if permissao('producao','cadastros') && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']);
+      allow delete: if false;
+    }
+
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
