@@ -20,6 +20,8 @@ jobs:
           set -e
           node --check js/production.js
           node --check js/production-dashboard.js
+          node --check js/disposal.js
+          node --check js/disposal-dashboard.js
           node --check js/area-navigation.js
           grep -q 'production.js' app.js
           grep -q 'production-dashboard.js' app.js
@@ -36,4 +38,11 @@ jobs:
           grep -q 'menuOperacao' js/area-navigation.js
           grep -q 'areaNav-producao' js/area-navigation.js || grep -q 'producao' js/area-navigation.js
           grep -q 'Operação · Produção' js/production-dashboard.js
+          grep -q 'disposal.js' app.js
+          grep -q 'disposal-dashboard.js' app.js
+          grep -q 'descarteLancamentos' js/disposal.js
+          grep -q 'match /descarteLancamentos/{id}' firestore.rules
+          grep -q 'allow delete: if false;' firestore.rules
+          grep -q '\["descarte","Operação · Descarte"' js/profiles.js
+          grep -q 'descarte:{label:"Descarte"' js/area-navigation.js
           test -f production.css
