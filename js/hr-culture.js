@@ -10,12 +10,18 @@ function garantirCss(arquivo,versao){
 garantirCss('production.css','2');
 garantirCss('rh.css','3');
 
-window.addEventListener('sig:data-changed',e=>{
-  if(e.detail?.modulo!=='rh')return;
-  setTimeout(()=>{
+let refreshRhTimer=0;
+function atualizarTelaRhAposGravacao(){
+  clearTimeout(refreshRhTimer);
+  refreshRhTimer=setTimeout(()=>{
     const aval=document.getElementById('pagina-rh-avaliacoes');
     const acoes=document.getElementById('pagina-rh-acoes');
     if(aval&&!aval.classList.contains('hidden'))document.getElementById('rhCultAtualizar-avaliacoes')?.click();
     if(acoes&&!acoes.classList.contains('hidden'))document.getElementById('rhCultAtualizar-acoes')?.click();
-  },0);
+  },120);
+}
+
+window.addEventListener('sig:data-changed',e=>{
+  if(e.detail?.modulo!=='rh')return;
+  atualizarTelaRhAposGravacao();
 });
