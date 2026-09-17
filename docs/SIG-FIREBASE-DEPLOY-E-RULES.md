@@ -1,136 +1,125 @@
 # SIG — Firebase, Deploy e Rules
 
-**Baseline:** 01/09/2026 — Plano de Contas v6 + Consórcios v1  
+**Baseline:** 16/09/2026  
 **Projeto Firebase:** `gestao-de-contratos-b266b`
 
-Este documento distingue o deploy do frontend do deploy do backend gerenciado do SIG.
+## 1. Arquitetura vigente
 
-## 1. Dois deploys independentes
-
-O SIG usa:
-
-- GitHub Pages para HTML/CSS/JavaScript;
+O SIG usa atualmente:
+- frontend Web/PWA;
 - Firebase Authentication;
 - Cloud Firestore;
-- Firebase Storage.
+- GitHub Pages para hospedagem do frontend.
 
-Promover `main` e concluir GitHub Pages **não publica automaticamente**:
+Firebase Storage permanece **adiado/não ativo para a operação atual**. Não considerar Storage publicado ou disponível sem ativação e Rules confirmadas.
 
+Banco local, API própria, VPN obrigatória e domínio multi-tenant são opções futuras em avaliação e não substituem a arquitetura vigente sem decisão explícita.
+
+## 2. Deploys independentes
+
+GitHub Pages não publica:
 - `firestore.rules`;
 - `storage.rules`;
-- índices/configurações administrativas Firebase.
+- configurações administrativas do Firebase.
 
-Uma versão com frontend novo e Rule antiga é release incompleta.
+Sempre que `firestore.rules` mudar, a release só termina depois da publicação da Rule completa correspondente ao mesmo HEAD.
 
-## 2. Contrato do repositório
+Se frontend mudar e Rules não mudarem, registrar explicitamente que **não há republicação de Rules**.
 
-- `.firebaserc` — projeto Firebase de destino;
-- `firebase.json` — aponta para arquivos de Rules;
-- `firestore.rules` — autorização Firestore;
-- `storage.rules` — autorização Storage;
-- `.github/workflows/firebase-contract-check.yml` — valida o contrato mínimo.
+## 3. Arquivos de contrato
 
-Projeto esperado: `gestao-de-contratos-b266b`.
+- `.firebaserc`;
+- `firebase.json`;
+- `firestore.rules`;
+- `storage.rules`;
+- `.github/workflows/firebase-contract-check.yml`.
 
-## 3. Rules críticas atuais
+## 4. Segurança obrigatória
 
-### 3.1 Imobilizado
+- Auth identifica; Rules autorizam;
+- Grupo e Empresa são fronteiras de segurança;
+- `grupoId`/`empresaId` não podem ser trocados em update fora das regras do módulo;
+- botões escondidos não substituem backend;
+- segredo, token, certificado ou Service Account nunca vai para JavaScript público;
+- `auditoriaAdministrativa` é append-only.
 
-A coleção `imobilizados` exige:
+## 5. Rules por módulos relevantes
 
-- leitura: permissão de visualização da Controladoria + documento acessível;
-- create/update: `fpaImobilizado()` + isolamento Grupo/Empresa;
-- delete: não permitido pela Rule atual.
+A baseline vigente possui regras próprias para, entre outros:
+- Contratos;
+- Frota;
+- Vendedores/Vendas;
+- Plano de Contas;
+- Imobilizado;
+- Consórcios;
+- Permutas;
+- Budget/Forecast;
+- Fluxo de Caixa;
+- Contas a Pagar;
+- Governança/Planos de Ação.
 
-A integração contábil depende dessa coleção e deve operar fail-closed em falha de leitura.
+### Contratos
+Permissões continuam em `contratos.*`, mesmo com o item aparecendo dentro de Controladoria na navegação.
 
-### 3.2 Plano de Contas v6
+### Contas a Pagar
+Permissões continuam em `contasPagar.*`. A posição visual dentro de Controladoria não autoriza transformar a Rule em `controladoria.*`.
 
-A coleção `planoContasGerencial` mantém:
+### Permutas e Consórcios
+Continuam com regras e permissões próprias/compatíveis já existentes. A mudança de menu não altera persistência.
 
-- read: visualização da Controladoria + documento acessível;
-- create/update: `fpaPlano()` + documento acessível;
-- delete: `fpaPlano()` + documento acessível.
+### Produção
+A migração de Produção está em homologação no PR #30. **Não existe Rule de Produção aprovada/publicada na baseline produtiva.** Não usar dados reais de Produção até a tela ser homologada e o pacote de Rules correspondente ser fechado/publicado.
 
-O delete existe para limpeza de cadastro de teste/erro. O frontend verifica referências antes da exclusão. Com uso/histórico, a conta deve ser inativada.
+## 6. Publicação manual de Firestore Rules
 
-### 3.3 Consórcios v1
+Quando houver alteração aprovada:
+1. abrir Firebase Console;
+2. selecionar `gestao-de-contratos-b266b`;
+3. Firestore Database → Regras;
+4. substituir pelo conteúdo integral de `firestore.rules` do HEAD aprovado;
+5. publicar;
+6. testar com perfil autorizado e não autorizado.
 
-A coleção `consorcios` possui autorização própria:
+CLI, quando somente Firestore Rules mudarem:
 
-- read: `consorciosVisualizar()`, que aceita Administração FP&A, `controladoria.consorciosVisualizar` ou `controladoria.consorciosEditar`;
-- create/update: `consorciosEditar()`, que aceita Administração FP&A ou `controladoria.consorciosEditar`;
-- Grupo/Empresa permanecem imutáveis em update;
-- delete: bloqueado.
+```bash
+firebase deploy --only firestore:rules
+```
 
-A tela também esconde ações de edição para perfil somente consulta, mas a Rule é a barreira de autorização efetiva.
-
-Consórcios v1 não depende de acesso às coleções contábeis para calcular sua carteira e não deve gerar lançamentos em outras bases.
-
-## 4. Publicação desta versão
-
-Depois de promover uma versão que altere `firestore.rules` para `main`, publicar as Rules completas.
-
-Firebase CLI autenticado:
+Quando Firestore e Storage Rules mudarem juntas e o Storage estiver efetivamente em uso:
 
 ```bash
 firebase deploy --only firestore:rules,storage
 ```
 
-Se a publicação for manual:
+Storage só deve ser incluído quando o recurso for efetivamente ativado e a Rule tiver sido aprovada.
 
-1. abrir Firebase Console;
-2. selecionar `gestao-de-contratos-b266b`;
-3. abrir Firestore Database;
-4. abrir aba **Regras**;
-5. substituir pelo conteúdo integral de `firestore.rules` da mesma versão da `main`;
-6. publicar;
-7. testar autenticado.
+## 7. Preview
 
-Para Storage, publicar `storage.rules` se ela também tiver sido alterada.
+A política do projeto é preview-first. O objetivo é usar canal isolado por PR, preferencialmente Firebase Hosting Preview Channels, para homologação sem merge em `main`.
 
-Nunca misturar Rule antiga com frontend novo ou publicar apenas um bloco isolado sem o arquivo completo.
+A esteira de preview navegável ainda precisa ser concluída. Enquanto isso, não usar `main` como ambiente temporário de teste.
 
-## 5. Diagnóstico rápido
+## 8. Regras de release
 
-### `permission-denied` em Imobilizado
+Para qualquer pacote que altere backend:
+- CI verde;
+- preview/homologação quando aplicável;
+- confirmação da Rule que mudou;
+- publicação da Rule completa;
+- teste autenticado;
+- confirmação explícita no handoff.
 
-Verificar Rule `match /imobilizados/{id}`, permissão de Controladoria, Grupo/Empresa e acesso do usuário.
+Nunca misturar Rule de um commit com frontend de outro.
 
-### `permission-denied` ao excluir conta de teste
+## 9. Storage
 
-Verificar Rule da v6, `controladoria.editar`/`controladoria.planoContas`, escopo do documento e se o frontend não bloqueou por referência.
+Decisão vigente:
+- ativação adiada;
+- custom Storage Rules não confirmadas como publicadas;
+- branch histórica `feature/firebase-storage-contratos-futuro` preserva implementação futura;
+- quando retomado, portar apenas os arquivos de Storage para branch nova baseada na `main` vigente; não fazer merge wholesale da branch antiga.
 
-### `permission-denied` em Consórcios
+## 10. App Check, MFA e hardening
 
-Verificar:
-
-- Rule `match /consorcios/{id}` publicada;
-- `consorciosVisualizar` para consulta ou `consorciosEditar` para gestão;
-- `grupoId` / `empresaId` do documento;
-- empresa dentro do acesso do usuário;
-- ao criar, exatamente uma empresa selecionada no cabeçalho.
-
-### Frontend atualizado, comportamento de Rule antigo
-
-Isso ocorre quando apenas GitHub Pages foi publicado. Confirmar a versão ativa das Rules no Firebase e republicar o arquivo completo.
-
-## 6. QA de contrato
-
-`SIG Firebase Contract Check` deve falhar se:
-
-- `firebase.json` / `.firebaserc` sumirem ou divergirem;
-- a Rule de Imobilizado desaparecer;
-- a Rule de delete seguro do Plano v6 desaparecer;
-- a Rule/permissões de Consórcios desaparecerem;
-- o módulo Consórcios deixar de usar a coleção esperada;
-- o Plano ativo deixar de fazer checagem de referências;
-- documentação deixar de registrar que Pages e Rules têm deploy independente.
-
-`SIG Consorcios Contract Check` valida também rota, permissões, matemática básica e abertura real da tela.
-
-## 7. Segurança
-
-Rules são a barreira efetiva de autorização. Botões, filtros e confirmações são proteção adicional de negócio, não substitutos das Rules.
-
-Não colocar Service Account, token administrativo ou segredo no frontend/repositório.
+App Check/MFA podem fazer parte do hardening corporativo futuro, mas qualquer ativação deve ser implementada e testada explicitamente. Não documentar como recurso ativo antes da configuração real.

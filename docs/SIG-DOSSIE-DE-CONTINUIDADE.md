@@ -1,366 +1,181 @@
 # SIG — Dossiê de Continuidade do Projeto
 
-**Sistema Integrado de Gestão (SIG)**  
-**Baseline funcional:** 02/09/2026 — Plano v6 + Balanço + Consórcios + Permutas v2 + Governança/Antifraude + Inadimplência + Dashboard v2 + Vendas  
+**Sistema:** Sistema Integrado de Gestão (SIG)  
+**Baseline:** 16/09/2026  
 **Repositório:** `Dyyjoao/gestao-contratos`  
-**Produção:** `main`
+**Produção:** `main`  
+**Documento-base:** `docs/SIG-BASELINE-ATUAL.md`
 
----
+## 0. Como retomar o projeto
 
-## 0. Fonte de verdade
-
-Este documento registra o estado funcional consolidado do SIG. O código executável e as Rules publicadas são a prova final do comportamento vigente.
-
-Ordem recomendada de leitura:
-
-1. `AGENTS.md`;
-2. este Dossiê;
-3. `docs/SIG-MANUAL-MESTRE.md`;
+Ler nesta ordem:
+1. `docs/SIG-BASELINE-ATUAL.md`;
+2. `docs/SIG-MANUAL-MESTRE.md`;
+3. este Dossiê;
 4. `docs/SIG-GUIA-DE-CONTINUIDADE.md`;
 5. `docs/SIG-FIREBASE-DEPLOY-E-RULES.md`;
-6. `SECURITY.md`;
-7. `docs/dashboard-v2-vendas.md` para Dashboard/Vendas;
-8. `app.js`;
-9. `js/controllership-router.js`;
-10. `js/profiles.js`;
-11. `firestore.rules`, `storage.rules`, `firebase.json` e `.firebaserc`;
-12. `.github/workflows/`.
+6. `app.js`;
+7. `js/controllership-router.js`;
+8. `js/profiles.js`;
+9. `firestore.rules`;
+10. `.github/workflows/`.
 
-**Regra de ouro:** conversa ou memória de IA nunca são a única fonte de verdade. Para a Controladoria, `js/controllership-router.js` define quais módulos estão ativos.
+PR aberto não é produção. Conversa não é fonte única de verdade.
 
----
+## 1. Estado atual de navegação
 
-# 1. Visão do produto
+PR #29 foi mergeado em `main` e reorganizou a navegação por áreas.
 
-O SIG é uma camada empresarial de operação, controle, governança e decisão. Deve evoluir como arquitetura integrada, não como coleção de telas isoladas.
+### Comercial
+- Vendas & Comissões.
 
-Escopo ativo principal:
-
-- Dashboard Gerencial e Minha Mesa;
+### Controladoria & FP&A
+Visualmente contém, antes dos módulos nativos:
 - Contratos;
-- Consórcios;
+- Contas a Pagar;
 - Permutas;
-- Vendas & Comissões;
-- Controladoria & FP&A;
-- Governança & Compliance, incluindo Antifraude & TI;
-- Planos de Ação;
-- Administração de grupo, empresas, usuários e perfis.
+- Consórcios.
+
+Apenas a navegação mudou. Os módulos continuam independentes em permissão, persistência e regras.
+
+## 2. Estado atual da Controladoria
+
+Rota vigente: `js/controllership-router.js`.
 
-Módulos operacionais antigos podem continuar fisicamente no repositório por histórico, mas não são ativos sem import/rota explícita.
+Módulos nativos:
+- DRE Gerencial;
+- Balanço Patrimonial;
+- Inadimplência & Aging;
+- Input Mensal;
+- Budget;
+- Forecast;
+- Fluxo de Caixa;
+- Prestação de Contas;
+- Cockpit de Fechamento;
+- Premissas;
+- Imobilizado & CAPEX;
+- Plano de Contas;
+- Centros de Custo;
+- Configurações.
+
+## 3. DRE restaurada
+
+A arquitetura aprovada foi restaurada no merge do PR #28:
+- DRE Gerencial principal;
+- detalhamento de contas;
+- estrutura do plano;
+- visualização societária CPC 51;
+- totalizadores calculados.
 
-**Regra estrutural:** nova tela/módulo deve nascer com menu/rota, grid de Perfis, bloqueio real de ação, Rules quando houver dados, QA e documentação.
+O Plano classifica contas de resultado para Linha DRE Gerencial e Categoria CPC 51. Totalizadores não são contas lançáveis.
 
----
+## 4. Contratos + FP&A + Caixa
 
-# 2. Arquitetura de execução
+O sincronizador de Contratos usa conta Analítica de Resultado válida, Centro de Custo permitido, vigência, dia de vencimento e regra de reajuste.
 
-## 2.1 Frontend e backend
+Contrato pode alimentar:
+- Budget/Forecast quando planejamento estiver ativo;
+- Contas a Pagar quando aplicável;
+- provisões de Caixa quando `fluxoCaixaAtivo` estiver ativo.
 
-- frontend estático/PWA em HTML, CSS e JavaScript;
-- Firebase Authentication para autenticação;
-- Cloud Firestore para persistência;
-- Firebase Storage para anexos cobertos por Rules;
-- GitHub Pages para hospedagem do frontend.
+O motor de reajuste é compartilhado. O percentual/referência é informado no contrato; não existe busca externa automática de IPCA/IGP-M.
 
-**GitHub Pages e Firebase Rules são deploys independentes.** Alterar `firestore.rules` no Git não publica a Rule no Firebase.
+Mudanças de regra, vigência ou renovação devem reconciliar posições futuras/abertas e preservar estados históricos protegidos. Se isso não ocorrer em algum caso, tratar como defeito, não como nova regra.
 
-## 2.2 Contexto empresarial
+## 5. Contas a Pagar
 
-Toda persistência empresarial deve respeitar:
+Cockpit operacional independente de FP&A.
 
-- `grupoId`;
-- `empresaId` quando aplicável;
-- empresa(s) selecionada(s) no cabeçalho;
-- permissões do perfil.
+- Contratos podem gerar obrigações;
+- reajuste de contrato recalcula obrigações futuras/abertas;
+- pagos e estornados são preservados;
+- obrigação histórica em aberto não deve ser cancelada só por sair da janela atual;
+- conta bancária planejada é definida no lançamento;
+- conta efetiva pode ser registrada na baixa conforme autorização;
+- filtros e impressão usam a conta bancária;
+- não há geração automática de DRE, Budget, Forecast ou Fluxo de Caixa.
 
-Telas monoempresa não podem escolher silenciosamente a primeira empresa de um contexto múltiplo. Fluxo de Caixa e Prestação de Contas exigem exatamente uma empresa.
+## 6. Correções administrativas
 
-Carteiras gerenciais como Consórcios, Permutas, Inadimplência, Dashboard e Vendas podem consolidar empresas quando o módulo tiver sido desenhado para isso; cadastros pertencentes a uma empresa exigem contexto inequívoco.
+Helpers centrais:
+- `js/admin-actions.js`;
+- `js/input-admin-actions.js`;
+- `js/master-admin-actions.js`;
+- `js/workflow-admin-actions.js`;
+- `js/fleet-admin-actions.js`;
+- `js/cashflow-admin-actions.js`.
 
----
+Regra permanente: estorno auditável como caminho normal; exclusão física apenas excepcional e Administrador + senha + motivo + auditoria.
 
-# 3. Navegação e permissões
+## 7. Firebase e Storage
 
-Módulos de primeiro nível relevantes na baseline:
+Firebase Authentication + Firestore continuam como backend vigente.
 
-- Dashboard;
-- Contratos;
-- Consórcios;
-- Permutas;
-- Vendas & Comissões;
-- Controladoria & FP&A;
-- Governança & Compliance;
-- Administração conforme autorização.
+- Firestore Rules e frontend têm deploys independentes;
+- Storage continua adiado/não ativo;
+- não afirmar que Storage está operacional;
+- opção de banco local/API própria continua em estudo e não deve ser implementada sem aprovação;
+- integrações/bases críticas devem operar em **fail-closed**: falha de leitura não pode virar zero, lista vazia ou autorização implícita.
 
-Consórcios, Permutas e Vendas são independentes da Controladoria e não devem aparecer no submenu de FP&A.
+## 8. Migração do sistema Script
 
-Perfis são definidos em `js/profiles.js`. Ocultar menu não substitui autorização. O roteador também deve bloquear abertura e as Rules devem proteger persistência/leitura quando necessário.
+Objetivo: substituir gradualmente o sistema em Apps Script e concentrar os controles no SIG.
 
----
+Diretriz:
+- preservar dados, regras e indicadores úteis;
+- redesenhar a UX no padrão SIG;
+- transformar listas hardcoded em cadastros mestres quando fizer sentido;
+- expor KPIs relevantes ao Dashboard;
+- migrar tela por tela.
 
-# 4. Controladoria & FP&A — módulos ativos
+Inventário identificado:
+- Operação: Produção, Descarte;
+- Comercial: Vendedor, Consolidado de Vendas, Material, Visitas, Reclamações, Orçamentos;
+- Logística: Entrega/Recolhimento de Pallets, Inventário de Pallets;
+- Frota: Abastecimento, Gestão de Veículos, Consumo Diesel;
+- Financeiro: Financeiro, Custo de EPI;
+- RH: Hora Extra, Quadro de Funcionários, Ativos por Setor, Ativos no Mês;
+- Segurança: Segurança, Treinamentos;
+- Manutenção: Ordem de Serviço.
 
-A rota vigente está em `js/controllership-router.js`.
+O sistema legado usa Google Sheets como persistência e `CacheService` para desempenho.
 
-- DRE Gerencial — `js/ctrl-dre-v6.js`;
-- Balanço Patrimonial — `js/ctrl-balance-sheet-v1.js`;
-- Inadimplência & Aging — `js/ctrl-delinquency-v1.js`;
-- Input Mensal — `js/ctrl-input-v6.js`;
-- Budget — `js/ctrl-budget-v7.js`;
-- Forecast — `js/ctrl-forecast-v5.js`;
-- Fluxo de Caixa — `js/cashflow.js`;
-- Prestação de Contas — `js/accountability.js`;
-- Cockpit de Fechamento — `js/closing-v3.js`;
-- Premissas — `js/ctrl-premises-v4.js`;
-- Imobilizado & CAPEX — `js/ctrl-assets-v1.js`;
-- Plano de Contas — `js/ctrl-chart-accounts-v6.js`;
-- Centros de Custo — `js/ctrl-cost-centers-v2.js`;
-- Configurações — `js/ctrl-settings.js`.
+## 9. Primeira tela da migração
 
-`fpa.js` e gerações anteriores não são fonte de verdade da Controladoria atual.
+PR #30: **Operação · Produção v1**.
 
-Permissões de DRE/Balanço são feature gates explícitos. Inadimplência possui consulta (`controladoria.inadimplencia`) e gestão (`controladoria.inadimplenciaEditar`) separadas.
+Estado: homologação, sem merge em `main`.
 
----
+Escopo previsto:
+- Data;
+- Produção/Máquina;
+- Quantidade;
+- Horas trabalhadas;
+- Produção por hora;
+- Item;
+- Concretador;
+- cadastros operacionais;
+- KPIs e gráficos;
+- histórico com estorno ADM.
 
-# 5. Plano de Contas v6 e natureza
+Rules de Produção ainda não fazem parte da baseline publicada. Não usar a tela como produção real até aprovação, Rules e merge.
 
-Máscara canônica: `#.##.##.####`.
+## 10. Preview-first
 
-Hierarquia:
+Fluxo de entrega:
 
-1. Raiz — `1`, `2`, `3`, `4`, `9`;
-2. Sintética N1 — `#.##`;
-3. Sintética N2 — `#.##.##`;
-4. Analítica — `#.##.##.####`.
+`branch → CI → preview isolado → teste do usuário → ajustes → aprovação → merge → produção`
 
-Somente Analíticas recebem lançamento. `contaPaiId` é o vínculo estrutural persistido.
+Pendente estrutural: configurar preview navegável por PR, preferencialmente via Firebase Hosting Preview Channels, sem usar `main` como ambiente de homologação.
 
-`js/account-mask.js` é a fonte única de natureza, raiz, conta redutora e multiplicadores. Saldo bruto nunca é regravado para corrigir apresentação.
+## 11. Pontos ainda pendentes
 
-Conta com histórico deve ser inativada. Exclusão física do Plano existe apenas para erro/teste sem referência, após varredura de dependências.
+- issue de conta legada do Plano bloqueada por referências invisíveis/orfãs ainda precisa de diagnóstico específico;
+- Storage permanece adiado;
+- preview automatizado ainda precisa ser configurado;
+- banco local/VPN/domínio/app nativo não são arquitetura aprovada;
+- migração do Script seguirá tela por tela durante o ciclo atual.
 
-Centros técnicos:
+## 12. Regra de continuidade
 
-- Estatísticas: `__cc_estatistico__`;
-- Balanço: `__cc_balanco__`.
-
----
-
-# 6. Balanço, DRE e planejamento
-
-Balanço representa **posição de fechamento**, não fluxo. Meses não são somados entre si.
-
-- trimestre = meses + posição final do trimestre;
-- ano = Jan–Dez + posição de dezembro;
-- comparativo anual = dezembro atual x dezembro Last Year.
-
-DRE usa raízes 3 e 4 e `multiplicadorResultado`. Budget é anual/versionado. Forecast = Realizado fechado + projeção futura. Premissas respeitam vigência/competência.
-
-`js/financial-reporting.js` concentra a base compartilhada usada por DRE, prestação e Dashboard para evitar fórmulas paralelas.
-
----
-
-# 7. Imobilizado & CAPEX
-
-Coleção: `imobilizados`.
-
-Integrações atuais:
-
-- Balanço: custo e depreciação acumulada;
-- Budget/Forecast: despesa de depreciação automática por Conta × CC.
-
-Fim da vida útil não baixa o bem. CAPEX ainda não gera desembolso automático no Caixa.
-
-A coleção é crítica: falha de leitura deve operar em **fail-closed** nos cálculos dependentes.
-
----
-
-# 8. Consórcios
-
-Coleção: `consorcios`.
-
-Módulo de primeiro nível após Contratos. A UI usa permissões próprias `consorcios.visualizar` e `consorcios.editar`; existe espelho técnico temporário para chaves legadas de Controladoria enquanto backend/roteador ainda exigirem compatibilidade.
-
-`js/consortium-calculations.js` centraliza a matemática. Carta atual é base preferencial; taxas de administração/reserva/seguro ficam separadas de juros/encargos. Cronograma de parcelas é projeção, não histórico real.
-
-**Consórcios não alimenta automaticamente DRE, Balanço, Caixa, Budget, Forecast ou Imobilizado.**
-
----
-
-# 9. Permutas v2
-
-Módulo operacional de primeiro nível após Consórcios.
-
-Coleções:
-
-- `permutas`;
-- `permutaMovimentos`;
-- `permutaFechamentos`.
-
-Principais contratos:
-
-- CPF/CNPJ usa helper padronizado do SIG;
-- ficha individual e relatórios por intervalo exato de dias;
-- estorno preserva lançamento riscado, motivo, usuário e data/hora;
-- estorno não compõe saldo/fechamento;
-- permuta inativa não aceita movimento novo;
-- fechamento registra entradas, saídas, saldo e ciclo, podendo zerar ou carregar saldo para próximo ciclo;
-- delete físico somente Administrador, com reautenticação pela senha;
-- UI deve refletir exclusão imediatamente sem depender de reload completo.
-
----
-
-# 10. Governança, Antifraude e Inadimplência
-
-Governança & Compliance usa a estrutura de riscos, obrigações, programas/ciclos de auditoria e Planos de Ação.
-
-O Cockpit Antifraude & TI concentra controles simples e executáveis: MFA, endpoint/antivírus, patches, bloqueio de tela, backups, credenciais/privilégios, phishing e validação independente de alterações financeiras. Achados podem gerar Plano de Ação.
-
-Inadimplência usa coleção própria `inadimplenciaTitulos`, com aging e índice vencido/carteira em aberto. Consulta e gestão são segregadas. Delete físico é bloqueado.
-
----
-
-# 11. Dashboard Gerencial v2
-
-Implementação ativa:
-
-- `js/dashboard-v2.js` — ponto de entrada;
-- `js/dashboard-cockpit-v2.js` — cockpit;
-- `dashboard-v2.css` — layout.
-
-O dashboard deixou de ser um resumo fixo de DRE + Caixa e passa a ser **cockpit configurável por usuário**.
-
-Princípios:
-
-- não usar “Atalhos de Gestão”; o menu já cumpre esse papel;
-- cada KPI relevante deve trazer comparação/tendência/meta quando possível;
-- visão resumida deve permitir drill-down para o módulo de origem;
-- widgets só aparecem se o perfil possuir acesso à fonte;
-- usuário pode exibir/ocultar e ordenar widgets;
-- preferência fica em `dashboardPreferencias/{uid}` e só o próprio usuário pode acessá-la;
-- Dashboard não é ledger nem fonte de lançamentos.
-
-Blocos previstos/ativos: Resumo Executivo, Evolução de Resultado, Balanço, Caixa, Inadimplência, Consórcios, Permutas, Vendas & Comissões e desvios vs Budget.
-
-A análise patrimonial usa posição de fechamento e comparação com Last Year, preservando o contrato do Balanço.
-
----
-
-# 12. Vendas & Comissões
-
-Módulo comercial de primeiro nível após Permutas. Não pertence à Controladoria.
-
-Arquivos:
-
-- `js/sales.js`;
-- `js/sales-guard.js`;
-- `js/sales-performance.js`;
-- `sales.css`;
-- `sales-performance.css`.
-
-Coleções:
-
-- `vendedores`;
-- `vendas`.
-
-Permissões:
-
-- `vendas.visualizar`;
-- `vendas.lancar`;
-- `vendas.editar`;
-- `vendas.vendedores`;
-- `vendas.comissoes`.
-
-Cadastro do vendedor define meta mensal, comissão padrão e **base da comissão**:
-
-- `venda`: gera comissão sobre a venda confirmada;
-- `faturamento`: gera comissão sobre o valor efetivamente faturado.
-
-Faturamento parcial é permitido. A venda grava snapshot da regra (`baseComissao`, `comissaoPct`, `comissaoBaseValor`, `comissaoValor`, `comissaoStatus`) para impedir recálculo retroativo quando a regra do vendedor mudar.
-
-Fluxo financeiro da comissão:
-
-- aguardando faturamento;
-- provisionada;
-- aprovada;
-- paga.
-
-Quem possui apenas `vendas.lancar` não pode definir taxa/base divergente do cadastro do vendedor. `sales-guard.js` protege a UI e `firestore.rules` é a barreira efetiva.
-
-Venda cancelada fica no histórico e sai dos totais. Delete físico de venda/vendedor é bloqueado; vendedor é inativado.
-
-## 12.1 Performance comercial
-
-O cockpit por vendedor mostra:
-
-- barras Venda x Faturamento x Meta;
-- atingimento;
-- Faturado/Venda;
-- ticket médio;
-- comissão;
-- líder e participação no total;
-- maior atingimento;
-- maior gap venda x faturamento;
-- maior comissão.
-
-Também gera leituras gerenciais como meta batida com faturamento pendente ou gap elevado. Clicar no vendedor filtra a carteira detalhada.
-
-**Vendas não alimenta automaticamente DRE, Balanço, Caixa, Budget ou Forecast.** O Dashboard pode cruzar a leitura comercial com a financeira sem misturar fontes.
-
----
-
-# 13. Persistência e Firebase
-
-Arquivo versionado: `firestore.rules`.
-
-Coleções/regras críticas desta baseline incluem:
-
-- `imobilizados`;
-- `planoContasGerencial`;
-- `consorcios`;
-- `permutas`, `permutaMovimentos`, `permutaFechamentos`;
-- `inadimplenciaTitulos`;
-- `dashboardPreferencias`;
-- `vendedores`;
-- `vendas`.
-
-Dashboard Preferences é por UID. Vendedores/Vendas respeitam grupo/empresa e permissões comerciais. Rules validam o contrato da comissão e bloqueiam delete físico.
-
-O release só está completo quando frontend e Rules compatíveis estiverem publicados.
-
----
-
-# 14. QA e release
-
-Workflows relevantes:
-
-- `SIG Quality Check`;
-- `SIG Firebase Contract Check`;
-- `SIG Permissions Contract Check`;
-- `SIG Consorcios Contract Check`;
-- `SIG Permutas Contract Check`;
-- contrato específico Dashboard/Vendas quando presente;
-- GitHub Pages build/deploy.
-
-O QA deve verificar sintaxe, rotas ativas, permissões, Rules, cálculo e browser smoke dos módulos alterados. Não promover pacote estrutural pela metade.
-
----
-
-# 15. Limitações e decisões abertas
-
-- contas v5 não são migradas automaticamente para v6;
-- baixa/venda de ativo ainda não fecha automaticamente ganho/perda na DRE;
-- CAPEX ainda não integra desembolso de caixa automaticamente;
-- Consórcios ainda não integra demonstrativos, caixa ou planejamento;
-- Permutas continua independente da contabilidade automática;
-- Vendas ainda não gera lançamento de Receita/Contas a Receber/DRE automaticamente;
-- faturamento comercial é registrado no módulo de Vendas, não substitui integração fiscal/ERP;
-- Dashboard cruza fontes mas não cria nova fonte de verdade;
-- módulos legados no repositório não devem ser reativados sem decisão explícita.
-
----
-
-## Estado desta baseline
-
-A baseline combina Controladoria modular, gestão operacional independente, Governança/Antifraude, Inadimplência, Dashboard Gerencial configurável e Vendas & Comissões com segregação de acesso. Qualquer release que altere `firestore.rules` exige QA verde, promoção do frontend e republicação da Rule completa correspondente ao SHA de produção no Firebase.
+Nenhuma diretriz funcional, arquitetural ou de governança pode ser alterada silenciosamente. Melhorias podem ser propostas, mas só viram regra após aprovação explícita.
