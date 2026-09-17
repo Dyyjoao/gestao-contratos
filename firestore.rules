@@ -726,6 +726,48 @@ service cloud.firestore {
         );
       allow delete: if colecao in ['rhAusencias','rhHorasColaboradores'] && administrador() && documentoAcessivel(resource.data);
     }
+    function rhCicloRef(id) { return /databases/$(database)/documents/rhCiclosAvaliacao/$(id); }
+    function rhCicloValido(d) {
+      return rhMesValido(d.competencia) && d.modelo in ['90','180','360','540'] &&
+        d.avaliadoId is string && exists(rhColaboradorRef(d.avaliadoId)) &&
+        get(rhColaboradorRef(d.avaliadoId)).data.grupoId == d.grupoId &&
+        get(rhColaboradorRef(d.avaliadoId)).data.empresaId == d.empresaId &&
+        d.avaliadores is map && d.avaliadores.size() > 0 && d.avaliadores.size() <= 50;
+    }
+    match /rhCiclosAvaliacao/{id} {
+      allow read: if rhVer('rhAvaliacoes360') && documentoAcessivel(resource.data);
+      allow create: if permissao('rhAvaliacoes360','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' && request.resource.data.registradoPor == request.auth.uid &&
+        rhCicloValido(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('rhAvaliacoes360','editar') && request.resource.data.status == 'ativo' &&
+            rhCicloValido(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'competencia','modelo','avaliadoId','avaliadores','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+    function rhAvaliacaoPlanejada(d) {
+      return d.cicloId is string && exists(rhCicloRef(d.cicloId)) &&
+        get(rhCicloRef(d.cicloId)).data.status == 'ativo' &&
+        get(rhCicloRef(d.cicloId)).data.grupoId == d.grupoId &&
+        get(rhCicloRef(d.cicloId)).data.empresaId == d.empresaId &&
+        get(rhCicloRef(d.cicloId)).data.competencia == d.ciclo &&
+        get(rhCicloRef(d.cicloId)).data.modelo == d.modelo &&
+        get(rhCicloRef(d.cicloId)).data.avaliadoId == d.avaliadoId &&
+        d.avaliadorChave is string && d.avaliadorChave in get(rhCicloRef(d.cicloId)).data.avaliadores &&
+        get(rhCicloRef(d.cicloId)).data.avaliadores[d.avaliadorChave].papel == d.papel &&
+        get(rhCicloRef(d.cicloId)).data.avaliadores[d.avaliadorChave].colaboradorId == d.avaliadorId &&
+        (d.papel in ['CLIENTE','FORNECEDOR'] ?
+          get(rhCicloRef(d.cicloId)).data.avaliadores[d.avaliadorChave].nome == d.avaliadorExternoNome :
+          d.avaliadorExternoNome == '');
+    }
     function rhModeloPapelValido(d) {
       return d.modelo is string && d.modelo in ['90','180','360','540'] && (
         (d.modelo == '90' && d.papel == 'LIDERANÇA') ||
@@ -754,6 +796,7 @@ service cloud.firestore {
         get(rhColaboradorRef(d.avaliadoId)).data.grupoId == d.grupoId &&
         get(rhColaboradorRef(d.avaliadoId)).data.empresaId == d.empresaId &&
         rhModeloPapelValido(d) && rhAvaliadorValido(d) &&
+        (!('cicloId' in d) || rhAvaliacaoPlanejada(d)) &&
         ((d.papel == 'AUTOAVALIAÇÃO') == (d.avaliadoId == d.avaliadorId)) &&
         d.notas is list && d.notas.size() == 5 &&
         d.notas[0] is int && d.notas[0] >= 1 && d.notas[0] <= 5 &&
@@ -778,7 +821,7 @@ service cloud.firestore {
           (permissao('rhAvaliacoes360','editar') && request.resource.data.status == 'ativo' &&
             rhAvaliacaoValida(request.resource.data) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'modelo','ciclo','avaliadoId','avaliadorId','avaliadorExternoNome','papel','notas','comentario','atualizadoEm']))
+              'modelo','ciclo','cicloId','avaliadorChave','avaliadoId','avaliadorId','avaliadorExternoNome','papel','notas','comentario','atualizadoEm']))
         );
       allow delete: if administrador() && documentoAcessivel(resource.data);
     }

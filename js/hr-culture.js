@@ -1,4 +1,5 @@
-import './hr-performance.js?v=3';
+import './hr-performance.js?v=4';
+import './hr-cycle-config.js?v=1';
 import './hr-actions.js';
 
 function garantirCss(arquivo,versao){
@@ -8,7 +9,7 @@ function garantirCss(arquivo,versao){
   if(link.getAttribute('href')!==href)link.href=href;
 }
 garantirCss('production.css','2');
-garantirCss('rh.css','3');
+garantirCss('rh.css','4');
 
 let refreshRhTimer=0;
 function atualizarTelaRhAposGravacao(){
