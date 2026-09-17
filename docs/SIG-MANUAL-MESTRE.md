@@ -2,6 +2,7 @@
 
 > Documento de invariantes do Sistema Integrado de Gestão.  
 > **Atualizado em:** 16/09/2026.  
+> **Baseline histórica substituída:** 02/09/2026.  
 > A baseline consolidada está em `docs/SIG-BASELINE-ATUAL.md`.
 
 ## 1. Fonte de verdade
