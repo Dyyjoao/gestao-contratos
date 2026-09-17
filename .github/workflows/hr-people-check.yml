@@ -1,0 +1,27 @@
+name: SIG RH People and Culture Check
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+jobs:
+  rh-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate RH indicators and access
+        run: |
+          set -e
+          node --check js/hr-metrics.js
+          node --check js/hr-people.js
+          node --check js/hr-culture.js
+          node --check js/hr-agenda.js
+          node tests/hr-metrics.test.mjs
+          grep -q 'hr-people.js' app.js
+          grep -q 'hr-culture.js' app.js
+          grep -q 'hr-agenda.js' app.js
+          grep -q 'match /rhColaboradores/{id}' firestore.rules
+          grep -q 'match /rhAvaliacoes360/{id}' firestore.rules
+          grep -q 'match /rhAcoes/{id}' firestore.rules
+          grep -q 'rhAusencias' js/profiles.js
+          grep -q 'participanteUsuarios' js/hr-agenda.js
