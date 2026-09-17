@@ -23,7 +23,7 @@ const ORDEM_CONTROLADORIA=["contratos","contasPagar","permutas","consorcios"];
 let chaveAtiva="";
 let agendado=false;
 
-function permitido(item){if(admin())return true;return item.acoes.some(acao=>permite(item.modulo,acao)||(item.area==="logistica"&&permite("palletInventario",acao))||(item.area==="rh"&&["modquadro","modsetores","modativos"].some(m=>permite(m,acao)))||(item.area==="seguranca"&&permite("modtreinamentos",acao)))}
+function permitido(item){if(admin())return true;if(item.area==="frota"&&item.modulo==="combustivel"&&!ITENS.frota.acoes.some(acao=>permite("frota",acao)))return false;return item.acoes.some(acao=>permite(item.modulo,acao)||(item.area==="logistica"&&permite("palletInventario",acao))||(item.area==="rh"&&["modquadro","modsetores","modativos"].some(m=>permite(m,acao)))||(item.area==="seguranca"&&permite("modtreinamentos",acao)))}
 function css(){
   if($("area-navigation-css"))return;
   const s=document.createElement("style");s.id="area-navigation-css";s.textContent=`
