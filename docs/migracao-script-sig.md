@@ -147,3 +147,13 @@ Os movimentos são segregados por Grupo/Empresa e permissões próprias para ent
 As abas de RH preservam horas extras 50%/100% e valor por setor; admissões, demissões, atestados e afastamentos >15 dias por data; ativos por setor; e ativos no mês. A última posição de ativos, e a última posição de cada setor, são **fotografias**, não fluxos somáveis ao longo do ano. O quadro de movimentações (admissões menos demissões) é um fluxo separado.
 
 Segurança registra acidentes de trabalho/trajeto com quantidades e treinamentos com setor, tipo, data, nome, local, carga horária, horário, instrutor, custo e público. As seis coleções têm permissões próprias de consulta, lançamento e edição, segregação Grupo/Empresa, estorno administrativo auditado e bloqueio de delete físico. RH e Segurança recebem indicadores no Dashboard. Nenhum desses registros cria folha, obrigação financeira ou lançamento contábil automaticamente.
+
+### Frota — Combustível e Diesel
+
+`abastecimentosFrota` registra consumo e recebimento de diesel em litros, data, motorista, placa e quilometragem. Cada lançamento aponta para um veículo existente da mesma empresa; o perfil precisa das permissões de **Combustível** e de consulta à **Frota**. O estoque exibido é derivado dos movimentos ativos da empresa selecionada, sem gravar saldos como fonte paralela. Uma edição ou estorno recalcula os indicadores. O formulário impede saldo final negativo com os movimentos carregados, mas lançamentos simultâneos exigem conferência operacional antes de fechar o período.
+
+`custosDiesel` registra data e valor informado, separado dos litros. Esses valores não criam lançamento no Caixa ou na DRE. Edição exige permissão, e estorno é exclusivo de Administrador com reautenticação, motivo e auditoria. Não existe exclusão física. A coleção de veículos do SIG continua sendo o cadastro único; a planilha de Gestão de Veículos requer mapeamento e reconciliação antes de importar registros históricos.
+
+### Telas existentes e dados ainda não importados
+
+Vendedor, Vendas e Consolidado de Vendas usam a carteira já existente de Vendas & Comissões e o Dashboard. Material, Financeiro e Custo de EPI dependem de classificação e reconciliação com receitas, Caixa, FP&A e Almoxarifado existentes antes de importar valores históricos; registrar o mesmo valor novamente produziria dupla contagem. O lote prepara as telas operacionais independentes e suas Rules, sem transferir as linhas das planilhas.
