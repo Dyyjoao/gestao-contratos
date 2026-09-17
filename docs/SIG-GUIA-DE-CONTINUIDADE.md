@@ -1,6 +1,7 @@
 # SIG — Guia Operacional de Continuidade
 
 **Data-base:** 16/09/2026  
+**Baseline histórica substituída:** 02/09/2026  
 **Baseline:** `docs/SIG-BASELINE-ATUAL.md`
 
 ## 1. Retomada segura
