@@ -69,4 +69,10 @@ No SIG a tela passa a ter histórico auditável, filtros, KPIs, visão mensal, v
 
 Estorno de lançamento segue a diretriz administrativa do SIG: Administrador, reautenticação pela senha atual, motivo obrigatório e auditoria. Estornos deixam de compor indicadores sem apagar o histórico.
 
+### Produção — persistência e publicação
+
+As coleções `producaoLancamentos` e `operacaoCadastros` são segregadas por `grupoId` e `empresaId`. As Rules versionadas na branch de homologação permitem leitura conforme as permissões de Produção, criação de lançamentos para quem pode lançar, edição de registros ativos para quem pode editar, e gestão de cadastros para quem possui a permissão correspondente. Estorno permanece ação administrativa com trilha na coleção `auditoriaAdministrativa`; exclusão física é bloqueada.
+
+O frontend no GitHub Pages e as Firestore Rules são publicados separadamente. Antes de liberar gravação real, publicar as Rules completas deste commit no projeto Firebase correto e testar com usuário autorizado, usuário sem permissão e Administrador. Uma prévia estática da interface não grava no Firebase nem comprova as Rules publicadas.
+
 Nenhuma integração contábil, financeira ou operacional nova será criada automaticamente apenas porque existe no Script; mudanças de regra ou de integração continuam exigindo decisão explícita.
