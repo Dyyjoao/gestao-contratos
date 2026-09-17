@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import { resumoRHPeriodo } from '../js/hr-metrics.js';import { rankingAbsenteismo, rankingHorasExtras, turnoverPorSetor } from '../js/hr-analytics.js';
+const pessoas=[{id:'a',nome:'ANA',setor:'ADM',admissao:'2026-01-01',demissao:'',jornadaMensalHoras:220,status:'ativo'},{id:'b',nome:'BIA',setor:'PRODUÇÃO',admissao:'2026-01-01',demissao:'2026-09-10',jornadaMensalHoras:220,status:'ativo'}];
+const aus=[{colaboradorId:'a',setor:'ADM',data:'2026-09-02',tipo:'FALTA',horas:8,status:'ativo'},{colaboradorId:'a',setor:'ADM',data:'2026-09-03',tipo:'ATESTADO',horas:4,status:'ativo'}];
+const ext=[{colaboradorId:'a',setor:'ADM',data:'2026-09-05',horas50:2,horas100:1,status:'ativo'}];
+test('periodo livre soma parcial',()=>{const r=resumoRHPeriodo(pessoas,aus,ext,'2026-09-01','2026-09-15');assert.equal(r.horasAusentes,12);assert.equal(r.horas50,2);assert.equal(r.horas100,1)});
+test('rankings e turnover por setor',()=>{assert.equal(rankingAbsenteismo(pessoas,aus,'2026-09-01','2026-09-15')[0].nome,'ANA');assert.equal(rankingHorasExtras(pessoas,ext,'2026-09-01','2026-09-15')[0].total,3);assert.equal(turnoverPorSetor(pessoas,aus,ext,'2026-09-01','2026-09-30')[0].setor,'PRODUÇÃO')});

@@ -11,3 +11,9 @@
 #pagina-rh .fleet-tabs{display:flex;gap:8px;flex-wrap:wrap}
 #pagina-rh .fleet-tab{border:1px solid #d0d5dd;border-radius:999px;padding:8px 12px;background:#fff;color:#475467;font-size:12px;font-weight:700}
 #pagina-rh .fleet-tab.ativo{background:#15354b;color:#fff;border-color:#15354b}
+
+#pagina-rh .rh-floating-actions{position:fixed;right:22px;bottom:22px;z-index:800;display:flex;gap:8px;padding:8px;border:1px solid #dbe3ea;border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(16,42,67,.16);backdrop-filter:blur(8px)}
+#pagina-rh .rh-filter-field input[type="date"]{min-width:150px}
+#pagina-rh .rh-analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#pagina-rh .rh-bars{display:grid;gap:11px}.rh-bar-row{display:grid;gap:5px}.rh-bar-label{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#40566a}.rh-bar-label strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rh-bar-track{height:9px;border-radius:999px;background:#edf2f5;overflow:hidden}.rh-bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#15354b,#20b6a5)}.rh-empty{padding:14px;color:#667085;font-size:12px;text-align:center}
+@media(max-width:800px){#pagina-rh .rh-floating-actions{right:12px;bottom:12px}#pagina-rh .rh-analytics-grid{grid-template-columns:1fr}}

@@ -218,6 +218,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /configuracoesModulos/{id} {
+      allow read: if usuarioAtivo() && documentoAcessivel(resource.data);
+      allow create: if administrador() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.modulo is string && request.resource.data.modulo.size() > 0;
+      allow update: if administrador() && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.modulo == resource.data.modulo;
+      allow delete: if false;
+    }
+
     match /dashboardPreferencias/{usuarioId} {
       allow read: if usuarioAtivo() && request.auth.uid == usuarioId && resource.data.grupoId == usuario().data.grupoId;
       allow create: if usuarioAtivo() && request.auth.uid == usuarioId &&
@@ -632,7 +643,7 @@ service cloud.firestore {
     }
 
     function rhVer(modulo) { return permissao(modulo,'visualizar') || permissao(modulo,'lancar') || permissao(modulo,'editar'); }
-    function rhSetorValido(setor) { return setor in ['ADM','LAJE','COMERCIAL','LOGISTICA','PRODUÇÃO','MOURÃO','MANUTENÇÃO']; }
+    function rhSetorValido(setor) { return setor is string && setor.size() > 0 && setor.size() <= 80; }
     function rhDataValida(data) { return data is string && data.size() == 10; }
     function rhMesValido(mes) { return mes is string && mes.size() == 7; }
     function rhColaboradorRef(id) { return /databases/$(database)/documents/rhColaboradores/$(id); }
@@ -690,7 +701,7 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'codigo','nome','setor','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
     match /{colecao}/{id} {
       allow read: if colecao in ['rhAusencias','rhHorasColaboradores'] &&
@@ -713,7 +724,7 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'data','setor','tipo','horas','observacao','horas50','horas100','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if colecao in ['rhAusencias','rhHorasColaboradores'] && administrador() && documentoAcessivel(resource.data);
     }
     function rhAvaliacaoValida(d) {
       return rhMesValido(d.ciclo) && d.avaliadoId is string && d.avaliadorId is string &&
@@ -749,7 +760,7 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'ciclo','avaliadoId','avaliadorId','papel','notas','comentario','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
     function rhAcaoValida(d) {
       return rhMesValido(d.competencia) && rhDataValida(d.prazo) &&
@@ -781,7 +792,7 @@ service cloud.firestore {
               'competencia','prazo','tipo','titulo','descricao','situacao',
                 'participanteIds','participanteUsuarios','atualizadoEm']))
         );
-      allow delete: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
     function moduloIndicador(colecao) {

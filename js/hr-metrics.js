@@ -72,3 +72,16 @@ export function resumoRH(colaboradores, ausencias, horas, inicio, fim, setor = '
     previstas, absenteismo: previstas ? horasAusentes / previstas * 100 : 0,
     horas50: total('horas50'), horas100: total('horas100') };
 }
+
+
+// Intervalo livre (inclusive), usado pelos filtros de calendário do RH.
+export function resumoRHPeriodo(colaboradores, ausencias, horas, inicio, fim, setor = '') {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fim) || inicio > fim) return {linhas:[],abertura:0,fechamento:0,admissoes:0,demissoes:0,turnover:0,horasAusentes:0,previstas:0,absenteismo:0,horas50:0,horas100:0};
+  const iniMes=inicio.slice(0,7),fimM=fim.slice(0,7),linhas=[];
+  for (const mes of mesesEntre(iniMes,fimM)) {
+    const de=mes===iniMes?inicio:`${mes}-01`, ate=mes===fimM?fim:fimMes(mes);
+    const r=resumoRHDatas(colaboradores,ausencias,horas,de,ate,setor); if(r) linhas.push(r);
+  }
+  const flat=linhas.map(x=>x.linhas[0]),total=k=>flat.reduce((n,l)=>n+Number(l[k]||0),0),abertura=flat[0]?.abertura||0,fechamento=flat.at(-1)?.fechamento||0,media=(abertura+fechamento)/2,previstas=total('previstas'),horasAusentes=total('horasAusentes');
+  return {linhas:flat,abertura,fechamento,admissoes:total('admissoes'),demissoes:total('demissoes'),turnover:media?total('demissoes')/media*100:0,horasAusentes,previstas,absenteismo:previstas?horasAusentes/previstas*100:0,horas50:total('horas50'),horas100:total('horas100')};
+}
