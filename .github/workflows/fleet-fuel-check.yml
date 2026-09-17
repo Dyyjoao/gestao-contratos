@@ -17,4 +17,4 @@ jobs:
           grep -q 'combustivel' js/profiles.js
           grep -q 'match /abastecimentosFrota/{id}' firestore.rules
           grep -q 'match /custosDiesel/{id}' firestore.rules
-          grep -q 'combustivel' js/area-navigation.js
+          grep -q 'menuFrota' js/fleet-fuel.js
