@@ -1,6 +1,15 @@
 import './hr-performance.js';
 import './hr-actions.js';
 
+function garantirCss(arquivo,versao){
+  let link=document.querySelector(`link[href^="${arquivo}"]`);
+  const href=`${arquivo}?v=${versao}`;
+  if(!link){link=document.createElement('link');link.rel='stylesheet';document.head.appendChild(link)}
+  if(link.getAttribute('href')!==href)link.href=href;
+}
+garantirCss('production.css','2');
+garantirCss('rh.css','3');
+
 window.addEventListener('sig:data-changed',e=>{
   if(e.detail?.modulo!=='rh')return;
   setTimeout(()=>{
