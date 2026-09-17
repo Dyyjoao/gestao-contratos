@@ -11,14 +11,16 @@ const ITENS={
   visitas:{label:"Visitas e contatos",root:"menuvisitas",area:"comercial",modulo:"visitas",acoes:["visualizar","registrar","editar","supervisionar"]},
   orcamentos:{label:"Orçamentos",root:"menuorcamentos",area:"comercial",modulo:"orcamentos",acoes:["visualizar","registrar","editar","supervisionar"]},
   pallets:{label:"Pallets",root:"menuPallets",area:"logistica",modulo:"palletMovimentos",acoes:["visualizar","lancar","editar"]},
-  ordensservico:{label:"Ordens de Serviço",root:"menuOrdensServico",area:"manutencao",modulo:"ordensServico",acoes:["visualizar","solicitar","executar"]}
+  ordensservico:{label:"Ordens de Serviço",root:"menuOrdensServico",area:"manutencao",modulo:"ordensServico",acoes:["visualizar","solicitar","executar"]},
+  rh:{label:"Indicadores de RH",root:"menurh",area:"rh",modulo:"modhoras",acoes:["visualizar","lancar","editar"]},
+  seguranca:{label:"Segurança do Trabalho",root:"menuseguranca",area:"seguranca",modulo:"modincidentes",acoes:["visualizar","lancar","editar"]}
 };
 
 const ORDEM_CONTROLADORIA=["contratos","contasPagar","permutas","consorcios"];
 let chaveAtiva="";
 let agendado=false;
 
-function permitido(item){if(admin())return true;return item.acoes.some(acao=>permite(item.modulo,acao)||(item.area==="logistica"&&permite("palletInventario",acao)))}
+function permitido(item){if(admin())return true;return item.acoes.some(acao=>permite(item.modulo,acao)||(item.area==="logistica"&&permite("palletInventario",acao))||(item.area==="rh"&&["modquadro","modsetores","modativos"].some(m=>permite(m,acao)))||(item.area==="seguranca"&&permite("modtreinamentos",acao)))}
 function css(){
   if($("area-navigation-css"))return;
   const s=document.createElement("style");s.id="area-navigation-css";s.textContent=`
@@ -44,9 +46,10 @@ function garantirOperacao(){criarArea({menuId:"menuOperacao",boxId:"operacaoSubm
 function garantirComercial(){criarArea({menuId:"menuComercial",boxId:"comercialSubmenu",label:"Comercial",antesDe:"menuControladoria",chaves:["vendas","visitas","orcamentos"]})}
 function garantirLogistica(){criarArea({menuId:"menuLogistica",boxId:"logisticaSubmenu",label:"Logística",antesDe:"menuControladoria",chaves:["pallets"]})}
 function garantirManutencao(){criarArea({menuId:"menuManutencao",boxId:"manutencaoSubmenu",label:"Manutenção",antesDe:"menuControladoria",chaves:["ordensservico"]})}
+function garantirPessoas(){criarArea({menuId:"menuRh",boxId:"rhSubmenu",label:"RH",antesDe:"menuControladoria",chaves:["rh"]});criarArea({menuId:"menuSeguranca",boxId:"segurancaSubmenu",label:"Segurança",antesDe:"menuControladoria",chaves:["seguranca"]})}
 function garantirControladoriaTransferidos(){const menu=$("menuControladoria"),box=$("ctrlSubmenu");if(!menu||!box)return;const primeiroNativo=box.querySelector(".ctrl-subitem");ORDEM_CONTROLADORIA.forEach(chave=>criarSubitem(chave,box,primeiroNativo));if(!$("areaNavCtrlDivider")){const d=document.createElement("div");d.id="areaNavCtrlDivider";d.className="area-divider";const nativo=box.querySelector(".ctrl-subitem");if(nativo)box.insertBefore(d,nativo);else box.appendChild(d)}const temTransferido=ORDEM_CONTROLADORIA.some(chave=>permitido(ITENS[chave]));const temNativo=[...box.querySelectorAll(".ctrl-subitem")].some(b=>!b.classList.contains("hidden"));menu.classList.toggle("hidden",!(temTransferido||temNativo))}
 function marcarAtivo(chave=""){document.querySelectorAll(".area-subitem").forEach(b=>b.classList.toggle("ativo",b.dataset.areaChave===chave));const operacao=$("menuOperacao"),comercial=$("menuComercial"),ctrl=$("menuControladoria");if(operacao)operacao.classList.toggle("ativo",["producao","descarte"].includes(chave));if(comercial)comercial.classList.toggle("ativo",["vendas","visitas","orcamentos"].includes(chave));if(ctrl&&ORDEM_CONTROLADORIA.includes(chave))ctrl.classList.add("ativo");else if(ctrl&&["vendas","visitas","orcamentos","producao","descarte"].includes(chave))ctrl.classList.remove("ativo")}
-function chavePorPagina(pagina=""){const p=String(pagina||"").toLowerCase();if(p.includes("producao"))return"producao";if(p.includes("descarte"))return"descarte";if(p.includes("visita"))return"visitas";if(p.includes("orcamento"))return"orcamentos";if(p.includes("pallet"))return"pallets";if(p.includes("ordensservico"))return"ordensservico";if(p.includes("contas-pagar"))return"contasPagar";if(p.includes("contrat"))return"contratos";if(p.includes("permut"))return"permutas";if(p.includes("consor"))return"consorcios";if(p.includes("venda"))return"vendas";return""}
-function aplicar(){css();garantirOperacao();garantirComercial();garantirLogistica();garantirManutencao();garantirControladoriaTransferidos();ocultarRaizes();marcarAtivo(chaveAtiva)}
+function chavePorPagina(pagina=""){const p=String(pagina||"").toLowerCase();if(p.includes("producao"))return"producao";if(p.includes("descarte"))return"descarte";if(p.includes("visita"))return"visitas";if(p.includes("orcamento"))return"orcamentos";if(p.includes("pallet"))return"pallets";if(p.includes("ordensservico"))return"ordensservico";if(p==="rh")return"rh";if(p==="seguranca")return"seguranca";if(p.includes("contas-pagar"))return"contasPagar";if(p.includes("contrat"))return"contratos";if(p.includes("permut"))return"permutas";if(p.includes("consor"))return"consorcios";if(p.includes("venda"))return"vendas";return""}
+function aplicar(){css();garantirOperacao();garantirComercial();garantirLogistica();garantirManutencao();garantirPessoas();garantirControladoriaTransferidos();ocultarRaizes();marcarAtivo(chaveAtiva)}
 function agendar(){if(agendado)return;agendado=true;requestAnimationFrame(()=>{agendado=false;aplicar()})}
 aplicar();const sidebar=document.querySelector(".sidebar-menu");if(sidebar)new MutationObserver(agendar).observe(sidebar,{childList:true});window.addEventListener("sig:ready",()=>{chaveAtiva="";agendar()});window.addEventListener("sig:page",e=>{const k=chavePorPagina(e.detail?.pagina);if(k)chaveAtiva=k;else if(e.detail?.pagina!=="controladoria")chaveAtiva="";agendar()});document.addEventListener("click",e=>{if(e.target.closest?.("#ctrlSubmenu .ctrl-subitem")){chaveAtiva="";setTimeout(()=>marcarAtivo(""),0)}},true);
