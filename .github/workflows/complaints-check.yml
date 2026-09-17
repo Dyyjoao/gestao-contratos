@@ -1,0 +1,20 @@
+name: SIG Customer Complaints Check
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+jobs:
+  complaints-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate complaints module
+        run: |
+          set -e
+          node --check js/customer-complaints.js
+          grep -q 'customer-complaints.js' app.js
+          grep -q 'reclamacoesComerciais' js/customer-complaints.js
+          grep -q 'match /reclamacoesComerciais/{id}' firestore.rules
+          grep -q 'resource.data.eventos.size() + 1' firestore.rules
+          grep -q 'reclamacoes' js/profiles.js
