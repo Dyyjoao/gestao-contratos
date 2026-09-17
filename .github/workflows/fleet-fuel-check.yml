@@ -1,0 +1,20 @@
+name: SIG Fleet Fuel Check
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+jobs:
+  fleet-fuel-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check fuel module and access rules
+        run: |
+          set -e
+          node --check js/fleet-fuel.js
+          grep -q 'fleet-fuel.js' app.js
+          grep -q 'combustivel' js/profiles.js
+          grep -q 'match /abastecimentosFrota/{id}' firestore.rules
+          grep -q 'match /custosDiesel/{id}' firestore.rules
+          grep -q 'combustivel' js/area-navigation.js
