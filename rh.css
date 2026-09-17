@@ -7,7 +7,7 @@
 #pagina-rh .rh-filter-field select{min-width:140px;max-width:210px}
 #pagina-rh .rh-filter-bar :is(input,select):focus,#pagina-rh .rh-ranking-toolbar select:focus{outline:2px solid #20b6a5;outline-offset:1px;border-color:#0d9d8d}
 
-#pagina-rh .rh-module-head{position:sticky;top:0;z-index:120;margin:-2px -2px 0;padding:14px 16px 12px;background:rgba(247,249,251,.98);border-bottom:1px solid #dfe7ed;box-shadow:0 10px 22px rgba(20,45,65,.08);backdrop-filter:blur(10px)}
+#pagina-rh .rh-module-head{position:sticky;top:82px;z-index:40;margin:-2px -2px 0;padding:14px 16px 12px;background:rgba(247,249,251,.98);border-bottom:1px solid #dfe7ed;box-shadow:0 10px 22px rgba(20,45,65,.08);backdrop-filter:blur(10px)}
 #pagina-rh .rh-module-head .pagina-cabecalho{margin:0;padding:0;background:transparent;border:0;box-shadow:none;position:static}
 #pagina-rh .rh-module-head .fleet-tabs{margin-top:14px}
 #pagina-rh .fleet-tabs{display:flex;gap:8px;flex-wrap:wrap}
@@ -26,3 +26,4 @@
 .module-config-entry{width:100%;background:#fff;cursor:pointer;text-align:left}.module-config-entry span:first-child{display:grid;gap:3px}.module-config-entry small{color:#667085;font-weight:500}
 
 @media(max-width:800px){#pagina-rh .production-toolbar{align-items:stretch;flex-direction:column}#pagina-rh .rh-filter-bar{justify-content:flex-start}#pagina-rh .rh-filter-field select{max-width:100%}#pagina-rh .rh-module-head{padding:10px 12px}#pagina-rh .rh-module-head .pagina-cabecalho{gap:10px}#pagina-rh .rh-module-head .acoes-cabecalho{width:100%;justify-content:flex-start;flex-wrap:wrap}#pagina-rh .rh-analytics-grid{grid-template-columns:1fr}#pagina-rh .rh-ranking-toolbar{align-items:stretch;flex-direction:column}#pagina-rh .rh-ranking-toolbar .rh-filter-field,#pagina-rh .rh-ranking-toolbar select{width:100%;max-width:none}}
+@media(max-width:620px){#pagina-rh .rh-module-head{top:0}}
