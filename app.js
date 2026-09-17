@@ -30,6 +30,8 @@ import "./js/disposal.js";
 import "./js/commercial-workflow.js";
 import "./js/pallets.js";
 import "./js/pallet-dashboard.js";
+import "./js/service-orders.js";
+import "./js/service-orders-dashboard.js";
 import "./js/area-navigation.js";
 import "./js/governance.js";
 import "./js/governance-security.js";
