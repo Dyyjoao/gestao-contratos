@@ -1,12 +1,32 @@
-# Contas a Pagar · vínculo bancário operacional
+# SIG — Contas a Pagar · Conta Bancária
 
-Diretriz vigente do cockpit:
+**Atualizado em:** 16/09/2026
 
-- Todo compromisso manual criado por Administrador deve ter uma conta bancária prevista.
-- Contratos enviados ao Contas a Pagar também devem possuir conta bancária prevista.
-- A conta prevista serve para orientar o radar semanal e permitir filtro por conta.
-- Na baixa, a conta prevista vem pré-selecionada e o Administrador pode alterá-la para registrar a conta efetivamente usada no pagamento.
-- Para compromissos pagos, o filtro por conta considera a conta efetivamente usada; para compromissos em aberto, considera a conta prevista.
-- A conta prevista permanece preservada quando a baixa é feita por outra conta, permitindo rastrear a mudança.
-- O vínculo é operacional. Não cria lançamento automático no Fluxo de Caixa e não alimenta DRE, Budget ou Forecast.
-- Esta alteração não amplia permissões de leitura das contas bancárias: seleção/alteração de conta permanece restrita ao Administrador enquanto vigorar a política atual do SIG.
+## Regra vigente
+
+A conta bancária faz parte do compromisso desde o lançamento e também da baixa.
+
+### Lançamento
+- compromisso manual novo deve receber conta bancária planejada;
+- obrigações geradas por Contratos recebem a conta planejada configurada no contrato quando disponível;
+- registros legados sem conta são preservados como `Sem conta vinculada`.
+
+### Baixa
+- a conta planejada é sugerida;
+- a conta efetiva de pagamento pode divergir conforme permissão vigente/ação administrativa;
+- o histórico deve preservar a conta realmente utilizada no pagamento.
+
+### Filtro e impressão
+- contas em aberto usam a conta planejada;
+- contas pagas usam a conta efetiva;
+- filtro por conta bancária deve afetar a listagem e a impressão.
+
+## Limite arquitetural
+
+A conta bancária em Contas a Pagar é informação operacional do cockpit. Ela **não cria automaticamente lançamento no Fluxo de Caixa**.
+
+Qualquer integração AP → Caixa exige decisão explícita.
+
+## Navegação
+
+Contas a Pagar aparece dentro de Controladoria & FP&A, mas continua usando módulo/permissões próprios `contasPagar`.
