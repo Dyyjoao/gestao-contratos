@@ -57,8 +57,9 @@ A migração será feita tela por tela, sempre em branch/PR de homologação ant
 | Área | Tela | Status |
 |---|---|---|
 | Estrutura | Navegação por áreas | Implementada em `main` |
-| Operação | Produção | Em homologação — primeira tela da migração |
+| Operação | Produção | Tela na `main`; Rules versionadas, publicação Firebase pendente |
 | Operação | Descarte | Implementada em branch de preparação; aguardando publicação conjunta de Rules |
+| Comercial | Visitas e contatos; Orçamentos | Preparados no lote, aguardando publicação conjunta de Rules |
 | Demais áreas | Inventário acima | Aguardando tratamento tela por tela |
 
 ### Produção — contrato de migração
@@ -118,3 +119,9 @@ O código `Salvador.gs` e o cliente `Index.html` foram conferidos. Os arquivos d
 - Não publicar Rules parciais enquanto o lote estiver em desenvolvimento; publicar o `firestore.rules` **integral** da versão da `main` que contiver as telas liberadas.
 - A equipe só poderá testar gravação real das novas coleções depois dessa publicação. O site e o Firebase são deploys independentes.
 - O cadastro de dados históricos do Script requer migração específica com reconciliação, origem e chaves de idempotência; as telas novas não importam automaticamente as planilhas antigas.
+
+### Comercial — Visitas e Orçamentos
+
+As telas preservam os campos de `Registro Visita` e `Orçamento` do Script. No SIG, `visitasComerciais` e `orcamentosComerciais` pertencem ao Grupo/Empresa e ao usuário que registrou o atendimento (`responsavelId`). Usuário comum consulta apenas os próprios registros; a permissão `supervisionar` dá visão consolidada da equipe. Vendedor continua como informação comercial textual; **não há mapeamento automático** entre os e-mails do Script e as contas do SIG. Esse vínculo deve ser definido antes de importar o histórico.
+
+Orçamentos abertos (`aguardando_aprovacao` ou `licitacao`) entram na Minha Mesa do responsável e no resumo comercial do Dashboard. Cada novo orçamento aberto recebe próximo contato em 24 horas. Registrar o contato preserva o resultado e renova o prazo por 24 horas; mudar para `venda_concluida` ou `perdido_concorrente` retira o item da fila. Esta é uma fila operacional exibida ao abrir o SIG; não envia mensagem automática fora do aplicativo. O status de venda concluída **não cria lançamento em Vendas & Comissões, DRE ou Caixa**. Edição exige permissão; exclusão física permanece bloqueada.
