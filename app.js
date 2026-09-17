@@ -61,4 +61,5 @@ import "./js/master-admin-actions.js";
 import "./js/workflow-admin-actions.js";
 import "./js/accountability-pdf.js";
 import "./js/permission-ui.js";
+import "./js/branding-footer.js";
 import "./js/polish.js";
