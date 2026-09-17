@@ -1,4 +1,4 @@
-import './hr-performance.js';
+import './hr-performance.js?v=3';
 import './hr-actions.js';
 
 function garantirCss(arquivo,versao){
