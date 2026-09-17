@@ -114,7 +114,8 @@ Firebase Authentication + Firestore continuam como backend vigente.
 - Firestore Rules e frontend têm deploys independentes;
 - Storage continua adiado/não ativo;
 - não afirmar que Storage está operacional;
-- opção de banco local/API própria continua em estudo e não deve ser implementada sem aprovação.
+- opção de banco local/API própria continua em estudo e não deve ser implementada sem aprovação;
+- integrações/bases críticas devem operar em **fail-closed**: falha de leitura não pode virar zero, lista vazia ou autorização implícita.
 
 ## 8. Migração do sistema Script
 
