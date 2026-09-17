@@ -63,3 +63,4 @@ import "./js/accountability-pdf.js";
 import "./js/permission-ui.js";
 import "./js/branding-footer.js?v=2";
 import "./js/polish.js";
+import "./js/mobile-navigation.js";
