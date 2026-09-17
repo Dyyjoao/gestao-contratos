@@ -13,6 +13,31 @@ export const mesesEntre = (inicio, fim) => {
 export const fimMes = mes => `${mes}-${new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate()}`;
 export const ativoNaData = (c, data) => c.status !== 'estornado' && c.admissao <= data && (!c.demissao || c.demissao >= data);
 export const ativoNoMes = (c, mes) => c.status !== 'estornado' && c.admissao <= fimMes(mes) && (!c.demissao || c.demissao >= `${mes}-01`);
+export function resumoRHDatas(colaboradores, ausencias, horas, inicio, fim, setor = '') {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fim) || inicio > fim || inicio.slice(0, 7) !== fim.slice(0, 7) || fim > fimMes(fim.slice(0, 7))) return null;
+  const pessoas = colaboradores.filter(c => c.status !== 'estornado' && (!setor || c.setor === setor));
+  const ids = new Set(pessoas.map(c => c.id));
+  const abertura = pessoas.filter(c => c.admissao < inicio && (!c.demissao || c.demissao >= inicio)).length;
+  const admissoes = pessoas.filter(c => c.admissao >= inicio && c.admissao <= fim).length;
+  const demissoes = pessoas.filter(c => c.demissao >= inicio && c.demissao <= fim).length;
+  const fechamento = pessoas.filter(c => c.admissao <= fim && (!c.demissao || c.demissao > fim)).length;
+  const media = (abertura + fechamento) / 2;
+  const diasMes = Number(fimMes(inicio.slice(0, 7)).slice(-2));
+  const previstas = pessoas.reduce((total, c) => {
+    const de = c.admissao > inicio ? c.admissao : inicio;
+    const ate = c.demissao && c.demissao < fim ? c.demissao : fim;
+    return total + (de <= ate ? Number(c.jornadaMensalHoras || 0) * (Number(ate.slice(-2)) - Number(de.slice(-2)) + 1) / diasMes : 0);
+  }, 0);
+  const noIntervalo = x => x.status !== 'estornado' && x.data >= inicio && x.data <= fim && ids.has(x.colaboradorId);
+  const horasAusentes = ausencias.filter(noIntervalo).reduce((n, x) => n + Number(x.horas || 0), 0);
+  const extras = horas.filter(noIntervalo);
+  const linha = { mes: inicio.slice(0, 7), abertura, admissoes, demissoes, fechamento, media,
+    turnover: media ? demissoes / media * 100 : 0, previstas, horasAusentes,
+    absenteismo: previstas ? horasAusentes / previstas * 100 : 0,
+    horas50: extras.reduce((n, x) => n + Number(x.horas50 || 0), 0),
+    horas100: extras.reduce((n, x) => n + Number(x.horas100 || 0), 0) };
+  return { ...linha, linhas: [linha] };
+}
 export function resumoRH(colaboradores, ausencias, horas, inicio, fim, setor = '') {
   const pessoas = colaboradores.filter(c => c.status !== 'estornado' && (!setor || c.setor === setor));
   const ids = new Set(pessoas.map(c => c.id));
