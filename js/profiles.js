@@ -7,6 +7,8 @@ const DEF=[
  ["descarte","Operação · Descarte",[["visualizar","Visualizar"],["lancar","Registrar descarte"],["editar","Editar lançamentos"]]],
  ["visitas","Comercial · Visitas e contatos",[["visualizar","Visualizar próprios"],["registrar","Registrar contato"],["editar","Editar próprios"],["supervisionar","Acompanhar equipe"]]],
  ["orcamentos","Comercial · Orçamentos",[["visualizar","Visualizar próprios"],["registrar","Registrar orçamento"],["editar","Editar próprios e registrar follow-up"],["supervisionar","Acompanhar equipe"]]],
+ ["palletMovimentos","Logística · Entrega e recolhimento",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["palletInventario","Logística · Inventário de pallets",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
  ["contasPagar","Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
  ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
