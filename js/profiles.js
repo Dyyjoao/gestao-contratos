@@ -9,6 +9,7 @@ const DEF=[
  ["orcamentos","Comercial · Orçamentos",[["visualizar","Visualizar próprios"],["registrar","Registrar orçamento"],["editar","Editar próprios e registrar follow-up"],["supervisionar","Acompanhar equipe"]]],
  ["palletMovimentos","Logística · Entrega e recolhimento",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["palletInventario","Logística · Inventário de pallets",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["ordensServico","Manutenção · Ordens de Serviço",[["visualizar","Visualizar"],["solicitar","Solicitar OS"],["executar","Executar e concluir OS"]]],
  ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
  ["contasPagar","Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
  ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
