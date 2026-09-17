@@ -58,3 +58,11 @@
 
 @media(max-width:800px){#pagina-rh .production-toolbar,#pagina-rh-avaliacoes .production-toolbar{align-items:stretch;flex-direction:column}#pagina-rh .rh-filter-bar,#pagina-rh-avaliacoes .rh-filter-bar{justify-content:flex-start}#pagina-rh .rh-filter-field select,#pagina-rh-avaliacoes .rh-filter-field select{max-width:100%}#pagina-rh .rh-module-head,#pagina-rh-avaliacoes .rh-module-head{padding:10px 12px}#pagina-rh .rh-module-head .pagina-cabecalho,#pagina-rh-avaliacoes .rh-module-head .pagina-cabecalho{gap:10px}#pagina-rh .rh-module-head .acoes-cabecalho,#pagina-rh-avaliacoes .rh-module-head .acoes-cabecalho{width:100%;justify-content:flex-start;flex-wrap:wrap}#pagina-rh .rh-analytics-grid{grid-template-columns:1fr}#pagina-rh .rh-ranking-toolbar{align-items:stretch;flex-direction:column}#pagina-rh .rh-ranking-toolbar .rh-filter-field,#pagina-rh .rh-ranking-toolbar select{width:100%;max-width:none}#pagina-rh-avaliacoes .rh-nine-grid{grid-template-columns:1fr}#pagina-rh-avaliacoes .rh-history-item{grid-template-columns:1fr;gap:6px}}
 @media(max-width:620px){#pagina-rh .rh-module-head,#pagina-rh-avaliacoes .rh-module-head{top:0}}
+#rhCiclosPlanejados{padding-bottom:15px}
+#rhCicloFormBox{margin:16px}
+#rhCicloAvaliadores{display:grid;gap:9px;margin:12px 0}
+#rhCicloAvaliadores .rh-ciclo-avaliador{display:grid;grid-template-columns:minmax(130px,1fr) minmax(170px,2fr) auto;align-items:end;gap:9px;padding:9px;border:1px solid #e5eaef;border-radius:9px;background:#fbfcfd}
+#rhCicloAvaliadores label{display:grid;gap:5px;font-size:11px;color:#526779;font-weight:700}
+#rhCicloAvaliadores :is(input,select){box-sizing:border-box;width:100%;min-height:38px;border:1px solid #dbe3ea;border-radius:8px;padding:7px 9px;background:#fff;color:#183247}
+#rhCicloAvaliadores .hidden{display:none}
+@media(max-width:700px){#rhCicloAvaliadores .rh-ciclo-avaliador{grid-template-columns:1fr 1fr}#rhCicloAvaliadores button{grid-column:1/-1}}
