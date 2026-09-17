@@ -4,6 +4,7 @@ import { $, on, esc, norm, msg, db, state, abrirPagina, carregarAdmin, atualizar
 const DEF=[
  ["dashboard","Dashboard",[["visualizar","Visualizar"]]],
  ["producao","Operação · Produção",[["visualizar","Visualizar"],["lancar","Registrar produção"],["editar","Editar lançamentos"],["cadastros","Gerir máquinas, itens e concretadores"]]],
+ ["descarte","Operação · Descarte",[["visualizar","Visualizar"],["lancar","Registrar descarte"],["editar","Editar lançamentos"]]],
  ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
  ["contasPagar","Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
  ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
