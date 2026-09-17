@@ -1,0 +1,24 @@
+name: SIG Workforce and Safety Check
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+jobs:
+  workforce-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate RH and Safety migration
+        run: |
+          set -e
+          node --check js/workforce-safety.js
+          node --check js/workforce-dashboard.js
+          grep -q 'workforce-safety.js' app.js
+          grep -q 'workforce-dashboard.js' app.js
+          grep -q 'rhHorasExtras' js/workforce-safety.js
+          grep -q 'rhAtivosMes' js/workforce-safety.js
+          grep -q 'segurancaOcorrencias' js/workforce-safety.js
+          grep -q 'segurancaTreinamentos' js/workforce-safety.js
+          grep -q 'colecaoIndicador' firestore.rules
+          grep -q 'modtreinamentos' js/profiles.js

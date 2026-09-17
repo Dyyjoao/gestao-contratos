@@ -1,0 +1,25 @@
+name: SIG Pallet Migration Check
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+jobs:
+  pallet-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Pallet migration
+        run: |
+          set -e
+          node --check js/pallets.js
+          node --check js/pallet-dashboard.js
+          node --check js/area-navigation.js
+          grep -q 'pallets.js' app.js
+          grep -q 'pallet-dashboard.js' app.js
+          grep -q 'palletMovimentos' js/pallets.js
+          grep -q 'palletInventarios' js/pallets.js
+          grep -q 'total>500' js/pallets.js
+          grep -q 'match /palletMovimentos/{id}' firestore.rules
+          grep -q 'match /palletInventarios/{id}' firestore.rules
+          grep -q 'palletInventario' js/profiles.js

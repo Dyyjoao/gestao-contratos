@@ -1,0 +1,22 @@
+name: SIG Service Orders Check
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+jobs:
+  os-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate order workflow
+        run: |
+          set -e
+          node --check js/service-orders.js
+          node --check js/service-orders-dashboard.js
+          grep -q 'service-orders.js' app.js
+          grep -q 'match /ordensServico/{id}' firestore.rules
+          grep -q 'solicitadoPor == request.auth.uid' firestore.rules
+          grep -q 'confirmarAcaoAdministrativa' js/service-orders.js
+          grep -q 'dataFim' js/service-orders.js
+          grep -q 'ordensServico' js/profiles.js

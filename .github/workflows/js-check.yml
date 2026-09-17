@@ -185,8 +185,13 @@ jobs:
       - name: Open SIG in headless Chrome
         run: |
           set -e
+          trap 'echo "Smoke diagnostic:"; for f in /tmp/sig-dom.html /tmp/consorcios-smoke-dom.html /tmp/sig-dash-dom.html /tmp/sig-sales-dom.html; do if test -f "$f"; then echo "$f: $(wc -c < "$f") bytes"; grep -oE "(data-load-[a-z]+=|data-[a-z-]+smoke=|<pre id=|id=\"pagina-frota\"|id=\"ctrlSubmenu\")[^<]{0,400}" "$f" | head -15 || true; fi; done' ERR
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
+          python3 - <<'PYDIAG'
+          from pathlib import Path
+          p=Path('index.html');s=p.read_text();s=s.replace('<script type="module" src="app.js?v=12"></script>', '<script>window.addEventListener("error",e=>document.documentElement.setAttribute("data-load-error",(e.message||e.target?.src||"error")+" @ "+e.filename+":"+e.lineno+":"+e.colno),true);window.addEventListener("unhandledrejection",e=>document.documentElement.setAttribute("data-load-rejection",String(e.reason)))</script><script type="module" src="app.js?v=12"></script>');p.write_text(s)
+          PYDIAG
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=6000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dom.html
           grep -q 'id="pagina-contratos"' /tmp/sig-dom.html
           grep -q 'id="pagina-controladoria"' /tmp/sig-dom.html

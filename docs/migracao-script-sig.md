@@ -57,8 +57,13 @@ A migração será feita tela por tela, sempre em branch/PR de homologação ant
 | Área | Tela | Status |
 |---|---|---|
 | Estrutura | Navegação por áreas | Implementada em `main` |
-| Operação | Produção | Em homologação — primeira tela da migração |
-| Operação | Descarte | Próxima após fechamento de Produção |
+| Operação | Produção | Tela na `main`; Rules versionadas, publicação Firebase pendente |
+| Operação | Descarte | Implementada em branch de preparação; aguardando publicação conjunta de Rules |
+| Comercial | Visitas, Orçamentos e Reclamações | Preparados no lote, aguardando publicação conjunta de Rules |
+| Logística | Entrega/recolhimento e Inventário de pallets | Preparados no lote, aguardando publicação conjunta de Rules |
+| Manutenção | Ordens de Serviço | Preparada no lote, aguardando publicação conjunta de Rules |
+| RH | Horas extras; Quadro; Ativos por setor; Ativos no mês | Preparados no lote, aguardando publicação conjunta de Rules |
+| Segurança | Ocorrências; Treinamentos | Preparados no lote, aguardando publicação conjunta de Rules |
 | Demais áreas | Inventário acima | Aguardando tratamento tela por tela |
 
 ### Produção — contrato de migração
@@ -76,3 +81,79 @@ As coleções `producaoLancamentos` e `operacaoCadastros` são segregadas por `g
 O frontend no GitHub Pages e as Firestore Rules são publicados separadamente. Antes de liberar gravação real, publicar as Rules completas deste commit no projeto Firebase correto e testar com usuário autorizado, usuário sem permissão e Administrador. Uma prévia estática da interface não grava no Firebase nem comprova as Rules publicadas.
 
 Nenhuma integração contábil, financeira ou operacional nova será criada automaticamente apenas porque existe no Script; mudanças de regra ou de integração continuam exigindo decisão explícita.
+
+### Descarte — contrato de migração
+
+Fonte: `Salvador.gs` v1.8.8, aba `Descarte`. Campos: Data, Quantidade não negativa, Máquina (`MAQ.1`, `MAQ.2`, `LAJE`) e Responsável pelo recolhimento (`ARTUR`, `GIL`, `PAULO`). O SIG apresenta filtro por ano, mês e máquina, totais por máquina e responsável, histórico e KPI para o Dashboard. Lançamentos são segregados por Grupo/Empresa; edição exige permissão e estorno exige Administrador, reautenticação, motivo e auditoria. Não há exclusão física.
+
+A Rule de `descarteLancamentos` está preparada para ser publicada junto com os demais módulos. Até que a publicação completa no Firebase ocorra, a tela não deve ser tratada como funcional para gravação real. O arquivo de origem foi utilizado apenas para análise e não contém dados migrados automaticamente.
+
+## Mapa de migração do Script v1.8.8 (17/09/2026)
+
+O código `Salvador.gs` e o cliente `Index.html` foram conferidos. Os arquivos de origem não são importados para o repositório, pois contêm listas e dados operacionais. A classificação abaixo indica o destino funcional; cada integração deve conservar o escopo Grupo/Empresa, permissões e histórico. A base antiga continua separada até uma importação de dados planejada.
+
+| Tela no Script | Destino no SIG | Tratamento necessário |
+|---|---|---|
+| Produção | Operação → Produção | Tela na `main`; Rules versionadas, publicação Firebase pendente. |
+| Descarte | Operação → Descarte | Tela e Rule preparadas em branch de migração. |
+| Vendedor / Vendas | Vendas & Comissões | Conferir correspondência de vendedor, valor e datas; evitar segunda carteira de vendas. |
+| Consolidado de Vendas | Vendas & Comissões / Dashboard | Agregar dados da fonte única de vendas. |
+| Material | Vendas & Comissões | Definir classificação de material/local por venda sem duplicar receitas. |
+| Registro de Visita | Comercial: funil e Minha Mesa | Registro de interação com vendedor, cliente, obra, canal e follow-up. |
+| Reclamação de Cliente | Comercial: atendimento | Histórico e responsável com acompanhamento de situação. |
+| Orçamentos | Comercial: funil e Minha Mesa | Status e justificativa; aprovação e cobrança periódica conforme fluxo acordado. |
+| Entrega e Recolhimento de Pallet | Logística | Movimentos por motorista, totais mensal/anual e regra indicativa acima de 500 recolhidos no mês. |
+| Inventário de Pallet | Logística | Saldo físico mensal, compras, entradas e saídas, comparativo e perdas. |
+| Abastecimento | Frota | Vincular por placa à ficha existente; diferenciar consumo e recebimento; KM e estoque de diesel. |
+| Gestão de Veículos | Frota existente | Mapear campos legados sem duplicar cadastro de veículos. |
+| Consumo Diesel | Frota / custos gerenciais | Avaliar se o valor já existe em outro lançamento para evitar dupla contabilização. |
+| Financeiro | Caixa / FP&A existentes | Relacionar naturezas legadas a contas analíticas, sem lançar automaticamente em DRE/Caixa. |
+| Custo de EPI | Almoxarifado / FP&A | Definir se custo é compra, entrega ou competência antes de integrar. |
+| Hora Extra | RH | Horas 50%, 100% e custo por setor e data. |
+| Quadro de Funcionários | RH | Admissões, demissões, atestados e afastamentos por competência. |
+| Ativos por Setor | RH | Fotografia por setor/data, sem somar fotografias como fluxo. |
+| Ativos no Mês | RH | Fotografia mensal reconciliável com o quadro. |
+| Segurança | Segurança do Trabalho | Acidentes de trabalho e de trajeto por data/quantidade. |
+| Treinamento | Segurança do Trabalho | Agenda, setor, carga horária, instrutor, público e custo. |
+| Ordem de Serviço | Manutenção | Solicitação → execução → conclusão, evidenciando parada e troca de peça. |
+
+### Publicação das Rules em lote
+
+- Cada tela nova recebe coleção, permissão, Rule e QA no mesmo PR de preparação.
+- Não publicar Rules parciais enquanto o lote estiver em desenvolvimento; publicar o `firestore.rules` **integral** da versão da `main` que contiver as telas liberadas.
+- A equipe só poderá testar gravação real das novas coleções depois dessa publicação. O site e o Firebase são deploys independentes.
+- O cadastro de dados históricos do Script requer migração específica com reconciliação, origem e chaves de idempotência; as telas novas não importam automaticamente as planilhas antigas.
+
+### Comercial — Visitas e Orçamentos
+
+As telas preservam os campos de `Registro Visita` e `Orçamento` do Script. No SIG, `visitasComerciais` e `orcamentosComerciais` pertencem ao Grupo/Empresa e ao usuário que registrou o atendimento (`responsavelId`). Usuário comum consulta apenas os próprios registros; a permissão `supervisionar` dá visão consolidada da equipe. Vendedor continua como informação comercial textual; **não há mapeamento automático** entre os e-mails do Script e as contas do SIG. Esse vínculo deve ser definido antes de importar o histórico.
+
+Orçamentos abertos (`aguardando_aprovacao` ou `licitacao`) entram na Minha Mesa do responsável e no resumo comercial do Dashboard. Cada novo orçamento aberto recebe próximo contato em 24 horas. Registrar o contato acrescenta um evento ao histórico do orçamento e renova o prazo por 24 horas; mudar para `venda_concluida` ou `perdido_concorrente` retira o item da fila. Esta é uma fila operacional exibida ao abrir o SIG; não envia mensagem automática fora do aplicativo. O status de venda concluída **não cria lançamento em Vendas & Comissões, DRE ou Caixa**. Edição exige permissão; exclusão física permanece bloqueada.
+
+`reclamacoesComerciais` preserva data, cliente, vendedor, motivo, cidade, produto, histórico e e-mail do vendedor. O SIG acrescenta status `aberta` → `em_analise` → `resolvida`, eventos cronológicos de tratamento, visão própria do responsável e consolidação para quem pode supervisionar. A consulta segue Grupo/Empresa, não há delete físico e a tela não cria lançamento financeiro.
+
+### Logística — Pallets
+
+`palletMovimentos` guarda data, motorista, quantidade entregue e recolhida. O resumo por motorista no mês segue a regra indicativa do Script: **mais de 500** pallets recolhidos → referência de R$ 120,00. É um indicador, não gera pagamento, comissão ou obrigação financeira automaticamente. `palletInventarios` registra data, tipo e quantidade; o balanço mensal reproduz as linhas de pallets com material, vazios, total físico, diferença frente ao mês anterior, entradas, saídas, compras e saldo/perda. O Dashboard recebe os totais de entregas/recolhimentos do período selecionado.
+
+Os movimentos são segregados por Grupo/Empresa e permissões próprias para entregas e inventário. Estorno preserva histórico e retira o registro dos cálculos; não há exclusão física. O cadastro histórico ainda não foi importado e não há reconciliação automática entre inventário e entregas até validar a base anterior.
+
+### Manutenção — Ordem de Serviço
+
+`ordensServico` preserva número da OS, tipo (corretiva, melhoria, preventiva), solicitante, data, função, equipamento, serviço solicitado, executante, datas de início/fim, serviço realizado, parada de produção, troca de peça e observação. O fluxo é `aberta` → `em_execucao` → `concluida`, derivado das datas; conclusão exige descrição do serviço realizado. Cancelamento é ação administrativa com reautenticação, motivo e auditoria, preservando o histórico. O Dashboard mostra OS abertas e em execução; uma OS não cria automaticamente manutenção na ficha de Frota nem lançamento financeiro.
+
+### RH e Segurança
+
+As abas de RH preservam horas extras 50%/100% e valor por setor; admissões, demissões, atestados e afastamentos >15 dias por data; ativos por setor; e ativos no mês. A última posição de ativos, e a última posição de cada setor, são **fotografias**, não fluxos somáveis ao longo do ano. O quadro de movimentações (admissões menos demissões) é um fluxo separado.
+
+Segurança registra acidentes de trabalho/trajeto com quantidades e treinamentos com setor, tipo, data, nome, local, carga horária, horário, instrutor, custo e público. As seis coleções têm permissões próprias de consulta, lançamento e edição, segregação Grupo/Empresa, estorno administrativo auditado e bloqueio de delete físico. RH e Segurança recebem indicadores no Dashboard. Nenhum desses registros cria folha, obrigação financeira ou lançamento contábil automaticamente.
+
+### Frota — Combustível e Diesel
+
+`abastecimentosFrota` registra consumo e recebimento de diesel em litros, data, motorista, placa e quilometragem. Cada lançamento aponta para um veículo existente da mesma empresa; o perfil precisa das permissões de **Combustível** e de consulta à **Frota**. O estoque exibido é derivado dos movimentos ativos da empresa selecionada, sem gravar saldos como fonte paralela. Uma edição ou estorno recalcula os indicadores. O formulário impede saldo final negativo com os movimentos carregados, mas lançamentos simultâneos exigem conferência operacional antes de fechar o período.
+
+`custosDiesel` registra data e valor informado, separado dos litros. Esses valores não criam lançamento no Caixa ou na DRE. Edição exige permissão, e estorno é exclusivo de Administrador com reautenticação, motivo e auditoria. Não existe exclusão física. A coleção de veículos do SIG continua sendo o cadastro único; a planilha de Gestão de Veículos requer mapeamento e reconciliação antes de importar registros históricos.
+
+### Telas existentes e dados ainda não importados
+
+Vendedor, Vendas e Consolidado de Vendas usam a carteira já existente de Vendas & Comissões e o Dashboard. Material, Financeiro e Custo de EPI dependem de classificação e reconciliação com receitas, Caixa, FP&A e Almoxarifado existentes antes de importar valores históricos; registrar o mesmo valor novamente produziria dupla contagem. O lote prepara as telas operacionais independentes e suas Rules, sem transferir as linhas das planilhas.

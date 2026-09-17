@@ -303,6 +303,68 @@ service cloud.firestore {
       allow delete: if administrador() && documentoAcessivel(resource.data);
     }
 
+    function combustivelVer() {
+      return frotaVisualizar() && (permissao('combustivel','visualizar') ||
+        permissao('combustivel','lancar') || permissao('combustivel','editar'));
+    }
+    function movimentoDieselValido(dados) {
+      return dados.data is string && dados.data.size() == 10 &&
+        dados.placa is string && dados.placa.size() > 0 &&
+        dados.motorista is string && dados.motorista.size() > 0 &&
+        dados.tipo in ['consumo','recebimento'] &&
+        dados.quantidade is int && dados.quantidade > 0 &&
+        (dados.kmAnterior == null || (dados.kmAnterior is int && dados.kmAnterior >= 0)) &&
+        (dados.kmAtual == null || (dados.kmAtual is int && dados.kmAtual >= 0)) &&
+        (dados.kmAnterior == null || dados.kmAtual == null || dados.kmAtual >= dados.kmAnterior) &&
+        dados.veiculoId is string &&
+        exists(/databases/$(database)/documents/veiculos/$(dados.veiculoId)) &&
+        get(/databases/$(database)/documents/veiculos/$(dados.veiculoId)).data.grupoId == dados.grupoId &&
+        get(/databases/$(database)/documents/veiculos/$(dados.veiculoId)).data.empresaId == dados.empresaId &&
+        get(/databases/$(database)/documents/veiculos/$(dados.veiculoId)).data.placa == dados.placa;
+    }
+    match /abastecimentosFrota/{id} {
+      allow read: if combustivelVer() && documentoAcessivel(resource.data);
+      allow create: if permissao('combustivel','lancar') && frotaVisualizar() &&
+        documentoAcessivel(request.resource.data) && request.resource.data.status == 'ativo' &&
+        request.resource.data.registradoPor == request.auth.uid && movimentoDieselValido(request.resource.data);
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor &&
+        (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('combustivel','editar') && frotaVisualizar() &&
+            request.resource.data.status == 'ativo' && movimentoDieselValido(request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','placa','veiculoId','motorista','tipo','quantidade','kmAnterior','kmAtual','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+    match /custosDiesel/{id} {
+      allow read: if combustivelVer() && documentoAcessivel(resource.data);
+      allow create: if permissao('combustivel','lancar') && frotaVisualizar() &&
+        documentoAcessivel(request.resource.data) && request.resource.data.status == 'ativo' &&
+        request.resource.data.registradoPor == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.valor is number && request.resource.data.valor >= 0;
+      allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor && (
+          (administrador() && request.resource.data.status == 'estornado' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'])) ||
+          (permissao('combustivel','editar') && frotaVisualizar() &&
+            request.resource.data.status == 'ativo' &&
+            request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+            request.resource.data.valor is number && request.resource.data.valor >= 0 &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data','valor','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+
     match /manutencoesFrota/{id} {
       allow read: if frotaVisualizar() && documentoAcessivel(resource.data);
       allow create: if frotaManutencao() && documentoAcessivel(request.resource.data);
@@ -370,6 +432,36 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /descarteLancamentos/{id} {
+      allow read: if (permissao('descarte','visualizar') || permissao('descarte','lancar') ||
+        permissao('descarte','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('descarte','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.maquina in ['MAQ.1','MAQ.2','LAJE'] &&
+        request.resource.data.responsavel in ['ARTUR','GIL','PAULO'] &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.maquina in ['MAQ.1','MAQ.2','LAJE'] &&
+        request.resource.data.responsavel in ['ARTUR','GIL','PAULO'] &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','quantidade','maquina','responsavel','status','motivoEstorno',
+              'estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao('descarte','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','quantidade','maquina','responsavel','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
     match /operacaoCadastros/{id} {
       allow read: if (permissao('producao','visualizar') || permissao('producao','lancar') ||
         permissao('producao','editar') || permissao('producao','cadastros')) && documentoAcessivel(resource.data);
@@ -381,6 +473,259 @@ service cloud.firestore {
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']);
+      allow delete: if false;
+    }
+
+    function comercialPodeVer(modulo, dados) {
+      return documentoAcessivel(dados) && (
+        administrador() || permissao(modulo,'supervisionar') ||
+        (dados.responsavelId == request.auth.uid && (
+          permissao(modulo,'visualizar') || permissao(modulo,'registrar') ||
+          permissao(modulo,'editar') || permissao(modulo,'tratar')
+        ))
+      );
+    }
+
+    match /visitasComerciais/{id} {
+      allow read: if comercialPodeVer('visitas',resource.data);
+      allow create: if permissao('visitas','registrar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0;
+      allow update: if comercialPodeVer('visitas',resource.data) &&
+        (administrador() || permissao('visitas','supervisionar') ||
+          (permissao('visitas','editar') && resource.data.responsavelId == request.auth.uid)) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','vendedor','cliente','obra','cidade','material','assunto','tipo',
+          'email','observacao','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
+    match /orcamentosComerciais/{id} {
+      allow read: if comercialPodeVer('orcamentos',resource.data);
+      allow create: if permissao('orcamentos','registrar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.produto is string && request.resource.data.produto.size() > 0 &&
+        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
+        request.resource.data.valor is number && request.resource.data.valor >= 0 &&
+        request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'];
+      allow update: if comercialPodeVer('orcamentos',resource.data) &&
+        (administrador() || permissao('orcamentos','supervisionar') ||
+          (permissao('orcamentos','editar') && resource.data.responsavelId == request.auth.uid)) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.valor is number && request.resource.data.valor >= 0 &&
+        request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'] &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['contatos']) || (
+          request.resource.data.contatos is list &&
+          request.resource.data.contatos.size() == resource.data.get('contatos', []).size() + 1 &&
+          request.resource.data.contatos.hasAll(resource.data.get('contatos', [])) &&
+          request.resource.data.contatos[request.resource.data.contatos.size() - 1].por == request.auth.uid
+        )) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','vendedor','cliente','produto','cidade','comprador','numeroVb','valor',
+          'status','telefone','email','observacao','justificativa','ultimoContatoEm',
+          'proximoContatoEm','notaUltimoContato','contatos','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
+    match /palletMovimentos/{id} {
+      allow read: if (permissao('palletMovimentos','visualizar') || permissao('palletMovimentos','lancar') ||
+        permissao('palletMovimentos','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('palletMovimentos','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.motorista is string && request.resource.data.motorista.size() > 0 &&
+        request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
+        request.resource.data.recolhido is int && request.resource.data.recolhido >= 0;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
+        request.resource.data.recolhido is int && request.resource.data.recolhido >= 0 && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','motorista','entregue','recolhido','status','motivoEstorno',
+              'estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao('palletMovimentos','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','motorista','entregue','recolhido','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
+    match /palletInventarios/{id} {
+      allow read: if (permissao('palletInventario','visualizar') || permissao('palletInventario','lancar') ||
+        permissao('palletInventario','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('palletInventario','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
+        request.resource.data.quantidade is int && request.resource.data.quantidade >= 0;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
+        request.resource.data.quantidade is int && request.resource.data.quantidade >= 0 && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','tipo','quantidade','status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao('palletInventario','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data','tipo','quantidade','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+
+    match /ordensServico/{id} {
+      allow read: if (permissao('ordensServico','visualizar') || permissao('ordensServico','solicitar') ||
+        permissao('ordensServico','executar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('ordensServico','solicitar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'aberta' &&
+        request.resource.data.numero is string && request.resource.data.numero.size() > 0 &&
+        request.resource.data.tipo in ['CORRETIVA','MELHORIA','PREVENTIVA'] &&
+        request.resource.data.solicitante is string && request.resource.data.solicitante.size() > 0 &&
+        request.resource.data.dataSolicitacao is string && request.resource.data.dataSolicitacao.size() == 10 &&
+        request.resource.data.funcao in ['MECÂNICO','ELETRICISTA','OPERADOR','AUTOMAÇÃO'] &&
+        request.resource.data.equipamento is string && request.resource.data.equipamento.size() > 0 &&
+        request.resource.data.descricao is string && request.resource.data.descricao.size() > 0 &&
+        request.resource.data.solicitadoPor == request.auth.uid &&
+        request.resource.data.dataInicio == '' && request.resource.data.dataFim == '';
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.numero == resource.data.numero &&
+        request.resource.data.dataSolicitacao == resource.data.dataSolicitacao &&
+        request.resource.data.solicitadoPor == resource.data.solicitadoPor && (
+          (administrador() && resource.data.status != 'cancelada' &&
+            request.resource.data.status == 'cancelada' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoCancelamento','canceladoPor','canceladoEm','atualizadoEm'
+            ])) ||
+          (permissao('ordensServico','executar') &&
+            resource.data.status in ['aberta','em_execucao'] &&
+            request.resource.data.status in ['aberta','em_execucao','concluida'] &&
+            (request.resource.data.status != 'concluida' || (
+              request.resource.data.dataFim is string && request.resource.data.dataFim.size() == 10 &&
+              request.resource.data.realizado is string && request.resource.data.realizado.size() > 0
+            )) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'tipo','solicitante','funcao','equipamento','descricao','executante',
+              'dataInicio','dataFim','realizado','paradaProducao','trocaPeca',
+              'observacao','status','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
+    function moduloIndicador(colecao) {
+      return colecao == 'rhHorasExtras' ? 'modhoras' :
+        colecao == 'rhQuadro' ? 'modquadro' :
+        colecao == 'rhAtivosSetor' ? 'modsetores' :
+        colecao == 'rhAtivosMes' ? 'modativos' :
+        colecao == 'segurancaOcorrencias' ? 'modincidentes' : 'modtreinamentos';
+    }
+    function colecaoIndicador(colecao) {
+      return colecao in ['rhHorasExtras','rhQuadro','rhAtivosSetor','rhAtivosMes',
+        'segurancaOcorrencias','segurancaTreinamentos'];
+    }
+    function indicadorValido(colecao, dados) {
+      return dados.data is string && dados.data.size() == 10 && (
+        (colecao == 'rhHorasExtras' &&
+          dados.setor in ['LAJE','MANUTENÇÃO','MOURÃO','LOGISTICA','PRODUÇÃO'] &&
+          dados.horas50 is number && dados.horas50 >= 0 &&
+          dados.horas100 is number && dados.horas100 >= 0 &&
+          dados.valor is number && dados.valor >= 0) ||
+        (colecao == 'rhQuadro' &&
+          dados.admissoes is int && dados.admissoes >= 0 &&
+          dados.demissoes is int && dados.demissoes >= 0 &&
+          dados.atestados is int && dados.atestados >= 0 &&
+          dados.afastamentos is int && dados.afastamentos >= 0) ||
+        (colecao == 'rhAtivosSetor' &&
+          dados.setor in ['ADM','LAJE','COMERCIAL','LOGISTICA','PRODUÇÃO','MOURÃO','MANUTENÇÃO'] &&
+          dados.quantidade is int && dados.quantidade >= 0) ||
+        (colecao == 'rhAtivosMes' && dados.quantidade is int && dados.quantidade >= 0) ||
+        (colecao == 'segurancaOcorrencias' &&
+          dados.tipo in ['ACIDENTE DE TRABALHO','ACIDENTE DE TRAJETO'] &&
+          dados.quantidade is int && dados.quantidade >= 0) ||
+        (colecao == 'segurancaTreinamentos' &&
+          dados.setor in ['Produção','Comercial','Logistica','Financeiro','RH'] &&
+          dados.tipoTreinamento is string && dados.tipoTreinamento.size() > 0 &&
+          dados.nome is string && dados.nome.size() > 0 &&
+          dados.publico in ['MOTORISTAS','GESTORES','TODOS COLABORADORES','ADMINISTRATIVO','TODOS'] &&
+          dados.cargaHoraria is number && dados.cargaHoraria >= 0 &&
+          dados.custoTotal is number && dados.custoTotal >= 0)
+      );
+    }
+    match /{colecao}/{id} {
+      allow read: if colecaoIndicador(colecao) &&
+        (permissao(moduloIndicador(colecao),'visualizar') ||
+          permissao(moduloIndicador(colecao),'lancar') ||
+          permissao(moduloIndicador(colecao),'editar')) && documentoAcessivel(resource.data);
+      allow create: if colecaoIndicador(colecao) &&
+        permissao(moduloIndicador(colecao),'lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.registradoPor == request.auth.uid &&
+        indicadorValido(colecao,request.resource.data);
+      allow update: if colecaoIndicador(colecao) && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor &&
+        resource.data.status == 'ativo' &&
+        indicadorValido(colecao,request.resource.data) && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','setor','horas50','horas100','valor','admissoes','demissoes','atestados',
+              'afastamentos','quantidade','tipo','tipoTreinamento','nome','local','cargaHoraria',
+              'horaInicio','instrutor','custoTotal','publico','status','motivoEstorno',
+              'estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao(moduloIndicador(colecao),'editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','setor','horas50','horas100','valor','admissoes','demissoes','atestados',
+              'afastamentos','quantidade','tipo','tipoTreinamento','nome','local','cargaHoraria',
+              'horaInicio','instrutor','custoTotal','publico','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
+    match /reclamacoesComerciais/{id} {
+      allow read: if comercialPodeVer('reclamacoes',resource.data);
+      allow create: if permissao('reclamacoes','registrar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.status == 'aberta' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.motivo is string && request.resource.data.motivo.size() > 0;
+      allow update: if comercialPodeVer('reclamacoes',resource.data) &&
+        (administrador() || permissao('reclamacoes','supervisionar') ||
+          (permissao('reclamacoes','tratar') && resource.data.responsavelId == request.auth.uid)) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.status in ['aberta','em_analise','resolvida'] &&
+        request.resource.data.eventos is list &&
+        request.resource.data.eventos.size() == resource.data.eventos.size() + 1 &&
+        request.resource.data.eventos.hasAll(resource.data.eventos) &&
+        request.resource.data.eventos[request.resource.data.eventos.size() - 1].por == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','cliente','vendedor','motivo','cidade','produto','email',
+          'status','historico','eventos','atualizadoEm'
+        ]);
       allow delete: if false;
     }
 
