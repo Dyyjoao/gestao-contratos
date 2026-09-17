@@ -4,7 +4,7 @@
 
 ## 1. Regra permanente
 
-Todo módulo que persiste input deve possuir caminho de correção auditável.
+Todo módulo que cria input persistente deve possuir caminho de correção auditável.
 
 ### Estorno — caminho normal
 - perfil Administrador;
@@ -27,6 +27,8 @@ Todo módulo que persiste input deve possuir caminho de correção auditável.
 ## 2. Invariante de backend
 
 `auditoriaAdministrativa` é append-only. Senhas nunca são persistidas. A reautenticação ocorre via Firebase Authentication.
+
+**Rules não comprovam senha fresca.** As Firestore Rules validam autorização/role; a reautenticação recente pela senha do Administrador é uma camada adicional executada no frontend via Firebase Authentication.
 
 Helpers centrais:
 - `confirmarAcaoAdministrativa(...)`;
@@ -51,6 +53,11 @@ A política vale para módulos atuais e futuros, incluindo:
 - Permutas;
 - Contratos;
 - Contas a Pagar quando a correção administrativa for necessária;
+- Input Mensal;
+- Budget / Forecast;
+- Planos de Ação;
+- Cockpit de Fechamento;
+- Prestação de Contas;
 - módulos operacionais migrados do Script, como Produção e Descarte.
 
 Produção em homologação já deve seguir o padrão de estorno administrativo, mas não é funcionalidade produtiva até Rules/merge.
