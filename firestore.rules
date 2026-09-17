@@ -418,7 +418,8 @@ service cloud.firestore {
       return documentoAcessivel(dados) && (
         administrador() || permissao(modulo,'supervisionar') ||
         (dados.responsavelId == request.auth.uid && (
-          permissao(modulo,'visualizar') || permissao(modulo,'registrar') || permissao(modulo,'editar')
+          permissao(modulo,'visualizar') || permissao(modulo,'registrar') ||
+          permissao(modulo,'editar') || permissao(modulo,'tratar')
         ))
       );
     }
@@ -637,6 +638,32 @@ service cloud.firestore {
               'horaInicio','instrutor','custoTotal','publico','atualizadoEm'
             ]))
         );
+      allow delete: if false;
+    }
+
+    match /reclamacoesComerciais/{id} {
+      allow read: if comercialPodeVer('reclamacoes',resource.data);
+      allow create: if permissao('reclamacoes','registrar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.status == 'aberta' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.motivo is string && request.resource.data.motivo.size() > 0;
+      allow update: if comercialPodeVer('reclamacoes',resource.data) &&
+        (administrador() || permissao('reclamacoes','supervisionar') ||
+          (permissao('reclamacoes','tratar') && resource.data.responsavelId == request.auth.uid)) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.status in ['aberta','em_analise','resolvida'] &&
+        request.resource.data.eventos is list &&
+        request.resource.data.eventos.size() == resource.data.eventos.size() + 1 &&
+        request.resource.data.eventos.hasAll(resource.data.eventos) &&
+        request.resource.data.eventos[request.resource.data.eventos.size() - 1].por == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','cliente','vendedor','motivo','cidade','produto','email',
+          'status','historico','eventos','atualizadoEm'
+        ]);
       allow delete: if false;
     }
 
