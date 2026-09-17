@@ -16,11 +16,12 @@ function instalarBranding(){
   `;
   document.head.appendChild(style);
 
+  const ano=new Date().getFullYear();
   const footer=document.createElement('div');
   footer.id=ID;
   footer.className='sig-branding-footer';
   footer.setAttribute('aria-label','Créditos do sistema');
-  footer.innerHTML='<span class="sig-powered">Powered by</span><strong>Avanço Consultoria</strong><span class="sig-copyright">© 2026 · Todos os direitos reservados</span>';
+  footer.innerHTML=`<span class="sig-powered">Powered by</span><strong>Avanço Consultoria</strong><span class="sig-copyright">© ${ano} · Todos os direitos reservados</span>`;
   sidebar.appendChild(footer);
 }
 
