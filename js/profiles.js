@@ -23,6 +23,7 @@ const DEF=[
  ["permutas","Permutas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar cadastro"],["movimentar","Registrar movimentações"],["estornar","Estornar lançamentos"],["fechar","Realizar fechamentos"],["inativar","Inativar/Reativar"]]],
  ["vendas","Vendas & Comissões",[["visualizar","Visualizar"],["lancar","Registrar vendas"],["editar","Editar/Cancelar vendas"],["vendedores","Gerir vendedores, metas e regras"],["comissoes","Aprovar e marcar comissões como pagas"]]],
  ["prestadores","Prestadores & Oficinas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["avaliar","Avaliar"],["excluir","Excluir"]]],
+ ["combustivel","Frota · Combustível e Diesel",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["frota","Gestão de Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"]]],
  ["almoxarifado","Almoxarifado",[["visualizar","Visualizar"],["cadastrar","Cadastrar item"],["solicitar","Solicitar"],["movimentar","Entregar/receber"],["prorrogar","Autorizar prorrogação"],["editar","Editar"],["ajustar","Ajustar saldo"],["excluir","Excluir"]]],
  ["cotacoes","Solicitações & Cotações",[["visualizar","Visualizar"],["solicitar","Solicitar"],["cotacao","Registrar cotação"],["anexar","Anexar proposta"],["aprovar","Aprovar"],["editar","Editar"]]],
