@@ -527,6 +527,47 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /ordensServico/{id} {
+      allow read: if (permissao('ordensServico','visualizar') || permissao('ordensServico','solicitar') ||
+        permissao('ordensServico','executar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('ordensServico','solicitar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'aberta' &&
+        request.resource.data.numero is string && request.resource.data.numero.size() > 0 &&
+        request.resource.data.tipo in ['CORRETIVA','MELHORIA','PREVENTIVA'] &&
+        request.resource.data.solicitante is string && request.resource.data.solicitante.size() > 0 &&
+        request.resource.data.dataSolicitacao is string && request.resource.data.dataSolicitacao.size() == 10 &&
+        request.resource.data.funcao in ['MECÂNICO','ELETRICISTA','OPERADOR','AUTOMAÇÃO'] &&
+        request.resource.data.equipamento is string && request.resource.data.equipamento.size() > 0 &&
+        request.resource.data.descricao is string && request.resource.data.descricao.size() > 0 &&
+        request.resource.data.solicitadoPor == request.auth.uid &&
+        request.resource.data.dataInicio == '' && request.resource.data.dataFim == '';
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.numero == resource.data.numero &&
+        request.resource.data.dataSolicitacao == resource.data.dataSolicitacao &&
+        request.resource.data.solicitadoPor == resource.data.solicitadoPor && (
+          (administrador() && resource.data.status != 'cancelada' &&
+            request.resource.data.status == 'cancelada' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','motivoCancelamento','canceladoPor','canceladoEm','atualizadoEm'
+            ])) ||
+          (permissao('ordensServico','executar') &&
+            resource.data.status in ['aberta','em_execucao'] &&
+            request.resource.data.status in ['aberta','em_execucao','concluida'] &&
+            (request.resource.data.status != 'concluida' || (
+              request.resource.data.dataFim is string && request.resource.data.dataFim.size() == 10 &&
+              request.resource.data.realizado is string && request.resource.data.realizado.size() > 0
+            )) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'tipo','solicitante','funcao','equipamento','descricao','executante',
+              'dataInicio','dataFim','realizado','paradaProducao','trocaPeca',
+              'observacao','status','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
