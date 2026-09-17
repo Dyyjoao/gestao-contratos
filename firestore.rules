@@ -475,6 +475,58 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /palletMovimentos/{id} {
+      allow read: if (permissao('palletMovimentos','visualizar') || permissao('palletMovimentos','lancar') ||
+        permissao('palletMovimentos','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('palletMovimentos','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.motorista is string && request.resource.data.motorista.size() > 0 &&
+        request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
+        request.resource.data.recolhido is int && request.resource.data.recolhido >= 0;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
+        request.resource.data.recolhido is int && request.resource.data.recolhido >= 0 && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','motorista','entregue','recolhido','status','motivoEstorno',
+              'estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao('palletMovimentos','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','motorista','entregue','recolhido','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
+    match /palletInventarios/{id} {
+      allow read: if (permissao('palletInventario','visualizar') || permissao('palletInventario','lancar') ||
+        permissao('palletInventario','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('palletInventario','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
+        request.resource.data.quantidade is int && request.resource.data.quantidade >= 0;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
+        request.resource.data.quantidade is int && request.resource.data.quantidade >= 0 && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','tipo','quantidade','status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao('palletInventario','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data','tipo','quantidade','atualizadoEm']))
+        );
+      allow delete: if false;
+    }
+
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
