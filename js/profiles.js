@@ -16,6 +16,7 @@ const DEF=[
  ["modativos","RH · Ativos no mês",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["modincidentes","Segurança · Ocorrências",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["modtreinamentos","Segurança · Treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["reclamacoes","Comercial · Reclamações",[["visualizar","Visualizar próprias"],["registrar","Registrar"],["tratar","Tratar próprias"],["supervisionar","Acompanhar equipe"]]],
  ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
  ["contasPagar","Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
  ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
