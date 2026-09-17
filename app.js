@@ -34,7 +34,7 @@ import "./js/service-orders.js";
 import "./js/service-orders-dashboard.js";
 import "./js/workforce-safety.js";
 import "./js/hr-people.js";
-import "./js/hr-role-registry.js?v=3";
+import "./js/hr-role-registry.js?v=4";
 import("./js/hr-culture.js?v=4").catch(error => console.error("Módulo de avaliações RH indisponível", error));
 import "./js/hr-agenda.js";
 import "./js/module-settings.js";
