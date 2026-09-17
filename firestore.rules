@@ -461,10 +461,16 @@ service cloud.firestore {
         request.resource.data.responsavelId == resource.data.responsavelId &&
         request.resource.data.valor is number && request.resource.data.valor >= 0 &&
         request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'] &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['contatos']) || (
+          request.resource.data.contatos is list &&
+          request.resource.data.contatos.size() == resource.data.get('contatos', []).size() + 1 &&
+          request.resource.data.contatos.hasAll(resource.data.get('contatos', [])) &&
+          request.resource.data.contatos[request.resource.data.contatos.size() - 1].por == request.auth.uid
+        )) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'data','vendedor','cliente','produto','cidade','comprador','numeroVb','valor',
           'status','telefone','email','observacao','justificativa','ultimoContatoEm',
-          'proximoContatoEm','notaUltimoContato','atualizadoEm'
+          'proximoContatoEm','notaUltimoContato','contatos','atualizadoEm'
         ]);
       allow delete: if false;
     }
