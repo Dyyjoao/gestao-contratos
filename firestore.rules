@@ -370,6 +370,36 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /descarteLancamentos/{id} {
+      allow read: if (permissao('descarte','visualizar') || permissao('descarte','lancar') ||
+        permissao('descarte','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('descarte','lancar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.maquina in ['MAQ.1','MAQ.2','LAJE'] &&
+        request.resource.data.responsavel in ['ARTUR','GIL','PAULO'] &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0;
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.maquina in ['MAQ.1','MAQ.2','LAJE'] &&
+        request.resource.data.responsavel in ['ARTUR','GIL','PAULO'] &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 && (
+          (administrador() && request.resource.data.status in ['ativo','estornado'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','quantidade','maquina','responsavel','status','motivoEstorno',
+              'estornadoPor','estornadoEm','atualizadoEm'
+            ])) ||
+          (permissao('descarte','editar') && request.resource.data.status == 'ativo' &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','quantidade','maquina','responsavel','atualizadoEm'
+            ]))
+        );
+      allow delete: if false;
+    }
+
     match /operacaoCadastros/{id} {
       allow read: if (permissao('producao','visualizar') || permissao('producao','lancar') ||
         permissao('producao','editar') || permissao('producao','cadastros')) && documentoAcessivel(resource.data);
