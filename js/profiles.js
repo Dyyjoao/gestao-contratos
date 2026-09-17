@@ -5,6 +5,8 @@ const DEF=[
  ["dashboard","Dashboard",[["visualizar","Visualizar"]]],
  ["producao","Operação · Produção",[["visualizar","Visualizar"],["lancar","Registrar produção"],["editar","Editar lançamentos"],["cadastros","Gerir máquinas, itens e concretadores"]]],
  ["descarte","Operação · Descarte",[["visualizar","Visualizar"],["lancar","Registrar descarte"],["editar","Editar lançamentos"]]],
+ ["visitas","Comercial · Visitas e contatos",[["visualizar","Visualizar próprios"],["registrar","Registrar contato"],["editar","Editar próprios"],["supervisionar","Acompanhar equipe"]]],
+ ["orcamentos","Comercial · Orçamentos",[["visualizar","Visualizar próprios"],["registrar","Registrar orçamento"],["editar","Editar próprios e registrar follow-up"],["supervisionar","Acompanhar equipe"]]],
  ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
  ["contasPagar","Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
  ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
