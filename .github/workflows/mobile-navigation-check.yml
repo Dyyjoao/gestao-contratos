@@ -1,0 +1,28 @@
+name: SIG Mobile Navigation Check
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'feature/mobile-layout']
+jobs:
+  mobile-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check navigation script
+        run: node --check js/mobile-navigation.js
+      - name: Open mobile layout in Chrome
+        run: |
+          set -e
+          python3 -m http.server 8000 >/tmp/mobile-server.log 2>&1 &
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          s=s.replace('<script type="module" src="app.js?v=18"></script>','')
+          s=s.replace('id="sistema" class="hidden"','id="sistema"')
+          script='''<script type="module">import './js/mobile-navigation.js';try{await new Promise(r=>setTimeout(r,700));const root=document.getElementById('sistema'),toggle=document.getElementById('abrirMenuMobile'),side=root.querySelector('.sidebar'),backdrop=document.getElementById('fundoMenuMobile');if(getComputedStyle(toggle).display==='none'||!side.inert)throw Error('Menu fechado indisponível');toggle.click();if(!root.classList.contains('mobile-nav-open')||side.inert||toggle.getAttribute('aria-expanded')!=='true')throw Error('Menu não abriu');backdrop.click();if(root.classList.contains('mobile-nav-open')||!side.inert)throw Error('Fundo não fechou');toggle.click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));if(root.classList.contains('mobile-nav-open'))throw Error('Escape não fechou');toggle.click();window.dispatchEvent(new CustomEvent('sig:page',{detail:{pagina:'dashboard'}}));if(root.classList.contains('mobile-nav-open'))throw Error('Navegação não fechou');document.documentElement.dataset.mobileSmoke='ok'}catch(e){document.documentElement.dataset.mobileSmoke='fail';document.body.insertAdjacentHTML('beforeend','<pre id="mobile-smoke-error">'+String(e.stack||e)+'</pre>')}</script>'''
+          Path('mobile-smoke.html').write_text(s.replace('</body>',script+'</body>'))
+          PY
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          timeout 35s "$CHROME" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=2500 --dump-dom http://127.0.0.1:8000/mobile-smoke.html >/tmp/mobile-smoke-dom.html
+          grep -q 'data-mobile-smoke="ok"' /tmp/mobile-smoke-dom.html || { grep -o '<pre id="mobile-smoke-error">[^<]*' /tmp/mobile-smoke-dom.html || true; exit 1; }
