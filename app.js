@@ -27,6 +27,7 @@ import "./js/management-shell.js";
 import "./js/controllership-router.js";
 import "./js/production.js";
 import "./js/disposal.js";
+import "./js/commercial-workflow.js";
 import "./js/area-navigation.js";
 import "./js/governance.js";
 import "./js/governance-security.js";
