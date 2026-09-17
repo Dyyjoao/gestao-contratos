@@ -59,7 +59,7 @@ A migração será feita tela por tela, sempre em branch/PR de homologação ant
 | Estrutura | Navegação por áreas | Implementada em `main` |
 | Operação | Produção | Tela na `main`; Rules versionadas, publicação Firebase pendente |
 | Operação | Descarte | Implementada em branch de preparação; aguardando publicação conjunta de Rules |
-| Comercial | Visitas e contatos; Orçamentos | Preparados no lote, aguardando publicação conjunta de Rules |
+| Comercial | Visitas, Orçamentos e Reclamações | Preparados no lote, aguardando publicação conjunta de Rules |
 | Logística | Entrega/recolhimento e Inventário de pallets | Preparados no lote, aguardando publicação conjunta de Rules |
 | Manutenção | Ordens de Serviço | Preparada no lote, aguardando publicação conjunta de Rules |
 | RH | Horas extras; Quadro; Ativos por setor; Ativos no mês | Preparados no lote, aguardando publicação conjunta de Rules |
@@ -129,6 +129,8 @@ O código `Salvador.gs` e o cliente `Index.html` foram conferidos. Os arquivos d
 As telas preservam os campos de `Registro Visita` e `Orçamento` do Script. No SIG, `visitasComerciais` e `orcamentosComerciais` pertencem ao Grupo/Empresa e ao usuário que registrou o atendimento (`responsavelId`). Usuário comum consulta apenas os próprios registros; a permissão `supervisionar` dá visão consolidada da equipe. Vendedor continua como informação comercial textual; **não há mapeamento automático** entre os e-mails do Script e as contas do SIG. Esse vínculo deve ser definido antes de importar o histórico.
 
 Orçamentos abertos (`aguardando_aprovacao` ou `licitacao`) entram na Minha Mesa do responsável e no resumo comercial do Dashboard. Cada novo orçamento aberto recebe próximo contato em 24 horas. Registrar o contato acrescenta um evento ao histórico do orçamento e renova o prazo por 24 horas; mudar para `venda_concluida` ou `perdido_concorrente` retira o item da fila. Esta é uma fila operacional exibida ao abrir o SIG; não envia mensagem automática fora do aplicativo. O status de venda concluída **não cria lançamento em Vendas & Comissões, DRE ou Caixa**. Edição exige permissão; exclusão física permanece bloqueada.
+
+`reclamacoesComerciais` preserva data, cliente, vendedor, motivo, cidade, produto, histórico e e-mail do vendedor. O SIG acrescenta status `aberta` → `em_analise` → `resolvida`, eventos cronológicos de tratamento, visão própria do responsável e consolidação para quem pode supervisionar. A consulta segue Grupo/Empresa, não há delete físico e a tela não cria lançamento financeiro.
 
 ### Logística — Pallets
 
