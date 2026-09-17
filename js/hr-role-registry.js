@@ -70,14 +70,18 @@ async function vincularDepoisDoSalvar(codigo,nome,cargoId){
 
 function garantirPainel(){
   const pagina=$('pagina-rh');if(!pagina||$('rhCargosCentralBox'))return;
-  const box=document.createElement('section');box.id='rhCargosCentralBox';box.className='form-card hidden';box.innerHTML=`<div class="form-card-titulo"><div><h3>Cadastro central de cargos</h3><p>Defina o cargo uma vez e marque quais funções do SIG ele habilita.</p></div></div><form id="rhCargoCadastroForm"><div class="form-grid form-grid-3"><div class="campo"><label for="rhCargoNome">Cargo</label><input id="rhCargoNome" maxlength="80" required placeholder="Ex.: Motorista de carreta"></div><div class="campo"><label>Funções sistêmicas</label><label><input type="checkbox" name="rhCargoFuncao" value="MOTORISTA"> Motorista</label><label><input type="checkbox" name="rhCargoFuncao" value="VENDEDOR"> Vendedor</label><label><input type="checkbox" name="rhCargoFuncao" value="SUPERVISOR_VENDAS"> Supervisora de vendas</label></div><div class="campo"><label for="rhCargoExtras">Outras funções</label><input id="rhCargoExtras" placeholder="Ex.: COMPRADOR, GESTOR"><small>Separe por vírgulas.</small></div></div><div class="form-acoes"><button id="rhCargoFechar" class="btn-secundario" type="button">Fechar</button><button class="btn-primario" type="submit">Adicionar cargo</button></div></form><div id="rhCargosLista" class="tabela-container"></div>`;
+  const box=document.createElement('section');box.id='rhCargosCentralBox';box.className='form-card hidden';box.innerHTML=`<div class="form-card-titulo"><div><h3>Cadastro central de cargos</h3><p>Defina o cargo uma vez e marque quais funções do SIG ele habilita.</p></div></div><form id="rhCargoCadastroForm" ${admin()?'':'class="hidden"'}><div class="form-grid form-grid-3"><div class="campo"><label for="rhCargoNome">Cargo</label><input id="rhCargoNome" maxlength="80" required placeholder="Ex.: Motorista de carreta"></div><div class="campo"><label>Funções sistêmicas</label><label><input type="checkbox" name="rhCargoFuncao" value="MOTORISTA"> Motorista</label><label><input type="checkbox" name="rhCargoFuncao" value="VENDEDOR"> Vendedor</label><label><input type="checkbox" name="rhCargoFuncao" value="SUPERVISOR_VENDAS"> Supervisora de vendas</label></div><div class="campo"><label for="rhCargoExtras">Outras funções</label><input id="rhCargoExtras" placeholder="Ex.: COMPRADOR, GESTOR"><small>Separe por vírgulas.</small></div></div><div class="form-acoes"><button id="rhCargoFechar" class="btn-secundario" type="button">Fechar</button><button class="btn-primario" type="submit">Adicionar cargo</button></div></form><div id="rhCargosLista" class="tabela-container"></div>`;
   const aviso=$('rhAviso');aviso?.insertAdjacentElement('afterend',box);
-  $('rhCargoFechar').addEventListener('click',()=>box.classList.add('hidden'));
-  $('rhCargoCadastroForm').addEventListener('submit',salvarCargo);
+  $('rhCargoFechar')?.addEventListener('click',()=>box.classList.add('hidden'));
+  $('rhCargoCadastroForm')?.addEventListener('submit',salvarCargo);
 }
 function garantirBotao(){
-  if(!admin())return;const acoes=$('pagina-rh')?.querySelector('.rh-module-head .acoes-cabecalho');if(!acoes||$('rhGerirCargos'))return;
-  const b=document.createElement('button');b.id='rhGerirCargos';b.className='btn-secundario';b.type='button';b.textContent='Cargos';b.addEventListener('click',()=>{garantirPainel();renderCargos();$('rhCargosCentralBox').classList.remove('hidden');$('rhCargosCentralBox').scrollIntoView({behavior:'smooth',block:'start'})});acoes.prepend(b);
+  const pagina=$('pagina-rh');if(!pagina)return;
+  const acoes=pagina.querySelector('.rh-module-head .acoes-cabecalho')||pagina.querySelector('.acoes-cabecalho');
+  if(!acoes||$('rhGerirCargos'))return;
+  const b=document.createElement('button');b.id='rhGerirCargos';b.className='btn-secundario';b.type='button';b.textContent='Cargos';b.title='Abrir cadastro central de cargos';
+  b.addEventListener('click',()=>{garantirPainel();renderCargos();$('rhCargosCentralBox')?.classList.remove('hidden');$('rhCargosCentralBox')?.scrollIntoView({behavior:'smooth',block:'start'})});
+  const atualizar=$('rhAtualizar');if(atualizar)acoes.insertBefore(b,atualizar);else acoes.prepend(b);
 }
 async function salvarCargo(e){
   e.preventDefault();if(!admin())return;
@@ -88,10 +92,10 @@ async function salvarCargo(e){
 }
 async function alternarCargo(id){if(!admin())return;await garantirBase();await salvarBase({cargos:cargos.map(c=>c.id===id?{...c,ativo:c.ativo===false}:c)});renderCargos()}
 function renderCargos(){
-  const el=$('rhCargosLista');if(!el)return;el.innerHTML=`<table class="tabela"><thead><tr><th>Cargo</th><th>Funções no SIG</th><th>Status</th><th>Ação</th></tr></thead><tbody>${cargos.map(c=>`<tr><td>${esc(c.nome)}</td><td>${esc((c.funcoesSistema||[]).join(', ')||'—')}</td><td>${c.ativo===false?'Inativo':'Ativo'}</td><td><button type="button" class="btn-acao" data-cargo-toggle="${esc(c.id)}">${c.ativo===false?'Reativar':'Inativar'}</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhum cargo cadastrado.</td></tr>'}</tbody></table>`;el.querySelectorAll('[data-cargo-toggle]').forEach(b=>b.addEventListener('click',()=>alternarCargo(b.dataset.cargoToggle)));
+  const el=$('rhCargosLista');if(!el)return;el.innerHTML=`<table class="tabela"><thead><tr><th>Cargo</th><th>Funções no SIG</th><th>Status</th><th>Ação</th></tr></thead><tbody>${cargos.map(c=>`<tr><td>${esc(c.nome)}</td><td>${esc((c.funcoesSistema||[]).join(', ')||'—')}</td><td>${c.ativo===false?'Inativo':'Ativo'}</td><td>${admin()?`<button type="button" class="btn-acao" data-cargo-toggle="${esc(c.id)}">${c.ativo===false?'Reativar':'Inativar'}</button>`:'Somente leitura'}</td></tr>`).join('')||'<tr><td colspan="4">Nenhum cargo cadastrado.</td></tr>'}</tbody></table>`;el.querySelectorAll('[data-cargo-toggle]').forEach(b=>b.addEventListener('click',()=>alternarCargo(b.dataset.cargoToggle)));
 }
 function decorar(){garantirBotao();garantirPainel();injetarCargoAdmissao()}
 function agendar(){clearTimeout(timer);timer=setTimeout(()=>{carregar().then(decorar)},80)}
 function instalar(){if(observador)return;observador=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(decorar,50)});observador.observe(document.body,{childList:true,subtree:true});agendar()}
-window.addEventListener('sig:ready',agendar);window.addEventListener('sig:empresa-contexto',agendar);window.addEventListener('sig:data-changed',e=>{if(e.detail?.modulo==='rh')agendar()});
+window.addEventListener('sig:ready',agendar);window.addEventListener('sig:empresa-contexto',agendar);window.addEventListener('sig:data-changed',e=>{if(e.detail?.modulo==='rh')agendar()});window.addEventListener('sig:page',e=>{if(e.detail?.pagina==='rh')agendar()});
 instalar();
