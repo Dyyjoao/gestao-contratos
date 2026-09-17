@@ -53,6 +53,7 @@ import "./js/sales-pangeia-import.js";
 import "./js/fleet.js";
 import "./js/fleet-detran-es.js";
 import "./js/fleet-central.js";
+import "./js/fleet-cost-kpi.js";
 import "./js/cashflow-admin-actions.js";
 import "./js/fleet-admin-actions.js";
 import "./js/input-admin-actions.js";
