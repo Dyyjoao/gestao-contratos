@@ -726,14 +726,34 @@ service cloud.firestore {
         );
       allow delete: if colecao in ['rhAusencias','rhHorasColaboradores'] && administrador() && documentoAcessivel(resource.data);
     }
-    function rhAvaliacaoValida(d) {
-      return rhMesValido(d.ciclo) && d.avaliadoId is string && d.avaliadorId is string &&
-        exists(rhColaboradorRef(d.avaliadoId)) && exists(rhColaboradorRef(d.avaliadorId)) &&
-        get(rhColaboradorRef(d.avaliadoId)).data.grupoId == d.grupoId &&
-        get(rhColaboradorRef(d.avaliadoId)).data.empresaId == d.empresaId &&
+    function rhModeloPapelValido(d) {
+      return d.modelo is string && d.modelo in ['90','180','360','540'] && (
+        (d.modelo == '90' && d.papel == 'LIDERANÇA') ||
+        (d.modelo == '180' && d.papel in ['LIDERANÇA','AUTOAVALIAÇÃO']) ||
+        (d.modelo == '360' && d.papel in ['LIDERANÇA','AUTOAVALIAÇÃO','PAR','LIDERADO']) ||
+        (d.modelo == '540' && d.papel in ['LIDERANÇA','AUTOAVALIAÇÃO','PAR','LIDERADO','CLIENTE','FORNECEDOR'])
+      );
+    }
+    function rhAvaliadorValido(d) {
+      return (
+        d.papel in ['CLIENTE','FORNECEDOR'] &&
+        d.avaliadorId is string && d.avaliadorId == '' &&
+        d.avaliadorExternoNome is string && d.avaliadorExternoNome.size() > 0 && d.avaliadorExternoNome.size() <= 120
+      ) || (
+        d.papel in ['AUTOAVALIAÇÃO','LIDERANÇA','PAR','LIDERADO'] &&
+        d.avaliadorId is string && d.avaliadorId.size() > 0 &&
+        exists(rhColaboradorRef(d.avaliadorId)) &&
         get(rhColaboradorRef(d.avaliadorId)).data.grupoId == d.grupoId &&
         get(rhColaboradorRef(d.avaliadorId)).data.empresaId == d.empresaId &&
-        d.papel in ['AUTOAVALIAÇÃO','LIDERANÇA','PAR','LIDERADO'] &&
+        d.avaliadorExternoNome is string && d.avaliadorExternoNome == ''
+      );
+    }
+    function rhAvaliacaoValida(d) {
+      return rhMesValido(d.ciclo) && d.avaliadoId is string &&
+        exists(rhColaboradorRef(d.avaliadoId)) &&
+        get(rhColaboradorRef(d.avaliadoId)).data.grupoId == d.grupoId &&
+        get(rhColaboradorRef(d.avaliadoId)).data.empresaId == d.empresaId &&
+        rhModeloPapelValido(d) && rhAvaliadorValido(d) &&
         ((d.papel == 'AUTOAVALIAÇÃO') == (d.avaliadoId == d.avaliadorId)) &&
         d.notas is list && d.notas.size() == 5 &&
         d.notas[0] is int && d.notas[0] >= 1 && d.notas[0] <= 5 &&
@@ -758,7 +778,7 @@ service cloud.firestore {
           (permissao('rhAvaliacoes360','editar') && request.resource.data.status == 'ativo' &&
             rhAvaliacaoValida(request.resource.data) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'ciclo','avaliadoId','avaliadorId','papel','notas','comentario','atualizadoEm']))
+              'modelo','ciclo','avaliadoId','avaliadorId','avaliadorExternoNome','papel','notas','comentario','atualizadoEm']))
         );
       allow delete: if administrador() && documentoAcessivel(resource.data);
     }
