@@ -1,28 +1,29 @@
 const ID='sigBrandingFooter';
 
 function instalarBranding(){
-  const sidebar=document.querySelector('.sidebar');
-  if(!sidebar||document.getElementById(ID))return;
+  const mainArea=document.querySelector('.main-area');
+  if(!mainArea||document.getElementById(ID))return;
 
-  const style=document.createElement('style');
-  style.id='sigBrandingFooterStyle';
-  style.textContent=`
-    .sidebar{display:flex;flex-direction:column}
-    .sidebar-menu{flex:1 1 auto;min-height:0;overflow-y:auto}
-    .sig-branding-footer{flex:0 0 auto;padding:14px 18px 16px;margin-top:auto;border-top:1px solid rgba(255,255,255,.08);text-align:center;color:rgba(255,255,255,.58);font-size:10px;line-height:1.45;letter-spacing:.02em}
-    .sig-branding-footer strong{display:block;margin:2px 0 3px;color:rgba(255,255,255,.86);font-size:11px;font-weight:600;letter-spacing:.03em}
-    .sig-branding-footer .sig-powered{display:block;text-transform:uppercase;font-size:9px;letter-spacing:.12em;color:rgba(255,255,255,.42)}
-    .sig-branding-footer .sig-copyright{display:block;margin-top:2px;font-size:9px;color:rgba(255,255,255,.38)}
-  `;
-  document.head.appendChild(style);
+  if(!document.getElementById('sigBrandingFooterStyle')){
+    const style=document.createElement('style');
+    style.id='sigBrandingFooterStyle';
+    style.textContent=`
+      .sig-page-footer{margin-top:28px;padding:16px 24px 20px;border-top:1px solid rgba(15,23,42,.08);text-align:center;color:#7b8794;font-size:11px;line-height:1.45;letter-spacing:.01em}
+      .sig-page-footer strong{font-weight:600;color:#4b5563}
+      .sig-page-footer .sig-powered{margin-right:4px}
+      .sig-page-footer .sig-copyright{margin-left:8px}
+      @media (max-width:720px){.sig-page-footer{padding:14px 16px 18px;font-size:10px}.sig-page-footer .sig-copyright{display:block;margin:3px 0 0}}
+    `;
+    document.head.appendChild(style);
+  }
 
   const ano=new Date().getFullYear();
-  const footer=document.createElement('div');
+  const footer=document.createElement('footer');
   footer.id=ID;
-  footer.className='sig-branding-footer';
+  footer.className='sig-page-footer';
   footer.setAttribute('aria-label','Créditos do sistema');
   footer.innerHTML=`<span class="sig-powered">Powered by</span><strong>Avanço Consultoria</strong><span class="sig-copyright">© ${ano} · Todos os direitos reservados</span>`;
-  sidebar.appendChild(footer);
+  mainArea.appendChild(footer);
 }
 
 instalarBranding();
