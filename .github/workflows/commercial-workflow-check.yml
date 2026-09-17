@@ -1,0 +1,28 @@
+name: SIG Commercial Workflow Check
+
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  commercial-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate visit and quote workflow contract
+        run: |
+          set -e
+          node --check js/commercial-workflow.js
+          node --check js/area-navigation.js
+          grep -q 'commercial-workflow.js' app.js
+          grep -q 'visitasComerciais' js/commercial-workflow.js
+          grep -q 'orcamentosComerciais' js/commercial-workflow.js
+          grep -q 'where("responsavelId","==",id)' js/commercial-workflow.js
+          grep -q 'proximo24()' js/commercial-workflow.js
+          grep -q 'match /visitasComerciais/{id}' firestore.rules
+          grep -q 'match /orcamentosComerciais/{id}' firestore.rules
+          grep -q "dados.responsavelId == request.auth.uid" firestore.rules
+          grep -q 'supervisionar' js/profiles.js
+          test -s commercial-workflow.css
