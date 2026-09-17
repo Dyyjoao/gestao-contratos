@@ -62,6 +62,8 @@ A migração será feita tela por tela, sempre em branch/PR de homologação ant
 | Comercial | Visitas e contatos; Orçamentos | Preparados no lote, aguardando publicação conjunta de Rules |
 | Logística | Entrega/recolhimento e Inventário de pallets | Preparados no lote, aguardando publicação conjunta de Rules |
 | Manutenção | Ordens de Serviço | Preparada no lote, aguardando publicação conjunta de Rules |
+| RH | Horas extras; Quadro; Ativos por setor; Ativos no mês | Preparados no lote, aguardando publicação conjunta de Rules |
+| Segurança | Ocorrências; Treinamentos | Preparados no lote, aguardando publicação conjunta de Rules |
 | Demais áreas | Inventário acima | Aguardando tratamento tela por tela |
 
 ### Produção — contrato de migração
@@ -137,3 +139,9 @@ Os movimentos são segregados por Grupo/Empresa e permissões próprias para ent
 ### Manutenção — Ordem de Serviço
 
 `ordensServico` preserva número da OS, tipo (corretiva, melhoria, preventiva), solicitante, data, função, equipamento, serviço solicitado, executante, datas de início/fim, serviço realizado, parada de produção, troca de peça e observação. O fluxo é `aberta` → `em_execucao` → `concluida`, derivado das datas; conclusão exige descrição do serviço realizado. Cancelamento é ação administrativa com reautenticação, motivo e auditoria, preservando o histórico. O Dashboard mostra OS abertas e em execução; uma OS não cria automaticamente manutenção na ficha de Frota nem lançamento financeiro.
+
+### RH e Segurança
+
+As abas de RH preservam horas extras 50%/100% e valor por setor; admissões, demissões, atestados e afastamentos >15 dias por data; ativos por setor; e ativos no mês. A última posição de ativos, e a última posição de cada setor, são **fotografias**, não fluxos somáveis ao longo do ano. O quadro de movimentações (admissões menos demissões) é um fluxo separado.
+
+Segurança registra acidentes de trabalho/trajeto com quantidades e treinamentos com setor, tipo, data, nome, local, carga horária, horário, instrutor, custo e público. As seis coleções têm permissões próprias de consulta, lançamento e edição, segregação Grupo/Empresa, estorno administrativo auditado e bloqueio de delete físico. RH e Segurança recebem indicadores no Dashboard. Nenhum desses registros cria folha, obrigação financeira ou lançamento contábil automaticamente.
