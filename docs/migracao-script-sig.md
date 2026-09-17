@@ -82,3 +82,39 @@ Nenhuma integração contábil, financeira ou operacional nova será criada auto
 Fonte: `Salvador.gs` v1.8.8, aba `Descarte`. Campos: Data, Quantidade não negativa, Máquina (`MAQ.1`, `MAQ.2`, `LAJE`) e Responsável pelo recolhimento (`ARTUR`, `GIL`, `PAULO`). O SIG apresenta filtro por ano, mês e máquina, totais por máquina e responsável, histórico e KPI para o Dashboard. Lançamentos são segregados por Grupo/Empresa; edição exige permissão e estorno exige Administrador, reautenticação, motivo e auditoria. Não há exclusão física.
 
 A Rule de `descarteLancamentos` está preparada para ser publicada junto com os demais módulos. Até que a publicação completa no Firebase ocorra, a tela não deve ser tratada como funcional para gravação real. O arquivo de origem foi utilizado apenas para análise e não contém dados migrados automaticamente.
+
+## Mapa de migração do Script v1.8.8 (17/09/2026)
+
+O código `Salvador.gs` e o cliente `Index.html` foram conferidos. Os arquivos de origem não são importados para o repositório, pois contêm listas e dados operacionais. A classificação abaixo indica o destino funcional; cada integração deve conservar o escopo Grupo/Empresa, permissões e histórico. A base antiga continua separada até uma importação de dados planejada.
+
+| Tela no Script | Destino no SIG | Tratamento necessário |
+|---|---|---|
+| Produção | Operação → Produção | Tela na `main`; Rules versionadas, publicação Firebase pendente. |
+| Descarte | Operação → Descarte | Tela e Rule preparadas em branch de migração. |
+| Vendedor / Vendas | Vendas & Comissões | Conferir correspondência de vendedor, valor e datas; evitar segunda carteira de vendas. |
+| Consolidado de Vendas | Vendas & Comissões / Dashboard | Agregar dados da fonte única de vendas. |
+| Material | Vendas & Comissões | Definir classificação de material/local por venda sem duplicar receitas. |
+| Registro de Visita | Comercial: funil e Minha Mesa | Registro de interação com vendedor, cliente, obra, canal e follow-up. |
+| Reclamação de Cliente | Comercial: atendimento | Histórico e responsável com acompanhamento de situação. |
+| Orçamentos | Comercial: funil e Minha Mesa | Status e justificativa; aprovação e cobrança periódica conforme fluxo acordado. |
+| Entrega e Recolhimento de Pallet | Logística | Movimentos por motorista, totais mensal/anual e regra indicativa acima de 500 recolhidos no mês. |
+| Inventário de Pallet | Logística | Saldo físico mensal, compras, entradas e saídas, comparativo e perdas. |
+| Abastecimento | Frota | Vincular por placa à ficha existente; diferenciar consumo e recebimento; KM e estoque de diesel. |
+| Gestão de Veículos | Frota existente | Mapear campos legados sem duplicar cadastro de veículos. |
+| Consumo Diesel | Frota / custos gerenciais | Avaliar se o valor já existe em outro lançamento para evitar dupla contabilização. |
+| Financeiro | Caixa / FP&A existentes | Relacionar naturezas legadas a contas analíticas, sem lançar automaticamente em DRE/Caixa. |
+| Custo de EPI | Almoxarifado / FP&A | Definir se custo é compra, entrega ou competência antes de integrar. |
+| Hora Extra | RH | Horas 50%, 100% e custo por setor e data. |
+| Quadro de Funcionários | RH | Admissões, demissões, atestados e afastamentos por competência. |
+| Ativos por Setor | RH | Fotografia por setor/data, sem somar fotografias como fluxo. |
+| Ativos no Mês | RH | Fotografia mensal reconciliável com o quadro. |
+| Segurança | Segurança do Trabalho | Acidentes de trabalho e de trajeto por data/quantidade. |
+| Treinamento | Segurança do Trabalho | Agenda, setor, carga horária, instrutor, público e custo. |
+| Ordem de Serviço | Manutenção | Solicitação → execução → conclusão, evidenciando parada e troca de peça. |
+
+### Publicação das Rules em lote
+
+- Cada tela nova recebe coleção, permissão, Rule e QA no mesmo PR de preparação.
+- Não publicar Rules parciais enquanto o lote estiver em desenvolvimento; publicar o `firestore.rules` **integral** da versão da `main` que contiver as telas liberadas.
+- A equipe só poderá testar gravação real das novas coleções depois dessa publicação. O site e o Firebase são deploys independentes.
+- O cadastro de dados históricos do Script requer migração específica com reconciliação, origem e chaves de idempotência; as telas novas não importam automaticamente as planilhas antigas.
