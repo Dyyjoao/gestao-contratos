@@ -414,6 +414,61 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function comercialPodeVer(modulo, dados) {
+      return documentoAcessivel(dados) && (
+        administrador() || permissao(modulo,'supervisionar') ||
+        (dados.responsavelId == request.auth.uid && (
+          permissao(modulo,'visualizar') || permissao(modulo,'registrar') || permissao(modulo,'editar')
+        ))
+      );
+    }
+
+    match /visitasComerciais/{id} {
+      allow read: if comercialPodeVer('visitas',resource.data);
+      allow create: if permissao('visitas','registrar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0;
+      allow update: if comercialPodeVer('visitas',resource.data) &&
+        (administrador() || permissao('visitas','supervisionar') ||
+          (permissao('visitas','editar') && resource.data.responsavelId == request.auth.uid)) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','vendedor','cliente','obra','cidade','material','assunto','tipo',
+          'email','observacao','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
+    match /orcamentosComerciais/{id} {
+      allow read: if comercialPodeVer('orcamentos',resource.data);
+      allow create: if permissao('orcamentos','registrar') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.produto is string && request.resource.data.produto.size() > 0 &&
+        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
+        request.resource.data.valor is number && request.resource.data.valor >= 0 &&
+        request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'];
+      allow update: if comercialPodeVer('orcamentos',resource.data) &&
+        (administrador() || permissao('orcamentos','supervisionar') ||
+          (permissao('orcamentos','editar') && resource.data.responsavelId == request.auth.uid)) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.valor is number && request.resource.data.valor >= 0 &&
+        request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','vendedor','cliente','produto','cidade','comprador','numeroVb','valor',
+          'status','telefone','email','observacao','justificativa','ultimoContatoEm',
+          'proximoContatoEm','notaUltimoContato','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
