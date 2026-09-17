@@ -58,7 +58,7 @@ A migração será feita tela por tela, sempre em branch/PR de homologação ant
 |---|---|---|
 | Estrutura | Navegação por áreas | Implementada em `main` |
 | Operação | Produção | Em homologação — primeira tela da migração |
-| Operação | Descarte | Próxima após fechamento de Produção |
+| Operação | Descarte | Implementada em branch de preparação; aguardando publicação conjunta de Rules |
 | Demais áreas | Inventário acima | Aguardando tratamento tela por tela |
 
 ### Produção — contrato de migração
@@ -76,3 +76,9 @@ As coleções `producaoLancamentos` e `operacaoCadastros` são segregadas por `g
 O frontend no GitHub Pages e as Firestore Rules são publicados separadamente. Antes de liberar gravação real, publicar as Rules completas deste commit no projeto Firebase correto e testar com usuário autorizado, usuário sem permissão e Administrador. Uma prévia estática da interface não grava no Firebase nem comprova as Rules publicadas.
 
 Nenhuma integração contábil, financeira ou operacional nova será criada automaticamente apenas porque existe no Script; mudanças de regra ou de integração continuam exigindo decisão explícita.
+
+### Descarte — contrato de migração
+
+Fonte: `Salvador.gs` v1.8.8, aba `Descarte`. Campos: Data, Quantidade não negativa, Máquina (`MAQ.1`, `MAQ.2`, `LAJE`) e Responsável pelo recolhimento (`ARTUR`, `GIL`, `PAULO`). O SIG apresenta filtro por ano, mês e máquina, totais por máquina e responsável, histórico e KPI para o Dashboard. Lançamentos são segregados por Grupo/Empresa; edição exige permissão e estorno exige Administrador, reautenticação, motivo e auditoria. Não há exclusão física.
+
+A Rule de `descarteLancamentos` está preparada para ser publicada junto com os demais módulos. Até que a publicação completa no Firebase ocorra, a tela não deve ser tratada como funcional para gravação real. O arquivo de origem foi utilizado apenas para análise e não contém dados migrados automaticamente.
