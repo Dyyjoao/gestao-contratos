@@ -60,6 +60,7 @@ A migração será feita tela por tela, sempre em branch/PR de homologação ant
 | Operação | Produção | Tela na `main`; Rules versionadas, publicação Firebase pendente |
 | Operação | Descarte | Implementada em branch de preparação; aguardando publicação conjunta de Rules |
 | Comercial | Visitas e contatos; Orçamentos | Preparados no lote, aguardando publicação conjunta de Rules |
+| Logística | Entrega/recolhimento e Inventário de pallets | Preparados no lote, aguardando publicação conjunta de Rules |
 | Demais áreas | Inventário acima | Aguardando tratamento tela por tela |
 
 ### Produção — contrato de migração
@@ -125,3 +126,9 @@ O código `Salvador.gs` e o cliente `Index.html` foram conferidos. Os arquivos d
 As telas preservam os campos de `Registro Visita` e `Orçamento` do Script. No SIG, `visitasComerciais` e `orcamentosComerciais` pertencem ao Grupo/Empresa e ao usuário que registrou o atendimento (`responsavelId`). Usuário comum consulta apenas os próprios registros; a permissão `supervisionar` dá visão consolidada da equipe. Vendedor continua como informação comercial textual; **não há mapeamento automático** entre os e-mails do Script e as contas do SIG. Esse vínculo deve ser definido antes de importar o histórico.
 
 Orçamentos abertos (`aguardando_aprovacao` ou `licitacao`) entram na Minha Mesa do responsável e no resumo comercial do Dashboard. Cada novo orçamento aberto recebe próximo contato em 24 horas. Registrar o contato acrescenta um evento ao histórico do orçamento e renova o prazo por 24 horas; mudar para `venda_concluida` ou `perdido_concorrente` retira o item da fila. Esta é uma fila operacional exibida ao abrir o SIG; não envia mensagem automática fora do aplicativo. O status de venda concluída **não cria lançamento em Vendas & Comissões, DRE ou Caixa**. Edição exige permissão; exclusão física permanece bloqueada.
+
+### Logística — Pallets
+
+`palletMovimentos` guarda data, motorista, quantidade entregue e recolhida. O resumo por motorista no mês segue a regra indicativa do Script: **mais de 500** pallets recolhidos → referência de R$ 120,00. É um indicador, não gera pagamento, comissão ou obrigação financeira automaticamente. `palletInventarios` registra data, tipo e quantidade; o balanço mensal reproduz as linhas de pallets com material, vazios, total físico, diferença frente ao mês anterior, entradas, saídas, compras e saldo/perda. O Dashboard recebe os totais de entregas/recolhimentos do período selecionado.
+
+Os movimentos são segregados por Grupo/Empresa e permissões próprias para entregas e inventário. Estorno preserva histórico e retira o registro dos cálculos; não há exclusão física. O cadastro histórico ainda não foi importado e não há reconciliação automática entre inventário e entregas até validar a base anterior.
