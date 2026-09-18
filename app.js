@@ -50,7 +50,7 @@ import "./js/disposal-dashboard.js";
 import "./js/sales-guard.js";
 import "./js/sales-performance.js";
 import "./js/sales-pangeia-import.js";
-import "./js/fleet.js?v=7";
+import "./js/fleet.js?v=8";
 import "./js/fleet-detran-es.js";
 import "./js/fleet-central.js?v=9";
 import "./js/fleet-cost-kpi.js?v=3";
