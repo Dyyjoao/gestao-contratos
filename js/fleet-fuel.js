@@ -189,11 +189,34 @@ function renderCompras(p){
 
 function saldoTeoricoAte(dataFim){
   const dataInicial=String(configCombustivel.estoqueInicialData||""),inicial=num(configCombustivel.estoqueInicialLitros);
-  if(!dataInicial||dataFim<dataInicial)return{configurado:false,inicial:0,entradas:0,saidas:0,ajustes:0,saldo:0};
-  const entradas=comprasAtivas().filter(x=>x.data>=dataInicial&&x.data<=dataFim).reduce((s,x)=>s+num(x.quantidade),0);
-  const saidas=ativosAbastecimento().filter(x=>x.data>=dataInicial&&x.data<=dataFim).reduce((s,x)=>s+num(x.quantidade),0);
-  const ajustes=auditoriasAtivas().filter(x=>x.empresaId===emp()&&x.data>=dataInicial&&x.data<=dataFim).reduce((s,x)=>s+num(x.diferenca),0);
-  return{configurado:true,inicial,entradas,saidas,ajustes,saldo:inicial+entradas-saidas+ajustes}
+  if(!dataInicial||dataFim<dataInicial)return{configurado:false,inicial:0,entradas:0,saidas:0,ajustes:0,saldo:0,ultimoInventario:null};
+
+  const entradasLista=comprasAtivas().filter(x=>x.data>=dataInicial&&x.data<=dataFim);
+  const saidasLista=ativosAbastecimento().filter(x=>x.data>=dataInicial&&x.data<=dataFim);
+  const auditoriasLista=auditoriasAtivas().filter(x=>x.empresaId===emp()&&x.data>=dataInicial&&x.data<=dataFim);
+
+  const entradas=entradasLista.reduce((s,x)=>s+num(x.quantidade),0);
+  const saidas=saidasLista.reduce((s,x)=>s+num(x.quantidade),0);
+
+  const eventos=[
+    ...entradasLista.map(x=>({data:x.data,tipo:"entrada",valor:num(x.quantidade),ordem:1,criadoEm:String(x.criadoEm?.seconds??x.criadoEm??"")})),
+    ...saidasLista.map(x=>({data:x.data,tipo:"saida",valor:num(x.quantidade),ordem:2,criadoEm:String(x.criadoEm?.seconds??x.criadoEm??"")})),
+    ...auditoriasLista.map(x=>({data:x.data,tipo:"inventario",saldoFisico:num(x.saldoFisico),ordem:3,criadoEm:String(x.criadoEm?.seconds??x.criadoEm??""),id:x.id}))
+  ].sort((a,b)=>String(a.data).localeCompare(String(b.data))||a.ordem-b.ordem||String(a.criadoEm).localeCompare(String(b.criadoEm)));
+
+  let saldo=inicial,ajustes=0,ultimoInventario=null;
+  eventos.forEach(ev=>{
+    if(ev.tipo==="entrada")saldo+=ev.valor;
+    else if(ev.tipo==="saida")saldo-=ev.valor;
+    else{
+      const ajuste=ev.saldoFisico-saldo;
+      ajustes+=ajuste;
+      saldo=ev.saldoFisico;
+      ultimoInventario={id:ev.id,data:ev.data,saldoFisico:ev.saldoFisico,ajuste};
+    }
+  });
+
+  return{configurado:true,inicial,entradas,saidas,ajustes,saldo,ultimoInventario}
 }
 function classeDiferenca(v){return Math.abs(num(v))<0.005?"fuel-diff-ok":num(v)>0?"fuel-diff-pos":"fuel-diff-neg"}
 function auditoriasAtivas(){return auditoriasTanque.filter(x=>x.status!=="estornado")}
