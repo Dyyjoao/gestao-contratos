@@ -17,7 +17,8 @@ async function carregar(){
   const atuais=Array.isArray(cfg?.cargos)?cfg.cargos:[];
   const antigos=Array.isArray(legacy?.cargos)?legacy.cargos:[];
   cargos=(atuais.length?atuais:antigos).map(c=>({...c,funcoesSistema:Array.isArray(c.funcoesSistema)?c.funcoesSistema:[]}));
-  colaboradores=pessoas.filter(x=>x.empresaId===empresaId&&x.status!=='estornado');
+  const hoje=new Date().toISOString().slice(0,10);
+  colaboradores=pessoas.filter(x=>x.empresaId===empresaId&&x.status!=='estornado'&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje));
 }
 function cargoIdPessoa(p){return p?.cargoId||legacy?.vinculos?.[p?.id]||''}
 export async function carregarBaseCargos(){
