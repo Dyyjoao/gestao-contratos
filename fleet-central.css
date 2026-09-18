@@ -31,3 +31,12 @@
 #pagina-frota .fleet-central-kpis small,#pagina-frota .fleet-cost-grid small{color:#667085;font-size:10px}
 @media(max-width:850px){#pagina-frota .fleet-central-kpis,#pagina-frota .fleet-cost-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){#pagina-frota .fleet-integration-grid,#pagina-frota .fleet-central-kpis,#pagina-frota .fleet-cost-grid{grid-template-columns:1fr}#pagina-frota .fleet-health-vehicle summary{align-items:flex-start;flex-direction:column}}
+
+#pagina-frota .fleet-tech-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+#pagina-frota .fleet-tech-grid>div{display:grid;gap:4px;padding:11px 12px;border:1px solid #dfe7ed;border-radius:10px;background:#fff}
+#pagina-frota .fleet-tech-grid span{font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.03em;font-weight:700}
+#pagina-frota .fleet-tech-grid strong{font-size:13px;color:#183247;overflow-wrap:anywhere}
+#pagina-frota #frotaResumoVeiculos tr[role="button"]{cursor:pointer}
+#pagina-frota #frotaResumoVeiculos tr[role="button"]:focus-visible{outline:2px solid #20b6a5;outline-offset:-2px}
+@media(max-width:850px){#pagina-frota .fleet-tech-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){#pagina-frota .fleet-tech-grid{grid-template-columns:1fr}}
