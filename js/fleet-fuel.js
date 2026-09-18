@@ -246,11 +246,18 @@ async function salvar(e){
     if(!d.nf||!Number.isFinite(d.quantidade)||d.quantidade<=0||!Number.isFinite(d.valorTotal)||d.valorTotal<0)return msg($("fuelMensagem"),"Revise NF, litros e valor total.")
   }else return;
   try{
-    msg($("fuelMensagem"),"Salvando...");const col=aba==="compras"?"custosDiesel":"abastecimentosFrota";
+    msg($("fuelMensagem"),"Salvando...");const col=aba==="compras"?"custosDiesel":"abastecimentosFrota";let salvoId=editId||"",avisoKm="";
     if(editId){const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(v=>v.id===editId);if(!x||!pode("editar")||x.status!=="ativo")throw new Error("Edição não autorizada.");await atualizarDocumento(col,editId,d)}
-    else{if(!pode("lancar"))throw new Error("Sem permissão.");await criarDocumento(col,{...d,empresaId,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""})}
-    if(aba==="abastecimentos")await atualizarKmVeiculo(veiculoPorPlaca(d.placa),d.kmAtual);
-    $("fuelFormBox").classList.add("hidden");limpar();emitirAlteracao("combustivel");emitirAlteracao("frota");await carregar()
+    else{if(!pode("lancar"))throw new Error("Sem permissão.");salvoId=await criarDocumento(col,{...d,empresaId,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""})}
+    if(aba==="abastecimentos"){
+      try{await atualizarKmVeiculo(veiculoPorPlaca(d.placa),d.kmAtual)}
+      catch(eKm){console.warn("Abastecimento salvo, mas o KM do veículo não foi sincronizado",eKm);avisoKm=" O abastecimento foi salvo, mas o KM da ficha do veículo não pôde ser atualizado."}
+    }
+    $("fuelFormBox").classList.add("hidden");limpar();await carregar();
+    const confirmado=(aba==="compras"?compras:abastecimentos).some(x=>x.id===salvoId);
+    if(!confirmado&&salvoId)console.warn("Registro salvo no Firestore, mas não retornou na consulta atual",salvoId);
+    emitirAlteracao("combustivel");emitirAlteracao("frota");
+    if(avisoKm)alert(avisoKm.trim());
   }catch(err){console.error(err);msg($("fuelMensagem"),err.message||"Não foi possível salvar.")}
 }
 async function estornar(id){
