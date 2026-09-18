@@ -40,21 +40,26 @@
             <strong>Sistema Integrado</strong>
             <small>Gestão Empresarial</small>
           </div>
+          <button id="fecharMenuMobile" class="mobile-menu-close" type="button" aria-label="Fechar menu">×</button>
         </div>
 
-        <nav class="sidebar-menu">
+        <nav id="menuPrincipal" class="sidebar-menu" aria-label="Navegação principal">
           <button id="menuDashboard" class="menu-item ativo" data-pagina="dashboard" type="button">Dashboard</button>
           <button id="menuContratos" class="menu-item" data-pagina="contratos" type="button">Contratos</button>
           <div class="menu-separador"></div>
           <button id="menuAdministracao" class="menu-item hidden" data-pagina="administracao" type="button">Administração</button>
         </nav>
       </aside>
+      <div id="fundoMenuMobile" class="mobile-menu-backdrop" aria-hidden="true"></div>
 
       <div class="main-area">
         <header class="app-topbar">
-          <div>
+          <div class="topbar-heading">
+            <button id="abrirMenuMobile" class="mobile-menu-toggle" type="button" aria-label="Abrir menu" aria-controls="menuPrincipal" aria-expanded="false"><span></span><span></span><span></span></button>
+            <div>
             <h1 id="tituloPagina">Dashboard</h1>
             <p id="subtituloContexto">Sistema Integrado de Gestão</p>
+            </div>
           </div>
           <div class="usuario">
             <span id="nomeUsuario"></span>

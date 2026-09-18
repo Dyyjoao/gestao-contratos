@@ -26,6 +26,10 @@ Na Controladoria, nunca deduzir o módulo ativo pelo nome do arquivo: conferir o
 
 ## 2. Estado estrutural atual
 
+### Navegação em celular
+
+Em telas de até 760 px, o menu principal abre pela tecla de menu no cabeçalho e ocupa uma lateral deslizante. `js/mobile-navigation.js` controla abertura, fechamento, foco e bloqueio do fundo; `mobile-navigation.css` define o layout. O menu fecha ao navegar, tocar no fundo, pressionar Escape ou sair. Os filtros globais permanecem no cabeçalho em duas colunas. Em telas maiores, a barra lateral continua fixa. O antigo menu horizontal inferior foi removido de `js/polish.js`.
+
 Plano ativo: `js/ctrl-chart-accounts-v6.js`.
 
 Máscara: `#.##.##.####`.

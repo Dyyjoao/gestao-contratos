@@ -1,0 +1,53 @@
+.mobile-menu-toggle,.mobile-menu-close,.mobile-menu-backdrop{display:none}
+.topbar-heading{display:flex;align-items:center;gap:12px;min-width:0}
+.topbar-heading>div{min-width:0}
+
+@media(max-width:760px){
+  #sistema .app-shell{display:block}
+  #sistema .main-area{min-width:0;width:100%}
+  #sistema .app-topbar{position:sticky;top:0;z-index:80;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 10px;min-height:62px;padding:calc(8px + env(safe-area-inset-top)) 14px 9px;background:#fff}
+  #sistema .topbar-heading{gap:10px}
+  #sistema .topbar-heading h1{font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #sistema .topbar-heading p{display:none}
+  #sistema .usuario{min-width:0;gap:6px;flex-direction:row;align-items:center}
+  #sistema #nomeUsuario{display:none}
+  #sistema #btnSair{min-height:44px;padding:8px 12px;font-size:13px}
+  #sistema .contexto-global{grid-column:1/-1;order:initial;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin:0;gap:8px}
+  #sistema .ctx-campo,#sistema .ctx-empresas{min-width:0}
+  #sistema .ctx-select,#sistema .ctx-empresas summary{width:100%;min-width:0;height:44px;font-size:13px}
+  #sistema .ctx-periodo{min-height:44px;gap:7px}
+  #sistema .ctx-ano-btn,#sistema .ctx-ano-atual{height:44px}
+  #sistema .ctx-ano-btn{width:44px}
+  #sistema .ctx-empresas-pop{width:min(320px,calc(100vw - 28px))}
+  #sistema .mobile-menu-toggle,#sistema .mobile-menu-close{display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:46px;border:1px solid #d5e1e7;border-radius:12px;background:#fff;color:#0b1f33}
+  #sistema .mobile-menu-toggle{flex-direction:column;gap:5px}
+  #sistema .mobile-menu-toggle span{width:20px;height:2px;border-radius:2px;background:currentColor}
+  #sistema .mobile-menu-close{margin-left:auto;background:#173650;color:#fff;border-color:#406078;font-size:29px;line-height:1}
+  #sistema .sidebar{position:fixed!important;inset:0 auto 0 0!important;z-index:201;width:min(330px,88vw)!important;height:100dvh!important;max-height:none!important;padding:calc(16px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;overscroll-behavior:contain;transform:translateX(-105%);visibility:hidden;transition:transform .22s ease,visibility .22s ease;box-shadow:16px 0 45px rgba(11,31,51,.22)}
+  #sistema.mobile-nav-open .sidebar{transform:translateX(0);visibility:visible}
+  #sistema .sidebar-brand{display:flex!important;padding:4px 4px 22px;gap:10px}
+  #sistema .sidebar-brand>div:last-of-type{display:block}
+  #sistema .sidebar-brand strong{font-size:14px}
+  #sistema .sidebar-brand small{font-size:11px}
+  #sistema .sidebar-menu{display:flex!important;flex-direction:column!important;gap:5px!important;overflow:visible!important;padding-bottom:20px}
+  #sistema .sidebar-menu .menu-item{width:100%;min-height:50px;padding:12px 15px;text-align:left!important;white-space:normal;line-height:1.25;font-size:15px}
+  #sistema .sidebar-menu .menu-separador{display:block}
+  #sistema .sidebar-menu .area-menu-wrap,#sistema .sidebar-menu .ctrl-menu-wrap{margin-left:12px}
+  #sistema .sidebar-menu .area-menu-wrap button,#sistema .sidebar-menu .ctrl-menu-wrap button{min-height:46px;text-align:left}
+  #sistema .mobile-menu-backdrop{display:block;position:fixed;inset:0;z-index:200;background:rgba(8,25,42,.56);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s ease}
+  #sistema.mobile-nav-open .mobile-menu-backdrop{opacity:1;visibility:visible;pointer-events:auto}
+  body.mobile-nav-locked{overflow:hidden}
+  #sistema .conteudo{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+  #sistema .pagina,#sistema .lista-card,#sistema .form-card{min-width:0}
+  #sistema .tabela-container{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #sistema .filtros-linha,#sistema .rh-filter-bar{max-width:100%}
+  #sistema .pagina-cabecalho button,#sistema .acoes-cabecalho button,#sistema .form-acoes button{min-height:46px}
+  #sistema button:focus-visible{outline:3px solid #14b8a6;outline-offset:2px}
+}
+@media(max-width:380px){
+  #sistema .app-topbar{padding-left:10px;padding-right:10px}
+  #sistema .topbar-heading h1{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){
+  #sistema .sidebar,#sistema .mobile-menu-backdrop{transition:none}
+}
