@@ -1,5 +1,5 @@
 import { $, esc, listarDocumentos, empresaUnicaSelecionadaId, dataBr, moeda } from './shared.js';
-import { colaboradoresPorFuncao } from './hr-role-registry.js';
+import { colaboradoresPorFuncao } from './hr-role-registry.js?v=6';
 
 let veiculos=[],manutencoes=[],abastecimentos=[],custosDiesel=[],motoristas=[],busy=false,timer=0,observer=null,veiculoSelecionado='';
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -18,7 +18,19 @@ function css(){if(document.querySelector('link[href^="fleet-central.css"]'))retu
 async function lerSeguro(c){try{return await listarDocumentos(c)}catch(e){console.warn(`Frota: ${c} indisponível`,e);return[]}}
 async function carregar(){if(busy||!emp())return;busy=true;try{const [v,m,a,c,mo]=await Promise.all([lerSeguro('veiculos'),lerSeguro('manutencoesFrota'),lerSeguro('abastecimentosFrota'),lerSeguro('custosDiesel'),colaboradoresPorFuncao('MOTORISTA').catch(()=>[])]);veiculos=v.filter(x=>x.empresaId===emp());manutencoes=m.filter(x=>x.empresaId===emp());abastecimentos=a.filter(x=>x.empresaId===emp());custosDiesel=c.filter(x=>x.empresaId===emp());motoristas=mo.filter(x=>x.empresaId===emp());decorar();renderSaude();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)}finally{busy=false}}
 
-function selectMotorista(input,placeholder){if(!input||input.tagName==='SELECT')return;const valor=String(input.value||'').trim().toUpperCase(),s=document.createElement('select');[...input.attributes].forEach(a=>{if(!['type','placeholder','value'].includes(a.name))s.setAttribute(a.name,a.value)});s.id=input.id;s.required=input.required;s.innerHTML=`<option value="">${placeholder}</option>`+motoristas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${esc(p.cargoNome||'MOTORISTA')}</option>`).join('');input.replaceWith(s);const achou=[...s.options].find(o=>String(o.value).toUpperCase()===valor);if(achou)s.value=achou.value}
+function selectMotorista(input,placeholder){
+  if(!input)return;
+  const valor=String(input.value||'').trim(),eraSelect=input.tagName==='SELECT';
+  let s=input;
+  if(!eraSelect){
+    s=document.createElement('select');
+    [...input.attributes].forEach(a=>{if(!['type','placeholder','value'].includes(a.name))s.setAttribute(a.name,a.value)});
+    s.id=input.id;s.required=input.required;input.replaceWith(s);
+  }
+  s.innerHTML=`<option value="">${placeholder}</option>`+motoristas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${esc(p.cargoNome||'MOTORISTA')}</option>`).join('');
+  if(valor&&![...s.options].some(o=>o.value===valor))s.add(new Option(`${valor} · vínculo anterior`,valor));
+  s.value=valor;
+}
 function decorarFormularios(){selectMotorista($('veiculoResponsavel'),'Selecione o motorista...');selectMotorista($('fuelMotorista'),'Selecione o motorista...');selectMotorista($('obrigCondutor'),'Sem condutor vinculado');$('veiculoCentro')?.closest('.campo')?.remove();const t=$('manutTipo');if(t){[['pecas','Peças / componentes'],['servicos','Serviços / mão de obra']].forEach(([v,n])=>{if(![...t.options].some(o=>o.value===v))t.add(new Option(n,v))})}}
 
 function vencida(o){return !['pago','cancelado','em_recurso'].includes(o.status)&&o.vencimento&&(diasAte(o.vencimento)??0)<0}
