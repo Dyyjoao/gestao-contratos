@@ -53,16 +53,18 @@ function montar(){
   if($("pagina-combustivel"))return;
   const main=document.querySelector("main.conteudo");if(!main)return;garantirCss();
   const s=document.createElement("section");s.id="pagina-combustivel";s.className="pagina hidden production-page";s.innerHTML=`
-  <div class="pagina-cabecalho production-head">
-    <div><span class="eyebrow">FROTA</span><h2>Combustível e Diesel</h2><p>Abastecimentos, compras de diesel e auditoria física do tanque.</p></div>
-    <div class="acoes-cabecalho"><button id="fuelNovo" class="btn-primario" type="button">+ Novo abastecimento</button><button id="fuelAtualizar" class="btn-secundario" type="button">Atualizar</button></div>
+  <div class="fleet-module-head">
+    <div class="pagina-cabecalho production-head">
+      <div><span class="eyebrow">FROTA</span><h2>Combustível e Diesel</h2><p>Abastecimentos, compras de diesel e auditoria física do tanque.</p></div>
+      <div class="acoes-cabecalho"><button id="fuelNovo" class="btn-primario" type="button">+ Novo abastecimento</button><button id="fuelAtualizar" class="btn-secundario" type="button">Atualizar</button></div>
+    </div>
+    <div class="fleet-tabs">
+      <button id="fuelTabMov" class="fleet-tab" type="button">Abastecimentos</button>
+      <button id="fuelTabCusto" class="fleet-tab" type="button">Compra de diesel</button>
+      <button id="fuelTabAuditoria" class="fleet-tab" type="button">Auditoria da bomba</button>
+    </div>
   </div>
   <div id="fuelAviso" class="modulo-aviso hidden"></div>
-  <div class="fleet-tabs">
-    <button id="fuelTabMov" class="fleet-tab" type="button">Abastecimentos</button>
-    <button id="fuelTabCusto" class="fleet-tab" type="button">Compra de diesel</button>
-    <button id="fuelTabAuditoria" class="fleet-tab" type="button">Auditoria da bomba</button>
-  </div>
   <div id="fuelKpis" class="production-kpis">
     <div class="kpi-card"><span id="fuelLabelA">—</span><strong id="fuelValorA">—</strong></div>
     <div class="kpi-card"><span id="fuelLabelB">—</span><strong id="fuelValorB">—</strong></div>
