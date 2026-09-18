@@ -103,14 +103,13 @@ function montar(){
 
   <section id="fuelAuditoriaBox" class="hidden">
     <section class="lista-card">
-      <div class="lista-cabecalho"><div><h3>Configuração do tanque</h3><p>Estoque inicial e capacidade são parâmetros administrativos.</p></div><span class="badge">Somente ADM</span></div>
-      <div id="fuelConfigTanqueCampos" class="fuel-config-form">
-        <div class="campo"><label for="fuelEstoqueInicialData">Data do estoque inicial</label><input id="fuelEstoqueInicialData" type="date"></div>
-        <div class="campo"><label for="fuelEstoqueInicialLitros">Estoque inicial (litros)</label><input id="fuelEstoqueInicialLitros" type="number" min="0" step="0.01"></div>
-        <div class="campo"><label for="fuelCapacidadeTanque">Capacidade do tanque (litros)</label><input id="fuelCapacidadeTanque" type="number" min="0" step="0.01"></div>
+      <div class="lista-cabecalho">
+        <div><h3>Parâmetros da bomba</h3><p>Estoque inicial e capacidade são protegidos e administrados fora da operação.</p></div>
+        <span class="badge">Protegido</span>
       </div>
-      <div class="form-acoes"><button id="fuelSalvarTanque" class="btn-primario" type="button">Salvar configuração do tanque</button></div>
-      <p class="fuel-config-note">Usuários não administradores apenas consultam estes parâmetros.</p>
+      <div id="fuelConfigResumo" class="fuel-audit-grid"></div>
+      <div class="form-acoes"><button id="fuelAbrirConfigTanque" class="btn-secundario hidden" type="button">Abrir configuração administrativa</button></div>
+      <p class="fuel-config-note">Alterações de parâmetro ficam restritas ao menu Administração e exigem desbloqueio explícito.</p>
     </section>
     <section class="lista-card"><div class="lista-cabecalho"><div><h3>Posição teórica da bomba</h3><p id="fuelAuditoriaPeriodo">—</p></div></div><div id="fuelAuditoriaResumo"></div></section>
     <section class="lista-card">
@@ -138,7 +137,7 @@ function montar(){
   $("fuelPlaca").addEventListener("change",preencherKm);
   $("fuelData").addEventListener("change",preencherKm);
   ["fuelLitrosCompra","fuelValor"].forEach(id=>$(id)?.addEventListener("input",calcularCustoLitro));
-  $("fuelSalvarTanque").onclick=salvarConfiguracaoTanque;
+  $("fuelAbrirConfigTanque").onclick=()=>{if(admin())abrirPagina("configuracao-bomba")};
   $("fuelSalvarAuditoria").onclick=salvarAuditoriaTanque;
   ["fuelAuditData","fuelAuditSaldoFisico"].forEach(id=>$(id)?.addEventListener("input",atualizarPreviewAuditoria));
   trocar("abastecimentos");
@@ -267,7 +266,7 @@ function renderGraficoDiferencas(p){
 }
 function renderAuditoria(p){
   const dataInicial=String(configCombustivel.estoqueInicialData||""),inicial=num(configCombustivel.estoqueInicialLitros),capacidade=num(configCombustivel.capacidadeTanqueLitros);
-  $("fuelEstoqueInicialData").value=dataInicial;$("fuelEstoqueInicialLitros").value=inicial||"";$("fuelCapacidadeTanque").value=capacidade||"";["fuelEstoqueInicialData","fuelEstoqueInicialLitros","fuelCapacidadeTanque","fuelSalvarTanque"].forEach(id=>{if($(id))$(id).disabled=!admin()});$("fuelSalvarTanque")?.classList.toggle("hidden",!admin());
+  const resumoCfg=$("fuelConfigResumo");if(resumoCfg)resumoCfg.innerHTML=`<div class="fuel-audit-card"><span>Data-base</span><strong>${dataInicial?dataBr(dataInicial):"—"}</strong></div><div class="fuel-audit-card"><span>Estoque inicial</span><strong>${dataInicial?fmt(inicial)+" L":"—"}</strong></div><div class="fuel-audit-card"><span>Capacidade</span><strong>${capacidade?fmt(capacidade)+" L":"—"}</strong></div>`;$("fuelAbrirConfigTanque")?.classList.toggle("hidden",!admin());
   $("fuelAuditoriaPeriodo").textContent=`Posição acumulada até ${dataBr(p.fim)} · filtro atual: ${p.label} ${p.ano}`;
   const pos=saldoTeoricoAte(p.fim),entradasPeriodo=comprasAtivas().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),saidasPeriodo=ativosAbastecimento().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),ajustesPeriodo=auditoriasAtivas().filter(x=>x.empresaId===emp()&&dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.diferenca),0),pct=capacidade>0?Math.max(0,Math.min(100,pos.saldo/capacidade*100)):0;
   $("fuelAuditoriaResumo").innerHTML=pos.configurado?`<div class="fuel-audit-grid"><div class="fuel-audit-card"><span>Estoque inicial</span><strong>${fmt(pos.inicial)} L</strong><small>${dataBr(dataInicial)}</small></div><div class="fuel-audit-card"><span>Entradas acumuladas</span><strong>${fmt(pos.entradas)} L</strong><small>Compras desde o estoque inicial</small></div><div class="fuel-audit-card"><span>Saídas acumuladas</span><strong>${fmt(pos.saidas)} L</strong><small>Abastecimentos registrados</small></div><div class="fuel-audit-card"><span>Ajustes de inventário</span><strong class="${classeDiferenca(pos.ajustes)}">${pos.ajustes>=0?"+":""}${fmt(pos.ajustes)} L</strong><small>Diferenças físicas acumuladas</small></div></div><div class="fuel-audit-grid" style="margin-top:12px"><div class="fuel-audit-card"><span>Saldo teórico ajustado</span><strong>${fmt(pos.saldo)} L</strong><small>Base para a próxima conferência</small></div></div><div class="fuel-tank"><strong>Nível teórico do tanque</strong><div class="fuel-tank-bar"><i style="width:${capacidade?pct:0}%"></i></div><div class="fuel-tank-meta"><span>${capacidade?`${fmt(pct)}% da capacidade`:"Cadastre a capacidade para visualizar o nível"}</span><span>${capacidade?`${fmt(pos.saldo)} / ${fmt(capacidade)} L`:`${fmt(pos.saldo)} L`}</span></div></div><div class="fuel-audit-grid" style="margin-top:12px"><div class="fuel-audit-card"><span>Entradas no período</span><strong>${fmt(entradasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Saídas no período</span><strong>${fmt(saidasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Ajustes no período</span><strong class="${classeDiferenca(ajustesPeriodo)}">${ajustesPeriodo>=0?"+":""}${fmt(ajustesPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Movimento líquido ajustado</span><strong>${fmt(entradasPeriodo-saidasPeriodo+ajustesPeriodo)} L</strong></div></div>`:'<div class="modulo-aviso">Configure a data e o estoque inicial do tanque para iniciar a auditoria da bomba.</div>';
