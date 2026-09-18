@@ -5,7 +5,7 @@ import { periodoAtual } from "./company-context.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
-let abastecimentos=[],compras=[],veiculos=[],motoristas=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="";
+let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="";
 const pode=a=>admin()||permite("combustivel",a);
 const ver=()=>["visualizar","lancar","editar"].some(pode);
 const frotaVer=()=>admin()||permite("frota","visualizar")||permite("frota","cadastrar")||permite("frota","editar")||permite("frota","manutencao")||permite("frota","obrigacoes");
@@ -44,8 +44,8 @@ function garantirCss(){
     .fuel-audit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.fuel-audit-card{padding:14px;border:1px solid #e4e9ed;border-radius:12px;background:#fff}.fuel-audit-card span{display:block;font-size:11px;color:#667085}.fuel-audit-card strong{display:block;margin-top:4px;font-size:20px}
     .fuel-tank{margin-top:16px;border:1px solid #dfe6eb;border-radius:14px;padding:14px}.fuel-tank-bar{height:28px;border-radius:10px;background:#eef2f5;overflow:hidden}.fuel-tank-bar i{display:block;height:100%;background:#0b1f33}.fuel-tank-meta{display:flex;justify-content:space-between;gap:12px;margin-top:7px;font-size:11px;color:#667085}
     .fuel-audit-months{display:grid;gap:11px}.fuel-audit-month{display:grid;grid-template-columns:44px minmax(180px,1fr) 110px 110px 120px;gap:10px;align-items:center}.fuel-audit-bars{display:grid;gap:4px}.fuel-audit-bars .entrada i{background:#0c9488}.fuel-audit-bars .saida i{background:#0b1f33}
-    .fuel-config-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}.fuel-config-note{font-size:11px;color:#667085;margin:6px 0 0}
-    @media(max-width:850px){.fuel-ranking,.fuel-audit-months{overflow-x:auto}.fuel-rank-row{min-width:650px}.fuel-audit-month{min-width:620px}.fuel-audit-grid{grid-template-columns:1fr 1fr}.fuel-config-form{grid-template-columns:1fr}}
+    .fuel-config-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}.fuel-config-note{font-size:11px;color:#667085;margin:6px 0 0}.fuel-audit-point-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.fuel-diff-pos{color:#b54708}.fuel-diff-neg{color:#b42318}.fuel-diff-ok{color:#027a48}.fuel-audit-chart{display:grid;gap:9px}.fuel-audit-point-row{display:grid;grid-template-columns:90px minmax(160px,1fr) 110px 110px 110px;gap:10px;align-items:center}.fuel-diff-track{height:12px;background:#eef2f5;border-radius:999px;overflow:hidden;position:relative}.fuel-diff-track i{display:block;height:100%;background:#b42318;border-radius:999px}.fuel-diff-track i.pos{background:#b54708}.fuel-audit-history{margin-top:14px}
+    @media(max-width:850px){.fuel-ranking,.fuel-audit-months,.fuel-audit-chart{overflow-x:auto}.fuel-rank-row{min-width:650px}.fuel-audit-month{min-width:620px}.fuel-audit-point-row{min-width:680px}.fuel-audit-grid{grid-template-columns:1fr 1fr}.fuel-config-form,.fuel-audit-point-form{grid-template-columns:1fr}}
   `;document.head.appendChild(s)
 }
 
@@ -103,17 +103,29 @@ function montar(){
 
   <section id="fuelAuditoriaBox" class="hidden">
     <section class="lista-card">
-      <div class="lista-cabecalho"><div><h3>Configuração do tanque</h3><p>O estoque teórico parte desta posição inicial e soma compras menos abastecimentos.</p></div></div>
-      <div class="fuel-config-form">
+      <div class="lista-cabecalho"><div><h3>Configuração do tanque</h3><p>Estoque inicial e capacidade são parâmetros administrativos.</p></div><span class="badge">Somente ADM</span></div>
+      <div id="fuelConfigTanqueCampos" class="fuel-config-form">
         <div class="campo"><label for="fuelEstoqueInicialData">Data do estoque inicial</label><input id="fuelEstoqueInicialData" type="date"></div>
         <div class="campo"><label for="fuelEstoqueInicialLitros">Estoque inicial (litros)</label><input id="fuelEstoqueInicialLitros" type="number" min="0" step="0.01"></div>
         <div class="campo"><label for="fuelCapacidadeTanque">Capacidade do tanque (litros)</label><input id="fuelCapacidadeTanque" type="number" min="0" step="0.01"></div>
       </div>
       <div class="form-acoes"><button id="fuelSalvarTanque" class="btn-primario" type="button">Salvar configuração do tanque</button></div>
-      <p class="fuel-config-note">Configuração por empresa. Somente administrador pode alterar; demais usuários visualizam a posição.</p>
+      <p class="fuel-config-note">Usuários não administradores apenas consultam estes parâmetros.</p>
     </section>
     <section class="lista-card"><div class="lista-cabecalho"><div><h3>Posição teórica da bomba</h3><p id="fuelAuditoriaPeriodo">—</p></div></div><div id="fuelAuditoriaResumo"></div></section>
+    <section class="lista-card">
+      <div class="lista-cabecalho"><div><h3>Conferência física do tanque</h3><p>Informe o saldo encontrado na bomba; o SIG registra a diferença contra o saldo teórico daquela data.</p></div></div>
+      <div class="fuel-audit-point-form">
+        <div class="campo"><label for="fuelAuditData">Data da conferência</label><input id="fuelAuditData" type="date"></div>
+        <div class="campo"><label for="fuelAuditSaldoFisico">Saldo físico encontrado (L)</label><input id="fuelAuditSaldoFisico" type="number" min="0" step="0.01"></div>
+        <div class="campo"><label for="fuelAuditObservacao">Observação</label><input id="fuelAuditObservacao" maxlength="160" placeholder="Opcional"></div>
+        <div class="campo"><button id="fuelSalvarAuditoria" class="btn-primario" type="button">Registrar conferência</button></div>
+      </div>
+      <p id="fuelAuditPreview" class="fuel-config-note">Informe a data e o saldo físico para calcular a diferença.</p>
+      <div id="fuelAuditoriaHistorico" class="tabela-container fuel-audit-history"></div>
+    </section>
     <section class="lista-card"><div class="lista-cabecalho"><div><h3>Movimentação mensal do tanque</h3><p>Entradas = compras de diesel · Saídas = abastecimentos registrados.</p></div></div><div id="fuelAuditoriaMeses" class="fuel-audit-months"></div></section>
+    <section class="lista-card"><div class="lista-cabecalho"><div><h3>Diferenças de auditoria</h3><p>Apontamentos físicos consolidados por dia, mês e ano.</p></div></div><div id="fuelAuditGraficoDia" class="fuel-audit-chart"></div><div id="fuelAuditGraficoMes" class="fuel-audit-chart" style="margin-top:18px"></div><div id="fuelAuditGraficoAno" class="fuel-audit-chart" style="margin-top:18px"></div></section>
   </section>`;
   main.appendChild(s);
   $("fuelTabMov").onclick=()=>trocar("abastecimentos");
@@ -127,6 +139,8 @@ function montar(){
   $("fuelData").addEventListener("change",preencherKm);
   ["fuelLitrosCompra","fuelValor"].forEach(id=>$(id)?.addEventListener("input",calcularCustoLitro));
   $("fuelSalvarTanque").onclick=salvarConfiguracaoTanque;
+  $("fuelSalvarAuditoria").onclick=salvarAuditoriaTanque;
+  ["fuelAuditData","fuelAuditSaldoFisico"].forEach(id=>$(id)?.addEventListener("input",atualizarPreviewAuditoria));
   trocar("abastecimentos");
 }
 function menu(){const nav=document.querySelector(".sidebar-menu");if(!nav)return;let b=$("menuCombustivel");if(!b){b=document.createElement("button");b.id="menuCombustivel";b.className="menu-item hidden";b.dataset.pagina="combustivel";b.type="button";b.textContent="Combustível e Diesel";const frota=$("menuFrota");if(frota)frota.insertAdjacentElement("afterend",b);else nav.appendChild(b);b.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();if(!ver())return;abrirPagina("combustivel");carregar()},true)}b.classList.toggle("hidden",!ver()||!frotaVer())}
@@ -181,16 +195,52 @@ function saldoTeoricoAte(dataFim){
   const saidas=ativosAbastecimento().filter(x=>x.data>=dataInicial&&x.data<=dataFim).reduce((s,x)=>s+num(x.quantidade),0);
   return{configurado:true,inicial,entradas,saidas,saldo:inicial+entradas-saidas}
 }
+function classeDiferenca(v){return Math.abs(num(v))<0.005?"fuel-diff-ok":num(v)>0?"fuel-diff-pos":"fuel-diff-neg"}
+function auditoriasAtivas(){return auditoriasTanque.filter(x=>x.status!=="estornado")}
+function atualizarPreviewAuditoria(){
+  const data=$("fuelAuditData")?.value,saldo=Number($("fuelAuditSaldoFisico")?.value),out=$("fuelAuditPreview");if(!out)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||!Number.isFinite(saldo)||saldo<0){out.textContent="Informe a data e o saldo físico para calcular a diferença.";out.className="fuel-config-note";return}
+  const t=saldoTeoricoAte(data);if(!t.configurado){out.textContent="A data informada é anterior à configuração do estoque inicial.";out.className="fuel-config-note";return}
+  const dif=saldo-t.saldo;out.textContent=`Teórico: ${fmt(t.saldo)} L · Físico: ${fmt(saldo)} L · Diferença: ${dif>=0?"+":""}${fmt(dif)} L`;out.className=`fuel-config-note ${classeDiferenca(dif)}`
+}
+async function salvarAuditoriaTanque(){
+  if(!pode("lancar"))return alert("Seu perfil não possui permissão para lançar conferências de combustível.");
+  const empresaId=emp(),data=$("fuelAuditData")?.value,saldoFisico=Number($("fuelAuditSaldoFisico")?.value),observacao=String($("fuelAuditObservacao")?.value||"").trim().slice(0,160);
+  if(!empresaId)return alert("Selecione apenas uma empresa.");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||!Number.isFinite(saldoFisico)||saldoFisico<0)return alert("Informe data e saldo físico válidos.");
+  const pos=saldoTeoricoAte(data);if(!pos.configurado)return alert("A auditoria deve ocorrer a partir da data configurada para o estoque inicial.");
+  const diferenca=saldoFisico-pos.saldo;
+  try{
+    await criarDocumento("auditoriasTanqueDiesel",{empresaId,data,saldoFisico,saldoTeorico:pos.saldo,diferenca,observacao,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""});
+    $("fuelAuditSaldoFisico").value="";$("fuelAuditObservacao").value="";emitirAlteracao("combustivel");await carregar()
+  }catch(e){console.error(e);alert(e?.code==="permission-denied"?"Gravação negada pelo Firestore. Publique as Rules atualizadas.":"Não foi possível registrar a conferência do tanque.")}
+}
+async function estornarAuditoriaTanque(id){
+  if(!admin())return;const x=auditoriasTanque.find(a=>a.id===id&&a.status!=="estornado");if(!x)return;
+  const ok=await confirmarAcaoAdministrativa({titulo:"Estornar conferência do tanque",descricao:`Conferência de ${dataBr(x.data)} · diferença ${fmt(x.diferenca)} L`,motivoLabel:"Motivo obrigatório",confirmarTexto:"Estornar",perigosa:true});if(!ok)return;
+  try{await atualizarComAuditoria({colecao:"auditoriasTanqueDiesel",id,empresaId:x.empresaId,modulo:"combustivel",acao:"estorno",motivo:ok.motivo,resumo:`Estorno auditoria tanque ${x.data}`,snapshotAntes:x,alteracoes:{status:"estornado",motivoEstorno:ok.motivo,estornadoPor:state.usuario?.id||"",estornadoEm:new Date().toISOString()}});emitirAlteracao("combustivel");await carregar()}catch(e){console.error(e);alert("Não foi possível estornar a conferência.")}
+}
+function renderGraficoDiferencas(p){
+  const ativos=auditoriasAtivas().filter(x=>x.empresaId===emp()),periodo=ativos.filter(x=>dentroPeriodo(x,p)).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
+  const maxDia=Math.max(1,...periodo.map(x=>Math.abs(num(x.diferenca))));
+  const dia=$("fuelAuditGraficoDia");if(dia)dia.innerHTML='<strong>Por dia</strong>'+ (periodo.length?periodo.map(x=>`<div class="fuel-audit-point-row"><span>${dataBr(x.data)}</span><div class="fuel-diff-track"><i class="${num(x.diferenca)>0?"pos":""}" style="width:${Math.abs(num(x.diferenca))/maxDia*100}%"></i></div><span>Teórico ${fmt(x.saldoTeorico)} L</span><span>Físico ${fmt(x.saldoFisico)} L</span><strong class="${classeDiferenca(x.diferenca)}">${num(x.diferenca)>=0?"+":""}${fmt(x.diferenca)} L</strong></div>`).join(""):'<p class="fuel-config-note">Sem conferências no período selecionado.</p>');
+  const meses=Array.from({length:12},(_,i)=>({mes:i+1,dif:0,qtd:0}));ativos.filter(x=>String(x.data||"").startsWith(String(p.ano))).forEach(x=>{const m=Number(String(x.data).slice(5,7));if(m){meses[m-1].dif+=num(x.diferenca);meses[m-1].qtd++}});
+  const maxMes=Math.max(1,...meses.map(x=>Math.abs(x.dif))),mes=$("fuelAuditGraficoMes");if(mes)mes.innerHTML='<strong>Por mês · '+p.ano+'</strong>'+meses.map(x=>{const rot=new Date(2020,x.mes-1,1).toLocaleDateString("pt-BR",{month:"short"}).replace(".","");return`<div class="fuel-audit-point-row"><span style="text-transform:capitalize">${rot}</span><div class="fuel-diff-track"><i class="${x.dif>0?"pos":""}" style="width:${Math.abs(x.dif)/maxMes*100}%"></i></div><span>${x.qtd} conferência(s)</span><span>Saldo das diferenças</span><strong class="${classeDiferenca(x.dif)}">${x.dif>=0?"+":""}${fmt(x.dif)} L</strong></div>`}).join("");
+  const anos=new Map();ativos.forEach(x=>{const a=String(x.data||"").slice(0,4);if(!a)return;const z=anos.get(a)||{dif:0,qtd:0};z.dif+=num(x.diferenca);z.qtd++;anos.set(a,z)});
+  const arr=[...anos.entries()].sort((a,b)=>a[0].localeCompare(b[0])),maxAno=Math.max(1,...arr.map(([,x])=>Math.abs(x.dif))),ano=$("fuelAuditGraficoAno");if(ano)ano.innerHTML='<strong>Por ano</strong>'+(arr.length?arr.map(([a,x])=>`<div class="fuel-audit-point-row"><span>${a}</span><div class="fuel-diff-track"><i class="${x.dif>0?"pos":""}" style="width:${Math.abs(x.dif)/maxAno*100}%"></i></div><span>${x.qtd} conferência(s)</span><span>Saldo das diferenças</span><strong class="${classeDiferenca(x.dif)}">${x.dif>=0?"+":""}${fmt(x.dif)} L</strong></div>`).join(""):'<p class="fuel-config-note">Sem histórico anual.</p>')
+}
 function renderAuditoria(p){
   const dataInicial=String(configCombustivel.estoqueInicialData||""),inicial=num(configCombustivel.estoqueInicialLitros),capacidade=num(configCombustivel.capacidadeTanqueLitros);
-  $("fuelEstoqueInicialData").value=dataInicial;$("fuelEstoqueInicialLitros").value=inicial||"";$("fuelCapacidadeTanque").value=capacidade||"";["fuelEstoqueInicialData","fuelEstoqueInicialLitros","fuelCapacidadeTanque","fuelSalvarTanque"].forEach(id=>{if($(id))$(id).disabled=!admin()});
+  $("fuelEstoqueInicialData").value=dataInicial;$("fuelEstoqueInicialLitros").value=inicial||"";$("fuelCapacidadeTanque").value=capacidade||"";["fuelEstoqueInicialData","fuelEstoqueInicialLitros","fuelCapacidadeTanque","fuelSalvarTanque"].forEach(id=>{if($(id))$(id).disabled=!admin()});$("fuelSalvarTanque")?.classList.toggle("hidden",!admin());
   $("fuelAuditoriaPeriodo").textContent=`Posição acumulada até ${dataBr(p.fim)} · filtro atual: ${p.label} ${p.ano}`;
   const pos=saldoTeoricoAte(p.fim),entradasPeriodo=comprasAtivas().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),saidasPeriodo=ativosAbastecimento().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),pct=capacidade>0?Math.max(0,Math.min(100,pos.saldo/capacidade*100)):0;
   $("fuelAuditoriaResumo").innerHTML=pos.configurado?`<div class="fuel-audit-grid"><div class="fuel-audit-card"><span>Estoque inicial</span><strong>${fmt(pos.inicial)} L</strong><small>${dataBr(dataInicial)}</small></div><div class="fuel-audit-card"><span>Entradas acumuladas</span><strong>${fmt(pos.entradas)} L</strong><small>Compras desde o estoque inicial</small></div><div class="fuel-audit-card"><span>Saídas acumuladas</span><strong>${fmt(pos.saidas)} L</strong><small>Abastecimentos registrados</small></div><div class="fuel-audit-card"><span>Saldo teórico</span><strong>${fmt(pos.saldo)} L</strong><small>O que deveria existir no tanque</small></div></div><div class="fuel-tank"><strong>Nível teórico do tanque</strong><div class="fuel-tank-bar"><i style="width:${capacidade?pct:0}%"></i></div><div class="fuel-tank-meta"><span>${capacidade?`${fmt(pct)}% da capacidade`:"Cadastre a capacidade para visualizar o nível"}</span><span>${capacidade?`${fmt(pos.saldo)} / ${fmt(capacidade)} L`:`${fmt(pos.saldo)} L`}</span></div></div><div class="fuel-audit-grid" style="margin-top:12px"><div class="fuel-audit-card"><span>Entradas no período</span><strong>${fmt(entradasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Saídas no período</span><strong>${fmt(saidasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Movimento líquido</span><strong>${fmt(entradasPeriodo-saidasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Compras no período</span><strong>${comprasAtivas().filter(x=>dentroPeriodo(x,p)).length}</strong></div></div>`:'<div class="modulo-aviso">Configure a data e o estoque inicial do tanque para iniciar a auditoria da bomba.</div>';
   const meses=p.indices.map(i=>({mes:i+1,rotulo:new Date(2020,i,1).toLocaleDateString("pt-BR",{month:"short"}).replace(".",""),entrada:0,saida:0,saldo:0}));
   meses.forEach(m=>{const prefix=`${p.ano}-${String(m.mes).padStart(2,"0")}`;m.entrada=comprasAtivas().filter(x=>String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.quantidade),0);m.saida=ativosAbastecimento().filter(x=>String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.quantidade),0);const fimMes=new Date(p.ano,m.mes,0).getDate();m.saldo=saldoTeoricoAte(`${prefix}-${String(fimMes).padStart(2,"0")}`).saldo});
   const max=Math.max(1,...meses.flatMap(x=>[x.entrada,x.saida]));
-  $("fuelAuditoriaMeses").innerHTML=meses.map(x=>`<div class="fuel-audit-month"><strong style="text-transform:capitalize">${esc(x.rotulo)}</strong><div class="fuel-audit-bars"><div class="fuel-audit-track entrada"><i style="width:${x.entrada/max*100}%"></i></div><div class="fuel-audit-track saida"><i style="width:${x.saida/max*100}%"></i></div></div><span>+${fmt(x.entrada)} L</span><span>−${fmt(x.saida)} L</span><strong>${pos.configurado?fmt(x.saldo)+" L":"—"}</strong></div>`).join("")
+  $("fuelAuditoriaMeses").innerHTML=meses.map(x=>`<div class="fuel-audit-month"><strong style="text-transform:capitalize">${esc(x.rotulo)}</strong><div class="fuel-audit-bars"><div class="fuel-audit-track entrada"><i style="width:${x.entrada/max*100}%"></i></div><div class="fuel-audit-track saida"><i style="width:${x.saida/max*100}%"></i></div></div><span>+${fmt(x.entrada)} L</span><span>−${fmt(x.saida)} L</span><strong>${pos.configurado?fmt(x.saldo)+" L":"—"}</strong></div>`).join("");
+  if($("fuelAuditData")&&!$("fuelAuditData").value)$("fuelAuditData").value=localIso();$("fuelSalvarAuditoria")?.classList.toggle("hidden",!pode("lancar"));atualizarPreviewAuditoria();
+  const historico=auditoriasAtivas().filter(x=>x.empresaId===emp()&&dentroPeriodo(x,p)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));$("fuelAuditoriaHistorico").innerHTML=`<table class="tabela"><thead><tr><th>Data</th><th>Teórico</th><th>Físico</th><th>Diferença</th><th>Observação</th><th>Ações</th></tr></thead><tbody>${historico.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${fmt(x.saldoTeorico)} L</td><td>${fmt(x.saldoFisico)} L</td><td class="${classeDiferenca(x.diferenca)}">${num(x.diferenca)>=0?"+":""}${fmt(x.diferenca)} L</td><td>${esc(x.observacao||"—")}</td><td>${admin()?`<button class="btn-acao perigo" data-audit-estorno="${esc(x.id)}">Estornar ADM</button>`:"—"}</td></tr>`).join("")||`<tr><td colspan="6">Nenhuma conferência no período selecionado.</td></tr>`}</tbody></table>`;$("fuelAuditoriaHistorico").querySelectorAll("[data-audit-estorno]").forEach(b=>b.onclick=()=>estornarAuditoriaTanque(b.dataset.auditEstorno));renderGraficoDiferencas(p)
 }
 async function salvarConfiguracaoTanque(){
   if(!admin())return;const empresaId=emp();if(!empresaId)return alert("Selecione apenas uma empresa.");
@@ -220,10 +270,10 @@ function render(){
 async function carregar(){
   if(busy||!ver()||!frotaVer()||!emp())return;busy=true;
   try{
-    const empresaId=emp(),[a,c,v,m,cfg]=await Promise.all([
-      listarDocumentos("abastecimentosFrota"),listarDocumentos("custosDiesel"),listarDocumentos("veiculos"),colaboradoresPorFuncao("MOTORISTA").catch(()=>[]),carregarConfiguracaoModulo("combustivel",empresaId).catch(()=>({}))
+    const empresaId=emp(),[a,c,v,m,at,cfg]=await Promise.all([
+      listarDocumentos("abastecimentosFrota"),listarDocumentos("custosDiesel"),listarDocumentos("veiculos"),colaboradoresPorFuncao("MOTORISTA").catch(()=>[]),listarDocumentos("auditoriasTanqueDiesel"),carregarConfiguracaoModulo("combustivel",empresaId).catch(()=>({}))
     ]);
-    abastecimentos=a.filter(x=>x.empresaId===empresaId);compras=c.filter(x=>x.empresaId===empresaId);veiculos=v.filter(x=>x.empresaId===empresaId);motoristas=m.filter(x=>x.empresaId===empresaId);configCombustivel=cfg||{};
+    abastecimentos=a.filter(x=>x.empresaId===empresaId);compras=c.filter(x=>x.empresaId===empresaId);veiculos=v.filter(x=>x.empresaId===empresaId);motoristas=m.filter(x=>x.empresaId===empresaId);auditoriasTanque=at.filter(x=>x.empresaId===empresaId);configCombustivel=cfg||{};
     preencherMotoristas();preencherVeiculos();render();$("fuelAviso").classList.add("hidden")
   }catch(e){console.error(e);$("fuelAviso").textContent="Não foi possível carregar Combustível e Diesel. Confira permissões e regras publicadas.";$("fuelAviso").classList.remove("hidden")}finally{busy=false}
 }
