@@ -5,7 +5,7 @@ import { periodoAtual } from "./company-context.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
-let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="";
+let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="",auditMesDetalhe="";
 const pode=a=>admin()||permite("combustivel",a);
 const ver=()=>["visualizar","lancar","editar"].some(pode);
 const frotaVer=()=>admin()||permite("frota","visualizar")||permite("frota","cadastrar")||permite("frota","editar")||permite("frota","manutencao")||permite("frota","obrigacoes");
@@ -44,7 +44,7 @@ function garantirCss(){
     .fuel-audit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.fuel-audit-card{padding:14px;border:1px solid #e4e9ed;border-radius:12px;background:#fff}.fuel-audit-card span{display:block;font-size:11px;color:#667085}.fuel-audit-card strong{display:block;margin-top:4px;font-size:20px}
     .fuel-tank{margin-top:16px;border:1px solid #dfe6eb;border-radius:14px;padding:14px}.fuel-tank-bar{height:28px;border-radius:10px;background:#eef2f5;overflow:hidden}.fuel-tank-bar i{display:block;height:100%;background:#0b1f33}.fuel-tank-meta{display:flex;justify-content:space-between;gap:12px;margin-top:7px;font-size:11px;color:#667085}
     .fuel-audit-months{display:grid;gap:11px}.fuel-audit-month{display:grid;grid-template-columns:44px minmax(180px,1fr) 110px 110px 120px;gap:10px;align-items:center}.fuel-audit-bars{display:grid;gap:4px}.fuel-audit-bars .entrada i{background:#0c9488}.fuel-audit-bars .saida i{background:#0b1f33}.fuel-chart-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:4px 0 14px;font-size:12px;color:#667085}.fuel-chart-legend span{display:inline-flex;align-items:center;gap:6px}.fuel-chart-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}.fuel-chart-legend i.entrada{background:#0c9488}.fuel-chart-legend i.saida{background:#0b1f33}.fuel-chart-legend i.saldo{background:#98a2b3}
-    .fuel-config-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}.fuel-config-note{font-size:11px;color:#667085;margin:6px 0 0}.fuel-audit-point-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.fuel-diff-pos{color:#b54708}.fuel-diff-neg{color:#b42318}.fuel-diff-ok{color:#027a48}.fuel-audit-chart{display:grid;gap:9px}.fuel-audit-point-row{display:grid;grid-template-columns:90px minmax(160px,1fr) 110px 110px 110px;gap:10px;align-items:center}.fuel-diff-track{height:12px;background:#eef2f5;border-radius:999px;overflow:hidden;position:relative}.fuel-diff-track i{display:block;height:100%;background:#b42318;border-radius:999px}.fuel-diff-track i.pos{background:#b54708}.fuel-audit-history{margin-top:14px}
+    .fuel-config-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}.fuel-config-note{font-size:11px;color:#667085;margin:6px 0 0}.fuel-audit-point-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.fuel-diff-pos{color:#b54708}.fuel-diff-neg{color:#b42318}.fuel-diff-ok{color:#027a48}.fuel-audit-chart{display:grid;gap:9px}.fuel-audit-point-row{display:grid;grid-template-columns:90px minmax(160px,1fr) 110px 110px 110px;gap:10px;align-items:center}.fuel-audit-point-row[data-audit-mes]{cursor:pointer;border:1px solid transparent;border-radius:10px;padding:7px 9px;transition:background .15s ease,border-color .15s ease}.fuel-audit-point-row[data-audit-mes]:hover{background:#f7fafb;border-color:#dce5ea}.fuel-audit-point-row[data-audit-mes].ativo{background:#eef8f6;border-color:#20b6a5}.fuel-diff-track{height:12px;background:#eef2f5;border-radius:999px;overflow:hidden;position:relative}.fuel-diff-track i{display:block;height:100%;background:#b42318;border-radius:999px}.fuel-diff-track i.pos{background:#b54708}.fuel-audit-history{margin-top:14px}
     @media(max-width:850px){.fuel-ranking,.fuel-audit-months,.fuel-audit-chart{overflow-x:auto}.fuel-rank-row{min-width:650px}.fuel-audit-month{min-width:620px}.fuel-audit-point-row{min-width:680px}.fuel-audit-grid{grid-template-columns:1fr 1fr}.fuel-config-form,.fuel-audit-point-form{grid-template-columns:1fr}}
   `;document.head.appendChild(s)
 }
@@ -221,13 +221,48 @@ async function estornarAuditoriaTanque(id){
   try{await atualizarComAuditoria({colecao:"auditoriasTanqueDiesel",id,empresaId:x.empresaId,modulo:"combustivel",acao:"estorno",motivo:ok.motivo,resumo:`Estorno auditoria tanque ${x.data}`,snapshotAntes:x,alteracoes:{status:"estornado",motivoEstorno:ok.motivo,estornadoPor:state.usuario?.id||"",estornadoEm:new Date().toISOString()}});emitirAlteracao("combustivel");await carregar()}catch(e){console.error(e);alert("Não foi possível estornar a conferência.")}
 }
 function renderGraficoDiferencas(p){
-  const ativos=auditoriasAtivas().filter(x=>x.empresaId===emp()),periodo=ativos.filter(x=>dentroPeriodo(x,p)).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
-  const maxDia=Math.max(1,...periodo.map(x=>Math.abs(num(x.diferenca))));
-  const dia=$("fuelAuditGraficoDia");if(dia)dia.innerHTML='<strong>Por dia</strong>'+ (periodo.length?periodo.map(x=>`<div class="fuel-audit-point-row"><span>${dataBr(x.data)}</span><div class="fuel-diff-track"><i class="${num(x.diferenca)>0?"pos":""}" style="width:${Math.abs(num(x.diferenca))/maxDia*100}%"></i></div><span>Teórico ${fmt(x.saldoTeorico)} L</span><span>Físico ${fmt(x.saldoFisico)} L</span><strong class="${classeDiferenca(x.diferenca)}">${num(x.diferenca)>=0?"+":""}${fmt(x.diferenca)} L</strong></div>`).join(""):'<p class="fuel-config-note">Sem conferências no período selecionado.</p>');
-  const meses=Array.from({length:12},(_,i)=>({mes:i+1,dif:0,qtd:0}));ativos.filter(x=>String(x.data||"").startsWith(String(p.ano))).forEach(x=>{const m=Number(String(x.data).slice(5,7));if(m){meses[m-1].dif+=num(x.diferenca);meses[m-1].qtd++}});
-  const maxMes=Math.max(1,...meses.map(x=>Math.abs(x.dif))),mes=$("fuelAuditGraficoMes");if(mes)mes.innerHTML='<strong>Por mês · '+p.ano+'</strong>'+meses.map(x=>{const rot=new Date(2020,x.mes-1,1).toLocaleDateString("pt-BR",{month:"short"}).replace(".","");return`<div class="fuel-audit-point-row"><span style="text-transform:capitalize">${rot}</span><div class="fuel-diff-track"><i class="${x.dif>0?"pos":""}" style="width:${Math.abs(x.dif)/maxMes*100}%"></i></div><span>${x.qtd} conferência(s)</span><span>Saldo das diferenças</span><strong class="${classeDiferenca(x.dif)}">${x.dif>=0?"+":""}${fmt(x.dif)} L</strong></div>`}).join("");
-  const anos=new Map();ativos.forEach(x=>{const a=String(x.data||"").slice(0,4);if(!a)return;const z=anos.get(a)||{dif:0,qtd:0};z.dif+=num(x.diferenca);z.qtd++;anos.set(a,z)});
-  const arr=[...anos.entries()].sort((a,b)=>a[0].localeCompare(b[0])),maxAno=Math.max(1,...arr.map(([,x])=>Math.abs(x.dif))),ano=$("fuelAuditGraficoAno");if(ano)ano.innerHTML='<strong>Por ano</strong>'+(arr.length?arr.map(([a,x])=>`<div class="fuel-audit-point-row"><span>${a}</span><div class="fuel-diff-track"><i class="${x.dif>0?"pos":""}" style="width:${Math.abs(x.dif)/maxAno*100}%"></i></div><span>${x.qtd} conferência(s)</span><span>Saldo das diferenças</span><strong class="${classeDiferenca(x.dif)}">${x.dif>=0?"+":""}${fmt(x.dif)} L</strong></div>`).join(""):'<p class="fuel-config-note">Sem histórico anual.</p>')
+  const ativos=auditoriasAtivas().filter(x=>x.empresaId===emp());
+  const mesesPermitidos=new Set(p.indices.map(i=>i+1));
+  if(auditMesDetalhe&&!mesesPermitidos.has(Number(auditMesDetalhe)))auditMesDetalhe="";
+
+  const meses=p.indices.map(i=>({mes:i+1,dif:0,qtd:0}));
+  ativos.filter(x=>String(x.data||"").startsWith(String(p.ano))).forEach(x=>{
+    const m=Number(String(x.data).slice(5,7));
+    const alvo=meses.find(y=>y.mes===m);
+    if(alvo){alvo.dif+=num(x.diferenca);alvo.qtd++}
+  });
+
+  const maxMes=Math.max(1,...meses.map(x=>Math.abs(x.dif)));
+  const mes=$("fuelAuditGraficoMes");
+  if(mes){
+    mes.innerHTML='<strong>Por mês · '+p.label+' '+p.ano+'</strong>'+meses.map(x=>{
+      const rot=new Date(2020,x.mes-1,1).toLocaleDateString("pt-BR",{month:"short"}).replace(".","");
+      return `<div class="fuel-audit-point-row ${Number(auditMesDetalhe)===x.mes?"ativo":""}" data-audit-mes="${x.mes}" role="button" tabindex="0"><span style="text-transform:capitalize">${rot}</span><div class="fuel-diff-track"><i class="${x.dif>0?"pos":""}" style="width:${Math.abs(x.dif)/maxMes*100}%"></i></div><span>${x.qtd} conferência(s)</span><span>Saldo das diferenças</span><strong class="${classeDiferenca(x.dif)}">${x.dif>=0?"+":""}${fmt(x.dif)} L</strong></div>`
+    }).join("");
+    mes.querySelectorAll("[data-audit-mes]").forEach(row=>{
+      const abrir=()=>{const m=Number(row.dataset.auditMes);auditMesDetalhe=Number(auditMesDetalhe)===m?"":String(m);renderGraficoDiferencas(p)};
+      row.onclick=abrir;row.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();abrir()}}
+    });
+  }
+
+  const dia=$("fuelAuditGraficoDia");
+  if(dia){
+    if(!auditMesDetalhe){
+      dia.innerHTML='<strong>Detalhamento diário</strong><p class="fuel-config-note">Clique em um mês acima para abrir as conferências por dia.</p>';
+    }else{
+      const prefix=`${p.ano}-${String(auditMesDetalhe).padStart(2,"0")}`;
+      const periodo=ativos.filter(x=>String(x.data||"").startsWith(prefix)).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
+      const maxDia=Math.max(1,...periodo.map(x=>Math.abs(num(x.diferenca))));
+      const rot=new Date(p.ano,Number(auditMesDetalhe)-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+      dia.innerHTML='<strong>Detalhamento diário · '+rot+'</strong>'+(periodo.length?periodo.map(x=>`<div class="fuel-audit-point-row"><span>${dataBr(x.data)}</span><div class="fuel-diff-track"><i class="${num(x.diferenca)>0?"pos":""}" style="width:${Math.abs(num(x.diferenca))/maxDia*100}%"></i></div><span>Teórico ${fmt(x.saldoTeorico)} L</span><span>Físico ${fmt(x.saldoFisico)} L</span><strong class="${classeDiferenca(x.diferenca)}">${num(x.diferenca)>=0?"+":""}${fmt(x.diferenca)} L</strong></div>`).join(""):'<p class="fuel-config-note">Sem conferências neste mês.</p>');
+    }
+  }
+
+  const ano=$("fuelAuditGraficoAno");
+  if(ano){
+    const difPeriodo=meses.reduce((s,x)=>s+x.dif,0),qtdPeriodo=meses.reduce((s,x)=>s+x.qtd,0);
+    ano.innerHTML='<strong>Resumo do filtro</strong>'+ `<div class="fuel-audit-point-row"><span>${p.ano}</span><div class="fuel-diff-track"><i class="${difPeriodo>0?"pos":""}" style="width:${Math.abs(difPeriodo)>0?100:0}%"></i></div><span>${qtdPeriodo} conferência(s)</span><span>${p.label}</span><strong class="${classeDiferenca(difPeriodo)}">${difPeriodo>=0?"+":""}${fmt(difPeriodo)} L</strong></div>`;
+  }
 }
 function renderAuditoria(p){
   const dataInicial=String(configCombustivel.estoqueInicialData||""),inicial=num(configCombustivel.estoqueInicialLitros),capacidade=num(configCombustivel.capacidadeTanqueLitros);
