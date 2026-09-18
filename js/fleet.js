@@ -167,7 +167,6 @@ function bind(){
   $("formVeiculo")?.addEventListener("submit",salvarVeiculo);
   $("buscaVeiculos")?.addEventListener("input",renderVeiculos);
   $("buscaFrotaVisao")?.addEventListener("input",renderResumoVeiculos);
-  $("btnNovaObrig")?.addEventListener("click",()=>novaObrigacao());
   $("btnCancelarObrig")?.addEventListener("click",()=>fechar("formObrigacaoBox","formObrigacao","msgObrig"));
   $("formObrigacao")?.addEventListener("submit",salvarObrigacao);
   $("filtroObrigTipo")?.addEventListener("change",renderObrigacoes);
@@ -252,8 +251,21 @@ function novaManutencao(veiculoId=""){if(!podeManut())return alert("Seu perfil n
 function editarManutencao(id){const m=manutencoes.find(x=>x.id===id);if(!m||!podeManut())return;editManutId=id;$("formManut")?.reset();preencherVeiculoSelects();$("manutVeiculo").value=m.veiculoId||"";$("manutTipo").value=m.tipo||"preventiva";$("manutStatus").value=m.status||"planejada";$("manutDescricao").value=m.descricao||"";$("manutOficina").value=m.oficina||"";$("manutPrevista").value=m.dataPrevista||"";$("manutKmPrevisto").value=n(m.kmPrevisto)||"";$("manutCustoPrev").value=n(m.custoPrevisto)||"";$("manutRealizada").value=m.dataRealizada||"";$("manutKmReal").value=n(m.kmRealizado)||"";$("manutCustoReal").value=n(m.custoReal)||"";$("manutProxima").value=m.proximaData||"";$("manutProximoKm").value=n(m.proximoKm)||"";$("manutObs").value=m.observacoes||"";$("tituloFormManut").textContent=`Editar manutenção · ${vById(m.veiculoId)?.placa||""}`;$("formManutBox").classList.remove("hidden");trocarTab("manutencoes")}
 async function salvarManutencao(e){e.preventDefault();const vid=$("manutVeiculo").value,v=vById(vid);if(!v)return msg($("msgManut"),"Selecione o veículo.");const d={veiculoId:vid,veiculoPlaca:v.placa||"",tipo:$("manutTipo").value,status:$("manutStatus").value,descricao:$("manutDescricao").value.trim(),oficina:$("manutOficina").value.trim(),dataPrevista:$("manutPrevista").value||"",kmPrevisto:Math.trunc(n($("manutKmPrevisto").value)),custoPrevisto:n($("manutCustoPrev").value),dataRealizada:$("manutRealizada").value||"",kmRealizado:Math.trunc(n($("manutKmReal").value)),custoReal:n($("manutCustoReal").value),proximaData:$("manutProxima").value||"",proximoKm:Math.trunc(n($("manutProximoKm").value)),observacoes:$("manutObs").value.trim()};if(!d.descricao)return msg($("msgManut"),"Informe o serviço.");if(d.status==="concluida"&&!d.dataRealizada)d.dataRealizada=hojeIso();try{if(editManutId)await atualizarDocumento("manutencoesFrota",editManutId,d);else await criarDocumento("manutencoesFrota",{...d,empresaId:v.empresaId});if(d.status==="concluida"&&d.kmRealizado>n(v.quilometragemAtual))await atualizarDocumento("veiculos",v.id,{quilometragemAtual:d.kmRealizado});msg($("msgManut"),"Manutenção salva.",true);emitirAlteracao("frota");await carregar();setTimeout(()=>fechar("formManutBox","formManut","msgManut"),500)}catch(err){console.error(err);msg($("msgManut"),mensagemErroDados(err,"a manutenção"))}}
 
+function instalarDelegacaoFrota(){
+  if(document.body?.dataset.frotaDelegacao==="1")return;
+  if(!document.body)return setTimeout(instalarDelegacaoFrota,0);
+  document.body.dataset.frotaDelegacao="1";
+  document.addEventListener("click",e=>{
+    const botao=e.target.closest?.("#btnNovaObrig");
+    if(!botao)return;
+    e.preventDefault();
+    e.stopPropagation();
+    novaObrigacao();
+  },true);
+}
 function bootstrap(){garantirCss();garantirMenu();criarPagina();const b=$("btnNovoVeiculo");if(b)b.classList.toggle("hidden",!podeCadastrar());$("btnNovaObrig")?.classList.toggle("hidden",!podeObrig());$("btnNovaManut")?.classList.toggle("hidden",!podeManut())}
 bootstrap();
+instalarDelegacaoFrota();
 window.addEventListener("sig:ready",()=>{bootstrap();if(podeVer())carregar()});
 window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="frota"&&podeVer())carregar()});
 window.addEventListener("sig:empresa-contexto",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
