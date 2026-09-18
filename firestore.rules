@@ -650,6 +650,8 @@ service cloud.firestore {
     function rhColaboradorValido(dados) {
       return dados.codigo is string && dados.codigo.size() > 0 && dados.codigo.size() <= 40 &&
         dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 120 &&
+        dados.cargoId is string && dados.cargoId.size() <= 80 &&
+        dados.cargoNome is string && dados.cargoNome.size() <= 80 &&
         rhSetorValido(dados.setor) && rhDataValida(dados.admissao) &&
         dados.demissao is string && (dados.demissao == '' || (rhDataValida(dados.demissao) && dados.demissao >= dados.admissao)) &&
         dados.jornadaMensalHoras is number && dados.jornadaMensalHoras > 0 && dados.jornadaMensalHoras <= 300 &&
@@ -699,7 +701,7 @@ service cloud.firestore {
           (permissao('rhColaboradores','editar') && request.resource.data.status == 'ativo' &&
             rhColaboradorValido(request.resource.data) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'codigo','nome','setor','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
+              'codigo','nome','setor','cargoId','cargoNome','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
         );
       allow delete: if administrador() && documentoAcessivel(resource.data);
     }
