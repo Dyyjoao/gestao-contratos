@@ -199,7 +199,26 @@ function filtrar(sel,pred){document.querySelectorAll(sel).forEach(tr=>{tr.style.
 function cardAcao(id){if(id==='frotaKpiAtivos'){document.querySelector('[data-fleet-tab="veiculos"]')?.click();setTimeout(()=>filtrar('#listaVeiculos tr',tr=>/\bativo\b/i.test(tr.innerText)),60)}else if(id==='frotaKpiVencidas'){document.querySelector('[data-fleet-tab="obrigacoes"]')?.click();setTimeout(()=>filtrar('#listaObrigacoes tr',tr=>/vencido/i.test(tr.innerText)),60)}else if(id==='frotaKpi30'){document.querySelector('[data-fleet-tab="visao"]')?.click();$('frotaAlertas')?.scrollIntoView({behavior:'smooth',block:'center'})}else if(id==='frotaKpiManut'){document.querySelector('[data-fleet-tab="manutencoes"]')?.click();setTimeout(()=>filtrar('#listaManutencoes tr',tr=>!/concluída|concluida|cancelada/i.test(tr.innerText)),60)}else if(id==='frotaKpiCusto'){document.querySelector('[data-fleet-tab="visao"]')?.click();$('frotaResumoVeiculos')?.closest('.fleet-card')?.scrollIntoView({behavior:'smooth',block:'start'})}else if(id==='frotaKpiSaude'){document.querySelector('[data-fleet-tab="visao"]')?.click();renderSaude();$('frotaSaude')?.scrollIntoView({behavior:'smooth',block:'center'})}}
 function cards(){document.querySelectorAll('#pagina-frota .fleet-kpi').forEach(c=>{if(c.dataset.click==='1')return;c.dataset.click='1';c.classList.add('fleet-kpi-clickable');c.tabIndex=0;c.setAttribute('role','button');const id=c.querySelector('strong')?.id,go=()=>cardAcao(id);c.addEventListener('click',go);c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})})}
 function decorar(){css();decorarFormularios();garantirIntegracoes();garantirFicha();cards();decorarLinhas();decorarResumoLinhas()}
+function instalarCliqueResumo(){
+  if(document.body?.dataset.fleetResumoClick==="1")return;
+  if(!document.body)return setTimeout(instalarCliqueResumo,0);
+  document.body.dataset.fleetResumoClick="1";
+  document.addEventListener("click",e=>{
+    const tr=e.target.closest?.("#frotaResumoVeiculos tr[data-veiculo-id]");
+    if(!tr||e.target.closest("button,a,input,select"))return;
+    const id=tr.dataset.veiculoId;
+    if(id)renderFicha(id);
+  },true);
+  document.addEventListener("keydown",e=>{
+    const tr=e.target.closest?.("#frotaResumoVeiculos tr[data-veiculo-id]");
+    if(!tr||!["Enter"," "].includes(e.key))return;
+    e.preventDefault();
+    const id=tr.dataset.veiculoId;
+    if(id)renderFicha(id);
+  });
+}
 function agenda(){clearTimeout(timer);timer=setTimeout(carregar,100)}
 function instalar(){if(observer)return;observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{decorarFormularios();cards();decorarLinhas()},60)});observer.observe(document.body,{childList:true,subtree:true});agenda()}
 window.addEventListener('sig:ready',agenda);window.addEventListener('sig:fleet-summary-rendered',()=>setTimeout(decorarResumoLinhas,0));window.addEventListener('sig:empresa-contexto',agenda);window.addEventListener('sig:periodo-changed',()=>{decorarResumoLinhas();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)});window.addEventListener('sig:data-changed',e=>{if(['frota','combustivel','rh'].includes(e.detail?.modulo))agenda()});window.addEventListener('sig:page',e=>{if(['frota','combustivel'].includes(e.detail?.pagina))agenda()});
 instalar();
+instalarCliqueResumo();
