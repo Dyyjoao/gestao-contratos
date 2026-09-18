@@ -47,12 +47,20 @@ function criarPagina(){
   if(pagina())return;
   const main=document.querySelector("main.conteudo");if(!main)return;
   const s=document.createElement("section");s.id="pagina-frota";s.className="pagina hidden fleet-page";s.innerHTML=`
-<div class="pagina-cabecalho">
-  <div><span class="eyebrow">OPERAÇÕES</span><h2>Gestão de Frota</h2><p>Veículos, obrigações, infrações, manutenção, custos e integração patrimonial em um único cockpit.</p></div>
-  <div class="acoes-cabecalho fleet-actions">
-    <button id="btnFrotaConsulta" class="btn-secundario" type="button">Consulta oficial SENATRAN</button>
-    <button id="btnNovoVeiculo" class="btn-primario" type="button">+ Novo veículo</button>
-    <button id="btnAtualizarFrota" class="btn-secundario" type="button">Atualizar</button>
+<div class="fleet-module-head">
+  <div class="pagina-cabecalho">
+    <div><span class="eyebrow">OPERAÇÕES</span><h2>Gestão de Frota</h2><p>Veículos, obrigações, infrações, manutenção, custos e integração patrimonial em um único cockpit.</p></div>
+    <div class="acoes-cabecalho fleet-actions">
+      <button id="btnFrotaConsulta" class="btn-secundario" type="button">Consulta oficial SENATRAN</button>
+      <button id="btnNovoVeiculo" class="btn-primario" type="button">+ Novo veículo</button>
+      <button id="btnAtualizarFrota" class="btn-secundario" type="button">Atualizar</button>
+    </div>
+  </div>
+  <div class="fleet-tabs">
+    <button class="fleet-tab ativo" data-fleet-tab="visao" type="button">Visão gerencial</button>
+    <button class="fleet-tab" data-fleet-tab="veiculos" type="button">Veículos</button>
+    <button class="fleet-tab" data-fleet-tab="obrigacoes" type="button">IPVA, multas & obrigações</button>
+    <button class="fleet-tab" data-fleet-tab="manutencoes" type="button">Manutenções</button>
   </div>
 </div>
 <div class="fleet-kpis">
@@ -62,12 +70,6 @@ function criarPagina(){
   <div class="fleet-kpi"><span>Manutenções abertas</span><strong id="frotaKpiManut">—</strong><small>preventivas e corretivas</small></div>
   <div class="fleet-kpi"><span>Custo 12 meses</span><strong id="frotaKpiCusto">—</strong><small>manutenção + obrigações pagas</small></div>
   <div class="fleet-kpi"><span>Saúde da frota</span><strong id="frotaKpiSaude">—</strong><small>score de pendências</small></div>
-</div>
-<div class="fleet-tabs">
-  <button class="fleet-tab ativo" data-fleet-tab="visao" type="button">Visão gerencial</button>
-  <button class="fleet-tab" data-fleet-tab="veiculos" type="button">Veículos</button>
-  <button class="fleet-tab" data-fleet-tab="obrigacoes" type="button">IPVA, multas & obrigações</button>
-  <button class="fleet-tab" data-fleet-tab="manutencoes" type="button">Manutenções</button>
 </div>
 
 <section class="fleet-panel" data-fleet-panel="visao">
