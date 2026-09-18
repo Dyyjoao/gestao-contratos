@@ -195,7 +195,18 @@ function manutProxima(m){if(["concluida","cancelada"].includes(m.status))return 
 function dentro12m(data){if(!data)return false;const d=new Date(`${data}T12:00:00`),lim=new Date();lim.setMonth(lim.getMonth()-12);return d>=lim&&d<=new Date()}
 function dentroPeriodo(data){if(!data)return false;const p=periodoAtual(),meses=new Set(p.indices.map(i=>String(i+1).padStart(2,"0"))),s=String(data);return s.slice(0,4)===String(p.ano)&&meses.has(s.slice(5,7))}
 function precoMedioDiesel(filtro){const compras=custosDiesel.filter(x=>x.status!=="estornado"&&filtro(x.data)),valor=compras.reduce((s,x)=>s+n(x.valorTotal??x.valor),0),litros=compras.reduce((s,x)=>s+n(x.quantidade),0);return litros?valor/litros:0}
-function abastecimentosDoVeiculo(id){const v=vById(id),placa=String(v?.placa||"").toUpperCase().replace(/[^A-Z0-9]/g,"");return abastecimentos.filter(x=>{if(x.status==="estornado"||x.tipo==="recebimento")return false;const xp=String(x.placa||"").toUpperCase().replace(/[^A-Z0-9]/g,"");return x.veiculoId===id||(!x.veiculoId&&placa&&xp===placa)||(placa&&xp===placa)})}
+function abastecimentosDoVeiculo(id){
+  const v=vById(id),placa=String(v?.placa||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  const operacionais=veiculos.filter(x=>x.empresaId===v?.empresaId&&!["baixado"].includes(x.status));
+  return abastecimentos.filter(x=>{
+    if(x.status==="estornado"||x.tipo==="recebimento"||x.empresaId!==v?.empresaId)return false;
+    const xp=String(x.placa||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if(x.veiculoId===id)return true;
+    if(placa&&xp===placa)return true;
+    const semVinculo=!String(x.veiculoId||"").trim()&&!xp;
+    return semVinculo&&operacionais.length===1&&operacionais[0].id===id;
+  })
+}
 function custoVeiculoPorFiltro(id,filtro){const m=manutencoes.filter(x=>x.veiculoId===id&&x.status==="concluida"&&filtro(x.dataRealizada||x.dataPrevista)).reduce((t,x)=>t+n(x.custoReal),0),o=obrigacoes(vById(id)).filter(x=>x.status==="pago"&&filtro(x.dataPagamento||x.vencimento)).reduce((t,x)=>t+n(x.valor),0),litros=abastecimentosDoVeiculo(id).filter(x=>filtro(x.data)).reduce((t,x)=>t+n(x.quantidade),0),combustivel=litros*precoMedioDiesel(filtro);return{manutencao:m,obrigacoes:o,combustivel,total:m+o+combustivel}}
 function custo12Veiculo(id){return custoVeiculoPorFiltro(id,dentro12m).total}
 function custoPeriodoVeiculo(id){return custoVeiculoPorFiltro(id,dentroPeriodo).total}
