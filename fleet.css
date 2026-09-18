@@ -36,3 +36,5 @@
   #pagina-frota .fleet-module-head,
   #pagina-combustivel .fleet-module-head{top:0}
 }
+
+#pagina-frota .fleet-obrig-modal{position:fixed!important;z-index:10050;left:50%;top:50%;transform:translate(-50%,-50%);width:min(980px,calc(100vw - 32px));max-height:88vh;overflow:auto;margin:0!important;box-shadow:0 0 0 9999px rgba(8,22,35,.58),0 24px 70px rgba(0,0,0,.28)}
