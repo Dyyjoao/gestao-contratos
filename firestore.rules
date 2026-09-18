@@ -165,7 +165,7 @@ service cloud.firestore {
     }
     function frotaFichaOperacionalValida() {
       return frotaEditar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'placa','renavam','marca','modelo','anoModelo','status','quilometragemAtual','dataAquisicao','valorAquisicao',
+        'placa','renavam','marca','modelo','anoModelo','status','quilometragemInicial','quilometragemAtual','dataAquisicao','valorAquisicao',
         'responsavel','centroCustoDescricao','observacoes','ultimaConsultaOficialEm','proximaConsultaOficialEm','atualizadoEm'
       ]);
     }
@@ -323,7 +323,7 @@ service cloud.firestore {
         dados.placa is string && dados.placa.size() > 0 &&
         dados.motorista is string && dados.motorista.size() > 0 &&
         dados.tipo in ['consumo','recebimento'] &&
-        dados.quantidade is int && dados.quantidade > 0 &&
+        dados.quantidade is number && dados.quantidade > 0 &&
         (dados.kmAnterior == null || (dados.kmAnterior is int && dados.kmAnterior >= 0)) &&
         (dados.kmAtual == null || (dados.kmAtual is int && dados.kmAtual >= 0)) &&
         (dados.kmAnterior == null || dados.kmAtual == null || dados.kmAtual >= dados.kmAnterior) &&
