@@ -26,7 +26,7 @@ const contextoOkGravacao=()=>contextoIds().length===1&&!!empresaUnicaSelecionada
 
 function garantirCss(){
   if(!document.querySelector('link[href^="fleet.css"]')){
-    const l=document.createElement("link");l.rel="stylesheet";l.href="fleet.css?v=1";document.head.appendChild(l)
+    const l=document.createElement("link");l.rel="stylesheet";l.href="fleet.css?v=2";document.head.appendChild(l)
   }
 }
 function garantirMenu(){
