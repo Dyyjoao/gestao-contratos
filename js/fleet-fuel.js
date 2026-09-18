@@ -77,8 +77,7 @@ function montar(){
       <div class="campo"><label for="fuelData">Data</label><input id="fuelData" type="date" required></div>
       <div class="campo" data-fuel-abastecimento><label for="fuelMotorista">Motorista</label><select id="fuelMotorista"></select></div>
       <div class="campo" data-fuel-abastecimento><label for="fuelPlaca">Veículo / placa</label><select id="fuelPlaca"></select></div>
-      <div class="campo" data-fuel-abastecimento><label>KM anterior</label><input id="fuelKmAnteriorView" type="text" readonly><small>Preenchido pela última informação do veículo/abastecimento.</small></div>
-      <div class="campo" data-fuel-abastecimento><label for="fuelKmAtual">KM atual</label><input id="fuelKmAtual" type="number" min="0" step="1" required></div>
+      <div class="campo" data-fuel-abastecimento><label for="fuelKmAtual">KM atual</label><input id="fuelKmAtual" type="number" min="0" step="1" required><small>O SIG compara internamente com o último KM registrado do veículo.</small></div>
       <div class="campo" data-fuel-abastecimento><label for="fuelQuantidade">Quantidade abastecida (litros)</label><input id="fuelQuantidade" type="number" min="0.01" step="0.01" required></div>
 
       <div class="campo" data-fuel-compra><label for="fuelNf">NF</label><input id="fuelNf" maxlength="40" placeholder="Número da nota fiscal"></div>
@@ -147,7 +146,15 @@ function limpar(){editId=null;$("fuelForm").reset();$("fuelData").value=localIso
 function calcularCustoLitro(){const litros=num($("fuelLitrosCompra")?.value),total=num($("fuelValor")?.value),el=$("fuelCustoLitro");if(el)el.value=litros>0?money(total/litros):""}
 function preencherMotoristas(valor=""){const s=$("fuelMotorista");if(!s)return;const atual=valor||s.value||"";s.innerHTML='<option value="">Selecione...</option>'+motoristas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${esc(p.cargoNome||"Motorista")}</option>`).join("");if(atual&&![...s.options].some(o=>o.value===atual))s.add(new Option(`${atual} · vínculo anterior`,atual));s.value=atual}
 function preencherVeiculos(valor=""){const s=$("fuelPlaca");if(!s)return;const atual=valor||s.value||"",empresaId=emp();s.innerHTML='<option value="">Selecione...</option>'+veiculos.filter(x=>x.empresaId===empresaId&&x.status!=="inativo"&&x.status!=="baixado").sort((a,b)=>String(a.placa).localeCompare(String(b.placa))).map(x=>`<option value="${esc(x.placa)}">${esc(x.placa)} · ${esc(nomeVeiculo(x))}</option>`).join("");if(atual)s.value=atual}
-function preencherKm(){const placa=$("fuelPlaca")?.value,v=veiculoPorPlaca(placa),data=$("fuelData")?.value||localIso(),base=v?kmBaseVeiculo(v,data,editId):0,view=$("fuelKmAnteriorView");if(view)view.value=v?fmt(base)+" km":"";if(!editId&&$("fuelKmAtual")&&v)$("fuelKmAtual").min=String(Math.trunc(base))}
+function preencherKm(){
+  const placa=$("fuelPlaca")?.value,v=veiculoPorPlaca(placa),data=$("fuelData")?.value||localIso(),base=v?kmBaseVeiculo(v,data,editId):0;
+  const kmAtual=$("fuelKmAtual"),motorista=$("fuelMotorista");
+  if(kmAtual&&v)kmAtual.min=String(Math.trunc(base));
+  if(v?.responsavel&&motorista&&!motorista.value){
+    if(![...motorista.options].some(o=>o.value===v.responsavel))motorista.add(new Option(`${v.responsavel} · responsável do veículo`,v.responsavel));
+    motorista.value=v.responsavel;
+  }
+}
 function novo(){if(!pode("lancar")||aba==="auditoria")return;if(!emp())return alert("Selecione apenas uma empresa no cabeçalho.");limpar();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
 function editarRegistro(id){if(!pode("editar"))return;const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(y=>y.id===id);if(!x||x.status!=="ativo"||x.empresaId!==emp())return;editId=id;$("fuelData").value=x.data;if(aba==="abastecimentos"){preencherMotoristas(x.motorista);preencherVeiculos(x.placa);$("fuelKmAtual").value=x.kmAtual??"";$("fuelQuantidade").value=x.quantidade;preencherKm()}else{$("fuelNf").value=x.nf||"";$("fuelLitrosCompra").value=x.quantidade||"";$("fuelValor").value=x.valorTotal??x.valor??"";calcularCustoLitro()}$("fuelFormTitulo").textContent="Editar lançamento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
 
@@ -228,7 +235,12 @@ async function salvar(e){
   const d={data};
   if(aba==="abastecimentos"){
     const placa=$("fuelPlaca").value,v=veiculoPorPlaca(placa);d.placa=placa;d.veiculoId=v?.id||"";d.motorista=$("fuelMotorista").value;d.tipo="consumo";d.quantidade=Number($("fuelQuantidade").value);d.kmAnterior=v?Math.trunc(kmBaseVeiculo(v,data,editId)):null;d.kmAtual=Number($("fuelKmAtual").value);
-    if(!v||!d.motorista||!Number.isFinite(d.quantidade)||d.quantidade<=0||!Number.isSafeInteger(d.kmAtual)||d.kmAtual<0||d.kmAnterior===null||d.kmAtual<d.kmAnterior)return msg($("fuelMensagem"),"Revise motorista, veículo, KM atual e litros. O KM atual não pode ser menor que o último KM registrado.")
+    if(!v)return msg($("fuelMensagem"),"Selecione um veículo válido.");
+    if(!d.motorista)return msg($("fuelMensagem"),"Selecione o motorista. Se a lista estiver vazia, confira no RH se o cargo do colaborador está com a função SIG Motorista / Frota.");
+    if(!Number.isFinite(d.quantidade)||d.quantidade<=0)return msg($("fuelMensagem"),"Informe uma quantidade de litros válida.");
+    if(!Number.isSafeInteger(d.kmAtual)||d.kmAtual<0)return msg($("fuelMensagem"),"Informe o KM atual do veículo.");
+    if(d.kmAnterior===null)return msg($("fuelMensagem"),"Não foi possível localizar o KM de referência do veículo. Confira a quilometragem inicial no cadastro do veículo.");
+    if(d.kmAtual<d.kmAnterior)return msg($("fuelMensagem"),`O KM atual (${fmt(d.kmAtual)}) não pode ser menor que o último KM registrado (${fmt(d.kmAnterior)}).`)
   }else if(aba==="compras"){
     d.nf=String($("fuelNf").value||"").trim().toUpperCase();d.quantidade=Number($("fuelLitrosCompra").value);d.valorTotal=Number($("fuelValor").value);d.valor=d.valorTotal;d.custoLitro=d.quantidade>0?d.valorTotal/d.quantidade:0;
     if(!d.nf||!Number.isFinite(d.quantidade)||d.quantidade<=0||!Number.isFinite(d.valorTotal)||d.valorTotal<0)return msg($("fuelMensagem"),"Revise NF, litros e valor total.")
