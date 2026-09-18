@@ -359,7 +359,12 @@ service cloud.firestore {
         documentoAcessivel(request.resource.data) && request.resource.data.status == 'ativo' &&
         request.resource.data.registradoPor == request.auth.uid &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
-        request.resource.data.valor is number && request.resource.data.valor >= 0;
+        request.resource.data.nf is string && request.resource.data.nf.size() > 0 && request.resource.data.nf.size() <= 40 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade > 0 &&
+        request.resource.data.valorTotal is number && request.resource.data.valorTotal >= 0 &&
+        request.resource.data.valor is number && request.resource.data.valor == request.resource.data.valorTotal &&
+        request.resource.data.custoLitro is number &&
+        request.resource.data.custoLitro == request.resource.data.valorTotal / request.resource.data.quantidade;
       allow update: if documentoAcessivel(resource.data) && resource.data.status == 'ativo' &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
@@ -370,8 +375,15 @@ service cloud.firestore {
           (permissao('combustivel','editar') && frotaVisualizar() &&
             request.resource.data.status == 'ativo' &&
             request.resource.data.data is string && request.resource.data.data.size() == 10 &&
-            request.resource.data.valor is number && request.resource.data.valor >= 0 &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data','valor','atualizadoEm']))
+            request.resource.data.nf is string && request.resource.data.nf.size() > 0 && request.resource.data.nf.size() <= 40 &&
+            request.resource.data.quantidade is number && request.resource.data.quantidade > 0 &&
+            request.resource.data.valorTotal is number && request.resource.data.valorTotal >= 0 &&
+            request.resource.data.valor is number && request.resource.data.valor == request.resource.data.valorTotal &&
+            request.resource.data.custoLitro is number &&
+            request.resource.data.custoLitro == request.resource.data.valorTotal / request.resource.data.quantidade &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','nf','quantidade','valorTotal','valor','custoLitro','atualizadoEm'
+            ]))
         );
       allow delete: if false;
     }
