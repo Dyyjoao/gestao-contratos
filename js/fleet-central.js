@@ -12,7 +12,7 @@ const em12m=s=>{const d=diasDesde(s);return d!=null&&d>=0&&d<=366};
 const periodoInfo=()=>{const p=periodoAtual(),meses=new Set(p.indices.map(i=>String(i+1).padStart(2,'0')));return{...p,meses}};
 const emPeriodo=s=>{if(!s)return false;const p=periodoInfo(),str=String(s);return str.slice(0,4)===String(p.ano)&&p.meses.has(str.slice(5,7))};
 const obr=v=>Array.isArray(v?.obrigacoes)?v.obrigacoes:[];
-const movCons=id=>abastecimentos.filter(x=>x.status!=='estornado'&&x.tipo==='consumo'&&x.veiculoId===id&&num(x.quantidade)>0);
+const movCons=id=>{const v=veiculos.find(x=>x.id===id),placa=String(v?.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');return abastecimentos.filter(x=>{if(x.status==='estornado'||x.tipo==='recebimento'||num(x.quantidade)<=0)return false;const xp=String(x.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');return x.veiculoId===id||(placa&&xp===placa)})};
 const kml=x=>x.kmAtual!=null&&x.kmAnterior!=null&&num(x.kmAtual)>num(x.kmAnterior)?(num(x.kmAtual)-num(x.kmAnterior))/num(x.quantidade):null;
 const media=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
 const classificacao=s=>s>=90?'Excelente':s>=75?'Saudável':s>=60?'Atenção':s>=40?'Crítico':'Urgente';
