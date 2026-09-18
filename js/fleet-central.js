@@ -61,45 +61,139 @@ function renderSaude(){const alvo=$('frotaSaude');if(!alvo)return;const itens=ve
 function garantirIntegracoes(){const p=document.querySelector('[data-fleet-panel="visao"]');if(!p||$('fleetIntegracoesOficiais'))return;const s=document.createElement('section');s.id='fleetIntegracoesOficiais';s.className='fleet-card';s.innerHTML='<div class="fleet-toolbar"><div><h3>Integrações oficiais</h3><p>Fontes definidas para automação segura.</p></div></div><div class="fleet-integration-grid"><div><strong>SENATRAN / SERPRO</strong><span>Multas, infrações e penalidades</span><small>Aguardando backend e credenciais. Consulta manual permanece como contingência.</small></div><div><strong>Detran-ES</strong><span>IPVA e licenciamento</span><small>Aguardando backend e credenciais. Consulta manual permanece como contingência.</small></div></div>';p.appendChild(s)}
 function garantirFicha(){const p=document.querySelector('[data-fleet-panel="visao"]');if(!p||$('fleetFichaCentral'))return;const s=document.createElement('section');s.id='fleetFichaCentral';s.className='fleet-card hidden';const alvo=p.querySelector('.fleet-card:last-child');if(alvo)alvo.before(s);else p.appendChild(s)}
 function renderFicha(id){
-  garantirFicha();const v=veiculos.find(x=>x.id===id),b=$('fleetFichaCentral');if(!v||!b)return;
+  garantirFicha();
+  const v=veiculos.find(x=>x.id===id),b=$('fleetFichaCentral');
+  if(!v||!b)return;
   veiculoSelecionado=id;
-  const c12=custo(v),cp=custoPeriodo(v),p=periodoInfo();
-  const fuel=movCons(id).filter(x=>em12m(x.data)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
-  const ms=manutencoes.filter(x=>x.veiculoId===id).sort((a,b)=>String(b.dataRealizada||b.dataPrevista).localeCompare(String(a.dataRealizada||a.dataPrevista)));
-  const os=[...obr(v)].sort((a,b)=>String(b.vencimento).localeCompare(String(a.vencimento)));
-  const sv=saude(v);
+
+  const p=periodoInfo(),c12=custo(v),cp=custoPeriodo(v),sv=saude(v);
+  const fuelPeriodo=movCons(id).filter(x=>emPeriodo(x.data)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  const fuel12=movCons(id).filter(x=>em12m(x.data)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  const manutPeriodo=manutencoes.filter(x=>x.veiculoId===id&&x.status==='concluida'&&emPeriodo(x.dataRealizada||x.dataPrevista)).sort((a,b)=>String(b.dataRealizada||b.dataPrevista).localeCompare(String(a.dataRealizada||a.dataPrevista)));
+  const manutTodas=manutencoes.filter(x=>x.veiculoId===id).sort((a,b)=>String(b.dataRealizada||b.dataPrevista).localeCompare(String(a.dataRealizada||a.dataPrevista)));
+  const obrigTodas=[...obr(v)].sort((a,b)=>String(b.dataPagamento||b.vencimento).localeCompare(String(a.dataPagamento||a.vencimento)));
+  const obrigPeriodo=obrigTodas.filter(x=>emPeriodo(x.dataPagamento||x.vencimento));
+  const impostos=obrigPeriodo.filter(x=>['ipva','licenciamento','seguro'].includes(String(x.tipo||'').toLowerCase()));
+  const multas=obrigPeriodo.filter(x=>String(x.tipo||'').toLowerCase()==='multa');
+
+  const kmPeriodo=fuelPeriodo.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0),0);
+  const litrosPeriodo=fuelPeriodo.reduce((s,x)=>s+num(x.quantidade),0);
+  const consumoPeriodo=litrosPeriodo&&kmPeriodo?kmPeriodo/litrosPeriodo:null;
+  const custoCombPeriodo=litrosPeriodo*precoLitro(emPeriodo);
+  const custoManutPeriodo=manutPeriodo.reduce((s,x)=>s+num(x.custoReal),0);
+  const custoImpostos=impostos.reduce((s,x)=>s+num(x.valor),0);
+  const custoMultas=multas.reduce((s,x)=>s+num(x.valor),0);
+
+  const motoristasMap=new Map();
+  fuelPeriodo.forEach(x=>{
+    const nome=String(x.motorista||'Não informado').trim()||'Não informado';
+    const z=motoristasMap.get(nome)||{nome,qtd:0,litros:0,km:0,primeiro:x.data,ultimo:x.data};
+    z.qtd++;z.litros+=num(x.quantidade);
+    if(x.kmAtual!=null&&x.kmAnterior!=null)z.km+=Math.max(0,num(x.kmAtual)-num(x.kmAnterior));
+    if(String(x.data)<String(z.primeiro))z.primeiro=x.data;
+    if(String(x.data)>String(z.ultimo))z.ultimo=x.data;
+    motoristasMap.set(nome,z)
+  });
+  const motoristasPeriodo=[...motoristasMap.values()].sort((a,b)=>b.qtd-a.qtd);
+
   const timeline=[
-    ...fuel.map(x=>({data:x.data,tipo:'Abastecimento',descricao:`${fmtLitros(x.quantidade)} L · ${x.motorista||'motorista não informado'}`,valor:num(x.quantidade)*precoLitro(em12m)})),
-    ...ms.map(x=>({data:x.dataRealizada||x.dataPrevista,tipo:'Manutenção',descricao:x.descricao||x.tipo||'Manutenção',valor:num(x.custoReal)||num(x.custoPrevisto)})),
-    ...os.map(x=>({data:x.dataPagamento||x.vencimento,tipo:'Obrigação',descricao:x.exercicio||x.auto||x.descricao||x.tipo||'Obrigação',valor:num(x.valor)}))
+    ...fuelPeriodo.map(x=>({data:x.data,tipo:'Abastecimento',descricao:`${fmtLitros(x.quantidade)} L · ${x.motorista||'motorista não informado'} · KM ${x.kmAtual??'—'}`,valor:num(x.quantidade)*precoLitro(emPeriodo)})),
+    ...manutPeriodo.map(x=>({data:x.dataRealizada||x.dataPrevista,tipo:'Manutenção',descricao:x.descricao||x.tipo||'Manutenção',valor:num(x.custoReal)})),
+    ...obrigPeriodo.map(x=>({data:x.dataPagamento||x.vencimento,tipo:String(x.tipo||'Obrigação'),descricao:x.exercicio||x.auto||x.descricao||'Obrigação',valor:num(x.valor)}))
   ].filter(x=>x.data).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
-  b.innerHTML=`<div class="fleet-toolbar"><div><h3>${esc(v.placa||'—')} · ${esc(v.marca||'')} ${esc(v.modelo||'')}</h3><p>Ficha consolidada · motorista ${esc(v.responsavel||'não definido')}</p></div><button id="fleetFecharFicha" class="btn-secundario" type="button">Fechar</button></div>
-  <div class="fleet-central-tabs"><button class="ativo" data-fsec="resumo">Resumo</button><button data-fsec="historico">Histórico geral</button><button data-fsec="custos">Custos</button><button data-fsec="combustivel">Abastecimento/consumo</button><button data-fsec="manutencao">Manutenções</button><button data-fsec="documentos">Documentação/infrações</button></div>
-  <div data-fpanel="resumo"><div class="fleet-central-kpis">
-    <div><span>Saúde</span><strong>${sv.score==null?'—':`${sv.score}/100`}</strong><small>${esc(sv.classe)} · ${sv.cobertura}/5 critérios</small></div>
-    <div><span>Custo 12 meses</span><strong>${moeda(c12.total)}</strong><small>combustível + manutenção + obrigações</small></div>
-    <div><span>Custo · ${esc(p.label)} ${p.ano}</span><strong>${moeda(cp.total)}</strong><small>período do filtro geral</small></div>
-    <div><span>Consumo 12m</span><strong>${c12.kml?`${c12.kml.toFixed(2)} km/l`:'—'}</strong><small>${c12.litros.toLocaleString('pt-BR',{maximumFractionDigits:1})} L</small></div>
-    <div><span>Custo por KM · período</span><strong>${cp.custoKm?moeda(cp.custoKm):'—'}</strong><small>${cp.km.toLocaleString('pt-BR')} km medidos</small></div>
-  </div></div>
-  <div data-fpanel="historico" class="hidden"><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Evento</th><th>Descrição</th><th>Valor / custo estimado</th></tr></thead><tbody>${timeline.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descricao)}</td><td>${moeda(x.valor)}</td></tr>`).join('')||'<tr><td colspan="4">Sem histórico registrado.</td></tr>'}</tbody></table></div></div>
-  <div data-fpanel="custos" class="hidden"><div class="fleet-cost-grid">
-    <div><span>Combustível 12m</span><strong>${moeda(c12.combustivel)}</strong></div><div><span>Combustível · período</span><strong>${moeda(cp.combustivel)}</strong></div>
-    <div><span>Manutenção 12m</span><strong>${moeda(c12.manutencao)}</strong></div><div><span>Manutenção · período</span><strong>${moeda(cp.manutencao)}</strong></div>
-    <div><span>Obrigações 12m</span><strong>${moeda(c12.documentacao)}</strong></div><div><span>Obrigações · período</span><strong>${moeda(cp.documentacao)}</strong></div>
-    <div><span>Total 12m</span><strong>${moeda(c12.total)}</strong></div><div><span>Total · ${esc(p.label)} ${p.ano}</span><strong>${moeda(cp.total)}</strong></div>
-  </div></div>
-  <div data-fpanel="combustivel" class="hidden"><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Motorista</th><th>Litros</th><th>KM</th><th>KM/L</th></tr></thead><tbody>${fuel.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${esc(x.motorista||'—')}</td><td>${num(x.quantidade).toLocaleString('pt-BR')}</td><td>${x.kmAtual!=null&&x.kmAnterior!=null?(num(x.kmAtual)-num(x.kmAnterior)).toLocaleString('pt-BR'):'—'}</td><td>${kml(x)?.toFixed(2)||'—'}</td></tr>`).join('')||'<tr><td colspan="5">Sem abastecimentos no período.</td></tr>'}</tbody></table></div></div>
-  <div data-fpanel="manutencao" class="hidden"><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Fornecedor</th><th>Custo</th></tr></thead><tbody>${ms.map(x=>`<tr><td>${dataBr(x.dataRealizada||x.dataPrevista)}</td><td>${esc(x.tipo||'—')}</td><td>${esc(x.descricao||'—')}</td><td>${esc(x.oficina||'—')}</td><td>${moeda(num(x.custoReal)||num(x.custoPrevisto))}</td></tr>`).join('')||'<tr><td colspan="5">Sem registros.</td></tr>'}</tbody></table></div></div>
-  <div data-fpanel="documentos" class="hidden"><div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Referência</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>${os.map(x=>`<tr><td>${esc(x.tipo||'—')}</td><td>${esc(x.exercicio||x.auto||x.descricao||'—')}</td><td>${dataBr(x.vencimento)}</td><td>${vencida(x)?'Vencido':esc(x.status||'aberto')}</td><td>${moeda(num(x.valor))}</td></tr>`).join('')||'<tr><td colspan="5">Sem obrigações registradas.</td></tr>'}</tbody></table></div></div>`;
+
+  b.innerHTML=`
+  <div class="fleet-toolbar">
+    <div>
+      <h3>${esc(v.placa||'—')} · ${esc(v.marca||'')} ${esc(v.modelo||'')}</h3>
+      <p>Detalhamento técnico · ${esc(p.label)} ${p.ano}</p>
+    </div>
+    <button id="fleetFecharFicha" class="btn-secundario" type="button">Fechar</button>
+  </div>
+
+  <div class="fleet-central-tabs">
+    <button class="ativo" data-fsec="ficha">Ficha técnica</button>
+    <button data-fsec="motorista">Motorista no período</button>
+    <button data-fsec="manutencao">Manutenções realizadas</button>
+    <button data-fsec="combustivel">Abastecimento & consumo</button>
+    <button data-fsec="tributos">Impostos & multas</button>
+    <button data-fsec="historico">Histórico geral</button>
+  </div>
+
+  <div data-fpanel="ficha">
+    <div class="fleet-central-kpis">
+      <div><span>Status</span><strong>${esc(v.status||'—')}</strong><small>situação operacional</small></div>
+      <div><span>KM atual</span><strong>${num(v.quilometragemAtual).toLocaleString('pt-BR')} km</strong><small>KM inicial: ${num(v.quilometragemInicial??v.quilometragemAtual).toLocaleString('pt-BR')} km</small></div>
+      <div><span>Motorista principal</span><strong>${esc(v.responsavel||'—')}</strong><small>cadastro atual do veículo</small></div>
+      <div><span>Custo do período</span><strong>${moeda(cp.total)}</strong><small>combustível + manutenção + obrigações</small></div>
+      <div><span>Custo 12 meses</span><strong>${moeda(c12.total)}</strong><small>visão acumulada</small></div>
+      <div><span>Consumo do período</span><strong>${consumoPeriodo?`${consumoPeriodo.toFixed(2)} km/l`:'—'}</strong><small>${fmtLitros(litrosPeriodo)} L · ${kmPeriodo.toLocaleString('pt-BR')} km</small></div>
+      <div><span>RENAVAM</span><strong>${esc(v.renavam||'—')}</strong><small>ano/modelo ${esc(v.anoModelo||'—')}</small></div>
+      <div><span>Saúde da frota</span><strong>${sv.score==null?'—':`${sv.score}/100`}</strong><small>${esc(sv.classe)}</small></div>
+    </div>
+    <div class="fleet-tech-grid">
+      <div><span>Data de aquisição</span><strong>${v.dataAquisicao?dataBr(v.dataAquisicao):'—'}</strong></div>
+      <div><span>Valor de aquisição</span><strong>${moeda(num(v.valorAquisicao))}</strong></div>
+      <div><span>Disponível para uso</span><strong>${v.dataDisponivelUso?dataBr(v.dataDisponivelUso):'—'}</strong></div>
+      <div><span>Vida útil</span><strong>${num(v.vidaUtilMeses)||'—'} meses</strong></div>
+      <div><span>Imobilizado</span><strong>${v.imobilizadoId?'Vinculado':'Pendente'}</strong></div>
+      <div><span>Observações</span><strong>${esc(v.observacoes||'—')}</strong></div>
+    </div>
+  </div>
+
+  <div data-fpanel="motorista" class="hidden">
+    <div class="fleet-central-kpis">
+      <div><span>Motoristas no período</span><strong>${motoristasPeriodo.length}</strong><small>${esc(p.label)} ${p.ano}</small></div>
+      <div><span>Abastecimentos</span><strong>${fuelPeriodo.length}</strong><small>lançamentos associados ao veículo</small></div>
+      <div><span>Litros</span><strong>${fmtLitros(litrosPeriodo)} L</strong><small>total abastecido</small></div>
+      <div><span>KM rodados</span><strong>${kmPeriodo.toLocaleString('pt-BR')} km</strong><small>pela sequência de abastecimentos</small></div>
+    </div>
+    <div class="tabela-container"><table class="tabela"><thead><tr><th>Motorista</th><th>1º registro</th><th>Último registro</th><th>Abastecimentos</th><th>Litros</th><th>KM</th></tr></thead><tbody>${motoristasPeriodo.map(x=>`<tr><td>${esc(x.nome)}</td><td>${dataBr(x.primeiro)}</td><td>${dataBr(x.ultimo)}</td><td>${x.qtd}</td><td>${fmtLitros(x.litros)} L</td><td>${x.km.toLocaleString('pt-BR')} km</td></tr>`).join('')||'<tr><td colspan="6">Sem motorista identificado nos abastecimentos do período.</td></tr>'}</tbody></table></div>
+  </div>
+
+  <div data-fpanel="manutencao" class="hidden">
+    <div class="fleet-central-kpis">
+      <div><span>Realizadas no período</span><strong>${manutPeriodo.length}</strong><small>status concluída</small></div>
+      <div><span>Custo realizado</span><strong>${moeda(custoManutPeriodo)}</strong><small>${esc(p.label)} ${p.ano}</small></div>
+      <div><span>Histórico total</span><strong>${manutTodas.length}</strong><small>todos os registros do veículo</small></div>
+    </div>
+    <div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Tipo</th><th>Serviço</th><th>Oficina</th><th>KM</th><th>Custo</th><th>Próxima revisão</th></tr></thead><tbody>${manutPeriodo.map(x=>`<tr><td>${dataBr(x.dataRealizada||x.dataPrevista)}</td><td>${esc(x.tipo||'—')}</td><td>${esc(x.descricao||'—')}</td><td>${esc(x.oficina||'—')}</td><td>${num(x.kmRealizado).toLocaleString('pt-BR')||'—'}</td><td>${moeda(num(x.custoReal))}</td><td>${x.proximaRevisao?dataBr(x.proximaRevisao):x.proximoKm?num(x.proximoKm).toLocaleString('pt-BR')+' km':'—'}</td></tr>`).join('')||'<tr><td colspan="7">Nenhuma manutenção concluída no período selecionado.</td></tr>'}</tbody></table></div>
+  </div>
+
+  <div data-fpanel="combustivel" class="hidden">
+    <div class="fleet-central-kpis">
+      <div><span>Abastecido no período</span><strong>${fmtLitros(litrosPeriodo)} L</strong><small>${fuelPeriodo.length} lançamento(s)</small></div>
+      <div><span>KM rodados</span><strong>${kmPeriodo.toLocaleString('pt-BR')} km</strong><small>diferença entre hodômetros</small></div>
+      <div><span>Consumo médio</span><strong>${consumoPeriodo?`${consumoPeriodo.toFixed(2)} km/l`:'—'}</strong><small>KM ÷ litros</small></div>
+      <div><span>Custo combustível</span><strong>${moeda(custoCombPeriodo)}</strong><small>preço médio das compras do período</small></div>
+    </div>
+    <div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Motorista</th><th>Litros</th><th>KM anterior</th><th>KM atual</th><th>KM rodado</th><th>KM/L</th></tr></thead><tbody>${fuelPeriodo.map(x=>{const km=x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0;return`<tr><td>${dataBr(x.data)}</td><td>${esc(x.motorista||'—')}</td><td>${fmtLitros(x.quantidade)} L</td><td>${x.kmAnterior!=null?num(x.kmAnterior).toLocaleString('pt-BR'):'—'}</td><td>${x.kmAtual!=null?num(x.kmAtual).toLocaleString('pt-BR'):'—'}</td><td>${km?km.toLocaleString('pt-BR')+' km':'—'}</td><td>${kml(x)?.toFixed(2)||'—'}</td></tr>`}).join('')||'<tr><td colspan="7">Sem abastecimentos no período selecionado.</td></tr>'}</tbody></table></div>
+  </div>
+
+  <div data-fpanel="tributos" class="hidden">
+    <div class="fleet-central-kpis">
+      <div><span>Impostos / documentos</span><strong>${moeda(custoImpostos)}</strong><small>${impostos.length} registro(s) no período</small></div>
+      <div><span>Multas</span><strong>${moeda(custoMultas)}</strong><small>${multas.length} infração(ões) no período</small></div>
+      <div><span>Obrigações do período</span><strong>${moeda(obrigPeriodo.reduce((s,x)=>s+num(x.valor),0))}</strong><small>inclui todos os tipos cadastrados</small></div>
+    </div>
+    <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Referência</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Órgão / condutor</th><th>Valor</th></tr></thead><tbody>${obrigPeriodo.map(x=>`<tr><td>${esc(x.tipo||'—')}</td><td>${esc(x.exercicio||x.auto||x.descricao||'—')}</td><td>${dataBr(x.vencimento)}</td><td>${x.dataPagamento?dataBr(x.dataPagamento):'—'}</td><td>${vencida(x)?'Vencido':esc(x.status||'aberto')}</td><td>${esc([x.orgao,x.condutor].filter(Boolean).join(' · ')||'—')}</td><td>${moeda(num(x.valor))}</td></tr>`).join('')||'<tr><td colspan="7">Sem impostos, multas ou obrigações no período selecionado.</td></tr>'}</tbody></table></div>
+  </div>
+
+  <div data-fpanel="historico" class="hidden">
+    <div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Evento</th><th>Descrição</th><th>Valor / custo</th></tr></thead><tbody>${timeline.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descricao)}</td><td>${moeda(x.valor)}</td></tr>`).join('')||'<tr><td colspan="4">Sem eventos no período selecionado.</td></tr>'}</tbody></table></div>
+  </div>`;
+
   b.classList.remove('hidden');
-  $('fleetFecharFicha').onclick=()=>b.classList.add('hidden');
-  b.querySelectorAll('[data-fsec]').forEach(bt=>bt.onclick=()=>{b.querySelectorAll('[data-fsec]').forEach(x=>x.classList.toggle('ativo',x===bt));b.querySelectorAll('[data-fpanel]').forEach(x=>x.classList.toggle('hidden',x.dataset.fpanel!==bt.dataset.fsec))});
+  $('fleetFecharFicha').onclick=()=>{b.classList.add('hidden');veiculoSelecionado=''};
+  b.querySelectorAll('[data-fsec]').forEach(bt=>bt.onclick=()=>{
+    b.querySelectorAll('[data-fsec]').forEach(x=>x.classList.toggle('ativo',x===bt));
+    b.querySelectorAll('[data-fpanel]').forEach(x=>x.classList.toggle('hidden',x.dataset.fpanel!==bt.dataset.fsec))
+  });
   b.scrollIntoView({behavior:'smooth',block:'start'})
 }
 function fmtLitros(v){return num(v).toLocaleString('pt-BR',{maximumFractionDigits:2})}
 function decorarLinhas(){document.querySelectorAll('#listaVeiculos tr').forEach(tr=>{if(tr.dataset.ficha==='1')return;const placa=String(tr.cells?.[0]?.innerText||'').trim().split(' ')[0],v=veiculos.find(x=>x.placa===placa);if(!v)return;tr.dataset.ficha='1';const ac=tr.cells?.[6]?.querySelector('.acoes-tabela');if(ac){const b=document.createElement('button');b.className='btn-acao';b.type='button';b.textContent='Ficha';b.onclick=()=>{document.querySelector('[data-fleet-tab="visao"]')?.click();setTimeout(()=>renderFicha(v.id),40)};ac.prepend(b)}});decorarResumoLinhas()}
-function decorarResumoLinhas(){const tb=$('frotaResumoVeiculos'),table=tb?.closest('table');if(!tb||!table)return;const head=table.querySelector('thead tr');if(head&&head.children.length===7){const th=document.createElement('th');th.textContent='Custo período';head.insertBefore(th,head.children[6])}const p=periodoInfo();tb.querySelectorAll('tr').forEach(tr=>{const placa=String(tr.cells?.[0]?.innerText||'').trim().split(' ')[0],v=veiculos.find(x=>x.placa===placa);if(!v)return;const c12=custo(v),cp=custoPeriodo(v);if(tr.cells[5])tr.cells[5].textContent=moeda(c12.total);if(tr.cells.length===7){const td=document.createElement('td');tr.insertBefore(td,tr.cells[6])}if(tr.cells[6]){tr.cells[6].innerHTML=`<strong>${moeda(cp.total)}</strong><br><small>${esc(p.label)} ${p.ano}</small>`}tr.style.cursor='pointer';tr.title='Clique para abrir histórico e detalhamento do veículo';tr.onclick=e=>{if(e.target.closest('button,a,input,select'))return;renderFicha(v.id)}})}
+function decorarResumoLinhas(){const tb=$('frotaResumoVeiculos'),table=tb?.closest('table');if(!tb||!table)return;const p=periodoInfo();tb.querySelectorAll('tr').forEach(tr=>{const id=tr.dataset.veiculoId||'',placa=String(tr.cells?.[0]?.innerText||'').trim().split(' ')[0],v=veiculos.find(x=>x.id===id)||veiculos.find(x=>x.placa===placa);if(!v)return;const c12=custo(v),cp=custoPeriodo(v);if(tr.cells[5])tr.cells[5].textContent=moeda(c12.total);if(tr.cells[6])tr.cells[6].innerHTML=`<strong>${moeda(cp.total)}</strong><br><small>${esc(p.label)} ${p.ano}</small>`;tr.style.cursor='pointer';tr.tabIndex=0;tr.setAttribute('role','button');tr.title='Abrir detalhamento técnico do veículo';const abrir=e=>{if(e?.target?.closest?.('button,a,input,select'))return;renderFicha(v.id)};tr.onclick=abrir;tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();renderFicha(v.id)}}})}
 
 function filtrar(sel,pred){document.querySelectorAll(sel).forEach(tr=>{tr.style.display=pred(tr)?'':'none'})}
 function cardAcao(id){if(id==='frotaKpiAtivos'){document.querySelector('[data-fleet-tab="veiculos"]')?.click();setTimeout(()=>filtrar('#listaVeiculos tr',tr=>/\bativo\b/i.test(tr.innerText)),60)}else if(id==='frotaKpiVencidas'){document.querySelector('[data-fleet-tab="obrigacoes"]')?.click();setTimeout(()=>filtrar('#listaObrigacoes tr',tr=>/vencido/i.test(tr.innerText)),60)}else if(id==='frotaKpi30'){document.querySelector('[data-fleet-tab="visao"]')?.click();$('frotaAlertas')?.scrollIntoView({behavior:'smooth',block:'center'})}else if(id==='frotaKpiManut'){document.querySelector('[data-fleet-tab="manutencoes"]')?.click();setTimeout(()=>filtrar('#listaManutencoes tr',tr=>!/concluída|concluida|cancelada/i.test(tr.innerText)),60)}else if(id==='frotaKpiCusto'){document.querySelector('[data-fleet-tab="visao"]')?.click();$('frotaResumoVeiculos')?.closest('.fleet-card')?.scrollIntoView({behavior:'smooth',block:'start'})}else if(id==='frotaKpiSaude'){document.querySelector('[data-fleet-tab="visao"]')?.click();renderSaude();$('frotaSaude')?.scrollIntoView({behavior:'smooth',block:'center'})}}
@@ -107,5 +201,5 @@ function cards(){document.querySelectorAll('#pagina-frota .fleet-kpi').forEach(c
 function decorar(){css();decorarFormularios();garantirIntegracoes();garantirFicha();cards();decorarLinhas();decorarResumoLinhas()}
 function agenda(){clearTimeout(timer);timer=setTimeout(carregar,100)}
 function instalar(){if(observer)return;observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{decorarFormularios();cards();decorarLinhas()},60)});observer.observe(document.body,{childList:true,subtree:true});agenda()}
-window.addEventListener('sig:ready',agenda);window.addEventListener('sig:empresa-contexto',agenda);window.addEventListener('sig:periodo-changed',()=>{decorarResumoLinhas();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)});window.addEventListener('sig:data-changed',e=>{if(['frota','combustivel','rh'].includes(e.detail?.modulo))agenda()});window.addEventListener('sig:page',e=>{if(['frota','combustivel'].includes(e.detail?.pagina))agenda()});
+window.addEventListener('sig:ready',agenda);window.addEventListener('sig:fleet-summary-rendered',()=>setTimeout(decorarResumoLinhas,0));window.addEventListener('sig:empresa-contexto',agenda);window.addEventListener('sig:periodo-changed',()=>{decorarResumoLinhas();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)});window.addEventListener('sig:data-changed',e=>{if(['frota','combustivel','rh'].includes(e.detail?.modulo))agenda()});window.addEventListener('sig:page',e=>{if(['frota','combustivel'].includes(e.detail?.pagina))agenda()});
 instalar();
