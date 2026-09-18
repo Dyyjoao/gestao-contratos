@@ -388,6 +388,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /auditoriasTanqueDiesel/{id} {
+      allow read: if combustivelVer() && documentoAcessivel(resource.data);
+      allow create: if permissao('combustivel','lancar') && frotaVisualizar() &&
+        documentoAcessivel(request.resource.data) &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.registradoPor == request.auth.uid &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.saldoFisico is number && request.resource.data.saldoFisico >= 0 &&
+        request.resource.data.saldoTeorico is number &&
+        request.resource.data.diferenca is number &&
+        request.resource.data.observacao is string && request.resource.data.observacao.size() <= 160;
+      allow update: if administrador() && documentoAcessivel(resource.data) &&
+        resource.data.status == 'ativo' &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.registradoPor == resource.data.registradoPor &&
+        request.resource.data.status == 'estornado' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','motivoEstorno','estornadoPor','estornadoEm','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
     match /manutencoesFrota/{id} {
       allow read: if frotaVisualizar() && documentoAcessivel(resource.data);
       allow create: if frotaManutencao() && documentoAcessivel(request.resource.data);
