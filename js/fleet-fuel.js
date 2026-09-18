@@ -5,7 +5,7 @@ import { periodoAtual } from "./company-context.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
-let abastecimentos=[],compras=[],veiculos=[],motoristas=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false;
+let abastecimentos=[],compras=[],veiculos=[],motoristas=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="";
 const pode=a=>admin()||permite("combustivel",a);
 const ver=()=>["visualizar","lancar","editar"].some(pode);
 const frotaVer=()=>admin()||permite("frota","visualizar")||permite("frota","cadastrar")||permite("frota","editar")||permite("frota","manutencao")||permite("frota","obrigacoes");
@@ -39,7 +39,7 @@ function kmBaseVeiculo(v,data="",ignorarId=""){
 function garantirCss(){
   if(document.getElementById("fuel-audit-css"))return;
   const s=document.createElement("style");s.id="fuel-audit-css";s.textContent=`
-    .fuel-ranking{display:grid;gap:10px}.fuel-rank-row{display:grid;grid-template-columns:minmax(150px,230px) minmax(160px,1fr) 120px 100px;gap:10px;align-items:center}
+    .fuel-ranking{display:grid;gap:10px}.fuel-rank-row{display:grid;grid-template-columns:minmax(150px,230px) minmax(160px,1fr) 120px 100px;gap:10px;align-items:center}.fuel-rank-row[data-fuel-veiculo]{cursor:pointer;border:1px solid transparent;border-radius:10px;padding:8px 10px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease}.fuel-rank-row[data-fuel-veiculo]:hover{background:#f7fafb;border-color:#dce5ea}.fuel-rank-row[data-fuel-veiculo].ativo{background:#eaf7f5;border-color:#20b6a5;box-shadow:0 0 0 2px rgba(32,182,165,.10)}
     .fuel-rank-name{display:grid}.fuel-rank-name small{color:#7b8794}.fuel-rank-track,.fuel-audit-track{height:14px;background:#edf1f4;border-radius:999px;overflow:hidden}.fuel-rank-track i,.fuel-audit-track i{display:block;height:100%;background:#0b1f33;border-radius:999px}
     .fuel-audit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.fuel-audit-card{padding:14px;border:1px solid #e4e9ed;border-radius:12px;background:#fff}.fuel-audit-card span{display:block;font-size:11px;color:#667085}.fuel-audit-card strong{display:block;margin-top:4px;font-size:20px}
     .fuel-tank{margin-top:16px;border:1px solid #dfe6eb;border-radius:14px;padding:14px}.fuel-tank-bar{height:28px;border-radius:10px;background:#eef2f5;overflow:hidden}.fuel-tank-bar i{display:block;height:100%;background:#0b1f33}.fuel-tank-meta{display:flex;justify-content:space-between;gap:12px;margin-top:7px;font-size:11px;color:#667085}
@@ -88,14 +88,14 @@ function montar(){
     </div><div class="form-acoes"><button id="fuelCancelar" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar</button></div><p id="fuelMensagem" class="mensagem-form"></p></form>
   </section>
 
+  <section id="fuelRankingBox" class="lista-card">
+    <div class="lista-cabecalho"><div><h3>Consumo por veículo</h3><p id="fuelRankingSub">Ranking de todos os veículos da frota no período geral selecionado. Clique em um veículo para filtrar os abastecimentos.</p></div></div>
+    <div id="fuelRanking" class="fuel-ranking"></div>
+  </section>
+
   <section id="fuelHistoricoBox" class="lista-card">
     <div class="lista-cabecalho production-toolbar"><div><h3 id="fuelHistoricoTitulo">Abastecimentos</h3><p id="fuelHistoricoSub">KM anterior é obtido automaticamente e o KM atual atualiza a ficha do veículo.</p></div></div>
     <div class="tabela-container"><table class="tabela"><thead id="fuelCabecalho"></thead><tbody id="fuelLista"></tbody></table></div>
-  </section>
-
-  <section id="fuelRankingBox" class="lista-card">
-    <div class="lista-cabecalho"><div><h3>Consumo por veículo</h3><p>Ranking de todos os veículos da frota no período geral selecionado.</p></div></div>
-    <div id="fuelRanking" class="fuel-ranking"></div>
   </section>
 
   <section id="fuelGraficoComprasBox" class="lista-card hidden">
@@ -133,7 +133,7 @@ function montar(){
 function menu(){const nav=document.querySelector(".sidebar-menu");if(!nav)return;let b=$("menuCombustivel");if(!b){b=document.createElement("button");b.id="menuCombustivel";b.className="menu-item hidden";b.dataset.pagina="combustivel";b.type="button";b.textContent="Combustível e Diesel";const frota=$("menuFrota");if(frota)frota.insertAdjacentElement("afterend",b);else nav.appendChild(b);b.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();if(!ver())return;abrirPagina("combustivel");carregar()},true)}b.classList.toggle("hidden",!ver()||!frotaVer())}
 
 function trocar(k){
-  aba=k;editId=null;$("fuelFormBox")?.classList.add("hidden");
+  aba=k;editId=null;if(k!=="abastecimentos")veiculoFiltroId="";$("fuelFormBox")?.classList.add("hidden");
   $("fuelTabMov")?.classList.toggle("ativo",k==="abastecimentos");$("fuelTabCusto")?.classList.toggle("ativo",k==="compras");$("fuelTabAuditoria")?.classList.toggle("ativo",k==="auditoria");
   document.querySelectorAll("[data-fuel-abastecimento]").forEach(x=>{x.classList.toggle("hidden",k!=="abastecimentos");x.querySelectorAll("input,select").forEach(i=>i.disabled=k!=="abastecimentos")});
   document.querySelectorAll("[data-fuel-compra]").forEach(x=>{x.classList.toggle("hidden",k!=="compras");x.querySelectorAll("input,select").forEach(i=>i.disabled=k!=="compras")});
@@ -151,12 +151,15 @@ function preencherKm(){const placa=$("fuelPlaca")?.value,v=veiculoPorPlaca(placa
 function novo(){if(!pode("lancar")||aba==="auditoria")return;if(!emp())return alert("Selecione apenas uma empresa no cabeçalho.");limpar();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
 function editarRegistro(id){if(!pode("editar"))return;const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(y=>y.id===id);if(!x||x.status!=="ativo"||x.empresaId!==emp())return;editId=id;$("fuelData").value=x.data;if(aba==="abastecimentos"){preencherMotoristas(x.motorista);preencherVeiculos(x.placa);$("fuelKmAtual").value=x.kmAtual??"";$("fuelQuantidade").value=x.quantidade;preencherKm()}else{$("fuelNf").value=x.nf||"";$("fuelLitrosCompra").value=x.quantidade||"";$("fuelValor").value=x.valorTotal??x.valor??"";calcularCustoLitro()}$("fuelFormTitulo").textContent="Editar lançamento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
 
+function alternarFiltroVeiculo(id){veiculoFiltroId=veiculoFiltroId===id?"":id;render()}
 function renderRanking(p){
   const host=$("fuelRanking");if(!host)return;
   const empresaId=emp(),ativosFrota=veiculos.filter(v=>v.empresaId===empresaId&&v.status!=="baixado");
   const rows=ativosFrota.map(v=>{const a=ativosAbastecimento().filter(x=>x.veiculoId===v.id&&dentroPeriodo(x,p)),litros=a.reduce((s,x)=>s+num(x.quantidade),0),km=a.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0),0);return{v,litros,km,kml:litros&&km?km/litros:0}}).sort((a,b)=>b.litros-a.litros);
   const max=Math.max(0,...rows.map(x=>x.litros));
-  host.innerHTML=rows.map((x,i)=>`<div class="fuel-rank-row"><div class="fuel-rank-name"><strong>${i+1}. ${esc(x.v.placa||"—")}</strong><small>${esc(nomeVeiculo(x.v))}</small></div><div class="fuel-rank-track"><i style="width:${max?Math.max(x.litros?3:0,x.litros/max*100):0}%"></i></div><strong>${fmt(x.litros)} L</strong><span>${x.kml?fmt(x.kml)+" km/L":"—"}</span></div>`).join("")||'<div class="rh-empty">Nenhum veículo cadastrado.</div>'
+  host.innerHTML=rows.map((x,i)=>`<div class="fuel-rank-row ${veiculoFiltroId===x.v.id?"ativo":""}" data-fuel-veiculo="${esc(x.v.id)}" role="button" tabindex="0" aria-pressed="${veiculoFiltroId===x.v.id?"true":"false"}"><div class="fuel-rank-name"><strong>${i+1}. ${esc(x.v.placa||"—")}</strong><small>${esc(nomeVeiculo(x.v))}</small></div><div class="fuel-rank-track"><i style="width:${max?Math.max(x.litros?3:0,x.litros/max*100):0}%"></i></div><strong>${fmt(x.litros)} L</strong><span>${x.kml?fmt(x.kml)+" km/L":"—"}</span></div>`).join("")||'<div class="rh-empty">Nenhum veículo cadastrado.</div>';
+  host.querySelectorAll("[data-fuel-veiculo]").forEach(row=>{const go=()=>alternarFiltroVeiculo(row.dataset.fuelVeiculo);row.onclick=go;row.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
+  const sub=$("fuelRankingSub"),v=veiculoPorId(veiculoFiltroId);if(sub)sub.textContent=v?`Filtrando abastecimentos de ${v.placa||"veículo"} · ${nomeVeiculo(v)}. Clique novamente para voltar ao geral.`:"Ranking de todos os veículos da frota no período geral selecionado. Clique em um veículo para filtrar os abastecimentos."
 }
 function renderCompras(p){
   const host=$("fuelGraficoCompras");if(!host)return;const meses=p.indices.map(i=>({mes:i+1,rotulo:new Date(2020,i,1).toLocaleDateString("pt-BR",{month:"short"}).replace(".",""),valor:0,litros:0}));
@@ -192,11 +195,11 @@ async function salvarConfiguracaoTanque(){
 function render(){
   if(!$("fuelLista"))return;const p=periodoCombustivel();
   if(aba==="auditoria"){renderAuditoria(p);return}
-  const arr=(aba==="compras"?compras:abastecimentos).filter(x=>x.empresaId===emp()&&x.status!=="estornado"&&dentroPeriodo(x,p));
+  let arr=(aba==="compras"?compras:abastecimentos).filter(x=>x.empresaId===emp()&&x.status!=="estornado"&&dentroPeriodo(x,p));if(aba==="abastecimentos"&&veiculoFiltroId)arr=arr.filter(x=>x.veiculoId===veiculoFiltroId);
   if(aba==="abastecimentos"){
     const litros=arr.reduce((s,x)=>s+num(x.quantidade),0),km=arr.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0),0);
-    $("fuelLabelA").textContent="Litros abastecidos";$("fuelLabelB").textContent="Abastecimentos";$("fuelLabelC").textContent="Média geral";$("fuelValorA").textContent=fmt(litros)+" L";$("fuelValorB").textContent=String(arr.length);$("fuelValorC").textContent=litros&&km?fmt(km/litros)+" km/L":"—";
-    $("fuelCabecalho").innerHTML='<tr><th>Data</th><th>Motorista</th><th>Veículo</th><th>KM anterior</th><th>KM atual</th><th>Litros</th><th>KM/L</th><th>Ações</th></tr>';
+    $("fuelLabelA").textContent=veiculoFiltroId?"Litros · veículo":"Litros abastecidos";$("fuelLabelB").textContent=veiculoFiltroId?"Abastecimentos · veículo":"Abastecimentos";$("fuelLabelC").textContent=veiculoFiltroId?"Média do veículo":"Média geral";$("fuelValorA").textContent=fmt(litros)+" L";$("fuelValorB").textContent=String(arr.length);$("fuelValorC").textContent=litros&&km?fmt(km/litros)+" km/L":"—";
+    const vf=veiculoPorId(veiculoFiltroId);$("fuelHistoricoTitulo").textContent=vf?`Abastecimentos · ${vf.placa||"veículo"}`:"Abastecimentos";$("fuelHistoricoSub").textContent=vf?`${nomeVeiculo(vf)} · clique novamente no veículo do gráfico para remover o filtro.`:"KM anterior automático, KM atual informado e litros abastecidos.";$("fuelCabecalho").innerHTML='<tr><th>Data</th><th>Motorista</th><th>Veículo</th><th>KM anterior</th><th>KM atual</th><th>Litros</th><th>KM/L</th><th>Ações</th></tr>';
     $("fuelLista").innerHTML=arr.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const v=veiculoPorId(x.veiculoId),dist=x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0,kml=x.quantidade&&dist?dist/num(x.quantidade):0;return`<tr><td>${dataBr(x.data)}</td><td>${esc(x.motorista||"—")}</td><td>${esc(x.placa||v?.placa||"—")}</td><td>${fmt(x.kmAnterior)} km</td><td>${fmt(x.kmAtual)} km</td><td>${fmt(x.quantidade)} L</td><td>${kml?fmt(kml):"—"}</td><td>${pode("editar")?`<button class="btn-acao destaque" data-fuel-edit="${esc(x.id)}">Editar</button>`:""}${admin()?`<button class="btn-acao perigo" data-fuel-estorno="${esc(x.id)}">Estornar ADM</button>`:""}</td></tr>`}).join("")||'<tr><td colspan="8">Nenhum abastecimento no período selecionado.</td></tr>';renderRanking(p)
   }else{
     const litros=arr.reduce((s,x)=>s+num(x.quantidade),0),total=arr.reduce((s,x)=>s+num(x.valorTotal??x.valor),0);
