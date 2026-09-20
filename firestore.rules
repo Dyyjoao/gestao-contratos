@@ -1015,10 +1015,10 @@ service cloud.firestore {
 
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
-      allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
+      allow create: if (vendasVendedores() || vendasComissoes()) && documentoAcessivel(request.resource.data) &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
-      allow update: if vendasVendedores() && documentoAcessivel(resource.data) &&
+      allow update: if (vendasVendedores() || vendasComissoes()) && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
