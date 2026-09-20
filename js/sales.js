@@ -187,8 +187,50 @@ function contextoUnico(){const emp=empresaUnicaSelecionadaId();if(!emp){alert("P
 function esconderBotoes(){$("btnSalesVenda")?.classList.toggle("hidden",!podeLancar())}
 function fecharVenda(){editVendaId="";$("formSalesVenda")?.reset();$("salesVendaBox")?.classList.add("hidden");msg($("salesVendaMsg"),"")}
 function fecharConfig(){configAtual=null;$("formSalesConfig")?.reset();$("salesConfigBox")?.classList.add("hidden");msg($("salesCfgMsg"),"")}
+function fecharItem(){editItemId="";$("formSalesItem")?.reset();$("salesItemBox")?.classList.add("hidden");msg($("salesItemMsg"),"")}
+function abrirItem(item=null){
+  if(!(podeEditar()||podeLancar()))return alert("Seu perfil não pode manter a base de itens.");
+  const emp=contextoUnico();if(!emp)return;
+  editItemId=item?.id||"";$("formSalesItem")?.reset();$("salesItemTitulo").textContent=item?"Editar item comercial":"Novo item comercial";
+  $("salesItemCodigo").value=item?.codigo||"";$("salesItemNome").value=item?.nome||"";$("salesItemCategoria").value=item?.categoria||"";$("salesItemUnidade").value=item?.unidade||"";$("salesItemStatus").value=item?.status||"ativo";
+  $("salesItemBox").classList.remove("hidden");$("salesItemBox").scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function salvarItem(e){
+  e.preventDefault();const emp=contextoUnico();if(!emp)return;
+  if(!(podeEditar()||podeLancar()))return;
+  const d={codigo:$("salesItemCodigo").value.trim(),nome:$("salesItemNome").value.trim(),categoria:$("salesItemCategoria").value.trim(),unidade:$("salesItemUnidade").value.trim().toUpperCase(),status:$("salesItemStatus").value};
+  if(!d.nome)return msg($("salesItemMsg"),"Informe a descrição do item.");
+  try{msg($("salesItemMsg"),"Salvando...");if(editItemId)await atualizarDocumento("itensComerciais",editItemId,d);else await criarDocumento("itensComerciais",{...d,empresaId:emp});fecharItem();await carregar();emitirAlteracao("vendas")}
+  catch(err){console.error(err);msg($("salesItemMsg"),"Não foi possível salvar o item.")}
+}
+function opcoesItens(valor=""){
+  const ativos=itensComerciais.filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+  return '<option value="">Selecione...</option>'+ativos.map(x=>`<option value="${esc(x.id)}" ${x.id===valor?"selected":""}>${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome||"")}</option>`).join("");
+}
+function atualizarTotalVenda(){
+  const total=[...document.querySelectorAll("#salesItensVendaLista tr")].reduce((s,tr)=>s+n(tr.querySelector("[data-item-total]")?.dataset.valor),0);
+  if($("salesValor"))$("salesValor").value=total?total.toFixed(2):"";
+}
+function recalcularLinhaItem(tr){
+  if(!tr)return;const sel=tr.querySelector("[data-item-id]"),q=tr.querySelector("[data-item-qtd]"),vu=tr.querySelector("[data-item-vu]"),total=tr.querySelector("[data-item-total]"),item=itensComerciais.find(x=>x.id===sel?.value),valor=n(q?.value)*n(vu?.value);
+  const un=tr.querySelector("[data-item-un]");if(un)un.textContent=item?.unidade||"—";if(total){total.dataset.valor=String(valor);total.textContent=moeda(valor)}atualizarTotalVenda();
+}
+function adicionarLinhaItem(dado={}){
+  const tb=$("salesItensVendaLista");if(!tb)return;
+  const tr=document.createElement("tr");tr.innerHTML=`<td><select data-item-id>${opcoesItens(dado.itemId||"")}</select></td><td><input data-item-qtd type="number" min="0.0001" step="0.0001" value="${n(dado.quantidade)||1}"></td><td data-item-un>${esc(dado.unidade||"—")}</td><td><input data-item-vu type="number" min="0" step="0.01" value="${n(dado.valorUnitario)||""}"></td><td data-item-total data-valor="${n(dado.valorTotal)}">${moeda(n(dado.valorTotal))}</td><td><button data-item-remover class="btn-acao" type="button">Remover</button></td>`;
+  tb.appendChild(tr);tr.querySelector("[data-item-id]").onchange=()=>recalcularLinhaItem(tr);tr.querySelector("[data-item-qtd]").oninput=()=>recalcularLinhaItem(tr);tr.querySelector("[data-item-vu]").oninput=()=>recalcularLinhaItem(tr);tr.querySelector("[data-item-remover]").onclick=()=>{tr.remove();atualizarTotalVenda()};recalcularLinhaItem(tr);
+}
+function itensVendaForm(){
+  return [...document.querySelectorAll("#salesItensVendaLista tr")].map(tr=>{const itemId=tr.querySelector("[data-item-id]")?.value||"",item=itensComerciais.find(x=>x.id===itemId),quantidade=n(tr.querySelector("[data-item-qtd]")?.value),valorUnitario=n(tr.querySelector("[data-item-vu]")?.value);return{itemId,codigo:item?.codigo||"",nome:item?.nome||"",categoria:item?.categoria||"",unidade:item?.unidade||"",quantidade,valorUnitario,valorTotal:quantidade*valorUnitario}}).filter(x=>x.itemId&&x.quantidade>0);
+}
+function renderItensCadastro(){
+  const tb=$("salesItensCadastroLista");if(!tb)return;const termo=String($("salesBuscaItem")?.value||"").trim().toLocaleLowerCase("pt-BR"),arr=itensComerciais.filter(x=>[x.codigo,x.nome,x.categoria].some(v=>String(v||"").toLocaleLowerCase("pt-BR").includes(termo))).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+  tb.innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.codigo||"—")}</td><td><strong>${esc(x.nome||"—")}</strong></td><td>${esc(x.categoria||"—")}</td><td>${esc(x.unidade||"—")}</td><td>${x.status==="inativo"?'<span class="status-inativo">Inativo</span>':'<span class="status-ativo">Ativo</span>'}</td><td>${(podeEditar()||podeLancar())?`<button class="btn-acao" data-sales-item-edit="${x.id}" type="button">Editar</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="6">Nenhum item comercial cadastrado.</td></tr>';
+  document.querySelectorAll("[data-sales-item-edit]").forEach(b=>b.onclick=()=>abrirItem(itensComerciais.find(x=>x.id===b.dataset.salesItemEdit)));
+}
 
 function abrirConfig(p,tipo){
+  if(tipo==="supervisor")return alert("A comissão da supervisão está congelada por enquanto.");
   if(!podeConfig())return alert("Seu perfil não pode alterar metas e comissões.");
   const emp=contextoUnico();if(!emp||p.empresaId!==emp)return;
   const cfg=pessoaCfg(p,tipo);
@@ -227,30 +269,33 @@ function abrirVenda(v=null){
   if(!(v?podeEditar():podeLancar()))return alert("Seu perfil não possui permissão para esta ação.");
   const emp=contextoUnico();if(!emp)return;
   editVendaId=v?.id||"";$("formSalesVenda")?.reset();$("salesVendaTitulo").textContent=v?"Editar venda":"Nova venda";$("salesEmpresa").value=nomeEmpresa(emp);
-  $("salesData").value=v?.data||hoje();$("salesVendedor").value=v?.vendedorId||"";$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";$("salesDescricao").value=v?.descricao||"";
-  $("salesValor").value=n(v?.valor)||"";$("salesDataRec").value=dataRecebimento(v)||"";$("salesValorRec").value=recebido(v)||"";$("salesPct").value=v?n(v.comissaoPct):"";
+  $("salesData").value=v?.data||hoje();$("salesVendedor").value=v?.vendedorId||"";$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";
+  $("salesDataRec").value=dataRecebimento(v)||"";$("salesValorRec").value=recebido(v)||"";$("salesPct").value=v?n(v.comissaoPct):"";
   $("salesStatus").value=v?.status||"confirmada";$("salesComStatus").value=comStatus(v);$("salesObs").value=v?.observacao||"";
+  const tb=$("salesItensVendaLista");if(tb)tb.innerHTML="";
+  const itens=Array.isArray(v?.itens)&&v.itens.length?v.itens:[];
+  if(itens.length)itens.forEach(adicionarLinhaItem);else adicionarLinhaItem();
+  if(v&&!itens.length){const match=itensComerciais.find(x=>String(x.nome||"").trim().toLocaleLowerCase("pt-BR")===String(v.descricao||"").trim().toLocaleLowerCase("pt-BR"));const tr=$("salesItensVendaLista")?.lastElementChild;if(match&&tr){tr.querySelector("[data-item-id]").value=match.id;tr.querySelector("[data-item-qtd]").value=1;tr.querySelector("[data-item-vu]").value=n(v.valor);recalcularLinhaItem(tr)}}
   if(!v)aplicarRegraVendedor();calcularComissao();$("salesComStatus").disabled=!podeComissoes();$("salesVendaBox").classList.remove("hidden");$("salesVendaBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function aplicarRegraVendedor(){if(editVendaId)return;const cfg=cfgVenda($("salesVendedor")?.value);$("salesPct").value=cfg?n(cfg.comissaoPct):"";calcularComissao()}
-function calcularComissao(){const valor= n($("salesValorRec")?.value),pct=n($("salesPct")?.value);$("salesComissao").value=moeda(valor*pct/100);if(!editVendaId&&$("salesComStatus"))$("salesComStatus").value=valor>0?"provisionada":"aguardando_recebimento"}
+function calcularComissao(){const valor=n($("salesValorRec")?.value),pct=n($("salesPct")?.value);$("salesComissao").value=moeda(valor*pct/100);if(!editVendaId&&$("salesComStatus"))$("salesComStatus").value=valor>0?"provisionada":"aguardando_recebimento"}
 
 async function salvarVenda(e){
   e.preventDefault();const nova=!editVendaId;if(nova&&!podeLancar())return;if(!nova&&!podeEditar())return;
   const emp=contextoUnico();if(!emp)return;const cfg=cfgVenda($("salesVendedor").value);if(!cfg)return msg($("salesVendaMsg"),"Selecione um vendedor configurado a partir do RH.");
-  const valor=n($("salesValor").value),valorRec=n($("salesValorRec").value),pct=n($("salesPct").value);
-  if(valor<=0)return msg($("salesVendaMsg"),"Informe um valor de venda maior que zero.");
+  const itens=itensVendaForm();if(!itens.length)return msg($("salesVendaMsg"),"Inclua pelo menos um item válido na venda.");
+  if(itens.some(x=>x.valorUnitario<=0))return msg($("salesVendaMsg"),"Informe o valor unitário de todos os itens.");
+  const valor=itens.reduce((s,x)=>s+n(x.valorTotal),0),valorRec=n($("salesValorRec").value),pct=n($("salesPct").value);
+  if(valor<=0)return msg($("salesVendaMsg"),"O valor total da venda deve ser maior que zero.");
   if(valorRec>valor)return msg($("salesVendaMsg"),"O valor recebido não pode superar o valor da venda.");
   if(valorRec>0&&!$("salesDataRec").value)return msg($("salesVendaMsg"),"Informe a data do recebimento.");
-  if(!$("salesDescricao").value.trim())return msg($("salesVendaMsg"),"Informe o material / item vendido.");
   let st=$("salesComStatus").value;if(valorRec<=0)st="aguardando_recebimento";else if(st==="aguardando_recebimento")st="provisionada";
   if(!podeComissoes()&&editVendaId)st=comStatus(vendas.find(x=>x.id===editVendaId));
-  const d={data:$("salesData").value,dataRecebimento:$("salesDataRec").value||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:$("salesDescricao").value.trim(),valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
-  try{
-    msg($("salesVendaMsg"),"Salvando...");
-    if(editVendaId){const at=vendas.find(x=>x.id===editVendaId);if(!at||at.empresaId!==emp)throw new Error("empresa-divergente");await atualizarDocumento("vendas",editVendaId,d)}else await criarDocumento("vendas",{...d,empresaId:emp});
-    fecharVenda();await carregar();emitirAlteracao("vendas");
-  }catch(err){console.error(err);msg($("salesVendaMsg"),"Não foi possível salvar a venda.")}
+  const resumoItens=itens.length===1?itens[0].nome:`${itens[0].nome} + ${itens.length-1} item(ns)`;
+  const d={data:$("salesData").value,dataRecebimento:$("salesDataRec").value||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:resumoItens,itens,valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
+  try{msg($("salesVendaMsg"),"Salvando...");if(editVendaId){const at=vendas.find(x=>x.id===editVendaId);if(!at||at.empresaId!==emp)throw new Error("empresa-divergente");await atualizarDocumento("vendas",editVendaId,d)}else await criarDocumento("vendas",{...d,empresaId:emp});fecharVenda();await carregar();emitirAlteracao("vendas")}
+  catch(err){console.error(err);msg($("salesVendaMsg"),"Não foi possível salvar a venda.")}
 }
 
 async function mudarComissao(id,status){if(!podeComissoes())return;const v=vendas.find(x=>x.id===id);if(!v)return;if(recebido(v)<=0)return alert("A comissão depende de recebimento. Informe o valor recebido antes de aprovar.");try{await atualizarDocumento("vendas",id,{comissaoStatus:status});await carregar();emitirAlteracao("vendas")}catch(e){console.error(e);alert("Não foi possível atualizar a comissão.")}}
@@ -283,29 +328,29 @@ function renderClientes(validas){
 }
 
 function renderAbc(validas){
-  const mapa=new Map();validas.forEach(v=>{const nome=String(v.descricao||"Sem material informado").trim()||"Sem material informado",k=nome.toLocaleLowerCase("pt-BR"),z=mapa.get(k)||{nome,valor:0};z.valor+=n(v.valor);mapa.set(k,z)});
+  const mapa=new Map();
+  validas.forEach(v=>{
+    const itens=Array.isArray(v.itens)&&v.itens.length?v.itens:[{nome:v.descricao||"Sem material informado",valorTotal:n(v.valor)}];
+    itens.forEach(item=>{const nome=String(item.nome||"Sem material informado").trim()||"Sem material informado",k=(item.itemId||nome).toLocaleLowerCase("pt-BR"),z=mapa.get(k)||{nome,valor:0};z.valor+=n(item.valorTotal);mapa.set(k,z)});
+  });
   const itens=[...mapa.values()].sort((a,b)=>b.valor-a.valor),total=itens.reduce((s,x)=>s+x.valor,0);let ac=0;
   itens.forEach(x=>{const pct=total?x.valor/total*100:0;ac+=pct;x.pct=pct;x.ac=ac;x.classe=ac<=80?"A":ac<=95?"B":"C"});
   const tb=$("salesAbcLista");if(tb)tb.innerHTML=itens.length?itens.map(x=>`<tr><td><span class="sales-abc-badge ${x.classe.toLowerCase()}">${x.classe}</span></td><td><strong>${esc(x.nome)}</strong></td><td>${moeda(x.valor)}</td><td>${x.pct.toLocaleString("pt-BR",{maximumFractionDigits:1})}%</td><td>${x.ac.toLocaleString("pt-BR",{maximumFractionDigits:1})}%</td><td><div class="sales-abc-bar"><i style="width:${Math.max(2,x.pct)}%"></i></div></td></tr>`).join(""):'<tr><td colspan="6">Sem materiais vendidos no período.</td></tr>';
-  const r=$("salesAbcResumo");if(r){const a=itens.filter(x=>x.classe==="A"),av=a.reduce((s,x)=>s+x.valor,0);r.innerHTML=`<span><strong>${itens.length}</strong> item(ns) vendido(s)</span><span>Classe A: <strong>${a.length}</strong> item(ns) · <strong>${total?av/total*100:0}%</strong> do valor</span><span>Total: <strong>${moeda(total)}</strong></span>`}
+  const r=$("salesAbcResumo");if(r){const a=itens.filter(x=>x.classe==="A"),av=a.reduce((s,x)=>s+x.valor,0);r.innerHTML=`<span><strong>${itens.length}</strong> item(ns) vendido(s)</span><span>Classe A: <strong>${a.length}</strong> item(ns) · <strong>${(total?av/total*100:0).toLocaleString("pt-BR",{maximumFractionDigits:1})}%</strong> do valor</span><span>Total: <strong>${moeda(total)}</strong></span>`}
 }
 
 function renderEquipe(){
   const tb=$("salesEquipeLista");if(!tb)return;
-  const linhas=[
-    ...equipeVendedores().map(x=>({...x,tipo:"vendedor",funcao:"Vendedor / Comercial"})),
-    ...equipeSupervisores().map(x=>({...x,tipo:"supervisor",funcao:"Supervisão comercial"}))
-  ].sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
-  tb.innerHTML=linhas.length?linhas.map(({p,cfg,tipo,funcao})=>`<tr><td><strong>${esc(p.nome||"—")}</strong><small>${esc(p.cargoNome||"")}</small></td><td>${funcao}</td><td>${tipo==="vendedor"?moeda(n(cfg?.metaMensal)):"—"}</td><td>${cfg?n(cfg.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:3})+"%":'<span class="status-inativo">Não configurada</span>'}</td><td>${tipo==="supervisor"?"Valor vendido":"Valor recebido"}</td><td>${podeConfig()?`<button class="btn-acao" data-sales-config="${p.id}" data-sales-tipo="${tipo}" type="button">Configurar</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="6">Nenhum vendedor ou supervisor ativo no RH com função SIG vinculada.</td></tr>';
-  document.querySelectorAll("[data-sales-config]").forEach(b=>b.onclick=()=>{const tipo=b.dataset.salesTipo,arr=tipo==="supervisor"?supervisoresRh:vendedoresRh,p=arr.find(x=>x.id===b.dataset.salesConfig);if(p)abrirConfig(p,tipo)});
+  const linhas=[...equipeVendedores().map(x=>({...x,tipo:"vendedor",funcao:"Vendedor / Comercial"})),...equipeSupervisores().map(x=>({...x,tipo:"supervisor",funcao:"Supervisão comercial"}))].sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
+  tb.innerHTML=linhas.length?linhas.map(({p,cfg,tipo,funcao})=>`<tr><td><strong>${esc(p.nome||"—")}</strong><small>${esc(p.cargoNome||"")}</small></td><td>${funcao}</td><td>${tipo==="vendedor"?moeda(n(cfg?.metaMensal)):"—"}</td><td>${tipo==="supervisor"?'<span class="sales-frozen">Congelada</span>':(cfg?n(cfg.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:3})+"%":'<span class="status-inativo">Não configurada</span>')}</td><td>${tipo==="supervisor"?"Regra suspensa":"Valor recebido"}</td><td>${tipo==="vendedor"&&podeConfig()?`<button class="btn-acao" data-sales-config="${p.id}" data-sales-tipo="vendedor" type="button">Configurar</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="6">Nenhum vendedor ou supervisor ativo no RH com função SIG vinculada.</td></tr>';
+  document.querySelectorAll("[data-sales-config]").forEach(b=>b.onclick=()=>{const p=vendedoresRh.find(x=>x.id===b.dataset.salesConfig);if(p)abrirConfig(p,"vendedor")});
 }
 
 function render(){
   if(!pagina())return;
   const ano=periodoAno(),idx=indices(),per=periodoVendas(),valid=per.filter(valida),recPer=periodoRecebimentos(),eq=equipeVendedores(),ativos=eq.filter(x=>x.cfg&&x.cfg.status!=="inativo");
   const total=valid.reduce((s,v)=>s+n(v.valor),0),rec=recPer.reduce((s,v)=>s+recebido(v),0),aberto=Math.max(0,valid.reduce((s,v)=>s+Math.max(0,n(v.valor)-recebido(v)),0)),meta=ativos.reduce((s,x)=>s+n(x.cfg.metaMensal)*idx.length,0),com=recPer.reduce((s,v)=>s+n(v.comissaoValor),0),q=valid.length;
-  const sup=equipeSupervisores().filter(x=>x.cfg&&x.cfg.status!=="inativo"),supCom=sup.reduce((s,x)=>s+total*n(x.cfg.comissaoPct)/100,0);
-  setText("salesKpiVendas",moeda(total));setText("salesKpiQtd",`${q} venda(s) válida(s)`);setText("salesKpiRecebido",moeda(rec));setText("salesKpiRecQtd",`${recPer.length} recebimento(s)`);setText("salesKpiAberto",moeda(aberto));setText("salesKpiMeta",moeda(meta));setText("salesKpiAting",meta?`${(total/meta*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:"—");setText("salesKpiAtingSub",meta?(total>=meta?"Meta atingida":"Abaixo da meta"):"Meta não configurada");setText("salesKpiTicket",moeda(q?total/q:0));setText("salesKpiComissao",moeda(com));setText("salesKpiSupervisor",moeda(supCom));setText("salesContexto",`${empresasSelecionadasIds().length>1?"Empresas consolidadas":"Empresa selecionada"} · ${ano}`);
+  setText("salesKpiVendas",moeda(total));setText("salesKpiQtd",`${q} venda(s) válida(s)`);setText("salesKpiRecebido",moeda(rec));setText("salesKpiRecQtd",`${recPer.length} recebimento(s)`);setText("salesKpiAberto",moeda(aberto));setText("salesKpiMeta",moeda(meta));setText("salesKpiAting",meta?`${(total/meta*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:"—");setText("salesKpiAtingSub",meta?(total>=meta?"Meta atingida":"Abaixo da meta"):"Meta não configurada");setText("salesKpiTicket",moeda(q?total/q:0));setText("salesKpiComissao",moeda(com));setText("salesKpiSupervisor","Congelada");setText("salesContexto",`${empresasSelecionadasIds().length>1?"Empresas consolidadas":"Empresa selecionada"} · ${ano}`);
 
   const vals=Array(12).fill(0),recs=Array(12).fill(0);vendas.filter(v=>valida(v)&&anoData(v.data)===ano).forEach(v=>{const m=mesData(v.data);if(m>=0)vals[m]+=n(v.valor)});vendas.filter(v=>valida(v)&&dataRecebimento(v)&&anoData(dataRecebimento(v))===ano).forEach(v=>{const m=mesData(dataRecebimento(v));if(m>=0)recs[m]+=recebido(v)});
   const metaMes=Array(12).fill(ativos.reduce((s,x)=>s+n(x.cfg.metaMensal),0));chart(vals,recs,metaMes);
@@ -313,19 +358,19 @@ function render(){
   const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*idx.length;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0)}}).sort((a,b)=>b.tot-a.tot);
   const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span><strong>${esc(r.p.nome)}</strong><small>Vendido ${moeda(r.tot)} · recebido ${moeda(r.rec)}</small></span><span>${r.meta?r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—"}</span><strong>${moeda(r.com)}</strong></div>`).join(""):'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
 
-  renderClientes(valid);renderAbc(valid);renderEquipe();
+  renderClientes(valid);renderAbc(valid);renderEquipe();renderItensCadastro();
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
-  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong><small>${dataRecebimento(v)?`Rec. ${formatData(dataRecebimento(v))}`:"Sem recebimento"}</small></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>${esc(v.descricao||v.documento||"")}</small></td><td>${moeda(v.valor)}</td><td>${recebido(v)>0?moeda(recebido(v)):"—"}</td><td>${v.status==="cancelada"?"—":moeda(v.comissaoValor)}<small>${n(v.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:2})}% sobre recebido</small></td><td><span class="sales-status ${esc(comStatus(v))}">${statusComLabel(comStatus(v))}</span><small>${v.status==="cancelada"?"Venda cancelada":"Venda confirmada"}</small></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&!["aprovada","paga","aguardando_recebimento","aguardando_faturamento"].includes(v.comissaoStatus)?`<button class="btn-acao destaque" data-sales-aprova="${v.id}" type="button">Aprovar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&v.comissaoStatus==="aprovada"?`<button class="btn-acao destaque" data-sales-paga="${v.id}" type="button">Pagar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="8">Nenhuma venda no período.</td></tr>';
+  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong><small>${dataRecebimento(v)?`Rec. ${formatData(dataRecebimento(v))}`:"Sem recebimento"}</small></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>${esc(Array.isArray(v.itens)&&v.itens.length?`${v.itens[0].nome}${v.itens.length>1?` + ${v.itens.length-1} item(ns)`:""}`:(v.descricao||v.documento||""))}</small></td><td>${moeda(v.valor)}</td><td>${recebido(v)>0?moeda(recebido(v)):"—"}</td><td>${v.status==="cancelada"?"—":moeda(v.comissaoValor)}<small>${n(v.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:2})}% sobre recebido</small></td><td><span class="sales-status ${esc(comStatus(v))}">${statusComLabel(comStatus(v))}</span><small>${v.status==="cancelada"?"Venda cancelada":"Venda confirmada"}</small></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&!["aprovada","paga","aguardando_recebimento","aguardando_faturamento"].includes(v.comissaoStatus)?`<button class="btn-acao destaque" data-sales-aprova="${v.id}" type="button">Aprovar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&v.comissaoStatus==="aprovada"?`<button class="btn-acao destaque" data-sales-paga="${v.id}" type="button">Pagar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="8">Nenhuma venda no período.</td></tr>';
   document.querySelectorAll("[data-sales-edit]").forEach(b=>b.onclick=()=>abrirVenda(vendas.find(v=>v.id===b.dataset.salesEdit)));document.querySelectorAll("[data-sales-aprova]").forEach(b=>b.onclick=()=>mudarComissao(b.dataset.salesAprova,"aprovada"));document.querySelectorAll("[data-sales-paga]").forEach(b=>b.onclick=()=>mudarComissao(b.dataset.salesPaga,"paga"));document.querySelectorAll("[data-sales-cancela]").forEach(b=>b.onclick=()=>cancelarVenda(b.dataset.salesCancela));
 }
 
 async function carregar(){
   if(busy||!podeVer())return;busy=true;
   try{
-    const [vr,sr,cfg,vs]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),colaboradoresPorFuncao("SUPERVISOR_VENDAS"),listarDocumentos("vendedores"),listarDocumentos("vendas")]);
-    vendedoresRh=vr;supervisoresRh=sr;configs=cfg;vendas=vs;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
+    const [vr,sr,cfg,vs,itens]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),colaboradoresPorFuncao("SUPERVISOR_VENDAS"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("itensComerciais")]);
+    vendedoresRh=vr;supervisoresRh=sr;configs=cfg;vendas=vs;itensComerciais=itens;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
   }catch(e){console.error("Vendas:",e);const a=$("salesAviso");if(a){a.textContent="Não foi possível carregar Vendas & Comissões. Verifique permissões, RH e Firestore Rules.";a.classList.remove("hidden")}}finally{busy=false}
 }
 
