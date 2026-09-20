@@ -96,7 +96,17 @@ service cloud.firestore {
       return exists(vendedorRef(dados.vendedorId)) &&
         get(vendedorRef(dados.vendedorId)).data.grupoId == dados.grupoId &&
         get(vendedorRef(dados.vendedorId)).data.empresaId == dados.empresaId &&
-        get(vendedorRef(dados.vendedorId)).data.status != 'inativo';
+        get(vendedorRef(dados.vendedorId)).data.status != 'inativo' &&
+        (!('tipoComissao' in get(vendedorRef(dados.vendedorId)).data) ||
+          get(vendedorRef(dados.vendedorId)).data.tipoComissao == 'vendedor');
+    }
+    function valorRecebidoVenda(dados) {
+      return 'valorRecebido' in dados ? dados.valorRecebido :
+        ('valorFaturado' in dados ? dados.valorFaturado : 0);
+    }
+    function dataRecebimentoVenda(dados) {
+      return 'dataRecebimento' in dados ? dados.dataRecebimento :
+        ('dataFaturamento' in dados ? dados.dataFaturamento : '');
     }
     function regraComissaoPadraoValida(dados) {
       return vendedorValidoParaVenda(dados) &&
@@ -104,14 +114,24 @@ service cloud.firestore {
         dados.comissaoPct == get(vendedorRef(dados.vendedorId)).data.comissaoPct;
     }
     function calculoComissaoValido(dados) {
-      return dados.valor > 0 && dados.valorFaturado >= 0 && dados.valorFaturado <= dados.valor &&
+      return dados.valor > 0 &&
+        valorRecebidoVenda(dados) >= 0 && valorRecebidoVenda(dados) <= dados.valor &&
+        dados.baseComissao in ['recebido','faturamento','venda'] &&
         dados.comissaoPct >= 0 && dados.comissaoPct <= 100 &&
-        dados.comissaoBaseValor == (dados.baseComissao == 'faturamento' ? dados.valorFaturado : dados.valor) &&
+        dados.comissaoBaseValor == (
+          dados.baseComissao in ['recebido','faturamento'] ? valorRecebidoVenda(dados) : dados.valor
+        ) &&
         dados.comissaoValor == dados.comissaoBaseValor * dados.comissaoPct / 100;
     }
     function statusComissaoInicialValido(dados) {
-      return (dados.baseComissao == 'faturamento' && dados.valorFaturado <= 0 && dados.comissaoStatus == 'aguardando_faturamento') ||
-        ((dados.baseComissao != 'faturamento' || dados.valorFaturado > 0) && dados.comissaoStatus == 'provisionada');
+      return (
+        dados.baseComissao in ['recebido','faturamento'] &&
+        valorRecebidoVenda(dados) <= 0 &&
+        dados.comissaoStatus in ['aguardando_recebimento','aguardando_faturamento']
+      ) || (
+        (dados.baseComissao == 'venda' || valorRecebidoVenda(dados) > 0) &&
+        dados.comissaoStatus == 'provisionada'
+      );
     }
     function vendaOperacionalValida(novo, antigo) {
       return calculoComissaoValido(novo) && (
@@ -123,8 +143,8 @@ service cloud.firestore {
           novo.comissaoStatus == antigo.comissaoStatus &&
           ((antigo.comissaoStatus != 'aprovada' && antigo.comissaoStatus != 'paga') || (
             novo.valor == antigo.valor &&
-            novo.valorFaturado == antigo.valorFaturado &&
-            novo.dataFaturamento == antigo.dataFaturamento
+            valorRecebidoVenda(novo) == valorRecebidoVenda(antigo) &&
+            dataRecebimentoVenda(novo) == dataRecebimentoVenda(antigo)
           ))
         )
       );
@@ -996,12 +1016,12 @@ service cloud.firestore {
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasVendedores() && documentoAcessivel(request.resource.data) &&
-        request.resource.data.baseComissao in ['venda','faturamento'] &&
+        request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
       allow update: if vendasVendedores() && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
-        request.resource.data.baseComissao in ['venda','faturamento'] &&
+        request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
       allow delete: if false;
     }
