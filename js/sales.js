@@ -12,7 +12,6 @@ const pagina=()=>$("pagina-vendas");
 const podeVer=()=>admin()||["visualizar","lancar","editar","vendedores","comissoes"].some(a=>permite("vendas",a));
 const podeLancar=()=>admin()||permite("vendas","lancar");
 const podeEditar=()=>admin()||permite("vendas","editar");
-const podeEditar=()=>admin()||permite("vendas","editar");
 const podeConfig=()=>admin()||permite("vendas","vendedores")||permite("vendas","comissoes");
 const podeComissoes=()=>admin()||permite("vendas","comissoes");
 const indices=()=>PERIODOS[periodoChave()]||PERIODOS.total;
@@ -107,6 +106,27 @@ function montar(){
     <section class="lista-card"><div class="lista-cabecalho"><div><h3>Ranking comercial</h3><p>Venda, recebimento, meta e comissão por vendedor.</p></div></div><div id="salesRanking" class="sales-ranking"></div></section>
   </div>
 
+  <section class="lista-card sales-clientes">
+    <div class="lista-cabecalho sales-clientes-head">
+      <div><h3>Principais clientes</h3><p>Ranking por valor financeiro no período selecionado.</p></div>
+      <div class="sales-clientes-filtros">
+        <select id="salesClientesMetrica">
+          <option value="vendido">Valor vendido</option>
+          <option value="recebido">Valor recebido</option>
+        </select>
+        <select id="salesClientesOrdem">
+          <option value="maior">Maior para menor</option>
+          <option value="menor">Menor para maior</option>
+          <option value="az">Nome A → Z</option>
+          <option value="za">Nome Z → A</option>
+        </select>
+      </div>
+    </div>
+    <div id="salesClientesResumo" class="sales-clientes-resumo"></div>
+    <div id="salesClientesGrafico" class="sales-clientes-grafico"></div>
+    <div class="tabela-container"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendido</th><th>Recebido</th><th>A receber</th><th>% da métrica</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
+  </section>
+
   <section class="lista-card sales-abc">
     <div class="lista-cabecalho"><div><h3>Curva ABC · materiais vendidos</h3><p>Classificação por valor vendido, não por quantidade.</p></div></div>
     <div id="salesAbcResumo" class="sales-abc-resumo"></div>
@@ -135,6 +155,8 @@ function montar(){
   $("salesFiltroVendedor")?.addEventListener("change",render);
   $("salesFiltroStatus")?.addEventListener("change",render);
   $("salesModoGrafico")?.addEventListener("change",render);
+  $("salesClientesMetrica")?.addEventListener("change",render);
+  $("salesClientesOrdem")?.addEventListener("change",render);
 }
 
 function contextoUnico(){const emp=empresaUnicaSelecionadaId();if(!emp){alert("Para cadastrar ou editar, selecione uma única empresa no cabeçalho.");return""}return emp}
@@ -218,6 +240,24 @@ function chart(vendidos,recebidos,metas){
   el.innerHTML=`<div class="sales-legend"><span><i></i>${legA}</span><span class="rec"><i></i>${legB}</span><span class="meta"><i></i>${legC}</span></div><svg viewBox="0 0 ${w} ${h}"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" class="sales-axis-line"/><polyline class="sales-line" points="${path(a)}"/><polyline class="sales-line rec" points="${path(b)}"/><polyline class="sales-line meta" points="${path(c)}"/>${MESES.map((m,i)=>`<text x="${x(i)}" y="${h-8}" text-anchor="middle">${m}</text>`).join("")}${a.map((v,i)=>v>0?`<text class="sales-value-label" x="${x(i)}" y="${Math.max(10,y(v)-8)}" text-anchor="middle">${fmt(v)}</text>`:"").join("")}</svg>`;
 }
 
+function renderClientes(validas){
+  const metrica=$("salesClientesMetrica")?.value||"vendido",ordem=$("salesClientesOrdem")?.value||"maior",mapa=new Map();
+  validas.forEach(v=>{
+    const nome=String(v.cliente||"Cliente não informado").trim()||"Cliente não informado";
+    const chave=nome.toLocaleLowerCase("pt-BR"),z=mapa.get(chave)||{nome,vendido:0,recebido:0,qtd:0};
+    z.vendido+=n(v.valor);z.recebido+=recebido(v);z.qtd++;mapa.set(chave,z);
+  });
+  let itens=[...mapa.values()].map(x=>({...x,aberto:Math.max(0,x.vendido-x.recebido),valor:metrica==="recebido"?x.recebido:x.vendido}));
+  if(ordem==="maior")itens.sort((a,b)=>b.valor-a.valor||a.nome.localeCompare(b.nome,"pt-BR"));
+  else if(ordem==="menor")itens.sort((a,b)=>a.valor-b.valor||a.nome.localeCompare(b.nome,"pt-BR"));
+  else if(ordem==="az")itens.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  else itens.sort((a,b)=>b.nome.localeCompare(a.nome,"pt-BR"));
+  const total=itens.reduce((s,x)=>s+x.valor,0),max=Math.max(1,...itens.map(x=>x.valor)),top=itens.slice(0,12);
+  const resumo=$("salesClientesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s)</span><span>Métrica: <strong>${metrica==="recebido"?"Valor recebido":"Valor vendido"}</strong></span><span>Total: <strong>${moeda(total)}</strong></span>`;
+  const graf=$("salesClientesGrafico");if(graf)graf.innerHTML=top.length?top.map((x,i)=>`<div class="sales-cliente-bar"><span class="sales-cliente-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(2,x.valor/max*100)}%"></b></i><em>${moeda(x.valor)}</em><small>${total?(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem clientes no período.</div>';
+  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr><td>${i+1}</td><td><strong>${esc(x.nome)}</strong><small>${x.qtd} venda(s)</small></td><td>${moeda(x.vendido)}</td><td>${moeda(x.recebido)}</td><td>${moeda(x.aberto)}</td><td>${total?(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="6">Sem clientes no período.</td></tr>';
+}
+
 function renderAbc(validas){
   const mapa=new Map();validas.forEach(v=>{const nome=String(v.descricao||"Sem material informado").trim()||"Sem material informado",k=nome.toLocaleLowerCase("pt-BR"),z=mapa.get(k)||{nome,valor:0};z.valor+=n(v.valor);mapa.set(k,z)});
   const itens=[...mapa.values()].sort((a,b)=>b.valor-a.valor),total=itens.reduce((s,x)=>s+x.valor,0);let ac=0;
@@ -249,7 +289,7 @@ function render(){
   const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*idx.length;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0)}}).sort((a,b)=>b.tot-a.tot);
   const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span><strong>${esc(r.p.nome)}</strong><small>Vendido ${moeda(r.tot)} · recebido ${moeda(r.rec)}</small></span><span>${r.meta?r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—"}</span><strong>${moeda(r.com)}</strong></div>`).join(""):'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
 
-  renderAbc(valid);renderEquipe();
+  renderClientes(valid);renderAbc(valid);renderEquipe();
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
