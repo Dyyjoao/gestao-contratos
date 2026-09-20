@@ -225,31 +225,152 @@ function garantirDetalheTecnicoLocal(){
   if(!painel)return null;
   box=document.createElement("section");
   box.id="fleetDetalheTecnicoLocal";
-  box.className="fleet-card hidden";
+  box.className="fleet-card fleet-report hidden";
   const tabela=$("frotaResumoVeiculos")?.closest(".fleet-card");
   if(tabela)tabela.insertAdjacentElement("beforebegin",box);else painel.appendChild(box);
   return box;
 }
 function renderDetalheTecnicoLocal(id){
-  const v=vById(id),box=garantirDetalheTecnicoLocal();if(!v||!box)return;
-  const p=periodoAtual(),mov=abastecimentosDoVeiculo(id).filter(x=>dentroPeriodo(x.data)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  const v=vById(id),box=garantirDetalheTecnicoLocal();
+  if(!v||!box)return;
+
+  const p=periodoAtual();
+  const mov=abastecimentosDoVeiculo(id).filter(x=>dentroPeriodo(x.data)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
   const mans=manutencoes.filter(x=>x.veiculoId===id&&x.status==="concluida"&&dentroPeriodo(x.dataRealizada||x.dataPrevista)).sort((a,b)=>String(b.dataRealizada||b.dataPrevista).localeCompare(String(a.dataRealizada||a.dataPrevista)));
   const obs=obrigacoes(v).filter(x=>dentroPeriodo(x.dataPagamento||x.vencimento)).sort((a,b)=>String(b.dataPagamento||b.vencimento).localeCompare(String(a.dataPagamento||a.vencimento)));
-  const litros=mov.reduce((s,x)=>s+n(x.quantidade),0),km=mov.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,n(x.kmAtual)-n(x.kmAnterior)):0),0),consumo=litros&&km?km/litros:null;
-  const motoristas=[...new Set(mov.map(x=>String(x.motorista||"").trim()).filter(Boolean))];
-  const custo=custoVeiculoPorFiltro(id,dentroPeriodo),impostos=obs.filter(x=>["ipva","licenciamento","seguro"].includes(String(x.tipo||"").toLowerCase())),multas=obs.filter(x=>String(x.tipo||"").toLowerCase()==="multa");
-  box.innerHTML=`<div class="fleet-toolbar"><div><h3>${esc(v.placa||"—")} · ${esc(veiculoNome(v))}</h3><p>Detalhamento técnico · ${esc(p.label)} ${p.ano}</p></div><button id="btnFecharDetalheFrota" class="btn-secundario" type="button">Fechar</button></div>
-  <div class="fleet-central-tabs"><button class="ativo" data-tech-tab="ficha">Ficha do veículo</button><button data-tech-tab="motorista">Motorista no período</button><button data-tech-tab="manutencao">Manutenções</button><button data-tech-tab="combustivel">Abastecimento & consumo</button><button data-tech-tab="obrigacoes">Impostos & multas</button></div>
-  <div data-tech-panel="ficha"><div class="fleet-central-kpis"><div><span>Status</span><strong>${esc(v.status||"—")}</strong></div><div><span>KM atual</span><strong>${n(v.quilometragemAtual).toLocaleString("pt-BR")} km</strong></div><div><span>Custo do período</span><strong>${moeda(custo.total)}</strong><small>combustível + manutenção + obrigações</small></div><div><span>RENAVAM</span><strong>${esc(v.renavam||"—")}</strong></div></div><div class="fleet-tech-grid"><div><span>Marca / modelo</span><strong>${esc(veiculoNome(v))}</strong></div><div><span>Ano/modelo</span><strong>${esc(v.anoModelo||"—")}</strong></div><div><span>Motorista principal</span><strong>${esc(v.responsavel||"—")}</strong></div><div><span>Data aquisição</span><strong>${v.dataAquisicao?dataBr(v.dataAquisicao):"—"}</strong></div><div><span>Valor aquisição</span><strong>${moeda(n(v.valorAquisicao))}</strong></div><div><span>Imobilizado</span><strong>${v.imobilizadoId?"Vinculado":"Pendente"}</strong></div></div></div>
-  <div data-tech-panel="motorista" class="hidden"><div class="fleet-central-kpis"><div><span>Motoristas identificados</span><strong>${motoristas.length}</strong></div><div><span>Abastecimentos</span><strong>${mov.length}</strong></div><div><span>Litros</span><strong>${litros.toLocaleString("pt-BR",{maximumFractionDigits:2})} L</strong></div><div><span>KM rodados</span><strong>${km.toLocaleString("pt-BR")} km</strong></div></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Motorista</th><th>Abastecimentos</th><th>Litros</th><th>KM</th></tr></thead><tbody>${motoristas.map(nome=>{const a=mov.filter(x=>String(x.motorista||"").trim()===nome),l=a.reduce((s,x)=>s+n(x.quantidade),0),k=a.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,n(x.kmAtual)-n(x.kmAnterior)):0),0);return`<tr><td>${esc(nome)}</td><td>${a.length}</td><td>${l.toLocaleString("pt-BR",{maximumFractionDigits:2})} L</td><td>${k.toLocaleString("pt-BR")} km</td></tr>`}).join("")||'<tr><td colspan="4">Sem motorista identificado no período.</td></tr>'}</tbody></table></div></div>
-  <div data-tech-panel="manutencao" class="hidden"><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Tipo</th><th>Serviço</th><th>Oficina</th><th>KM</th><th>Custo</th></tr></thead><tbody>${mans.map(x=>`<tr><td>${dataBr(x.dataRealizada||x.dataPrevista)}</td><td>${esc(x.tipo||"—")}</td><td>${esc(x.descricao||"—")}</td><td>${esc(x.oficina||"—")}</td><td>${n(x.kmRealizado).toLocaleString("pt-BR")}</td><td>${moeda(n(x.custoReal))}</td></tr>`).join("")||'<tr><td colspan="6">Nenhuma manutenção concluída no período.</td></tr>'}</tbody></table></div></div>
-  <div data-tech-panel="combustivel" class="hidden"><div class="fleet-central-kpis"><div><span>Abastecido</span><strong>${litros.toLocaleString("pt-BR",{maximumFractionDigits:2})} L</strong></div><div><span>KM rodados</span><strong>${km.toLocaleString("pt-BR")} km</strong></div><div><span>Consumo médio</span><strong>${consumo?consumo.toFixed(2)+" km/l":"—"}</strong></div><div><span>Custo combustível</span><strong>${moeda(custo.combustivel)}</strong></div></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Motorista</th><th>Litros</th><th>KM anterior</th><th>KM atual</th><th>KM/L</th></tr></thead><tbody>${mov.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${esc(x.motorista||"—")}</td><td>${n(x.quantidade).toLocaleString("pt-BR",{maximumFractionDigits:2})} L</td><td>${x.kmAnterior!=null?n(x.kmAnterior).toLocaleString("pt-BR"):"—"}</td><td>${x.kmAtual!=null?n(x.kmAtual).toLocaleString("pt-BR"):"—"}</td><td>${x.kmAtual!=null&&x.kmAnterior!=null&&n(x.quantidade)>0?((n(x.kmAtual)-n(x.kmAnterior))/n(x.quantidade)).toFixed(2):"—"}</td></tr>`).join("")||'<tr><td colspan="6">Sem abastecimentos no período.</td></tr>'}</tbody></table></div></div>
-  <div data-tech-panel="obrigacoes" class="hidden"><div class="fleet-central-kpis"><div><span>Impostos/documentos</span><strong>${moeda(impostos.reduce((s,x)=>s+n(x.valor),0))}</strong></div><div><span>Multas</span><strong>${moeda(multas.reduce((s,x)=>s+n(x.valor),0))}</strong></div><div><span>Registros</span><strong>${obs.length}</strong></div></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Referência</th><th>Vencimento</th><th>Status</th><th>Órgão/condutor</th><th>Valor</th></tr></thead><tbody>${obs.map(x=>`<tr><td>${esc(tipoObrig(x.tipo))}</td><td>${esc(x.exercicio||x.auto||x.descricao||"—")}</td><td>${dataBr(x.vencimento)}</td><td>${esc(labelStatusObrig(x))}</td><td>${esc([x.orgao,x.condutor].filter(Boolean).join(" · ")||"—")}</td><td>${moeda(n(x.valor))}</td></tr>`).join("")||'<tr><td colspan="6">Sem impostos, multas ou obrigações no período.</td></tr>'}</tbody></table></div></div>`;
+
+  const litros=mov.reduce((s,x)=>s+n(x.quantidade),0);
+  const km=mov.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,n(x.kmAtual)-n(x.kmAnterior)):0),0);
+  const consumo=litros&&km?km/litros:null;
+  const custo=custoVeiculoPorFiltro(id,dentroPeriodo),custo12=custoVeiculoPorFiltro(id,dentro12m);
+  const impostos=obs.filter(x=>["ipva","licenciamento","seguro"].includes(String(x.tipo||"").toLowerCase()));
+  const multas=obs.filter(x=>String(x.tipo||"").toLowerCase()==="multa");
+  const totalImpostos=impostos.reduce((s,x)=>s+n(x.valor),0),totalMultas=multas.reduce((s,x)=>s+n(x.valor),0);
+
+  const motoristasMap=new Map();
+  mov.forEach(x=>{
+    const nome=String(x.motorista||"Não informado").trim()||"Não informado";
+    const z=motoristasMap.get(nome)||{nome,qtd:0,litros:0,km:0,primeiro:x.data,ultimo:x.data};
+    z.qtd++;z.litros+=n(x.quantidade);
+    z.km+=(x.kmAtual!=null&&x.kmAnterior!=null)?Math.max(0,n(x.kmAtual)-n(x.kmAnterior)):0;
+    if(String(x.data)<String(z.primeiro))z.primeiro=x.data;
+    if(String(x.data)>String(z.ultimo))z.ultimo=x.data;
+    motoristasMap.set(nome,z);
+  });
+  const motoristas=[...motoristasMap.values()].sort((a,b)=>b.qtd-a.qtd);
+
+  const timeline=[
+    ...mov.map(x=>({data:x.data,tipo:"Abastecimento",descricao:`${n(x.quantidade).toLocaleString("pt-BR",{maximumFractionDigits:2})} L · ${x.motorista||"motorista não informado"}`,valor:n(x.quantidade)*precoMedioDiesel(dentroPeriodo)})),
+    ...mans.map(x=>({data:x.dataRealizada||x.dataPrevista,tipo:"Manutenção",descricao:x.descricao||x.tipo||"Manutenção",valor:n(x.custoReal)})),
+    ...obs.map(x=>({data:x.dataPagamento||x.vencimento,tipo:tipoObrig(x.tipo),descricao:x.exercicio||x.auto||x.descricao||"Obrigação",valor:n(x.valor)}))
+  ].filter(x=>x.data).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+
+  box.innerHTML=`
+    <div class="fleet-report-header">
+      <div>
+        <span class="fleet-report-eyebrow">RELATÓRIO TÉCNICO DA FROTA</span>
+        <h3>${esc(v.placa||"—")} · ${esc(veiculoNome(v))}</h3>
+        <p>Período: ${esc(p.label)} ${p.ano} · Emitido em ${new Date().toLocaleString("pt-BR")}</p>
+      </div>
+      <div class="fleet-report-actions no-print">
+        <button id="btnImprimirDetalheFrota" class="btn-secundario" type="button">Imprimir relatório</button>
+        <button id="btnFecharDetalheFrota" class="btn-secundario" type="button">Fechar</button>
+      </div>
+    </div>
+
+    <section class="fleet-report-section">
+      <h4>Resumo executivo</h4>
+      <div class="fleet-report-kpis">
+        <div><span>Custo do período</span><strong>${moeda(custo.total)}</strong><small>combustível + manutenção + obrigações</small></div>
+        <div><span>Custo 12 meses</span><strong>${moeda(custo12.total)}</strong><small>visão acumulada</small></div>
+        <div><span>Litros abastecidos</span><strong>${litros.toLocaleString("pt-BR",{maximumFractionDigits:2})} L</strong><small>${mov.length} lançamento(s)</small></div>
+        <div><span>KM rodados</span><strong>${km.toLocaleString("pt-BR")} km</strong><small>apurado pelos abastecimentos</small></div>
+        <div><span>Consumo médio</span><strong>${consumo?consumo.toFixed(2)+" km/l":"—"}</strong><small>KM ÷ litros</small></div>
+        <div><span>Impostos + multas</span><strong>${moeda(totalImpostos+totalMultas)}</strong><small>${obs.length} obrigação(ões)</small></div>
+      </div>
+    </section>
+
+    <section class="fleet-report-section">
+      <h4>Ficha do veículo</h4>
+      <div class="fleet-tech-grid">
+        <div><span>Placa</span><strong>${esc(v.placa||"—")}</strong></div>
+        <div><span>Marca / modelo</span><strong>${esc(veiculoNome(v))}</strong></div>
+        <div><span>Status</span><strong>${esc(v.status||"—")}</strong></div>
+        <div><span>RENAVAM</span><strong>${esc(v.renavam||"—")}</strong></div>
+        <div><span>Ano/modelo</span><strong>${esc(v.anoModelo||"—")}</strong></div>
+        <div><span>KM atual</span><strong>${n(v.quilometragemAtual).toLocaleString("pt-BR")} km</strong></div>
+        <div><span>KM inicial</span><strong>${n(v.quilometragemInicial??v.quilometragemAtual).toLocaleString("pt-BR")} km</strong></div>
+        <div><span>Motorista principal</span><strong>${esc(v.responsavel||"—")}</strong></div>
+        <div><span>Data de aquisição</span><strong>${v.dataAquisicao?dataBr(v.dataAquisicao):"—"}</strong></div>
+        <div><span>Valor de aquisição</span><strong>${moeda(n(v.valorAquisicao))}</strong></div>
+        <div><span>Imobilizado</span><strong>${v.imobilizadoId?"Vinculado":"Pendente"}</strong></div>
+        <div><span>Observações</span><strong>${esc(v.observacoes||"—")}</strong></div>
+      </div>
+    </section>
+
+    <section class="fleet-report-section">
+      <h4>Motoristas no período</h4>
+      <div class="tabela-container">
+        <table class="tabela fleet-report-table"><thead><tr><th>Motorista</th><th>Primeiro registro</th><th>Último registro</th><th>Abastecimentos</th><th>Litros</th><th>KM</th></tr></thead>
+        <tbody>${motoristas.map(x=>`<tr><td>${esc(x.nome)}</td><td>${dataBr(x.primeiro)}</td><td>${dataBr(x.ultimo)}</td><td>${x.qtd}</td><td>${x.litros.toLocaleString("pt-BR",{maximumFractionDigits:2})} L</td><td>${x.km.toLocaleString("pt-BR")} km</td></tr>`).join("")||'<tr><td colspan="6">Sem motorista identificado no período.</td></tr>'}</tbody></table>
+      </div>
+    </section>
+
+    <section class="fleet-report-section">
+      <h4>Abastecimento consolidado do período</h4>
+      <div class="fleet-report-kpis compact">
+        <div><span>Abastecimentos</span><strong>${mov.length}</strong></div>
+        <div><span>Litros</span><strong>${litros.toLocaleString("pt-BR",{maximumFractionDigits:2})} L</strong></div>
+        <div><span>KM rodados</span><strong>${km.toLocaleString("pt-BR")} km</strong></div>
+        <div><span>Consumo médio</span><strong>${consumo?consumo.toFixed(2)+" km/l":"—"}</strong></div>
+        <div><span>Custo combustível</span><strong>${moeda(custo.combustivel)}</strong></div>
+      </div>
+      <div class="tabela-container">
+        <table class="tabela fleet-report-table"><thead><tr><th>Data</th><th>Motorista</th><th>Litros</th><th>KM anterior</th><th>KM atual</th><th>KM rodado</th><th>KM/L</th></tr></thead>
+        <tbody>${mov.map(x=>{const kr=x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,n(x.kmAtual)-n(x.kmAnterior)):0,kml=n(x.quantidade)>0&&kr>0?kr/n(x.quantidade):null;return`<tr><td>${dataBr(x.data)}</td><td>${esc(x.motorista||"—")}</td><td>${n(x.quantidade).toLocaleString("pt-BR",{maximumFractionDigits:2})} L</td><td>${x.kmAnterior!=null?n(x.kmAnterior).toLocaleString("pt-BR"):"—"}</td><td>${x.kmAtual!=null?n(x.kmAtual).toLocaleString("pt-BR"):"—"}</td><td>${kr?kr.toLocaleString("pt-BR")+" km":"—"}</td><td>${kml?kml.toFixed(2):"—"}</td></tr>`}).join("")||'<tr><td colspan="7">Sem abastecimentos no período.</td></tr>'}</tbody></table>
+      </div>
+    </section>
+
+    <section class="fleet-report-section">
+      <h4>Manutenções realizadas</h4>
+      <div class="fleet-report-kpis compact">
+        <div><span>Realizadas</span><strong>${mans.length}</strong></div>
+        <div><span>Custo de manutenção</span><strong>${moeda(custo.manutencao)}</strong></div>
+      </div>
+      <div class="tabela-container">
+        <table class="tabela fleet-report-table"><thead><tr><th>Data</th><th>Tipo</th><th>Serviço</th><th>Oficina</th><th>KM</th><th>Custo</th><th>Próxima revisão</th></tr></thead>
+        <tbody>${mans.map(x=>`<tr><td>${dataBr(x.dataRealizada||x.dataPrevista)}</td><td>${esc(x.tipo||"—")}</td><td>${esc(x.descricao||"—")}</td><td>${esc(x.oficina||"—")}</td><td>${n(x.kmRealizado).toLocaleString("pt-BR")}</td><td>${moeda(n(x.custoReal))}</td><td>${x.proximaData?dataBr(x.proximaData):x.proximoKm?n(x.proximoKm).toLocaleString("pt-BR")+" km":"—"}</td></tr>`).join("")||'<tr><td colspan="7">Sem manutenções concluídas no período.</td></tr>'}</tbody></table>
+      </div>
+    </section>
+
+    <section class="fleet-report-section">
+      <h4>Impostos, multas e demais obrigações</h4>
+      <div class="fleet-report-kpis compact">
+        <div><span>Impostos / documentos</span><strong>${moeda(totalImpostos)}</strong></div>
+        <div><span>Multas</span><strong>${moeda(totalMultas)}</strong></div>
+        <div><span>Total de obrigações</span><strong>${moeda(obs.reduce((s,x)=>s+n(x.valor),0))}</strong></div>
+      </div>
+      <div class="tabela-container">
+        <table class="tabela fleet-report-table"><thead><tr><th>Tipo</th><th>Referência</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Órgão / condutor</th><th>Valor</th></tr></thead>
+        <tbody>${obs.map(x=>`<tr><td>${esc(tipoObrig(x.tipo))}</td><td>${esc(x.exercicio||x.auto||x.descricao||"—")}</td><td>${x.vencimento?dataBr(x.vencimento):"—"}</td><td>${x.dataPagamento?dataBr(x.dataPagamento):"—"}</td><td>${esc(labelStatusObrig(x))}</td><td>${esc([x.orgao,x.condutor].filter(Boolean).join(" · ")||"—")}</td><td>${moeda(n(x.valor))}</td></tr>`).join("")||'<tr><td colspan="7">Sem impostos, multas ou obrigações no período.</td></tr>'}</tbody></table>
+      </div>
+    </section>
+
+    <section class="fleet-report-section">
+      <h4>Histórico consolidado do período</h4>
+      <div class="tabela-container">
+        <table class="tabela fleet-report-table"><thead><tr><th>Data</th><th>Evento</th><th>Descrição</th><th>Valor / custo</th></tr></thead>
+        <tbody>${timeline.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descricao)}</td><td>${moeda(x.valor)}</td></tr>`).join("")||'<tr><td colspan="4">Sem eventos no período.</td></tr>'}</tbody></table>
+      </div>
+    </section>
+  `;
+
   box.classList.remove("hidden");
   $("btnFecharDetalheFrota").onclick=()=>box.classList.add("hidden");
-  box.querySelectorAll("[data-tech-tab]").forEach(btn=>btn.onclick=()=>{box.querySelectorAll("[data-tech-tab]").forEach(x=>x.classList.toggle("ativo",x===btn));box.querySelectorAll("[data-tech-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.techPanel!==btn.dataset.techTab))});
+  $("btnImprimirDetalheFrota").onclick=()=>window.print();
   box.scrollIntoView({behavior:"smooth",block:"start"});
 }
+
 function renderResumoVeiculos(){const t=$("buscaFrotaVisao")?.value||"",arr=veiculos.filter(v=>matchVeiculo(v,t)),pctx=periodoAtual();$("frotaResumoVeiculos").innerHTML=arr.length?arr.map(v=>{const p=proxEvento(v),ab=manutencoes.filter(m=>m.veiculoId===v.id&&!["concluida","cancelada"].includes(m.status)),mv=ab.some(m=>manutVencida(m));return`<tr data-veiculo-id="${esc(v.id)}"><td><span class="fleet-vehicle-title">${esc(v.placa||"—")} · ${esc(veiculoNome(v))}</span><span class="fleet-vehicle-sub">${esc(v.renavam||"RENAVAM não informado")} · ${esc(nomeEmpresa(v.empresaId))}</span></td><td><span class="fleet-badge ${v.status==="ativo"?"ok":v.status==="manutencao"?"warn":""}">${esc(v.status||"—")}</span></td><td>${n(v.quilometragemAtual).toLocaleString("pt-BR")} km</td><td>${p?`${dataBr(p.data)}<br><small>${esc(p.texto)}</small>`:"—"}</td><td><span class="fleet-badge ${mv?"bad":ab.length?"warn":"ok"}">${mv?"Vencida":ab.length?`${ab.length} aberta(s)`:"Em dia"}</span></td><td><strong>${moeda(custo12Veiculo(v.id))}</strong></td><td><strong>${moeda(custoPeriodoVeiculo(v.id))}</strong><br><small>${esc(pctx.label)} ${pctx.ano}</small></td><td>${v.imobilizadoId?'<span class="fleet-badge ok">Vinculado</span>':'<span class="fleet-badge warn">Pendente</span>'}</td></tr>`}).join(""):'<tr><td colspan="8" class="fleet-empty">Nenhum veículo encontrado.</td></tr>';$("frotaResumoVeiculos")?.querySelectorAll("tr[data-veiculo-id]").forEach(tr=>{tr.style.cursor="pointer";tr.tabIndex=0;tr.setAttribute("role","button");const abrir=()=>renderDetalheTecnicoLocal(tr.dataset.veiculoId);tr.onclick=e=>{if(!e.target.closest("button,a,input,select"))abrir()};tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();abrir()}}});window.dispatchEvent(new CustomEvent("sig:fleet-summary-rendered"))}
 function contaNome(id){const c=plano.find(x=>x.id===id);return c?`${c.codigo||""} · ${c.nome||""}`:"—"}
 function renderVeiculos(){const t=$("buscaVeiculos")?.value||"",arr=veiculos.filter(v=>matchVeiculo(v,t));$("frotaQtdVeiculos").textContent=`${arr.length} veículo(s)`;$("listaVeiculos").innerHTML=arr.length?arr.map(v=>`<tr><td><span class="fleet-vehicle-title">${esc(v.placa||"—")} · ${esc(veiculoNome(v))}</span><span class="fleet-vehicle-sub">RENAVAM ${esc(v.renavam||"—")}</span></td><td>${esc(nomeEmpresa(v.empresaId))}</td><td><span class="fleet-badge ${v.status==="ativo"?"ok":v.status==="manutencao"?"warn":""}">${esc(v.status||"—")}</span></td><td>${n(v.quilometragemAtual).toLocaleString("pt-BR")} km</td><td>${v.contaAtivoId?esc(contaNome(v.contaAtivoId)):'<span class="fleet-account-pending">Pendente</span>'}</td><td>${v.ultimaConsultaOficialEm?dataBr(v.ultimaConsultaOficialEm):"—"}</td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao destaque" data-fe="${v.id}" type="button">Editar</button>`:""}${podeObrig()?`<button class="btn-acao" data-fo="${v.id}" type="button">Obrigação</button>`:""}${podeManut()?`<button class="btn-acao" data-fm="${v.id}" type="button">Manutenção</button>`:""}<button class="btn-acao" data-fc="${v.id}" type="button">Consulta hoje</button></div></td></tr>`).join(""):'<tr><td colspan="7" class="fleet-empty">Nenhum veículo cadastrado.</td></tr>';document.querySelectorAll("[data-fe]").forEach(b=>b.addEventListener("click",()=>editarVeiculo(b.dataset.fe)));document.querySelectorAll("[data-fo]").forEach(b=>b.addEventListener("click",()=>novaObrigacao(b.dataset.fo)));document.querySelectorAll("[data-fm]").forEach(b=>b.addEventListener("click",()=>novaManutencao(b.dataset.fm)));document.querySelectorAll("[data-fc]").forEach(b=>b.addEventListener("click",()=>registrarConsulta(b.dataset.fc)))}
