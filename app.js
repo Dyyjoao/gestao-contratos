@@ -48,8 +48,6 @@ import "./js/dashboard-v2.js";
 import "./js/production-dashboard.js";
 import "./js/disposal-dashboard.js";
 import "./js/sales-guard.js";
-import "./js/sales-performance.js";
-import "./js/sales-pangeia-import.js";
 import "./js/fleet.js?v=12";
 import "./js/fleet-detran-es.js";
 import "./js/fleet-central.js?v=10";
