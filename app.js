@@ -24,7 +24,7 @@ import "./js/dre-view-navigation.js";
 import "./js/planning-dre-totalizers.js";
 import "./js/planning-account-coverage.js";
 import "./js/management-shell.js";
-import "./js/controllership-router.js";
+import "./js/controllership-router.js?v=3";
 import "./js/production.js";
 import "./js/disposal.js";
 import "./js/commercial-workflow.js";
