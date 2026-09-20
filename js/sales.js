@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=3";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=4";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
