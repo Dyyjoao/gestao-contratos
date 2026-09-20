@@ -12,6 +12,7 @@ const pagina=()=>$("pagina-vendas");
 const podeVer=()=>admin()||["visualizar","lancar","editar","vendedores","comissoes"].some(a=>permite("vendas",a));
 const podeLancar=()=>admin()||permite("vendas","lancar");
 const podeEditar=()=>admin()||permite("vendas","editar");
+const podeEditar=()=>admin()||permite("vendas","editar");
 const podeConfig=()=>admin()||permite("vendas","vendedores")||permite("vendas","comissoes");
 const podeComissoes=()=>admin()||permite("vendas","comissoes");
 const indices=()=>PERIODOS[periodoChave()]||PERIODOS.total;
