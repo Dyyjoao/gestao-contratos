@@ -1026,6 +1026,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /itensComerciais/{id} {
+      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data);
+      allow update: if (vendasLancar() || vendasEditar()) && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
     match /vendas/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasLancar() && documentoAcessivel(request.resource.data) &&
