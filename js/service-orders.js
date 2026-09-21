@@ -46,7 +46,7 @@ function montar(){
     <button id="osKpiExecucaoCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="em_execucao"><span>Em execução</span><strong id="osKpiExecucao">—</strong><small>Clique para filtrar · serviços iniciados</small></button>
     <button id="osKpiInicioVencidoCard" class="kpi-card os-filter-card os-alert-card" type="button" data-os-card-filter="__inicio_vencido__"><span>Início vencido</span><strong id="osKpiInicioVencido">—</strong><small>Clique para filtrar as OS atrasadas</small></button>
     <button id="osKpiConcluidasCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="concluida"><span>Concluídas</span><strong id="osKpiConcluidas">—</strong><small>Clique para filtrar · histórico concluído</small></button>
-    <button id="osKpiParadaCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="__parada__"><span>Com parada de produção</span><strong id="osKpiParada">—</strong><small>Clique para filtrar as OS com parada</small></button>
+    <button id="osKpiParadaCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="__parada__"><span>Com parada de produção</span><strong id="osKpiParada">—</strong><small>Clique para filtrar as OS com parada</small></button>\n    <button id="osKpiCanceladasCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="cancelada"><span>Canceladas</span><strong id="osKpiCanceladas">—</strong><small>Clique para filtrar · histórico cancelado</small></button>
   </div>
 
   <section class="form-card hidden" id="osFormBox">
@@ -132,7 +132,7 @@ async function salvar(e){
     }else{
       if(!pode("solicitar"))throw new Error("Sem permissão para solicitar OS.");
       if(ordens.some(x=>x.empresaId===empresaId&&String(x.numero).toUpperCase()===d.numero.toUpperCase()&&x.status!=="cancelada"))throw new Error("Já existe OS com esse número na empresa.");
-      await criarDocumento("ordensServico",{...d,equipamento:d.local,status:"aberta",dataInicio:"",dataFim:"",empresaId:empresaId,origem:"sig",solicitadoPor:state.usuario?.id||""})
+      await criarDocumento("ordensServico",{...d,equipamento:d.local,status:"aberta",dataInicio:"",dataFim:"",statusAlteradoEm:new Date().toISOString(),statusAlteradoPor:state.usuario?.id||"",empresaId:empresaId,origem:"sig",solicitadoPor:state.usuario?.id||""})
     }
     $("osFormBox").classList.add("hidden");limpar();emitirAlteracao("ordensservico");await carregar()
   }catch(err){console.error(err);msg($("osMensagem"),err.message||"Não foi possível salvar.")}
@@ -146,11 +146,11 @@ async function atualizarStatus(id,status){
   if(!pode("executar"))return;
   const x=ordens.find(v=>v.id===id);if(!x||!opcoesStatus(x).some(([s])=>s===status))return;
   const nome=STATUS[status]||status;if(!confirm(`Atualizar a OS ${x.numero} para "${nome}"?`))return;
-  const hoje=localIso(),alteracoes={status};
+  const hoje=localIso(),agora=new Date().toISOString(),alteracoes={status,statusAlteradoEm:agora,statusAlteradoPor:state.usuario?.id||""};
   if(status==="em_execucao"){alteracoes.dataInicio=x.dataInicio||hoje}
   if(status==="concluida"){alteracoes.dataInicio=x.dataInicio||hoje;alteracoes.dataFim=hoje}
-  if(status==="cancelada"){alteracoes.canceladoPor=state.usuario?.id||"";alteracoes.canceladoEm=new Date().toISOString()}
-  try{await atualizarDocumento("ordensServico",id,alteracoes);emitirAlteracao("ordensservico");await carregar()}catch(e){console.error(e);alert("Não foi possível atualizar o status da OS. Verifique as Rules publicadas no Firebase.")}
+  if(status==="cancelada"){alteracoes.canceladoPor=state.usuario?.id||"";alteracoes.canceladoEm=agora}
+  try{await atualizarDocumento("ordensServico",id,alteracoes);emitirAlteracao("ordensservico");await carregar()}catch(e){console.error("Falha ao atualizar status da OS",e);alert(`Não foi possível atualizar o status da OS (${e?.code||"erro"}). As Rules de Ordens de Serviço precisam estar publicadas na versão atual.`)}
 }
 function aplicarFiltroCard(filtro){
   const select=$("osFiltroStatus");if(!select)return;
@@ -170,7 +170,7 @@ function render(){
   $("osKpiExecucao").textContent=String(ordens.filter(x=>x.status==="em_execucao").length);
   $("osKpiInicioVencido").textContent=String(vencidas.length);
   $("osKpiConcluidas").textContent=String(ordens.filter(x=>x.status==="concluida").length);
-  $("osKpiParada").textContent=String(ordens.filter(x=>x.status!=="cancelada"&&x.paradaProducao).length);
+  $("osKpiParada").textContent=String(ordens.filter(x=>x.status!=="cancelada"&&x.paradaProducao).length);\n  $("osKpiCanceladas").textContent=String(ordens.filter(x=>x.status==="cancelada").length);
   $("osKpiInicioVencidoCard")?.classList.toggle("tem-alerta",vencidas.length>0);
   document.querySelectorAll("[data-os-card-filter]").forEach(card=>card.classList.toggle("ativo",card.dataset.osCardFilter===filtro));
 
@@ -181,7 +181,7 @@ function render(){
       <td>${dataBr(x.dataSolicitacao)}<small>${esc(x.solicitante)}</small></td>
       <td><strong>${esc(local)}</strong><small>${esc(x.descricao)}</small></td>
       <td><strong>Início ${dataBr(x.dataInicioPrevista||x.dataInicio)}</strong><small>Conclusão ${dataBr(x.dataConclusaoPrevista||x.dataFim)}</small></td>
-      <td><span class="${statusClass(x.status)}">${esc(STATUS[x.status]||x.status)}</span>${x.dataInicio?'<small>Iniciado '+dataBr(x.dataInicio)+'</small>':""}${x.dataFim?'<small>Concluído '+dataBr(x.dataFim)+'</small>':""}</td>
+      <td><span class="${statusClass(x.status)}">${esc(STATUS[x.status]||x.status)}</span>${x.dataInicio?'<small>Iniciado '+dataBr(x.dataInicio)+'</small>':""}${x.dataFim?'<small>Concluído '+dataBr(x.dataFim)+'</small>':""}${x.canceladoEm?'<small>Cancelado '+new Date(x.canceladoEm).toLocaleDateString("pt-BR")+'</small>':""}</td>
       <td>${esc(x.executante||"—")}</td>
       <td><div class="acoes-tabela os-acoes">${pode("executar")&&!["concluida","cancelada"].includes(x.status)?`<button class="btn-acao" data-os-edit="${esc(x.id)}" type="button">Editar</button>${opcoes.length?`<select data-os-status="${esc(x.id)}"><option value="">Novo status...</option>${opcoes.map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select><button class="btn-acao destaque" data-os-atualizar="${esc(x.id)}" type="button">Atualizar</button>`:""}`:"—"}</div></td>
     </tr>`
