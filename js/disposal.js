@@ -106,13 +106,14 @@ function novo(){if(!lancar())return;if(!emp())return alert("Selecione apenas uma
 function abrirEdicao(id){if(!editar())return;const x=registros.find(v=>v.id===id);if(!x||x.status!=="ativo"||x.empresaId!==emp())return alert("Selecione a empresa deste registro para editar.");editId=id;$("descarteData").value=x.data;$("descarteQuantidade").value=x.quantidade;opcoesProducao(producaoRegistro(x));opcoesResponsavel(x.responsavel);$("descarteFormTitulo").textContent="Editar perda";$("descarteFormBox").classList.remove("hidden");$("descarteFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
 function barras(id,values){const target=$(id),max=Math.max(1,...values.map(x=>x[1]));target.innerHTML=values.length?values.map(([k,v])=>`<div class="production-bar-row"><span title="${esc(k)}">${esc(k)}</span><div><i style="width:${Math.max(2,v/max*100)}%"></i></div><strong>${fmt(v)} cx</strong></div>`).join(""):'<p class="production-empty">Sem dados no filtro selecionado.</p>'}
 function graficoMesMeta(){
-  const host=$("descarteMesMeta");if(!host)return;const prod=$("descarteFiltroProducao")?.value||"",m=meta(),{ini,fim}=limitesEfetivos();
-  const dados=mesesEfetivos().map(x=>{
-    const mm=String(x.mes).padStart(2,"0"),prefix=`${x.ano}-${mm}`,docs=registros.filter(r=>r.status!=="estornado"&&String(r.data||"").startsWith(prefix)&&String(r.data||"")>=ini&&String(r.data||"")<=fim&&(!prod||producaoRegistro(r)===prod)),total=docs.reduce((s,r)=>s+num(r.quantidade),0);
-    return{label:x.label,total,qtd:docs.length}
-  }).filter(x=>x.qtd>0);
+  const host=$("descarteMesMeta");if(!host)return;const prod=$("descarteFiltroProducao")?.value||"",m=meta(),ano=Number(periodoAno());
+  const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const dados=meses.map((label,i)=>{
+    const mm=String(i+1).padStart(2,"0"),prefix=`${ano}-${mm}`,docs=registros.filter(r=>r.status!=="estornado"&&String(r.data||"").startsWith(prefix)&&(!prod||producaoRegistro(r)===prod)),total=docs.reduce((s,r)=>s+num(r.quantidade),0);
+    return{label,total,qtd:docs.length}
+  });
   const max=Math.max(1,m,...dados.map(x=>x.total));
-  host.innerHTML=dados.map(x=>`<div class="loss-month-row"><span>${esc(x.label)}</span><div class="loss-month-track"><i style="width:${Math.max(x.total?2:0,x.total/max*100)}%"></i><b style="left:${m/max*100}%" title="Meta ${fmt(m)}"></b></div><strong class="${x.total>m?"acima":""}">${fmt(x.total)} / ${fmt(m)}</strong></div>`).join("")||'<p class="production-empty">Sem lançamentos no período selecionado.</p>'
+  host.innerHTML=dados.map(x=>`<div class="loss-month-row"><span>${esc(x.label)}</span><div class="loss-month-track"><i style="width:${Math.max(x.total?2:0,x.total/max*100)}%"></i><b style="left:${m/max*100}%" title="Meta ${fmt(m)}"></b></div><strong class="${x.total>m?"acima":""}">${fmt(x.total)} / ${fmt(m)}</strong></div>`).join("")
 }
 function render(){
   const historico=lista(),ativos=historico.filter(x=>x.status!=="estornado"),total=ativos.reduce((s,x)=>s+num(x.quantidade),0),producoesAgg={},responsaveisAgg={};
