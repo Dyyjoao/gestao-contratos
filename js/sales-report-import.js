@@ -150,7 +150,7 @@ async function carregarBases(){
 function renderHistorico(){
   const tb=$("salesReportHistorico");if(!tb)return;const emp=empresaUnicaSelecionadaId();
   const arr=importacoes.filter(x=>x.empresaId===emp).sort((a,b)=>String(b.iniciadoEm||b.criadoEm||"").localeCompare(String(a.iniciadoEm||a.criadoEm||"")));
-  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="estornada"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}</td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.estornadoEm?`<small>${new Date(x.estornadoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-estorno="${esc(x.id)}">Estornar lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
+  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="estornada"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}</td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.estornadoEm?`<small>${new Date(x.estornadoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-estorno="${esc(x.id)}">Estornar lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
   document.querySelectorAll("[data-sales-import-estorno]").forEach(b=>b.onclick=()=>estornarLote(b.dataset.salesImportEstorno))
 }
 async function estornarLote(id){
@@ -221,11 +221,12 @@ async function garantirConfigs(emp,linhas){
 async function confirmar(){
   if(busy||!analise||!podeImportar())return;const emp=empresaUnicaSelecionadaId();if(!emp)return alert("Selecione uma única empresa.");
   const novas=analise.linhas.filter(r=>!duplicada(r,emp));if(!novas.length)return alert("Todas as vendas deste relatório já foram importadas.");
-  if(!confirm(`Importar ${novas.length} venda(s) para ${nomeEmpresa(emp)}?\n\nClientes inexistentes serão cadastrados automaticamente pelo código. Duplicidades serão ignoradas. A operação receberá um ID de lote rastreável.`))return;
-  busy=true;let logId="",lote="",clientesAntes=0;
+  const lojas=[...new Set(novas.map(r=>r.lojaCodigo).filter(Boolean))];
+  if(!confirm(`Importar ${novas.length} venda(s) para ${nomeEmpresa(emp)}?\n\nLoja(s) informada(s) no relatório: ${lojas.length?lojas.join(", "):"não identificada"}.\n\nClientes inexistentes serão cadastrados automaticamente pelo código. Duplicidades serão ignoradas. A operação receberá um ID de lote rastreável.`))return;
+  busy=true;let logId="",lote="";
   try{
-    lote=loteId();clientesAntes=clientes.filter(x=>x.empresaId===emp).length;
-    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",status:"processando",quantidadePrevista:novas.length,valorPrevisto:novas.reduce((s,x)=>s+n(x.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
+    lote=loteId();
+    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:novas.length,valorPrevisto:novas.reduce((s,x)=>s+n(x.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
     msg($("salesReportImportMsg"),`Lote ${lote} · validando clientes e vendedores...`);
     const clienteMap=await garantirClientes(emp,novas,lote),vendMap=await garantirConfigs(emp,novas),docs=[];
     for(const r of novas){
