@@ -120,7 +120,8 @@ function vendaPorPedido(r,emp){
   const pedido=codigo(r.vendaCodigo),loja=codigo(r.lojaCodigo),candidatas=vendas.filter(v=>v.empresaId===emp&&codigo(v.documento)===pedido);
   if(!candidatas.length)return null;
   if(loja){const porLoja=candidatas.find(v=>codigo(v.lojaOrigem)===loja);if(porLoja)return porLoja}
-  return candidatas.length===1?candidatas[0]:null
+  if(candidatas.length===1)return candidatas[0];
+  return{__ambigua:true,candidatas}
 }
 function vendaImportada(v){return !!v&&(v.origemImportacao==="relatorio_vendas"||String(v.importacaoLoteId||"").startsWith("IMP-VND-"))}
 function linhaMudou(r,v,rh,cfg,cl){
@@ -137,6 +138,7 @@ function linhaMudou(r,v,rh,cfg,cl){
 function classificarLinha(r,emp){
   const existente=vendaPorPedido(r,emp),rh=rhPorCodigo(r.vendedorCodigo),cfg=rh?cfgPorRh(rh.id):null,cl=clientePorCodigo(r.clienteCodigo,emp);
   if(!existente)return{tipo:"nova",existente,rh,cfg,cl};
+  if(existente.__ambigua)return{tipo:"conflito",motivo:"Pedido encontrado mais de uma vez na base; informe/revise a loja",existente:null,rh,cfg,cl};
   if(!vendaImportada(existente))return{tipo:"conflito",motivo:"Pedido já existe fora do importador",existente,rh,cfg,cl};
   if(["aprovada","paga"].includes(String(existente.comissaoStatus||""))&&linhaMudou(r,existente,rh,cfg,cl))return{tipo:"conflito",motivo:"Comissão já aprovada/paga",existente,rh,cfg,cl};
   if(n(existente.valorRecebido)>n(r.valor)+0.009)return{tipo:"conflito",motivo:"Recebido maior que o novo valor da venda",existente,rh,cfg,cl};
@@ -146,7 +148,7 @@ function montar(){
   const p=pagina();if(!p||$("salesReportImportBox"))return false;css();
   const acoes=p.querySelector(".pagina-cabecalho .acoes-cabecalho"),btn=document.createElement("button");btn.id="btnSalesReportImport";btn.className="btn-secundario";btn.type="button";btn.textContent="Importar vendas";acoes?.insertBefore(btn,$("btnSalesVenda")||null);
   const box=document.createElement("section");box.id="salesReportImportBox";box.className="form-card hidden sales-import-box";box.innerHTML=`
-    <div class="form-card-titulo"><div><h3>Importar relatório de vendas</h3><p>Compatível com o relatório Excel contendo CD_CLIENTE, CD_VENDA, CD_FUNCIONARIOVENDA, DATA_VENDA e VALOR_VENDA. Clientes são localizados pelo código e vendedores pelo código vinculado no RH.</p></div><button id="btnSalesReportImportFechar" class="btn-secundario" type="button">Fechar</button></div>
+    <div class="form-card-titulo"><div><h3>Importar relatório de vendas</h3><p>Compatível com o relatório Excel contendo CD_CLIENTE, CD_VENDA, CD_FUNCIONARIOVENDA, DATA_VENDA e VALOR_VENDA. Clientes são localizados pelo código e vendedores pelo código vinculado no RH. Pedidos já existentes são sincronizados pela chave do pedido.</p></div><button id="btnSalesReportImportFechar" class="btn-secundario" type="button">Fechar</button></div>
     <div class="sales-import-grid"><div class="campo"><label for="salesReportArquivo">Arquivo Excel</label><input id="salesReportArquivo" type="file" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"><small>O arquivo é lido no navegador; o XLS bruto não é gravado no Firebase.</small></div><div class="campo campo-span-2"><label>Estrutura reconhecida</label><div class="sales-import-schema"><strong>Venda:</strong> DATA_VENDA · CD_VENDA · VALOR_VENDA<br><strong>Cliente:</strong> CD_CLIENTE · NOME_PESSOA · CIDADE_PESSOA · UF_PESSOA<br><strong>Vendedor:</strong> CD_FUNCIONARIOVENDA · NOME_FUNCIONARIO</div></div></div>
     <div class="form-acoes"><button id="btnSalesReportImportLimpar" class="btn-secundario" type="button">Limpar</button><button id="btnSalesReportImportAnalisar" class="btn-primario" type="button">Analisar arquivo</button></div>
     <p id="salesReportImportMsg" class="mensagem-form"></p>
@@ -154,7 +156,7 @@ function montar(){
       <div id="salesReportImportResumo" class="sales-import-resumo"></div>
       <section class="lista-card sales-import-sub"><div class="lista-cabecalho"><div><h3>Vendedores do relatório</h3><p>O vínculo é automático pelo código comercial salvo no cadastro do colaborador no RH.</p></div></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Código</th><th>Nome no relatório</th><th>Colaborador RH</th><th>Configuração comercial</th><th>Linhas</th></tr></thead><tbody id="salesReportVendedores"></tbody></table></div></section>
       <section class="lista-card sales-import-sub"><div class="lista-cabecalho"><div><h3>Prévia</h3><p id="salesReportPreviewInfo">—</p></div></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Venda</th><th>Cliente</th><th>Vendedor</th><th>Valor</th><th>Situação</th></tr></thead><tbody id="salesReportPreview"></tbody></table></div></section>
-      <div class="sales-import-footer"><div><strong>Importação por código</strong><small>Cada importação recebe um ID rastreável. Cliente existente usa a base do SIG; cliente novo é criado automaticamente. Venda duplicada é ignorada.</small></div><button id="btnSalesReportImportConfirmar" class="btn-primario" type="button">Importar vendas válidas</button></div>
+      <div class="sales-import-footer"><div><strong>Importação por código</strong><small>Cada importação recebe um ID rastreável. Cliente existente usa a base do SIG; cliente novo é criado automaticamente. Pedido já existente é atualizado somente quando houver alteração.</small></div><button id="btnSalesReportImportConfirmar" class="btn-primario" type="button">Importar vendas válidas</button></div>
     </div>
     <section class="lista-card sales-import-history">
       <div class="lista-cabecalho"><div><h3>Histórico de importações</h3><p>Controle por lote. A exclusão em lote remove fisicamente os registros importados incorretamente e mantém somente o log mínimo da operação.</p></div><button id="btnSalesReportHistoricoAtualizar" class="btn-secundario" type="button">Atualizar histórico</button></div>
@@ -175,7 +177,7 @@ async function carregarBases(){
 function renderHistorico(){
   const tb=$("salesReportHistorico");if(!tb)return;const emp=empresaUnicaSelecionadaId();
   const arr=importacoes.filter(x=>x.empresaId===emp).sort((a,b)=>String(b.iniciadoEm||b.criadoEm||"").localeCompare(String(a.iniciadoEm||a.criadoEm||"")));
-  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="excluida"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}</td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.excluidoEm?`<small>${new Date(x.excluidoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial","exclusao_parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-excluir="${esc(x.id)}">Excluir lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
+  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="excluida"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}<small>${n(x.quantidadeVendasNovas)} nova(s) · ${n(x.quantidadeVendasAtualizadas)} atualizada(s)</small></td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.excluidoEm?`<small>${new Date(x.excluidoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial","exclusao_parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-excluir="${esc(x.id)}">Excluir lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
   document.querySelectorAll("[data-sales-import-excluir]").forEach(b=>b.onclick=()=>excluirLote(b.dataset.salesImportExcluir))
 }
 async function excluirLote(id){
