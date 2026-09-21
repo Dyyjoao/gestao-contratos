@@ -2,3 +2,15 @@
 #pagina-rh>.pagina-cabecalho{position:sticky;top:0;z-index:80;margin:-2px -2px 0;padding:14px 16px;background:rgba(255,255,255,.98);border-bottom:1px solid #e2e8ef;box-shadow:0 8px 18px rgba(20,45,65,.07);backdrop-filter:blur(8px)}
 #pagina-rh #rhFloatingActions{display:none!important}
 @media(max-width:1100px){.production-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.production-charts{grid-template-columns:1fr}.production-master-grid{grid-template-columns:1fr}}@media(max-width:700px){.production-kpis{grid-template-columns:1fr}.production-filtros{width:100%;justify-content:stretch}.production-filtros select{flex:1;min-width:140px}.production-charts{padding:0 10px 10px}.production-bar-row{grid-template-columns:80px 1fr 58px}.production-master-grid{grid-template-columns:1fr}#pagina-rh>.pagina-cabecalho{padding:10px 12px;gap:10px}#pagina-rh>.pagina-cabecalho .acoes-cabecalho{width:100%;justify-content:flex-start;flex-wrap:wrap}}
+.production-kpis-industria{grid-template-columns:repeat(5,minmax(0,1fr))}
+.production-charts-industria{grid-template-columns:repeat(2,minmax(0,1fr))}
+.production-master-grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.production-link-box{margin-top:16px;padding:14px;border:1px solid #e2e8ef;border-radius:12px;background:#fbfcfd}
+.production-link-box h4{margin:0 0 4px;color:#17324a}.production-link-box p{margin:0;color:#667085;font-size:11px}
+.production-link-form{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin:12px 0}.production-link-form select{min-width:0}
+.production-item-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 16px 16px}
+.production-item-group{border:1px solid #e2e8ef;border-radius:12px;padding:13px;background:#fff}
+.production-item-group-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.production-item-group-head strong{color:#17324a}.production-item-group-head span{font-size:10px;color:#667085;text-transform:uppercase;font-weight:800}
+@media(max-width:1200px){.production-kpis-industria{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.production-kpis-industria{grid-template-columns:repeat(2,minmax(0,1fr))}.production-charts-industria,.production-item-groups,.production-master-grid-2{grid-template-columns:1fr}.production-link-form{grid-template-columns:1fr}}
+@media(max-width:600px){.production-kpis-industria{grid-template-columns:1fr}.production-item-groups{padding:0 10px 10px}}
