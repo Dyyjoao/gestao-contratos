@@ -170,7 +170,8 @@ function render(){
   $("osKpiExecucao").textContent=String(ordens.filter(x=>x.status==="em_execucao").length);
   $("osKpiInicioVencido").textContent=String(vencidas.length);
   $("osKpiConcluidas").textContent=String(ordens.filter(x=>x.status==="concluida").length);
-  $("osKpiParada").textContent=String(ordens.filter(x=>x.status!=="cancelada"&&x.paradaProducao).length);\n  $("osKpiCanceladas").textContent=String(ordens.filter(x=>x.status==="cancelada").length);
+  $("osKpiParada").textContent=String(ordens.filter(x=>x.status!=="cancelada"&&x.paradaProducao).length);
+  $("osKpiCanceladas").textContent=String(ordens.filter(x=>x.status==="cancelada").length);
   $("osKpiInicioVencidoCard")?.classList.toggle("tem-alerta",vencidas.length>0);
   document.querySelectorAll("[data-os-card-filter]").forEach(card=>card.classList.toggle("ativo",card.dataset.osCardFilter===filtro));
 
