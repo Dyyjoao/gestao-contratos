@@ -39,13 +39,13 @@ function kmBaseVeiculo(v,data="",ignorarId=""){
 function garantirCss(){
   if(document.getElementById("fuel-audit-css"))return;
   const s=document.createElement("style");s.id="fuel-audit-css";s.textContent=`
-    .fuel-ranking{display:grid;gap:10px}.fuel-rank-row{display:grid;grid-template-columns:minmax(150px,230px) minmax(160px,1fr) 120px 100px;gap:10px;align-items:center}.fuel-rank-row[data-fuel-veiculo]{cursor:pointer;border:1px solid transparent;border-radius:10px;padding:8px 10px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease}.fuel-rank-row[data-fuel-veiculo]:hover{background:#f7fafb;border-color:#dce5ea}.fuel-rank-row[data-fuel-veiculo].ativo{background:#eaf7f5;border-color:#20b6a5;box-shadow:0 0 0 2px rgba(32,182,165,.10)}
+    .fuel-ranking-toggle{display:flex;align-items:flex-end;gap:10px}.fuel-ranking-toggle>span{font-size:11px;color:#667085;font-weight:700}.fuel-ranking-toggle>div{display:flex;gap:6px}.fuel-ranking-toggle .btn-secundario.ativo{background:#0b1f33;color:#fff;border-color:#0b1f33}.fuel-ranking-head{align-items:flex-end}\n    .fuel-ranking{display:grid;gap:10px}.fuel-rank-row{display:grid;grid-template-columns:minmax(150px,230px) minmax(160px,1fr) 120px 100px;gap:10px;align-items:center}.fuel-rank-row[data-fuel-veiculo]{cursor:pointer;border:1px solid transparent;border-radius:10px;padding:8px 10px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease}.fuel-rank-row[data-fuel-veiculo]:hover{background:#f7fafb;border-color:#dce5ea}.fuel-rank-row[data-fuel-veiculo].ativo{background:#eaf7f5;border-color:#20b6a5;box-shadow:0 0 0 2px rgba(32,182,165,.10)}
     .fuel-rank-name{display:grid}.fuel-rank-name small{color:#7b8794}.fuel-rank-track,.fuel-audit-track{height:14px;background:#edf1f4;border-radius:999px;overflow:hidden}.fuel-rank-track i,.fuel-audit-track i{display:block;height:100%;background:#0b1f33;border-radius:999px}
     .fuel-audit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.fuel-audit-card{padding:14px;border:1px solid #e4e9ed;border-radius:12px;background:#fff}.fuel-audit-card span{display:block;font-size:11px;color:#667085}.fuel-audit-card strong{display:block;margin-top:4px;font-size:20px}
     .fuel-tank{margin-top:16px;border:1px solid #dfe6eb;border-radius:14px;padding:14px}.fuel-tank-bar{height:28px;border-radius:10px;background:#eef2f5;overflow:hidden}.fuel-tank-bar i{display:block;height:100%;background:#0b1f33}.fuel-tank-meta{display:flex;justify-content:space-between;gap:12px;margin-top:7px;font-size:11px;color:#667085}
     .fuel-audit-months{display:grid;gap:11px}.fuel-audit-month{display:grid;grid-template-columns:44px minmax(180px,1fr) 110px 110px 120px;gap:10px;align-items:center}.fuel-audit-bars{display:grid;gap:4px}.fuel-audit-bars .entrada i{background:#0c9488}.fuel-audit-bars .saida i{background:#0b1f33}.fuel-audit-bars .saldo i{background:#98a2b3}.fuel-chart-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:4px 0 14px;font-size:12px;color:#667085}.fuel-chart-legend span{display:inline-flex;align-items:center;gap:6px}.fuel-chart-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}.fuel-chart-legend i.entrada{background:#0c9488}.fuel-chart-legend i.saida{background:#0b1f33}.fuel-chart-legend i.saldo{background:#98a2b3}
     .fuel-config-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}.fuel-config-note{font-size:11px;color:#667085;margin:6px 0 0}.fuel-audit-point-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.fuel-diff-pos{color:#4169e1}.fuel-diff-neg{color:#b42318}.fuel-diff-ok{color:#027a48}.fuel-audit-chart{display:grid;gap:9px}.fuel-audit-point-row{display:grid;grid-template-columns:90px minmax(160px,1fr) 110px 110px 110px;gap:10px;align-items:center}.fuel-audit-point-row[data-audit-mes]{cursor:pointer;border:1px solid transparent;border-radius:10px;padding:7px 9px;transition:background .15s ease,border-color .15s ease}.fuel-audit-point-row[data-audit-mes]:hover{background:#f7fafb;border-color:#dce5ea}.fuel-audit-point-row[data-audit-mes].ativo{background:#eef8f6;border-color:#20b6a5}.fuel-diff-track{height:12px;background:#eef2f5;border-radius:999px;overflow:hidden;position:relative}.fuel-diff-track i{display:block;height:100%;background:#b42318;border-radius:999px}.fuel-diff-track i.pos{background:#4169e1}.fuel-audit-history{margin-top:14px}
-    @media(max-width:850px){.fuel-ranking,.fuel-audit-months,.fuel-audit-chart{overflow-x:auto}.fuel-rank-row{min-width:650px}.fuel-audit-month{min-width:620px}.fuel-audit-point-row{min-width:680px}.fuel-audit-grid{grid-template-columns:1fr 1fr}.fuel-config-form,.fuel-audit-point-form{grid-template-columns:1fr}}
+    @media(max-width:850px){.fuel-ranking-head{align-items:stretch}.fuel-ranking-toggle{align-items:stretch;flex-direction:column}.fuel-ranking-toggle>div{width:100%}.fuel-ranking-toggle button{flex:1}.fuel-ranking,.fuel-audit-months,.fuel-audit-chart{overflow-x:auto}.fuel-rank-row{min-width:650px}.fuel-audit-month{min-width:620px}.fuel-audit-point-row{min-width:680px}.fuel-audit-grid{grid-template-columns:1fr 1fr}.fuel-config-form,.fuel-audit-point-form{grid-template-columns:1fr}}
   `;document.head.appendChild(s)
 }
 
@@ -88,7 +88,7 @@ function montar(){
   </section>
 
   <section id="fuelRankingBox" class="lista-card">
-    <div class="lista-cabecalho fuel-ranking-head"><div><h3 id="fuelRankingTitulo">Consumo por veículo</h3><p id="fuelRankingSub">Ranking de todos os veículos da frota no período geral selecionado. Clique em um veículo para filtrar os abastecimentos.</p></div><div class="campo fuel-ranking-mode"><label for="fuelRankingModo">Visualizar por</label><select id="fuelRankingModo"><option value="veiculo">Veículo</option><option value="motorista">Motorista</option></select></div></div>
+    <div class="lista-cabecalho fuel-ranking-head"><div><h3 id="fuelRankingTitulo">Consumo por veículo</h3><p id="fuelRankingSub">Ranking de todos os veículos da frota no período geral selecionado. Clique em um veículo para filtrar os abastecimentos.</p></div><div class="fuel-ranking-toggle" role="group" aria-label="Visualizar consumo por"><span>Visualizar por</span><div><button id="fuelRankingVeiculo" class="btn-secundario ativo" type="button">Veículo</button><button id="fuelRankingMotorista" class="btn-secundario" type="button">Motorista</button></div></div></div>
     <div id="fuelRanking" class="fuel-ranking"></div>
   </section>
 
@@ -139,7 +139,8 @@ function montar(){
   ["fuelLitrosCompra","fuelValor"].forEach(id=>$(id)?.addEventListener("input",calcularCustoLitro));
   $("fuelAbrirConfigTanque").onclick=()=>{if(admin())abrirPagina("configuracao-bomba")};
   $("fuelSalvarAuditoria").onclick=salvarAuditoriaTanque;
-  $("fuelRankingModo").onchange=e=>{rankingModo=e.target.value==="motorista"?"motorista":"veiculo";veiculoFiltroId="";motoristaFiltro="";render()};
+  $("fuelRankingVeiculo").onclick=()=>{rankingModo="veiculo";veiculoFiltroId="";motoristaFiltro="";render()};
+  $("fuelRankingMotorista").onclick=()=>{rankingModo="motorista";veiculoFiltroId="";motoristaFiltro="";render()};
   ["fuelAuditData","fuelAuditSaldoFisico"].forEach(id=>$(id)?.addEventListener("input",atualizarPreviewAuditoria));
   trocar("abastecimentos");
 }
@@ -176,7 +177,7 @@ function alternarFiltroVeiculo(id){veiculoFiltroId=veiculoFiltroId===id?"":id;mo
 function alternarFiltroMotorista(nome){motoristaFiltro=motoristaFiltro===nome?"":nome;veiculoFiltroId="";render()}
 function renderRanking(p){
   const host=$("fuelRanking");if(!host)return;
-  const titulo=$("fuelRankingTitulo"),sub=$("fuelRankingSub"),modo=$("fuelRankingModo");if(modo)modo.value=rankingModo;
+  const titulo=$("fuelRankingTitulo"),sub=$("fuelRankingSub");$("fuelRankingVeiculo")?.classList.toggle("ativo",rankingModo==="veiculo");$("fuelRankingMotorista")?.classList.toggle("ativo",rankingModo==="motorista");
 
   if(rankingModo==="motorista"){
     if(titulo)titulo.textContent="Consumo por motorista";
