@@ -42,11 +42,11 @@ function montar(){
   </div>
   <div id="osAviso" class="modulo-aviso hidden"></div>
   <div class="production-kpis os-kpis">
-    <div class="kpi-card"><span>Em aberto</span><strong id="osKpiAbertas">—</strong><small>aguardando início</small></div>
-    <div class="kpi-card"><span>Em execução</span><strong id="osKpiExecucao">—</strong><small>serviços iniciados</small></div>
-    <button id="osKpiInicioVencidoCard" class="kpi-card os-alert-card" type="button"><span>Início vencido</span><strong id="osKpiInicioVencido">—</strong><small>Clique para filtrar as OS atrasadas</small></button>
-    <div class="kpi-card"><span>Concluídas</span><strong id="osKpiConcluidas">—</strong><small>histórico concluído</small></div>
-    <div class="kpi-card"><span>Com parada de produção</span><strong id="osKpiParada">—</strong><small>OS não canceladas</small></div>
+    <button id="osKpiAbertasCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="aberta"><span>Em aberto</span><strong id="osKpiAbertas">—</strong><small>Clique para filtrar · aguardando início</small></button>
+    <button id="osKpiExecucaoCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="em_execucao"><span>Em execução</span><strong id="osKpiExecucao">—</strong><small>Clique para filtrar · serviços iniciados</small></button>
+    <button id="osKpiInicioVencidoCard" class="kpi-card os-filter-card os-alert-card" type="button" data-os-card-filter="__inicio_vencido__"><span>Início vencido</span><strong id="osKpiInicioVencido">—</strong><small>Clique para filtrar as OS atrasadas</small></button>
+    <button id="osKpiConcluidasCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="concluida"><span>Concluídas</span><strong id="osKpiConcluidas">—</strong><small>Clique para filtrar · histórico concluído</small></button>
+    <button id="osKpiParadaCard" class="kpi-card os-filter-card" type="button" data-os-card-filter="__parada__"><span>Com parada de produção</span><strong id="osKpiParada">—</strong><small>Clique para filtrar as OS com parada</small></button>
   </div>
 
   <section class="form-card hidden" id="osFormBox">
@@ -73,7 +73,7 @@ function montar(){
   <section class="lista-card">
     <div class="lista-cabecalho production-toolbar">
       <div><h3>Acompanhamento das OS</h3><p>Atualize o status diretamente na linha. OS com início previsto vencido ficam sinalizadas.</p></div>
-      <div class="production-filtros"><input id="osBusca" type="search" placeholder="OS, local, solicitante"><select id="osFiltroStatus"><option value="">Todos os status</option><option value="__inicio_vencido__">Início vencido</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
+      <div class="production-filtros"><input id="osBusca" type="search" placeholder="OS, local, solicitante"><select id="osFiltroStatus"><option value="">Todos os status</option><option value="__inicio_vencido__">Início vencido</option><option value="__parada__">Com parada de produção</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
     </div>
     <div class="tabela-container"><table class="tabela os-table"><thead><tr><th>Nº OS</th><th>Solicitação</th><th>Local / serviço</th><th>Prazo previsto</th><th>Status</th><th>Executante</th><th>Ações</th></tr></thead><tbody id="osLista"></tbody></table></div>
   </section>`;
@@ -85,7 +85,7 @@ function montar(){
   $("osForm").addEventListener("submit",salvar);
   $("osBusca").addEventListener("input",render);
   $("osFiltroStatus").addEventListener("change",render);
-  $("osKpiInicioVencidoCard").addEventListener("click",()=>{$("osFiltroStatus").value="__inicio_vencido__";render();document.querySelector("#osLista")?.closest(".lista-card")?.scrollIntoView({behavior:"smooth",block:"start"})})
+  document.querySelectorAll("[data-os-card-filter]").forEach(card=>card.addEventListener("click",()=>aplicarFiltroCard(card.dataset.osCardFilter)))
 }
 function menu(){
   const nav=document.querySelector(".sidebar-menu");if(!nav)return;let b=$("menuOrdensServico");
@@ -152,11 +152,16 @@ async function atualizarStatus(id,status){
   if(status==="cancelada"){alteracoes.canceladoPor=state.usuario?.id||"";alteracoes.canceladoEm=new Date().toISOString()}
   try{await atualizarDocumento("ordensServico",id,alteracoes);emitirAlteracao("ordensservico");await carregar()}catch(e){console.error(e);alert("Não foi possível atualizar o status da OS. Verifique as Rules publicadas no Firebase.")}
 }
+function aplicarFiltroCard(filtro){
+  const select=$("osFiltroStatus");if(!select)return;
+  select.value=select.value===filtro?"":filtro;render();
+  document.querySelector("#osLista")?.closest(".lista-card")?.scrollIntoView({behavior:"smooth",block:"start"})
+}
 function render(){
   if(!$("osLista"))return;
   const busca=$("osBusca").value.toLocaleLowerCase("pt-BR"),filtro=$("osFiltroStatus").value;
   const arr=ordens.filter(x=>{
-    const atendeStatus=!filtro||(filtro==="__inicio_vencido__"?osInicioVencido(x):x.status===filtro);
+    const atendeStatus=!filtro||(filtro==="__inicio_vencido__"?osInicioVencido(x):filtro==="__parada__"?(x.status!=="cancelada"&&x.paradaProducao===true):x.status===filtro);
     const local=x.local||x.equipamento||"";
     return atendeStatus&&[x.numero,local,x.solicitante,x.descricao,x.executante].some(v=>String(v||"").toLocaleLowerCase("pt-BR").includes(busca))
   });
@@ -167,6 +172,7 @@ function render(){
   $("osKpiConcluidas").textContent=String(ordens.filter(x=>x.status==="concluida").length);
   $("osKpiParada").textContent=String(ordens.filter(x=>x.status!=="cancelada"&&x.paradaProducao).length);
   $("osKpiInicioVencidoCard")?.classList.toggle("tem-alerta",vencidas.length>0);
+  document.querySelectorAll("[data-os-card-filter]").forEach(card=>card.classList.toggle("ativo",card.dataset.osCardFilter===filtro));
 
   $("osLista").innerHTML=arr.sort((a,b)=>String(b.dataSolicitacao).localeCompare(String(a.dataSolicitacao))).map(x=>{
     const atrasada=osInicioVencido(x),local=x.local||x.equipamento||"—",opcoes=opcoesStatus(x);
