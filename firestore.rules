@@ -737,6 +737,7 @@ service cloud.firestore {
         dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 120 &&
         dados.cargoId is string && dados.cargoId.size() <= 80 &&
         dados.cargoNome is string && dados.cargoNome.size() <= 80 &&
+        (!('codigoVendedor' in dados) || (dados.codigoVendedor is string && dados.codigoVendedor.size() <= 40)) &&
         rhSetorValido(dados.setor) && rhDataValida(dados.admissao) &&
         dados.demissao is string && (dados.demissao == '' || (rhDataValida(dados.demissao) && dados.demissao >= dados.admissao)) &&
         dados.jornadaMensalHoras is number && dados.jornadaMensalHoras > 0 && dados.jornadaMensalHoras <= 300 &&
@@ -786,7 +787,7 @@ service cloud.firestore {
           (permissao('rhColaboradores','editar') && request.resource.data.status == 'ativo' &&
             rhColaboradorValido(request.resource.data) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'codigo','nome','setor','cargoId','cargoNome','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
+              'codigo','nome','setor','cargoId','cargoNome','codigoVendedor','admissao','demissao','jornadaMensalHoras','usuarioId','atualizadoEm']))
         );
       allow delete: if administrador() && documentoAcessivel(resource.data);
     }
@@ -1053,6 +1054,21 @@ service cloud.firestore {
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
+      allow delete: if false;
+    }
+
+    match /clientesComerciais/{id} {
+      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data) &&
+        request.resource.data.codigo is string && request.resource.data.codigo.size() > 0 &&
+        request.resource.data.codigo.size() <= 60 &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.nome.size() <= 180;
+      allow update: if (vendasLancar() || vendasEditar()) && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.codigo is string && request.resource.data.codigo.size() > 0 &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0;
       allow delete: if false;
     }
 
