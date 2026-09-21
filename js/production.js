@@ -115,7 +115,7 @@ function criarPagina(){
       <div><h3>Acompanhamento anual</h3><p id="prodAcompanhamentoSub">Evolução mensal no ano selecionado no filtro principal.</p></div>
       <div class="campo production-annual-select"><label for="prodAcompanhamentoProducao">Produção</label><select id="prodAcompanhamentoProducao"></select></div>
     </div>
-    <div class="production-annual-summary"><span>Total anual</span><strong id="prodAcompanhamentoTotal">—</strong></div>
+    <div class="production-annual-summary"><div><span>Total anual</span><strong id="prodAcompanhamentoTotal">—</strong></div><div><span>Produtividade média</span><strong id="prodAcompanhamentoMedia">—</strong></div></div><div class="production-annual-legend"><span><i class="volume"></i>Produção</span><span><i class="rate"></i>Produção/hora</span></div>
     <div id="prodAcompanhamentoGrafico" class="production-annual-chart"></div>
   </section>
 
@@ -232,12 +232,25 @@ function renderAcompanhamentoAnual(){
     dadosBase=base.filter(x=>norm(x.recurso)===norm(escolha));unidade=unidadeRecurso(escolha);
   }
   const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-  const valores=meses.map((label,i)=>({label,valor:dadosBase.filter(x=>Number(String(x.data||"").slice(5,7))===i+1).reduce((s,x)=>s+n(x.quantidade),0)}));
-  const max=Math.max(1,...valores.map(x=>x.valor)),total=valores.reduce((s,x)=>s+x.valor,0),sufixo=unidade==="M²"?"m²":unidade==="BANDEJA"?"b":"un";
+  const valores=meses.map((label,i)=>{
+    const mes=dadosBase.filter(x=>Number(String(x.data||"").slice(5,7))===i+1),volume=mes.reduce((s,x)=>s+n(x.quantidade),0),horas=mes.reduce((s,x)=>s+n(x.horasTrabalhadas),0);
+    return{label,volume,horas,rate:horas?volume/horas:0}
+  });
+  const maxVolume=Math.max(1,...valores.map(x=>x.volume)),maxRate=Math.max(1,...valores.map(x=>x.rate)),total=valores.reduce((s,x)=>s+x.volume,0),horasTotal=valores.reduce((s,x)=>s+x.horas,0),rateMedio=horasTotal?total/horasTotal:0;
+  const sufixo=unidade==="M²"?"m²":unidade==="BANDEJA"?"b":"un",sufixoRate=unidade==="M²"?"m²/h":unidade==="BANDEJA"?"b/h":"un/h";
   if($("prodAcompanhamentoSub"))$("prodAcompanhamentoSub").textContent=`${rotulo} · evolução mensal de ${ano}`;
   if($("prodAcompanhamentoTotal"))$("prodAcompanhamentoTotal").textContent=`${fmt(total)} ${sufixo}`;
-  host.innerHTML=valores.map(x=>`<div class="production-annual-col"><div class="production-annual-value">${x.valor?fmt(x.valor):"0"}</div><div class="production-annual-track"><i style="height:${x.valor?Math.max(4,x.valor/max*100):0}%"></i></div><span>${x.label}</span></div>`).join("");
+  if($("prodAcompanhamentoMedia"))$("prodAcompanhamentoMedia").textContent=horasTotal?`${fmt(rateMedio)} ${sufixoRate}`:"—";
+  host.innerHTML=valores.map(x=>`<div class="production-annual-col">
+    <div class="production-annual-values"><strong>${x.volume?fmt(x.volume):"0"} ${sufixo}</strong><small>${x.horas?fmt(x.rate)+" "+sufixoRate:"—"}</small></div>
+    <div class="production-annual-dual">
+      <div class="production-annual-track volume" title="Produção: ${fmt(x.volume)} ${sufixo}"><i style="height:${x.volume?Math.max(4,x.volume/maxVolume*100):0}%"></i></div>
+      <div class="production-annual-track rate" title="Produção/hora: ${x.horas?fmt(x.rate)+" "+sufixoRate:"sem horas lançadas"}"><i style="height:${x.rate?Math.max(4,x.rate/maxRate*100):0}%"></i></div>
+    </div>
+    <span>${x.label}</span>
+  </div>`).join("");
 }
+
 function render(){
   const historico=baseFiltrada(),arr=historico.filter(x=>x.status!=="estornado");
   const maquinas=arr.filter(x=>tipoBloco(x.recurso)==="maquina"),lajes=arr.filter(x=>tipoBloco(x.recurso)==="laje"),mourao=arr.filter(x=>tipoBloco(x.recurso)==="mourao");
