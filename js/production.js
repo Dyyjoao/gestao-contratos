@@ -15,7 +15,7 @@ const VINCULOS_PADRAO={
   "MAQ.2":["BANDEJA"]
 };
 
-let registros=[],cadastros=[],vinculos=[],responsaveis=[],editId=null,busy=false;
+let registros=[],cadastros=[],vinculos=[],responsaveis=[],editId=null,busy=false,detalheTipo="";
 const pagina=()=>$("pagina-producao");
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const norm=v=>String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
@@ -94,18 +94,21 @@ function criarPagina(){
   </section>
 
   <section class="lista-card">
-    <div class="lista-cabecalho production-toolbar"><div><h3>Análise da produção</h3><p>Totais separados por unidade de medida para evitar somar bandejas, m² e unidades como se fossem iguais.</p></div>
+    <div class="lista-cabecalho production-toolbar"><div><h3>Análise da produção</h3><p>O período principal vem do cabeçalho. Use o intervalo abaixo apenas para refinar por dias.</p></div>
       <div class="production-filtros"><div class="production-date-range"><label>De <input id="prodFiltroDataIni" type="date"></label><label>Até <input id="prodFiltroDataFim" type="date"></label><button id="prodLimparIntervalo" class="btn-secundario" type="button">Limpar intervalo</button></div><select id="prodFiltroRecurso"><option value="">Todas as produções</option></select><select id="prodFiltroItem"><option value="">Todos os itens</option></select></div>
     </div>
-    <div class="production-charts production-charts-industria">
-      <div class="production-card"><h4>Máquinas · total por máquina</h4><div id="prodGraficoMaquinas" class="production-bars"></div></div>
-      <div class="production-card"><h4>Laje · total por item (m²)</h4><div id="prodGraficoLaje" class="production-bars"></div></div>
-      <div class="production-card"><h4>Mourão · total por item (un)</h4><div id="prodGraficoMourao" class="production-bars"></div></div>
-      <div class="production-card"><h4>Máquinas · bandejas/hora</h4><div id="prodGraficoMedia" class="production-bars"></div></div>
+    <div class="production-analysis-grid">
+      <div class="production-card production-machine-card"><h4>Máquinas · produção em bandejas</h4><div id="prodGraficoMaquinas" class="production-bars"></div></div>
+      <div class="production-summary-cards">
+        <button id="prodCardLaje" class="production-summary-card" type="button" data-detalhe="laje"><span>Laje</span><strong id="prodCardLajeValor">—</strong><small>m² produzidos · clique para detalhar por produto</small></button>
+        <button id="prodCardMourao" class="production-summary-card" type="button" data-detalhe="mourao"><span>Mourão</span><strong id="prodCardMouraoValor">—</strong><small>unidades produzidas · clique para detalhar por produto</small></button>
+      </div>
+    </div>
+    <div id="prodDetalheProdutos" class="production-card production-detail-card hidden">
+      <div class="production-detail-head"><div><h4 id="prodDetalheTitulo">Detalhamento por produto</h4><p id="prodDetalheSub">—</p></div><button id="prodFecharDetalhe" class="btn-secundario" type="button">Fechar</button></div>
+      <div id="prodGraficoDetalhe" class="production-bars"></div>
     </div>
   </section>
-
-  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Total de produção por item</h3><p>Detalhamento de cada item dentro de sua produção.</p></div></div><div id="prodResumoItens" class="production-item-groups"></div></section>
 
   <section class="lista-card"><div class="lista-cabecalho"><div><h3>Histórico de lançamentos</h3><p id="prodQtdRegistros">—</p></div><span class="production-history-note">Estornos permanecem visíveis e não entram nos indicadores.</span></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Produção</th><th>Item</th><th>Total</th><th>Horas</th><th>Produtividade</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="prodLista"></tbody></table></div></section>`;
   main.appendChild(s);ligarEventos();
@@ -169,8 +172,21 @@ function dentroPeriodoGeral(data){
   if(meses[p])return Number(d.slice(5,7))===meses[p];
   return true
 }
+function limitesPeriodoGeral(){
+  const ano=Number(periodoAno()),p=periodoChave(),pad=v=>String(v).padStart(2,"0"),ultimo=(a,m)=>new Date(a,m,0).getDate();
+  if(/^m\d{2}$/.test(p)){const m=Number(p.slice(1));return{ini:`${ano}-${pad(m)}-01`,fim:`${ano}-${pad(m)}-${pad(ultimo(ano,m))}`}}
+  if(/^t[1-4]$/.test(p)){const t=Number(p.slice(1)),mi=(t-1)*3+1,mf=t*3;return{ini:`${ano}-${pad(mi)}-01`,fim:`${ano}-${pad(mf)}-${pad(ultimo(ano,mf))}`}}
+  const meses={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+  if(meses[p]){const m=meses[p];return{ini:`${ano}-${pad(m)}-01`,fim:`${ano}-${pad(m)}-${pad(ultimo(ano,m))}`}}
+  return{ini:`${ano}-01-01`,fim:`${ano}-12-31`}
+}
+function atualizarLimitesIntervalo(){
+  const {ini,fim}=limitesPeriodoGeral(),a=$("prodFiltroDataIni"),b=$("prodFiltroDataFim");
+  if(a){a.min=ini;a.max=fim;if(a.value&&(a.value<ini||a.value>fim))a.value=""}
+  if(b){b.min=ini;b.max=fim;if(b.value&&(b.value<ini||b.value>fim))b.value=""}
+}
 function baseFiltrada(){
-  const ini=$("prodFiltroDataIni")?.value||"",fim=$("prodFiltroDataFim")?.value||"",rec=$("prodFiltroRecurso")?.value||"",item=$("prodFiltroItem")?.value||"";
+  let ini=$("prodFiltroDataIni")?.value||"",fim=$("prodFiltroDataFim")?.value||"";const rec=$("prodFiltroRecurso")?.value||"",item=$("prodFiltroItem")?.value||"";if(ini&&fim&&ini>fim)[ini,fim]=[fim,ini];
   return registros.filter(x=>{
     const d=String(x.data||"");
     return dentroPeriodoGeral(d)&&(!ini||d>=ini)&&(!fim||d<=fim)&&(!rec||x.recurso===rec)&&(!item||x.item===item)
@@ -178,22 +194,29 @@ function baseFiltrada(){
 }
 function barras(alvo,dados,{sufixo=""}={}){const el=$(alvo);if(!el)return;if(!dados.length){el.innerHTML='<p class="production-empty">Sem dados no filtro selecionado.</p>';return}const max=Math.max(...dados.map(x=>n(x.valor)),1);el.innerHTML=dados.map(x=>`<div class="production-bar-row"><span title="${esc(x.label)}">${esc(x.label)}</span><div><i style="width:${Math.max(2,n(x.valor)/max*100)}%"></i></div><strong>${fmt(x.valor)}${sufixo}</strong></div>`).join("")}
 function somarPor(arr,chave){const out={};arr.forEach(x=>{const k=typeof chave==="function"?chave(x):x[chave]||"Não informado";out[k]=(out[k]||0)+n(x.quantidade)});return out}
-function renderResumoItens(arr){
-  const host=$("prodResumoItens");if(!host)return;const grupos={};
-  arr.forEach(x=>{const r=x.recurso||"Não informado",item=x.item||"Não informado";grupos[r]??={unidade:unidadeRecurso(r),itens:{}};grupos[r].itens[item]=(grupos[r].itens[item]||0)+n(x.quantidade)});
-  host.innerHTML=Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b,"pt-BR")).map(([recurso,g])=>{const itens=Object.entries(g.itens).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...itens.map(x=>x[1]));return`<div class="production-item-group"><div class="production-item-group-head"><strong>${esc(recurso)}</strong><span>${unidadeTexto(g.unidade)}</span></div><div class="production-bars">${itens.map(([item,valor])=>`<div class="production-bar-row"><span title="${esc(item)}">${esc(item)}</span><div><i style="width:${Math.max(2,valor/max*100)}%"></i></div><strong>${fmt(valor)} ${unidadeTexto(g.unidade)}</strong></div>`).join("")}</div></div>`}).join("")||'<p class="production-empty">Sem produção no filtro selecionado.</p>'
+function renderDetalheProdutos(arr){
+  const box=$("prodDetalheProdutos"),graf=$("prodGraficoDetalhe");if(!box||!graf)return;
+  if(!detalheTipo){box.classList.add("hidden");return}
+  const isLaje=detalheTipo==="laje",dados=arr.filter(x=>tipoBloco(x.recurso)===detalheTipo),un=isLaje?" m²":" un",titulo=isLaje?"Laje · produção por produto":"Mourão · produção por produto";
+  $("prodDetalheTitulo").textContent=titulo;
+  $("prodDetalheSub").textContent=isLaje?"Distribuição do total produzido em m².":"Distribuição do total produzido em unidades.";
+  barras("prodGraficoDetalhe",Object.entries(somarPor(dados,"item")).map(([label,valor])=>({label,valor})).sort((a,b)=>b.valor-a.valor),{sufixo:un});
+  box.classList.remove("hidden");
+  document.querySelectorAll("[data-detalhe]").forEach(b=>b.classList.toggle("ativo",b.dataset.detalhe===detalheTipo))
 }
+
 function render(){
   const historico=baseFiltrada(),arr=historico.filter(x=>x.status!=="estornado");
   const maquinas=arr.filter(x=>tipoBloco(x.recurso)==="maquina"),lajes=arr.filter(x=>tipoBloco(x.recurso)==="laje"),mourao=arr.filter(x=>tipoBloco(x.recurso)==="mourao");
   const qMaq=maquinas.reduce((s,x)=>s+n(x.quantidade),0),hMaq=maquinas.reduce((s,x)=>s+n(x.horasTrabalhadas),0),qLaje=lajes.reduce((s,x)=>s+n(x.quantidade),0),qMourao=mourao.reduce((s,x)=>s+n(x.quantidade),0);
   $("prodKpiMaquinas").textContent=fmt(qMaq);$("prodKpiLaje").textContent=fmt(qLaje);$("prodKpiMourao").textContent=fmt(qMourao,0);$("prodKpiMediaMaq").textContent=hMaq?`${fmt(qMaq/hMaq)} b/h`:"—";$("prodKpiRegs").textContent=String(arr.length);$("prodQtdRegistros").textContent=`${historico.length} lançamento(s) no filtro · ${arr.length} ativo(s)`;
 
-  barras("prodGraficoMaquinas",Object.entries(somarPor(maquinas,"recurso")).map(([label,valor])=>({label,valor})).sort((a,b)=>b.valor-a.valor),{sufixo:" b"});
-  barras("prodGraficoLaje",Object.entries(somarPor(lajes,"item")).map(([label,valor])=>({label,valor})).sort((a,b)=>b.valor-a.valor),{sufixo:" m²"});
-  barras("prodGraficoMourao",Object.entries(somarPor(mourao,"item")).map(([label,valor])=>({label,valor})).sort((a,b)=>b.valor-a.valor),{sufixo:" un"});
-  const rate={};maquinas.forEach(x=>{const k=x.recurso||"Máquina";rate[k]??={q:0,h:0};rate[k].q+=n(x.quantidade);rate[k].h+=n(x.horasTrabalhadas)});barras("prodGraficoMedia",Object.entries(rate).map(([label,v])=>({label,valor:v.h?v.q/v.h:0})).sort((a,b)=>b.valor-a.valor),{sufixo:" b/h"});
-  renderResumoItens(arr);
+  const maq1=maquinas.filter(x=>["MAQ.1","MAQ1"].includes(norm(x.recurso).replaceAll(" ",""))).reduce((s,x)=>s+n(x.quantidade),0);
+  const maq2=maquinas.filter(x=>["MAQ.2","MAQ2"].includes(norm(x.recurso).replaceAll(" ",""))).reduce((s,x)=>s+n(x.quantidade),0);
+  barras("prodGraficoMaquinas",[{label:"MAQ.1",valor:maq1},{label:"MAQ.2",valor:maq2},{label:"Consolidado",valor:maq1+maq2}],{sufixo:" b"});
+  if($("prodCardLajeValor"))$("prodCardLajeValor").textContent=`${fmt(qLaje)} m²`;
+  if($("prodCardMouraoValor"))$("prodCardMouraoValor").textContent=`${fmt(qMourao,0)} un`;
+  renderDetalheProdutos(arr);
 
   const tb=$("prodLista");if(tb)tb.innerHTML=historico.sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))).map(x=>{const u=x.unidadeMedida||unidadeRecurso(x.recurso),rate=n(x.horasTrabalhadas)?n(x.quantidade)/n(x.horasTrabalhadas):0;return`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${dataBr(x.data)}</td><td><strong>${esc(x.recurso||"-")}</strong>${x.status==="estornado"?'<small class="sig-admin-estorno-info">Estornado</small>':""}</td><td>${esc(x.item||"-")}</td><td>${fmt(x.quantidade)} ${unidadeTexto(u)}</td><td>${n(x.horasTrabalhadas)?fmt(x.horasTrabalhadas):"—"}</td><td>${tipoBloco(x.recurso)==="maquina"&&rate?fmt(rate)+" b/h":"—"}</td><td>${esc(x.responsavel||x.concretador||"-")}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&podeEditar()?`<button class="btn-acao destaque" data-prod-edit="${x.id}" type="button">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button class="btn-acao perigo" data-prod-estorno="${x.id}" type="button">Estornar ADM</button>`:""}</div></td></tr>`}).join("")||'<tr><td colspan="8">Nenhum lançamento encontrado.</td></tr>';
   document.querySelectorAll("[data-prod-edit]").forEach(b=>b.onclick=()=>abrirEdicao(b.dataset.prodEdit));document.querySelectorAll("[data-prod-estorno]").forEach(b=>b.onclick=()=>estornar(b.dataset.prodEstorno))
@@ -245,6 +268,8 @@ function ligarEventos(){
   $("prodRecurso")?.addEventListener("change",()=>{atualizarItemDoForm();atualizarMetricaForm()});
   $("prodFiltroRecurso")?.addEventListener("change",()=>{const fi=$("prodFiltroItem"),atual=fi?.value;const itens=$("prodFiltroRecurso").value?itensParaProducao($("prodFiltroRecurso").value):itensAtivos();if(fi){fi.innerHTML='<option value="">Todos os itens</option>'+opcoesLista(itens,{vazio:false});if(atual&&[...fi.options].some(o=>o.value===atual))fi.value=atual}render()});
   ["prodFiltroDataIni","prodFiltroDataFim","prodFiltroItem"].forEach(id=>$(id)?.addEventListener("change",render));
+  document.querySelectorAll("[data-detalhe]").forEach(b=>b.addEventListener("click",()=>{detalheTipo=detalheTipo===b.dataset.detalhe?"":b.dataset.detalhe;render()}));
+  $("prodFecharDetalhe")?.addEventListener("click",()=>{detalheTipo="";render()});
   $("prodLimparIntervalo")?.addEventListener("click",()=>{if($("prodFiltroDataIni"))$("prodFiltroDataIni").value="";if($("prodFiltroDataFim"))$("prodFiltroDataFim").value="";render()});
   $("btnProducaoCadastros")?.addEventListener("click",()=>{if(!podeCadastros())return;$("producaoCadastrosBox")?.classList.remove("hidden");renderCadastros();$("producaoCadastrosBox")?.scrollIntoView({behavior:"smooth",block:"start"})});
   $("btnFecharCadastrosProducao")?.addEventListener("click",()=>$("producaoCadastrosBox")?.classList.add("hidden"));
@@ -252,10 +277,10 @@ function ligarEventos(){
   $("btnProdVincularItem")?.addEventListener("click",adicionarVinculo)
 }
 
-function instalar(){garantirCss();garantirMenu();criarPagina();$("btnNovaProducao")?.classList.toggle("hidden",!podeLancar());$("btnProducaoCadastros")?.classList.toggle("hidden",!podeCadastros())}
+function instalar(){garantirCss();garantirMenu();criarPagina();atualizarLimitesIntervalo();$("btnNovaProducao")?.classList.toggle("hidden",!podeLancar());$("btnProducaoCadastros")?.classList.toggle("hidden",!podeCadastros())}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();if(podeVer()&&!pagina()?.classList.contains("hidden"))carregar()});
 window.addEventListener("sig:empresa-contexto",()=>{if(!pagina()?.classList.contains("hidden"))carregar()});
 window.addEventListener("sig:data-changed",e=>{if(["producao","rh"].includes(e.detail?.modulo)&&!pagina()?.classList.contains("hidden"))carregar()});
-window.addEventListener("sig:periodo-changed",()=>{if(!pagina()?.classList.contains("hidden"))render()});
-window.addEventListener("sig:periodo-alterado",()=>{if(!pagina()?.classList.contains("hidden"))render()});
+window.addEventListener("sig:periodo-changed",()=>{atualizarLimitesIntervalo();if(!pagina()?.classList.contains("hidden"))render()});
+window.addEventListener("sig:periodo-alterado",()=>{atualizarLimitesIntervalo();if(!pagina()?.classList.contains("hidden"))render()});
