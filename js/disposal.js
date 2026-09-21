@@ -1,7 +1,7 @@
 import { abrirPagina, admin } from "./core.js";
 import { $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria } from "./admin-actions.js";
-import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=7";
+import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { carregarConfiguracaoModulo, abrirConfiguracaoModulo } from "./module-settings.js";
 
 const COLECAO="descarteLancamentos";
