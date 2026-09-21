@@ -14,3 +14,7 @@
 @media(max-width:1200px){.production-kpis-industria{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.production-kpis-industria{grid-template-columns:repeat(2,minmax(0,1fr))}.production-charts-industria,.production-item-groups,.production-master-grid-2{grid-template-columns:1fr}.production-link-form{grid-template-columns:1fr}}
 @media(max-width:600px){.production-kpis-industria{grid-template-columns:1fr}.production-item-groups{padding:0 10px 10px}}
+
+.losses-charts{grid-template-columns:1.2fr 1fr 1fr}
+.losses-month-chart{display:grid;gap:8px}.loss-month-row{display:grid;grid-template-columns:44px minmax(160px,1fr) 92px;gap:8px;align-items:center;font-size:11px}.loss-month-row>span{text-transform:capitalize;color:#526779}.loss-month-track{height:10px;border-radius:999px;background:#eef3f6;position:relative;overflow:visible}.loss-month-track i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#10a995,#20ccb8)}.loss-month-track b{position:absolute;top:-3px;width:2px;height:16px;background:#b42318;border-radius:2px}.loss-month-row strong{text-align:right;color:#183247}.loss-month-row strong.acima{color:#b42318}
+@media(max-width:900px){.losses-charts{grid-template-columns:1fr}}
