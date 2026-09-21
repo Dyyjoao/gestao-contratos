@@ -65,8 +65,11 @@
 @media(max-width:620px){.production-analysis-toggle{width:100%}.production-analysis-toggle button{flex:1}}
 
 .os-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
-.os-alert-card{appearance:none;text-align:left;cursor:pointer;font:inherit;width:100%;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .15s ease}
-.os-alert-card:hover{transform:translateY(-1px);border-color:#d7a54a;box-shadow:0 8px 20px rgba(124,78,8,.08)}
+.os-filter-card{appearance:none;text-align:left;cursor:pointer;font:inherit;width:100%;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .15s ease}
+.os-filter-card:hover{transform:translateY(-1px);border-color:#8fb8c7;box-shadow:0 8px 20px rgba(31,73,94,.08)}
+.os-filter-card.ativo{background:#eef8fa;border-color:#4aa6b5;box-shadow:0 0 0 2px rgba(74,166,181,.10)}
+.os-filter-card.ativo strong{color:#155e6d}
+.os-alert-card:hover{border-color:#d7a54a;box-shadow:0 8px 20px rgba(124,78,8,.08)}
 .os-alert-card.tem-alerta{background:#fff7e8;border-color:#e5aa3c;box-shadow:0 0 0 2px rgba(229,170,60,.08)}
 .os-alert-card.tem-alerta strong{color:#9a5b00}
 .os-row-atrasada td{background:#fffaf0}.os-row-atrasada td:first-child{box-shadow:inset 3px 0 0 #e5aa3c}
