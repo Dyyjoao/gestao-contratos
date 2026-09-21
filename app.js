@@ -49,7 +49,7 @@ import "./js/dashboard-v2.js";
 import "./js/production-dashboard.js?v=2";
 import "./js/disposal-dashboard.js?v=2";
 import "./js/sales-guard.js";
-import "./js/sales-report-import.js?v=1";
+import "./js/sales-report-import.js?v=2";
 import "./js/fleet.js?v=12";
 import "./js/fleet-detran-es.js";
 import "./js/fleet-central.js?v=10";
