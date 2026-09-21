@@ -40,7 +40,7 @@ import "./js/hr-agenda.js";
 import "./js/module-settings.js";
 import "./js/workforce-dashboard.js";
 import "./js/customer-complaints.js";
-import "./js/fleet-fuel.js?v=16";
+import "./js/fleet-fuel.js?v=17";
 import "./js/admin-fuel-settings.js?v=2";
 import "./js/area-navigation.js";
 import "./js/governance.js";
