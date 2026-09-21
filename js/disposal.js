@@ -108,11 +108,11 @@ function barras(id,values){const target=$(id),max=Math.max(1,...values.map(x=>x[
 function graficoMesMeta(){
   const host=$("descarteMesMeta");if(!host)return;const prod=$("descarteFiltroProducao")?.value||"",m=meta(),{ini,fim}=limitesEfetivos();
   const dados=mesesEfetivos().map(x=>{
-    const mm=String(x.mes).padStart(2,"0"),prefix=`${x.ano}-${mm}`,total=registros.filter(r=>r.status!=="estornado"&&String(r.data||"").startsWith(prefix)&&String(r.data||"")>=ini&&String(r.data||"")<=fim&&(!prod||producaoRegistro(r)===prod)).reduce((s,r)=>s+num(r.quantidade),0);
-    return{label:x.label,total}
-  });
+    const mm=String(x.mes).padStart(2,"0"),prefix=`${x.ano}-${mm}`,docs=registros.filter(r=>r.status!=="estornado"&&String(r.data||"").startsWith(prefix)&&String(r.data||"")>=ini&&String(r.data||"")<=fim&&(!prod||producaoRegistro(r)===prod)),total=docs.reduce((s,r)=>s+num(r.quantidade),0);
+    return{label:x.label,total,qtd:docs.length}
+  }).filter(x=>x.qtd>0);
   const max=Math.max(1,m,...dados.map(x=>x.total));
-  host.innerHTML=dados.map(x=>`<div class="loss-month-row"><span>${esc(x.label)}</span><div class="loss-month-track"><i style="width:${Math.max(x.total?2:0,x.total/max*100)}%"></i><b style="left:${m/max*100}%" title="Meta ${fmt(m)}"></b></div><strong class="${x.total>m?"acima":""}">${fmt(x.total)} / ${fmt(m)}</strong></div>`).join("")||'<p class="production-empty">Sem meses no período selecionado.</p>'
+  host.innerHTML=dados.map(x=>`<div class="loss-month-row"><span>${esc(x.label)}</span><div class="loss-month-track"><i style="width:${Math.max(x.total?2:0,x.total/max*100)}%"></i><b style="left:${m/max*100}%" title="Meta ${fmt(m)}"></b></div><strong class="${x.total>m?"acima":""}">${fmt(x.total)} / ${fmt(m)}</strong></div>`).join("")||'<p class="production-empty">Sem lançamentos no período selecionado.</p>'
 }
 function render(){
   const historico=lista(),ativos=historico.filter(x=>x.status!=="estornado"),total=ativos.reduce((s,x)=>s+num(x.quantidade),0),producoesAgg={},responsaveisAgg={};
@@ -120,10 +120,10 @@ function render(){
   const porMes=new Map();
   ativos.forEach(x=>{const chave=String(x.data||"").slice(0,7);if(chave)porMes.set(chave,(porMes.get(chave)||0)+num(x.quantidade))});
   const mesesComLancamento=[...porMes.entries()].map(([chave,valor])=>({chave,valor,dif:valor-meta()})).sort((a,b)=>a.chave.localeCompare(b.chave));
-  const pior=mesesComLancamento.length?mesesComLancamento.reduce((a,b)=>b.dif>a.dif?b:a):null,dif=pior?.dif??0;
+  const acima=mesesComLancamento.filter(x=>x.dif>0),pior=acima.length?acima.reduce((a,b)=>b.dif>a.dif?b:a):null,excesso=pior?.dif??0;
   $("descarteKpiTotal").textContent=`${fmt(total)} cx`;$("descarteKpiMeta").textContent=`${fmt(meta())} cx`;$("descarteKpiRegistros").textContent=String(ativos.length);
-  $("descarteKpiDiferenca").textContent=pior?`${dif>0?"+":""}${fmt(dif)} cx`:"—";
-  $("descarteKpiDiferencaSub").textContent=!pior?"Sem lançamento no período":dif>0?`Maior excesso mensal · ${pior.chave.slice(5,7)}/${pior.chave.slice(0,4)}`:`Nenhum mês com lançamento excedeu a meta`;
+  $("descarteKpiDiferenca").textContent=mesesComLancamento.length?`${fmt(excesso)} cx`:"—";
+  $("descarteKpiDiferencaSub").textContent=!mesesComLancamento.length?"Sem lançamento no período":pior?`Maior excesso mensal · ${pior.chave.slice(5,7)}/${pior.chave.slice(0,4)}`:`Nenhum mês com lançamento excedeu a meta`;
   $("descarteContagem").textContent=`${historico.length} lançamento(s) no filtro`;
   graficoMesMeta();barras("descartePorProducao",Object.entries(producoesAgg).sort((a,b)=>b[1]-a[1]));barras("descartePorResponsavel",Object.entries(responsaveisAgg).sort((a,b)=>b[1]-a[1]));
   $("descarteLista").innerHTML=historico.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${dataBr(x.data)}</td><td>${esc(producaoRegistro(x)||"—")}</td><td>${fmt(x.quantidade)} cx</td><td>${esc(x.responsavel||"—")}</td><td>${x.status==="estornado"?"Estornado":"Ativo"}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&editar()?`<button type="button" class="btn-acao destaque" data-descarte-edit="${esc(x.id)}">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button type="button" class="btn-acao perigo" data-descarte-estorno="${esc(x.id)}">Estornar ADM</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="6">Nenhuma perda encontrada.</td></tr>';
