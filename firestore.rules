@@ -149,6 +149,27 @@ service cloud.firestore {
         )
       );
     }
+    function vendaImportadaSincronizavel(novo, antigo) {
+      return vendasLancar() &&
+        (
+          (('origemImportacao' in antigo) && antigo.origemImportacao == 'relatorio_vendas') ||
+          (('importacaoLoteId' in antigo) && antigo.importacaoLoteId is string && antigo.importacaoLoteId.size() > 0)
+        ) &&
+        novo.origemImportacao == 'relatorio_vendas' &&
+        novo.documento == antigo.documento &&
+        valorRecebidoVenda(novo) == valorRecebidoVenda(antigo) &&
+        dataRecebimentoVenda(novo) == dataRecebimentoVenda(antigo) &&
+        antigo.comissaoStatus != 'aprovada' && antigo.comissaoStatus != 'paga' &&
+        vendedorValidoParaVenda(novo) &&
+        calculoComissaoValido(novo) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data','vendedorId','vendedorRhId','vendedorNome','vendedorCodigo','vendedorNomeOrigem',
+          'clienteId','clienteCodigo','cliente','clienteNomeOrigem','lojaOrigem',
+          'descricao','itens','valor','baseComissao','comissaoPct','comissaoBaseValor','comissaoValor',
+          'comissaoStatus','status','observacao','origemImportacao','arquivoImportacao','importacaoChave',
+          'ultimaImportacaoLoteId','ultimaImportacaoEm','atualizadoEm'
+        ]);
+    }
 
     function caixaVisualizar() {
       return permissao('controladoria','visualizar') ||
@@ -1061,6 +1082,16 @@ service cloud.firestore {
         ('origem' in resource.data) && resource.data.origem == 'importacao_relatorio_vendas';
     }
 
+    match /importacoesVendasAlteracoes/{id} {
+      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if vendasLancar() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.loteId is string && request.resource.data.loteId.size() > 0 &&
+        request.resource.data.vendaId is string && request.resource.data.vendaId.size() > 0 &&
+        request.resource.data.antes is map;
+      allow update: if false;
+      allow delete: if administrador() && documentoAcessivel(resource.data);
+    }
+
     match /importacoesVendas/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if vendasLancar() && documentoAcessivel(request.resource.data) &&
@@ -1070,12 +1101,14 @@ service cloud.firestore {
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId && (
           (vendasLancar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','quantidadeVendas','quantidadeClientesNovos','valorTotal','concluidoEm',
+            'status','quantidadeVendas','quantidadeVendasNovas','quantidadeVendasAtualizadas',
+            'quantidadeClientesNovos','valorTotal','concluidoEm',
             'erro','finalizadoEm','atualizadoEm'
           ])) ||
           (administrador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','excluidoEm','excluidoPor','exclusaoMotivo',
-            'quantidadeVendasExcluidas','quantidadeClientesExcluidos','quantidadeConfigsExcluidas',
+            'quantidadeVendasExcluidas','quantidadeVendasRestauradas',
+            'quantidadeClientesExcluidos','quantidadeConfigsExcluidas','quantidadeSnapshotsExcluidos',
             'erroExclusao','atualizadoEm'
           ]))
         );
@@ -1122,6 +1155,7 @@ service cloud.firestore {
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId && (
           (vendasEditar() && vendaOperacionalValida(request.resource.data, resource.data)) ||
+          vendaImportadaSincronizavel(request.resource.data, resource.data) ||
           (vendasComissoes() &&
             calculoComissaoValido(request.resource.data) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
