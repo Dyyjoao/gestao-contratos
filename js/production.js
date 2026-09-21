@@ -110,6 +110,15 @@ function criarPagina(){
     </div>
   </section>
 
+  <section class="lista-card production-annual-card">
+    <div class="lista-cabecalho production-annual-head">
+      <div><h3>Acompanhamento anual</h3><p id="prodAcompanhamentoSub">Evolução mensal no ano selecionado no filtro principal.</p></div>
+      <div class="campo production-annual-select"><label for="prodAcompanhamentoProducao">Produção</label><select id="prodAcompanhamentoProducao"></select></div>
+    </div>
+    <div class="production-annual-summary"><span>Total anual</span><strong id="prodAcompanhamentoTotal">—</strong></div>
+    <div id="prodAcompanhamentoGrafico" class="production-annual-chart"></div>
+  </section>
+
   <section class="lista-card"><div class="lista-cabecalho"><div><h3>Histórico de lançamentos</h3><p id="prodQtdRegistros">—</p></div><span class="production-history-note">Estornos permanecem visíveis e não entram nos indicadores.</span></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Produção</th><th>Item</th><th>Total</th><th>Horas</th><th>Produtividade</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="prodLista"></tbody></table></div></section>`;
   main.appendChild(s);ligarEventos();
 }
@@ -156,6 +165,12 @@ function atualizarSelects(){
   if(fr)fr.innerHTML='<option value="">Todas as produções</option>'+opcoesLista(producoesAtivas(),{vazio:false});
   const itensFiltro=vfr?itensParaProducao(vfr):itensAtivos();if(fi)fi.innerHTML='<option value="">Todos os itens</option>'+opcoesLista(itensFiltro,{vazio:false});
   if(r&&vr&&[...r.options].some(o=>o.value===vr))r.value=vr;if(fr&&vfr&&[...fr.options].some(o=>o.value===vfr))fr.value=vfr;if(fi&&vfi&&[...fi.options].some(o=>o.value===vfi))fi.value=vfi;
+  const anual=$("prodAcompanhamentoProducao"),anualAtual=anual?.value||"MAQUINAS_CONSOLIDADO";
+  if(anual){
+    const recursos=producoesAtivas().filter(x=>tipoBloco(x)!=="maquina").sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    anual.innerHTML='<option value="MAQUINAS_CONSOLIDADO">Máquinas · consolidado</option><option value="MAQ.1">MAQ.1</option><option value="MAQ.2">MAQ.2</option>'+recursos.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    anual.value=[...anual.options].some(o=>o.value===anualAtual)?anualAtual:"MAQUINAS_CONSOLIDADO";
+  }
   atualizarItemDoForm();preencherResponsaveis();atualizarMetricaForm();atualizarVinculoSelects()
 }
 function atualizarVinculoSelects(){
@@ -205,6 +220,24 @@ function renderDetalheProdutos(arr){
   document.querySelectorAll("[data-detalhe]").forEach(b=>b.classList.toggle("ativo",b.dataset.detalhe===detalheTipo))
 }
 
+function renderAcompanhamentoAnual(){
+  const host=$("prodAcompanhamentoGrafico"),sel=$("prodAcompanhamentoProducao");if(!host||!sel)return;
+  const ano=Number(periodoAno()),escolha=sel.value||"MAQUINAS_CONSOLIDADO";
+  let unidade="UN",rotulo=escolha;
+  const base=registros.filter(x=>x.status!=="estornado"&&String(x.data||"").startsWith(String(ano)));
+  let dadosBase=[];
+  if(escolha==="MAQUINAS_CONSOLIDADO"){
+    dadosBase=base.filter(x=>tipoBloco(x.recurso)==="maquina");unidade="BANDEJA";rotulo="Máquinas · consolidado";
+  }else{
+    dadosBase=base.filter(x=>norm(x.recurso)===norm(escolha));unidade=unidadeRecurso(escolha);
+  }
+  const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const valores=meses.map((label,i)=>({label,valor:dadosBase.filter(x=>Number(String(x.data||"").slice(5,7))===i+1).reduce((s,x)=>s+n(x.quantidade),0)}));
+  const max=Math.max(1,...valores.map(x=>x.valor)),total=valores.reduce((s,x)=>s+x.valor,0),sufixo=unidade==="M²"?"m²":unidade==="BANDEJA"?"b":"un";
+  if($("prodAcompanhamentoSub"))$("prodAcompanhamentoSub").textContent=`${rotulo} · evolução mensal de ${ano}`;
+  if($("prodAcompanhamentoTotal"))$("prodAcompanhamentoTotal").textContent=`${fmt(total)} ${sufixo}`;
+  host.innerHTML=valores.map(x=>`<div class="production-annual-col"><div class="production-annual-value">${x.valor?fmt(x.valor):"0"}</div><div class="production-annual-track"><i style="height:${x.valor?Math.max(4,x.valor/max*100):0}%"></i></div><span>${x.label}</span></div>`).join("");
+}
 function render(){
   const historico=baseFiltrada(),arr=historico.filter(x=>x.status!=="estornado");
   const maquinas=arr.filter(x=>tipoBloco(x.recurso)==="maquina"),lajes=arr.filter(x=>tipoBloco(x.recurso)==="laje"),mourao=arr.filter(x=>tipoBloco(x.recurso)==="mourao");
@@ -217,6 +250,7 @@ function render(){
   if($("prodCardLajeValor"))$("prodCardLajeValor").textContent=`${fmt(qLaje)} m²`;
   if($("prodCardMouraoValor"))$("prodCardMouraoValor").textContent=`${fmt(qMourao,0)} un`;
   renderDetalheProdutos(arr);
+  renderAcompanhamentoAnual();
 
   const tb=$("prodLista");if(tb)tb.innerHTML=historico.sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))).map(x=>{const u=x.unidadeMedida||unidadeRecurso(x.recurso),rate=n(x.horasTrabalhadas)?n(x.quantidade)/n(x.horasTrabalhadas):0;return`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${dataBr(x.data)}</td><td><strong>${esc(x.recurso||"-")}</strong>${x.status==="estornado"?'<small class="sig-admin-estorno-info">Estornado</small>':""}</td><td>${esc(x.item||"-")}</td><td>${fmt(x.quantidade)} ${unidadeTexto(u)}</td><td>${n(x.horasTrabalhadas)?fmt(x.horasTrabalhadas):"—"}</td><td>${tipoBloco(x.recurso)==="maquina"&&rate?fmt(rate)+" b/h":"—"}</td><td>${esc(x.responsavel||x.concretador||"-")}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&podeEditar()?`<button class="btn-acao destaque" data-prod-edit="${x.id}" type="button">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button class="btn-acao perigo" data-prod-estorno="${x.id}" type="button">Estornar ADM</button>`:""}</div></td></tr>`}).join("")||'<tr><td colspan="8">Nenhum lançamento encontrado.</td></tr>';
   document.querySelectorAll("[data-prod-edit]").forEach(b=>b.onclick=()=>abrirEdicao(b.dataset.prodEdit));document.querySelectorAll("[data-prod-estorno]").forEach(b=>b.onclick=()=>estornar(b.dataset.prodEstorno))
@@ -270,6 +304,7 @@ function ligarEventos(){
   ["prodFiltroDataIni","prodFiltroDataFim","prodFiltroItem"].forEach(id=>$(id)?.addEventListener("change",render));
   document.querySelectorAll("[data-detalhe]").forEach(b=>b.addEventListener("click",()=>{detalheTipo=detalheTipo===b.dataset.detalhe?"":b.dataset.detalhe;render()}));
   $("prodFecharDetalhe")?.addEventListener("click",()=>{detalheTipo="";render()});
+  $("prodAcompanhamentoProducao")?.addEventListener("change",renderAcompanhamentoAnual);
   $("prodLimparIntervalo")?.addEventListener("click",()=>{if($("prodFiltroDataIni"))$("prodFiltroDataIni").value="";if($("prodFiltroDataFim"))$("prodFiltroDataFim").value="";render()});
   $("btnProducaoCadastros")?.addEventListener("click",()=>{if(!podeCadastros())return;$("producaoCadastrosBox")?.classList.remove("hidden");renderCadastros();$("producaoCadastrosBox")?.scrollIntoView({behavior:"smooth",block:"start"})});
   $("btnFecharCadastrosProducao")?.addEventListener("click",()=>$("producaoCadastrosBox")?.classList.add("hidden"));
