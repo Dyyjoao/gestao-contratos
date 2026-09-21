@@ -117,8 +117,14 @@ function graficoMesMeta(){
 function render(){
   const historico=lista(),ativos=historico.filter(x=>x.status!=="estornado"),total=ativos.reduce((s,x)=>s+num(x.quantidade),0),producoesAgg={},responsaveisAgg={};
   ativos.forEach(x=>{const p=producaoRegistro(x)||"Não informado",r=x.responsavel||"Não informado";producoesAgg[p]=(producoesAgg[p]||0)+num(x.quantidade);responsaveisAgg[r]=(responsaveisAgg[r]||0)+num(x.quantidade)});
-  const mensal=meta()*Math.max(1,mesesEfetivos().length),dif=total-mensal;
-  $("descarteKpiTotal").textContent=`${fmt(total)} cx`;$("descarteKpiMeta").textContent=`${fmt(meta())} cx`;$("descarteKpiRegistros").textContent=String(ativos.length);$("descarteKpiDiferenca").textContent=`${dif>0?"+":""}${fmt(dif)} cx`;$("descarteKpiDiferencaSub").textContent=dif>0?"Acima da meta":"Dentro / abaixo da meta";$("descarteContagem").textContent=`${historico.length} lançamento(s) no filtro`;
+  const porMes=new Map();
+  ativos.forEach(x=>{const chave=String(x.data||"").slice(0,7);if(chave)porMes.set(chave,(porMes.get(chave)||0)+num(x.quantidade))});
+  const mesesComLancamento=[...porMes.entries()].map(([chave,valor])=>({chave,valor,dif:valor-meta()})).sort((a,b)=>a.chave.localeCompare(b.chave));
+  const pior=mesesComLancamento.length?mesesComLancamento.reduce((a,b)=>b.dif>a.dif?b:a):null,dif=pior?.dif??0;
+  $("descarteKpiTotal").textContent=`${fmt(total)} cx`;$("descarteKpiMeta").textContent=`${fmt(meta())} cx`;$("descarteKpiRegistros").textContent=String(ativos.length);
+  $("descarteKpiDiferenca").textContent=pior?`${dif>0?"+":""}${fmt(dif)} cx`:"—";
+  $("descarteKpiDiferencaSub").textContent=!pior?"Sem lançamento no período":dif>0?`Acima da meta em ${pior.chave.slice(5,7)}/${pior.chave.slice(0,4)}`:`Maior mês com lançamento ainda dentro da meta`;
+  $("descarteContagem").textContent=`${historico.length} lançamento(s) no filtro`;
   graficoMesMeta();barras("descartePorProducao",Object.entries(producoesAgg).sort((a,b)=>b[1]-a[1]));barras("descartePorResponsavel",Object.entries(responsaveisAgg).sort((a,b)=>b[1]-a[1]));
   $("descarteLista").innerHTML=historico.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${dataBr(x.data)}</td><td>${esc(producaoRegistro(x)||"—")}</td><td>${fmt(x.quantidade)} cx</td><td>${esc(x.responsavel||"—")}</td><td>${x.status==="estornado"?"Estornado":"Ativo"}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&editar()?`<button type="button" class="btn-acao destaque" data-descarte-edit="${esc(x.id)}">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button type="button" class="btn-acao perigo" data-descarte-estorno="${esc(x.id)}">Estornar ADM</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="6">Nenhuma perda encontrada.</td></tr>';
   document.querySelectorAll("[data-descarte-edit]").forEach(b=>b.onclick=()=>abrirEdicao(b.dataset.descarteEdit));document.querySelectorAll("[data-descarte-estorno]").forEach(b=>b.onclick=()=>estornar(b.dataset.descarteEstorno))
