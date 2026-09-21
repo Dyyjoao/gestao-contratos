@@ -17,7 +17,7 @@ const CAMPOS={
 };
 const OBRIGATORIOS=["CDCLIENTE","NOMEPESSOA","CDVENDA","CDFUNCIONARIOVENDA","NOMEFUNCIONARIO","DATAVENDA","VALORVENDA"];
 
-let arquivoAtual="",analise=null,vendedoresRh=[],configs=[],vendas=[],clientes=[],importacoes=[],busy=false;
+let arquivoAtual="",analise=null,vendedoresRh=[],configs=[],vendas=[],clientes=[],importacoes=[],snapshots=[],busy=false;
 const pagina=()=>$("pagina-vendas");
 const podeImportar=()=>admin()||permite("vendas","lancar");
 const podeVendedores=()=>admin()||permite("vendas","vendedores");
@@ -116,7 +116,32 @@ function clientePorCodigo(cod,emp){
   const key=chaveCodigo(cod);return clientes.find(x=>x.empresaId===emp&&chaveCodigo(x.codigo)===key)||null
 }
 function chaveVenda(r,emp){return chaveImportacao("RELATORIO_VENDAS",emp,r.lojaCodigo||"SEMLOJA",r.vendaCodigo)}
-function duplicada(r,emp){const k=chaveVenda(r,emp);return vendas.some(v=>v.empresaId===emp&&(v.importacaoChave===k||(String(v.documento||"").trim()===r.vendaCodigo&&String(v.lojaOrigem||"")===String(r.lojaCodigo||""))))}
+function vendaPorPedido(r,emp){
+  const pedido=codigo(r.vendaCodigo),loja=codigo(r.lojaCodigo),candidatas=vendas.filter(v=>v.empresaId===emp&&codigo(v.documento)===pedido);
+  if(!candidatas.length)return null;
+  if(loja){const porLoja=candidatas.find(v=>codigo(v.lojaOrigem)===loja);if(porLoja)return porLoja}
+  return candidatas.length===1?candidatas[0]:null
+}
+function vendaImportada(v){return !!v&&(v.origemImportacao==="relatorio_vendas"||String(v.importacaoLoteId||"").startsWith("IMP-VND-"))}
+function linhaMudou(r,v,rh,cfg,cl){
+  if(!v)return true;
+  return String(v.data||"")!==r.data||
+    Math.abs(n(v.valor)-n(r.valor))>0.009||
+    chaveCodigo(v.vendedorCodigo||"")!==chaveCodigo(r.vendedorCodigo)||
+    String(v.vendedorRhId||"")!==String(rh?.id||"")||
+    chaveCodigo(v.clienteCodigo||"")!==chaveCodigo(r.clienteCodigo)||
+    String(v.clienteId||"")!==String(cl?.id||"")||
+    codigo(v.lojaOrigem||"")!==codigo(r.lojaCodigo||"")||
+    String(v.vendedorId||"")!==String(cfg?.id||"")
+}
+function classificarLinha(r,emp){
+  const existente=vendaPorPedido(r,emp),rh=rhPorCodigo(r.vendedorCodigo),cfg=rh?cfgPorRh(rh.id):null,cl=clientePorCodigo(r.clienteCodigo,emp);
+  if(!existente)return{tipo:"nova",existente,rh,cfg,cl};
+  if(!vendaImportada(existente))return{tipo:"conflito",motivo:"Pedido já existe fora do importador",existente,rh,cfg,cl};
+  if(["aprovada","paga"].includes(String(existente.comissaoStatus||""))&&linhaMudou(r,existente,rh,cfg,cl))return{tipo:"conflito",motivo:"Comissão já aprovada/paga",existente,rh,cfg,cl};
+  if(n(existente.valorRecebido)>n(r.valor)+0.009)return{tipo:"conflito",motivo:"Recebido maior que o novo valor da venda",existente,rh,cfg,cl};
+  return{tipo:linhaMudou(r,existente,rh,cfg,cl)?"atualizar":"igual",existente,rh,cfg,cl}
+}
 function montar(){
   const p=pagina();if(!p||$("salesReportImportBox"))return false;css();
   const acoes=p.querySelector(".pagina-cabecalho .acoes-cabecalho"),btn=document.createElement("button");btn.id="btnSalesReportImport";btn.className="btn-secundario";btn.type="button";btn.textContent="Importar vendas";acoes?.insertBefore(btn,$("btnSalesVenda")||null);
@@ -144,8 +169,8 @@ function abrir(){if(!podeImportar())return alert("Seu perfil não pode importar 
 function fechar(){$("salesReportImportBox")?.classList.add("hidden")}
 function limpar(){analise=null;arquivoAtual="";const f=$("salesReportArquivo");if(f)f.value="";$("salesReportImportResultado")?.classList.add("hidden");msg($("salesReportImportMsg"),"")}
 async function carregarBases(){
-  const [rh,cfg,vs,cl,imps]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("clientesComerciais"),listarDocumentos("importacoesVendas")]);
-  vendedoresRh=rh;configs=cfg;vendas=vs;clientes=cl;importacoes=imps
+  const [rh,cfg,vs,cl,imps,snaps]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("clientesComerciais"),listarDocumentos("importacoesVendas"),listarDocumentos("importacoesVendasAlteracoes")]);
+  vendedoresRh=rh;configs=cfg;vendas=vs;clientes=cl;importacoes=imps;snapshots=snaps
 }
 function renderHistorico(){
   const tb=$("salesReportHistorico");if(!tb)return;const emp=empresaUnicaSelecionadaId();
@@ -156,32 +181,30 @@ function renderHistorico(){
 async function excluirLote(id){
   if(!admin())return alert("A exclusão em lote é restrita ao Administrador.");
   const imp=importacoes.find(x=>x.id===id);if(!imp||!["concluida","parcial","exclusao_parcial"].includes(imp.status))return;
-  const lote=imp.loteId||imp.id,linhas=vendas.filter(v=>v.empresaId===imp.empresaId&&v.importacaoLoteId===lote);
-  const motivo=prompt(`Excluir fisicamente a importação ${lote}?\n\n${linhas.length} venda(s) importada(s) serão apagadas do Firestore. Informe o motivo:`);
+  const lote=imp.loteId||imp.id,novas=vendas.filter(v=>v.empresaId===imp.empresaId&&v.importacaoLoteId===lote),snaps=snapshots.filter(s=>s.empresaId===imp.empresaId&&s.loteId===lote);
+  const motivo=prompt(`Excluir fisicamente a importação ${lote}?\n\n${novas.length} venda(s) criada(s) serão apagadas e ${snaps.length} venda(s) atualizada(s) serão restauradas ao estado anterior. Informe o motivo:`);
   if(motivo===null)return;if(!motivo.trim())return alert("Informe o motivo da exclusão.");
-  if(!confirm(`ATENÇÃO: confirmar exclusão física do lote ${lote}?\n\nAs vendas importadas serão apagadas do banco. Clientes e configurações criados exclusivamente por este lote também serão removidos quando não tiverem outro vínculo. O log mínimo do lote será preservado para rastreabilidade.`))return;
-  busy=true;let vendasExcluidas=0,clientesExcluidos=0,configsExcluidas=0;
+  if(!confirm(`ATENÇÃO: confirmar exclusão física do lote ${lote}?\n\nNovos registros serão apagados. Pedidos que já existiam antes do lote serão restaurados. O log mínimo do lote será preservado para rastreabilidade.`))return;
+  busy=true;let vendasExcluidas=0,vendasRestauradas=0,clientesExcluidos=0,configsExcluidas=0,snapshotsExcluidos=0;
   try{
     const agora=new Date().toISOString(),uid=state.usuario?.id||"";
-    msg($("salesReportImportMsg"),`Excluindo lote ${lote}...`);
-    await executarEmLotes(linhas,async v=>{await excluirDocumento("vendas",v.id);vendasExcluidas++},{tamanho:8});
+    msg($("salesReportImportMsg"),`Revertendo lote ${lote}...`);
+    for(const s of snaps){
+      const atual=vendas.find(v=>v.id===s.vendaId);if(atual&&s.antes){await atualizarDocumento("vendas",s.vendaId,{...s.antes,ultimaImportacaoLoteId:s.antes.ultimaImportacaoLoteId||"",ultimaImportacaoEm:s.antes.ultimaImportacaoEm||""});vendasRestauradas++}
+    }
+    await executarEmLotes(novas,async v=>{await excluirDocumento("vendas",v.id);vendasExcluidas++},{tamanho:8});
     const vendasDepois=await listarDocumentos("vendas");
     const clientesLote=clientes.filter(x=>x.empresaId===imp.empresaId&&x.importacaoLoteId===lote);
-    for(const cliente of clientesLote){
-      const usado=vendasDepois.some(v=>v.clienteId===cliente.id);
-      if(!usado){await excluirDocumento("clientesComerciais",cliente.id);clientesExcluidos++}
-    }
+    for(const cliente of clientesLote){if(!vendasDepois.some(v=>v.clienteId===cliente.id)){await excluirDocumento("clientesComerciais",cliente.id);clientesExcluidos++}}
     const configsLote=configs.filter(x=>x.empresaId===imp.empresaId&&x.importacaoLoteId===lote&&x.configuracaoPendente===true);
-    for(const cfg of configsLote){
-      const usado=vendasDepois.some(v=>v.vendedorId===cfg.id);
-      if(!usado){await excluirDocumento("vendedores",cfg.id);configsExcluidas++}
-    }
-    await atualizarDocumento("importacoesVendas",id,{status:"excluida",excluidoEm:agora,excluidoPor:uid,exclusaoMotivo:motivo.trim(),quantidadeVendasExcluidas:vendasExcluidas,quantidadeClientesExcluidos:clientesExcluidos,quantidadeConfigsExcluidas:configsExcluidas});
-    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} excluído fisicamente: ${vendasExcluidas} venda(s), ${clientesExcluidos} cliente(s) e ${configsExcluidas} configuração(ões) automática(s).`,true)
+    for(const cfg of configsLote){if(!vendasDepois.some(v=>v.vendedorId===cfg.id)){await excluirDocumento("vendedores",cfg.id);configsExcluidas++}}
+    for(const s of snaps){await excluirDocumento("importacoesVendasAlteracoes",s.id);snapshotsExcluidos++}
+    await atualizarDocumento("importacoesVendas",id,{status:"excluida",excluidoEm:agora,excluidoPor:uid,exclusaoMotivo:motivo.trim(),quantidadeVendasExcluidas:vendasExcluidas,quantidadeVendasRestauradas:vendasRestauradas,quantidadeClientesExcluidos:clientesExcluidos,quantidadeConfigsExcluidas:configsExcluidas,quantidadeSnapshotsExcluidos:snapshotsExcluidos});
+    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} revertido: ${vendasExcluidas} nova(s) apagada(s) e ${vendasRestauradas} venda(s) restaurada(s).`,true)
   }catch(e){
     console.error("Exclusão de importação:",e);
-    try{await atualizarDocumento("importacoesVendas",id,{status:"exclusao_parcial",erroExclusao:String(e?.message||e).slice(0,500),quantidadeVendasExcluidas:vendasExcluidas,quantidadeClientesExcluidos:clientesExcluidos,quantidadeConfigsExcluidas:configsExcluidas})}catch{}
-    msg($("salesReportImportMsg"),`A exclusão do lote foi interrompida após remover ${vendasExcluidas} venda(s). Execute novamente o botão Excluir lote para concluir. Confira as Rules publicadas.`)
+    try{await atualizarDocumento("importacoesVendas",id,{status:"exclusao_parcial",erroExclusao:String(e?.message||e).slice(0,500),quantidadeVendasExcluidas:vendasExcluidas,quantidadeVendasRestauradas:vendasRestauradas,quantidadeClientesExcluidos:clientesExcluidos,quantidadeConfigsExcluidas:configsExcluidas})}catch{}
+    msg($("salesReportImportMsg"),"A exclusão/reversão do lote foi interrompida. Execute novamente para concluir e confira as Rules publicadas.")
   }finally{busy=false}
 }
 
@@ -191,11 +214,12 @@ function consolidarVendedores(){
   const arr=[...mapa.values()];arr.forEach(x=>{x.rh=rhPorCodigo(x.codigo);x.cfg=x.rh?cfgPorRh(x.rh.id):null});return arr
 }
 function render(){
-  if(!analise)return;const emp=empresaUnicaSelecionadaId(),vend=consolidarVendedores(),novosClientes=new Set(analise.linhas.filter(r=>!clientePorCodigo(r.clienteCodigo,emp)).map(r=>chaveCodigo(r.clienteCodigo))),dups=analise.linhas.filter(r=>duplicada(r,emp)).length,semRh=vend.filter(x=>!x.rh).length,semCfg=vend.filter(x=>x.rh&&!x.cfg).length;
-  $("salesReportImportResumo").innerHTML=`<div><span>Linhas válidas</span><strong>${analise.linhas.length}</strong><small>${analise.erros.length} aviso(s) ignorado(s)</small></div><div><span>Valor das vendas</span><strong>${moeda(analise.total)}</strong><small>Aba: ${esc(analise.aba||"—")}</small></div><div><span>Clientes novos</span><strong>${novosClientes.size}</strong><small>Cadastro automático por CD_CLIENTE</small></div><div><span>Vendedores</span><strong>${vend.length}</strong><small>${semRh} sem vínculo RH · ${semCfg} sem configuração</small></div><div><span>Duplicadas</span><strong>${dups}</strong><small>Serão ignoradas</small></div>`;
+  if(!analise)return;const emp=empresaUnicaSelecionadaId(),vend=consolidarVendedores(),novosClientes=new Set(analise.linhas.filter(r=>!clientePorCodigo(r.clienteCodigo,emp)).map(r=>chaveCodigo(r.clienteCodigo))),semRh=vend.filter(x=>!x.rh).length,semCfg=vend.filter(x=>x.rh&&!x.cfg).length;
+  const classes=analise.linhas.map(r=>({r,...classificarLinha(r,emp)})),novas=classes.filter(x=>x.tipo==="nova").length,atualizar=classes.filter(x=>x.tipo==="atualizar").length,iguais=classes.filter(x=>x.tipo==="igual").length,conflitos=classes.filter(x=>x.tipo==="conflito").length;
+  $("salesReportImportResumo").innerHTML=`<div><span>Linhas válidas</span><strong>${analise.linhas.length}</strong><small>${analise.erros.length} aviso(s) ignorado(s)</small></div><div><span>Valor das vendas</span><strong>${moeda(analise.total)}</strong><small>Aba: ${esc(analise.aba||"—")}</small></div><div><span>Novas / atualizações</span><strong>${novas} / ${atualizar}</strong><small>${iguais} já idêntica(s) · ${conflitos} conflito(s)</small></div><div><span>Clientes novos</span><strong>${novosClientes.size}</strong><small>Cadastro automático por CD_CLIENTE</small></div><div><span>Vendedores</span><strong>${vend.length}</strong><small>${semRh} sem vínculo RH · ${semCfg} sem configuração</small></div>`;
   $("salesReportVendedores").innerHTML=vend.map(x=>`<tr><td><strong>${esc(x.codigo)}</strong></td><td>${esc(x.nome||"—")}</td><td>${x.rh?`<strong>${esc(x.rh.nome)}</strong><small>${esc(x.rh.cargoNome||"")}</small>`:'<span class="status-inativo">Código não vinculado no RH</span>'}</td><td>${x.cfg?`<span class="status-ativo">${n(x.cfg.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:3})}% · recebido</span>`:x.rh&&podeVendedores()?'<span class="status-inativo">Será criada em 0% · revisar depois</span>':'<span class="status-inativo">Configuração de comissão pendente</span>'}</td><td>${x.qtd}</td></tr>`).join("");
-  const preview=analise.linhas.slice(0,120);$("salesReportPreviewInfo").textContent=`${analise.linhas.length} venda(s) válida(s) · exibindo ${preview.length}. ${analise.erros.length?analise.erros.length+" linha(s) inválida(s) foram ignoradas.":""}`;
-  $("salesReportPreview").innerHTML=preview.map(r=>{const rh=rhPorCodigo(r.vendedorCodigo),cl=clientePorCodigo(r.clienteCodigo,emp),dup=duplicada(r,emp),ok=rh&&(cfgPorRh(rh.id)||podeVendedores());return`<tr class="${dup?"sales-import-dup":""}"><td>${esc(r.data.split("-").reverse().join("/"))}</td><td><strong>${esc(r.vendaCodigo)}</strong><small>${r.lojaCodigo?"Loja "+esc(r.lojaCodigo):""}</small></td><td><strong>${esc(cl?.nome||r.clienteNome)}</strong><small>Cód. ${esc(r.clienteCodigo)}${cl?" · cadastrado":" · será cadastrado"}</small></td><td><strong>${esc(rh?.nome||r.vendedorNome)}</strong><small>Cód. ${esc(r.vendedorCodigo)}</small></td><td>${moeda(r.valor)}</td><td>${dup?'<span class="status-inativo">Duplicada</span>':ok?'<span class="status-ativo">Pronta</span>':'<span class="status-inativo">Pendente de vínculo/configuração</span>'}</td></tr>`}).join("");
+  const preview=classes.slice(0,120);$("salesReportPreviewInfo").textContent=`${analise.linhas.length} venda(s) válida(s) · ${novas} nova(s) · ${atualizar} atualização(ões) · ${iguais} sem alteração · ${conflitos} conflito(s). Exibindo ${preview.length}.`;
+  $("salesReportPreview").innerHTML=preview.map(x=>{const r=x.r,rh=x.rh,cl=x.cl,tipo=x.tipo,label=tipo==="nova"?"Nova":tipo==="atualizar"?"Atualizar":tipo==="igual"?"Já atualizada":"Conflito",klass=tipo==="conflito"?"status-inativo":"status-ativo";return`<tr class="${tipo==="igual"?"sales-import-dup":""}"><td>${esc(r.data.split("-").reverse().join("/"))}</td><td><strong>${esc(r.vendaCodigo)}</strong><small>${r.lojaCodigo?"Loja "+esc(r.lojaCodigo):""}</small></td><td><strong>${esc(cl?.nome||r.clienteNome)}</strong><small>Cód. ${esc(r.clienteCodigo)}${cl?" · cadastrado":" · será cadastrado"}</small></td><td><strong>${esc(rh?.nome||r.vendedorNome)}</strong><small>Cód. ${esc(r.vendedorCodigo)}</small></td><td>${moeda(r.valor)}</td><td><span class="${klass}">${label}</span>${x.motivo?`<small>${esc(x.motivo)}</small>`:""}</td></tr>`}).join("");
   $("salesReportImportResultado")?.classList.remove("hidden");renderHistorico()
 }
 async function analisar(){
@@ -228,30 +252,49 @@ async function garantirConfigs(emp,linhas,lote){
   }
   return mapa
 }
+function snapshotVenda(v){
+  const campos=["data","dataRecebimento","valorRecebido","vendedorId","vendedorRhId","vendedorNome","vendedorCodigo","vendedorNomeOrigem","clienteId","clienteCodigo","cliente","clienteNomeOrigem","documento","lojaOrigem","descricao","itens","valor","baseComissao","comissaoPct","comissaoBaseValor","comissaoValor","comissaoStatus","status","observacao","origemImportacao","arquivoImportacao","importacaoLoteId","importacaoChave","ultimaImportacaoLoteId","ultimaImportacaoEm"];
+  const antes={};campos.forEach(k=>{if(Object.prototype.hasOwnProperty.call(v,k))antes[k]=v[k]});return antes
+}
+async function registrarSnapshot(lote,emp,v){
+  const existente=snapshots.find(s=>s.empresaId===emp&&s.loteId===lote&&s.vendaId===v.id);if(existente)return existente.id;
+  const id=await criarDocumento("importacoesVendasAlteracoes",{empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v),registradoEm:new Date().toISOString()});
+  snapshots.push({id,empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v)});return id
+}
+function dadosVendaImportada(r,cl,v,lote,existente=null){
+  const pct=n(v.cfg.comissaoPct),valorRec=n(existente?.valorRecebido),dataRec=existente?.dataRecebimento||null,comStatus=valorRec>0?(existente?.comissaoStatus||"provisionada"):"aguardando_recebimento";
+  return{data:r.data,dataRecebimento:dataRec,valorRecebido:valorRec,vendedorId:v.cfg.id,vendedorRhId:v.rh.id,vendedorNome:v.rh.nome||r.vendedorNome,vendedorCodigo:r.vendedorCodigo,vendedorNomeOrigem:r.vendedorNome,clienteId:cl.id,clienteCodigo:cl.codigo,cliente:cl.nome||r.clienteNome,clienteNomeOrigem:r.clienteNome,documento:r.vendaCodigo,lojaOrigem:r.lojaCodigo||"",descricao:"Venda importada de relatório · sem detalhamento de itens",itens:Array.isArray(existente?.itens)?existente.itens:[],valor:r.valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:comStatus,status:existente?.status==="cancelada"?"cancelada":"confirmada",observacao:existente?.observacao||"",origemImportacao:"relatorio_vendas",arquivoImportacao:arquivoAtual,importacaoChave:chaveVenda(r,empresaUnicaSelecionadaId()),ultimaImportacaoLoteId:lote,ultimaImportacaoEm:new Date().toISOString()}
+}
+
 async function confirmar(){
   if(busy||!analise||!podeImportar())return;const emp=empresaUnicaSelecionadaId();if(!emp)return alert("Selecione uma única empresa.");
-  const novas=analise.linhas.filter(r=>!duplicada(r,emp));if(!novas.length)return alert("Todas as vendas deste relatório já foram importadas.");
-  const lojas=[...new Set(novas.map(r=>r.lojaCodigo).filter(Boolean))];
-  if(!confirm(`Importar ${novas.length} venda(s) para ${nomeEmpresa(emp)}?\n\nLoja(s) informada(s) no relatório: ${lojas.length?lojas.join(", "):"não identificada"}.\n\nClientes inexistentes serão cadastrados automaticamente pelo código. Duplicidades serão ignoradas. A operação receberá um ID de lote rastreável.`))return;
-  busy=true;let logId="",lote="";
+  const classes=analise.linhas.map(r=>({r,...classificarLinha(r,emp)})),operacoes=classes.filter(x=>x.tipo==="nova"||x.tipo==="atualizar"),conflitos=classes.filter(x=>x.tipo==="conflito");
+  if(!operacoes.length)return alert(conflitos.length?"Não há vendas prontas para importar. Revise os conflitos apresentados.":"O relatório já está totalmente atualizado no SIG.");
+  const lojas=[...new Set(operacoes.map(x=>x.r.lojaCodigo).filter(Boolean))],novas=operacoes.filter(x=>x.tipo==="nova").length,atualizacoes=operacoes.filter(x=>x.tipo==="atualizar").length;
+  if(!confirm(`Processar ${operacoes.length} venda(s) para ${nomeEmpresa(emp)}?\n\n${novas} nova(s) · ${atualizacoes} atualização(ões) · ${conflitos.length} conflito(s) ignorado(s).\nLoja(s): ${lojas.length?lojas.join(", "):"não identificada"}.\n\nPedidos já existentes serão atualizados quando data, valor, vendedor ou cliente tiverem mudado. A operação receberá um ID de lote rastreável.`))return;
+  busy=true;let logId="",lote="",criadas=0,atualizadas=0;
   try{
     lote=loteId();
-    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:novas.length,valorPrevisto:novas.reduce((s,x)=>s+n(x.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
+    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:operacoes.length,quantidadeNovasPrevista:novas,quantidadeAtualizacoesPrevista:atualizacoes,quantidadeConflitos:conflitos.length,valorPrevisto:operacoes.reduce((s,x)=>s+n(x.r.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
     msg($("salesReportImportMsg"),`Lote ${lote} · validando clientes e vendedores...`);
-    const clienteMap=await garantirClientes(emp,novas,lote),vendMap=await garantirConfigs(emp,novas,lote),docs=[];
-    for(const r of novas){
-      const cl=clienteMap.get(chaveCodigo(r.clienteCodigo)),v=vendMap.get(chaveCodigo(r.vendedorCodigo));if(!cl||!v)throw new Error("vinculo-incompleto");
-      const pct=n(v.cfg.comissaoPct);
-      docs.push({empresaId:emp,data:r.data,dataRecebimento:null,valorRecebido:0,vendedorId:v.cfg.id,vendedorRhId:v.rh.id,vendedorNome:v.rh.nome||r.vendedorNome,vendedorCodigo:r.vendedorCodigo,vendedorNomeOrigem:r.vendedorNome,clienteId:cl.id,clienteCodigo:cl.codigo,cliente:cl.nome||r.clienteNome,clienteNomeOrigem:r.clienteNome,documento:r.vendaCodigo,lojaOrigem:r.lojaCodigo||"",descricao:"Venda importada de relatório · sem detalhamento de itens",itens:[],valor:r.valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:0,comissaoValor:0,comissaoStatus:"aguardando_recebimento",status:"confirmada",observacao:"",origemImportacao:"relatorio_vendas",arquivoImportacao:arquivoAtual,importacaoLoteId:lote,importacaoChave:chaveVenda(r,emp)})
+    const linhasOp=operacoes.map(x=>x.r),clienteMap=await garantirClientes(emp,linhasOp,lote),vendMap=await garantirConfigs(emp,linhasOp,lote);
+    for(let i=0;i<operacoes.length;i++){
+      const op=operacoes[i],r=op.r,cl=clienteMap.get(chaveCodigo(r.clienteCodigo)),v=vendMap.get(chaveCodigo(r.vendedorCodigo));if(!cl||!v)throw new Error("vinculo-incompleto");
+      msg($("salesReportImportMsg"),`Lote ${lote} · processando ${i+1} de ${operacoes.length}...`);
+      if(op.tipo==="nova"){
+        await criarDocumento("vendas",{...dadosVendaImportada(r,cl,v,lote),empresaId:emp,importacaoLoteId:lote});criadas++
+      }else{
+        const atual=vendas.find(x=>x.id===op.existente.id)||op.existente;
+        await registrarSnapshot(lote,emp,atual);
+        await atualizarDocumento("vendas",atual.id,dadosVendaImportada(r,cl,v,lote,atual));atualizadas++
+      }
     }
-    msg($("salesReportImportMsg"),`Lote ${lote} · importando 0 de ${docs.length}...`);
-    await executarEmLotes(docs,d=>criarDocumento("vendas",d),{tamanho:8,onProgress:(feito,total)=>msg($("salesReportImportMsg"),`Lote ${lote} · importando ${feito} de ${total}...`)});
-    await carregarBases();const qtdVendas=vendas.filter(v=>v.empresaId===emp&&v.importacaoLoteId===lote).length,qtdClientes=Math.max(0,clientes.filter(x=>x.empresaId===emp&&x.importacaoLoteId===lote).length);
-    await atualizarDocumento("importacoesVendas",logId,{status:"concluida",quantidadeVendas:qtdVendas,quantidadeClientesNovos:qtdClientes,valorTotal:docs.reduce((s,x)=>s+n(x.valor),0),concluidoEm:new Date().toISOString()});
-    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`${docs.length} venda(s) importada(s) com sucesso. ID do lote: ${lote}`,true)
+    await carregarBases();const qtdClientes=clientes.filter(x=>x.empresaId===emp&&x.importacaoLoteId===lote).length;
+    await atualizarDocumento("importacoesVendas",logId,{status:"concluida",quantidadeVendas:criadas+atualizadas,quantidadeVendasNovas:criadas,quantidadeVendasAtualizadas:atualizadas,quantidadeClientesNovos:qtdClientes,valorTotal:operacoes.reduce((s,x)=>s+n(x.r.valor),0),concluidoEm:new Date().toISOString()});
+    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} concluído: ${criadas} nova(s) e ${atualizadas} atualizada(s).`,true)
   }catch(e){
     console.error(e);
-    if(logId){try{await carregarBases();const qv=vendas.filter(v=>v.empresaId===emp&&v.importacaoLoteId===lote).length,qc=clientes.filter(x=>x.empresaId===emp&&x.importacaoLoteId===lote).length;await atualizarDocumento("importacoesVendas",logId,{status:qv||qc?"parcial":"erro",quantidadeVendas:qv,quantidadeClientesNovos:qc,erro:String(e?.message||e).slice(0,500),finalizadoEm:new Date().toISOString()});await carregarBases();renderHistorico()}catch(logErr){console.error("Falha ao registrar log da importação",logErr)}}
+    if(logId){try{await atualizarDocumento("importacoesVendas",logId,{status:criadas||atualizadas?"parcial":"erro",quantidadeVendasNovas:criadas,quantidadeVendasAtualizadas:atualizadas,erro:String(e?.message||e).slice(0,500),finalizadoEm:new Date().toISOString()});await carregarBases();renderHistorico()}catch(logErr){console.error("Falha ao registrar log da importação",logErr)}}
     msg($("salesReportImportMsg"),(e?.message||"A importação não pôde ser concluída.")+(lote?` · Lote: ${lote}`:""))
   }finally{busy=false}
 }
