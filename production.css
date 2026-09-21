@@ -50,3 +50,13 @@
 .production-annual-track i{display:block;width:100%;min-height:0;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#20ccb8,#10a995)}
 .production-annual-col>span{font-size:9px;color:#667085;font-weight:700}
 @media(max-width:800px){.production-annual-head{align-items:stretch}.production-annual-select{width:100%}.production-annual-chart{grid-template-columns:repeat(12,54px);padding-bottom:12px}}
+
+.production-annual-summary{display:flex;gap:24px;flex-wrap:wrap;padding:0 16px 4px}.production-annual-summary>div{display:grid;gap:2px}.production-annual-summary span{color:#667085;font-size:9px;text-transform:uppercase;font-weight:800}.production-annual-summary strong{color:#17324a;font-size:18px}
+.production-annual-legend{display:flex;gap:14px;flex-wrap:wrap;padding:4px 16px 0;color:#667085;font-size:9px}.production-annual-legend span{display:flex;align-items:center;gap:5px}.production-annual-legend i{width:13px;height:4px;border-radius:999px;display:block}.production-annual-legend i.volume{background:#10a995}.production-annual-legend i.rate{background:#315a82}
+.production-annual-col{display:grid;grid-template-rows:auto 180px auto;gap:6px;align-items:end;min-width:48px;text-align:center}
+.production-annual-values{display:grid;gap:2px;min-height:28px;align-content:end}.production-annual-values strong{font-size:8px;color:#344054;white-space:nowrap}.production-annual-values small{font-size:8px;color:#667085;white-space:nowrap}
+.production-annual-dual{height:180px;display:grid;grid-template-columns:1fr 1fr;gap:4px;align-items:end}
+.production-annual-track{height:180px;border-radius:8px 8px 4px 4px;background:#eef3f6;display:flex;align-items:flex-end;overflow:hidden}
+.production-annual-track i{display:block;width:100%;min-height:0;border-radius:8px 8px 0 0}
+.production-annual-track.volume i{background:linear-gradient(180deg,#20ccb8,#10a995)}
+.production-annual-track.rate i{background:linear-gradient(180deg,#5b7fa5,#315a82)}
