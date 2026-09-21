@@ -1057,6 +1057,26 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /importacoesVendas/{id} {
+      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow create: if vendasLancar() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.loteId is string && request.resource.data.loteId.size() > 0 &&
+        request.resource.data.status == 'processando';
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          (vendasLancar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','quantidadeVendas','quantidadeClientesNovos','valorTotal','concluidoEm',
+            'erro','finalizadoEm','atualizadoEm'
+          ])) ||
+          (administrador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','estornadoEm','estornadoPor','estornoMotivo',
+            'quantidadeVendasEstornadas','quantidadeClientesInativados','atualizadoEm'
+          ]))
+        );
+      allow delete: if false;
+    }
+
     match /clientesComerciais/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
       allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data) &&
