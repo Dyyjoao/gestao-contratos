@@ -31,7 +31,7 @@ const telaLogin=$("telaLogin"),sistema=$("sistema"),formLogin=$("formLogin"),ema
 const MENUS={
   dashboard:["menuDashboard","dashboard"],contratos:["menuContratos","contratos"],prestadores:["menuPrestadores","prestadores"],frota:["menuFrota","frota"],almoxarifado:["menuAlmoxarifado","almoxarifado"],cotacoes:["menuCotacoes","cotacoes"],controladoria:["menuControladoria","controladoria"]
 };
-const TITULOS={dashboard:"Dashboard",contratos:"Contratos",prestadores:"Prestadores & Oficinas",frota:"Frota",combustivel:"Combustível e Diesel",almoxarifado:"Almoxarifado",cotacoes:"Solicitações & Cotações",controladoria:"Controladoria & Planejamento",administracao:"Administração","configuracao-bomba":"Configuração da bomba",empresas:"Empresas",usuarios:"Usuários",perfis:"Perfis de Acesso",grupo:"Grupo Empresarial"};
+const TITULOS={dashboard:"Dashboard",contratos:"Contratos",prestadores:"Prestadores & Oficinas",frota:"Frota",combustivel:"Combustível e Diesel",producao:"Indústria · Produção",descarte:"Indústria · Perdas",ordensservico:"Indústria · Ordens de Serviço",almoxarifado:"Almoxarifado",cotacoes:"Solicitações & Cotações",controladoria:"Controladoria & Planejamento",administracao:"Administração","configuracao-bomba":"Configuração da bomba",empresas:"Empresas",usuarios:"Usuários",perfis:"Perfis de Acesso",grupo:"Grupo Empresarial"};
 let loginBusy=false;
 
 function setBusy(v,t="Entrando..."){loginBusy=v;if(btnEntrar){btnEntrar.disabled=v;btnEntrar.textContent=v?"Entrando...":"Entrar"}if(v)msg(mensagemLogin,t)}
