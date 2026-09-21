@@ -486,13 +486,13 @@ service cloud.firestore {
           (administrador() && request.resource.data.status in ['ativo','estornado'] &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'data','recurso','quantidade','horasTrabalhadas','producaoPorHora',
-              'item','concretador','atualizadoPor','atualizadoEm','status',
+              'item','concretador','responsavel','responsavelId','unidadeMedida','atualizadoPor','atualizadoEm','status',
               'motivoEstorno','estornadoPor','estornadoEm'
             ])) ||
           (permissao('producao','editar') && request.resource.data.status == 'ativo' &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'data','recurso','quantidade','horasTrabalhadas','producaoPorHora',
-              'item','concretador','atualizadoPor','atualizadoEm'
+              'item','concretador','responsavel','responsavelId','unidadeMedida','atualizadoPor','atualizadoEm'
             ]))
         );
       allow delete: if false;
@@ -504,25 +504,25 @@ service cloud.firestore {
       allow create: if permissao('descarte','lancar') && documentoAcessivel(request.resource.data) &&
         request.resource.data.status == 'ativo' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
-        request.resource.data.maquina in ['MAQ.1','MAQ.2','LAJE'] &&
-        request.resource.data.responsavel in ['ARTUR','GIL','PAULO'] &&
+        request.resource.data.maquina is string && request.resource.data.maquina.size() > 0 &&
+        request.resource.data.responsavel is string && request.resource.data.responsavel.size() > 0 &&
         request.resource.data.quantidade is number && request.resource.data.quantidade >= 0;
       allow update: if documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
         resource.data.status == 'ativo' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
-        request.resource.data.maquina in ['MAQ.1','MAQ.2','LAJE'] &&
-        request.resource.data.responsavel in ['ARTUR','GIL','PAULO'] &&
+        request.resource.data.maquina is string && request.resource.data.maquina.size() > 0 &&
+        request.resource.data.responsavel is string && request.resource.data.responsavel.size() > 0 &&
         request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 && (
           (administrador() && request.resource.data.status in ['ativo','estornado'] &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'data','quantidade','maquina','responsavel','status','motivoEstorno',
+              'data','quantidade','maquina','producao','responsavel','responsavelId','status','motivoEstorno',
               'estornadoPor','estornadoEm','atualizadoEm'
             ])) ||
           (permissao('descarte','editar') && request.resource.data.status == 'ativo' &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'data','quantidade','maquina','responsavel','atualizadoEm'
+              'data','quantidade','maquina','producao','responsavel','responsavelId','atualizadoEm'
             ]))
         );
       allow delete: if false;
@@ -534,6 +534,20 @@ service cloud.firestore {
       allow create: if permissao('producao','cadastros') && documentoAcessivel(request.resource.data) &&
         request.resource.data.tipo in ['recurso','item','concretador'] &&
         request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.ativo == true;
+      allow update: if permissao('producao','cadastros') && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo','atualizadoEm']);
+      allow delete: if false;
+    }
+
+    match /producaoItensConfig/{id} {
+      allow read: if (permissao('producao','visualizar') || permissao('producao','lancar') ||
+        permissao('producao','editar') || permissao('producao','cadastros')) && documentoAcessivel(resource.data);
+      allow create: if permissao('producao','cadastros') && documentoAcessivel(request.resource.data) &&
+        request.resource.data.recurso is string && request.resource.data.recurso.size() > 0 &&
+        request.resource.data.item is string && request.resource.data.item.size() > 0 &&
         request.resource.data.ativo == true;
       allow update: if permissao('producao','cadastros') && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
