@@ -60,3 +60,6 @@
 .production-annual-track i{display:block;width:100%;min-height:0;border-radius:8px 8px 0 0}
 .production-annual-track.volume i{background:linear-gradient(180deg,#20ccb8,#10a995)}
 .production-annual-track.rate i{background:linear-gradient(180deg,#5b7fa5,#315a82)}
+
+.production-analysis-toggle{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.production-analysis-toggle .btn-secundario.ativo{background:#17324a;color:#fff;border-color:#17324a}
+@media(max-width:620px){.production-analysis-toggle{width:100%}.production-analysis-toggle button{flex:1}}
