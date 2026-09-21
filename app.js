@@ -26,7 +26,7 @@ import "./js/planning-account-coverage.js";
 import "./js/management-shell.js";
 import "./js/controllership-router.js?v=3";
 import "./js/production.js?v=8";
-import "./js/disposal.js?v=5";
+import "./js/disposal.js?v=6";
 import "./js/commercial-workflow.js";
 import "./js/pallets.js";
 import "./js/pallet-dashboard.js";
