@@ -1,4 +1,4 @@
-import { $, esc, permite, admin, moeda, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
+import { $, esc, permite, admin, moeda, listarDocumentos, criarDocumento, atualizarDocumento, excluirDocumento, empresaUnicaSelecionadaId, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes } from "./import-center.js";
 
@@ -25,7 +25,7 @@ const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const codigo=v=>String(v??"").trim().toUpperCase();
 const chaveCodigo=v=>normalizarChave(codigo(v));
 const loteId=()=>{const d=new Date(),p=v=>String(v).padStart(2,"0"),s=Math.random().toString(36).slice(2,6).toUpperCase();return `IMP-VND-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${s}`};
-const statusImportacao=s=>({processando:"Processando",concluida:"Concluída",parcial:"Parcial",estornada:"Estornada",erro:"Erro"})[s]||s||"—";
+const statusImportacao=s=>({processando:"Processando",concluida:"Concluída",parcial:"Parcial",erro:"Erro",exclusao_parcial:"Exclusão parcial",excluida:"Excluída"})[s]||s||"—";
 
 const dataIso=v=>{
   if(v instanceof Date&&!Number.isNaN(v.getTime()))return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`;
@@ -132,7 +132,7 @@ function montar(){
       <div class="sales-import-footer"><div><strong>Importação por código</strong><small>Cada importação recebe um ID rastreável. Cliente existente usa a base do SIG; cliente novo é criado automaticamente. Venda duplicada é ignorada.</small></div><button id="btnSalesReportImportConfirmar" class="btn-primario" type="button">Importar vendas válidas</button></div>
     </div>
     <section class="lista-card sales-import-history">
-      <div class="lista-cabecalho"><div><h3>Histórico de importações</h3><p>Controle por lote. O estorno em lote remove as vendas dos indicadores e preserva toda a trilha de auditoria.</p></div><button id="btnSalesReportHistoricoAtualizar" class="btn-secundario" type="button">Atualizar histórico</button></div>
+      <div class="lista-cabecalho"><div><h3>Histórico de importações</h3><p>Controle por lote. A exclusão em lote remove fisicamente os registros importados incorretamente e mantém somente o log mínimo da operação.</p></div><button id="btnSalesReportHistoricoAtualizar" class="btn-secundario" type="button">Atualizar histórico</button></div>
       <div class="tabela-container"><table class="tabela"><thead><tr><th>ID da importação</th><th>Data / arquivo</th><th>Vendas</th><th>Clientes novos</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesReportHistorico"></tbody></table></div>
     </section>`;
   $("salesAviso")?.insertAdjacentElement("afterend",box);
@@ -150,29 +150,39 @@ async function carregarBases(){
 function renderHistorico(){
   const tb=$("salesReportHistorico");if(!tb)return;const emp=empresaUnicaSelecionadaId();
   const arr=importacoes.filter(x=>x.empresaId===emp).sort((a,b)=>String(b.iniciadoEm||b.criadoEm||"").localeCompare(String(a.iniciadoEm||a.criadoEm||"")));
-  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="estornada"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}</td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.estornadoEm?`<small>${new Date(x.estornadoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-estorno="${esc(x.id)}">Estornar lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
-  document.querySelectorAll("[data-sales-import-estorno]").forEach(b=>b.onclick=()=>estornarLote(b.dataset.salesImportEstorno))
+  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="excluida"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}</td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.excluidoEm?`<small>${new Date(x.excluidoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial","exclusao_parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-excluir="${esc(x.id)}">Excluir lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
+  document.querySelectorAll("[data-sales-import-excluir]").forEach(b=>b.onclick=()=>excluirLote(b.dataset.salesImportExcluir))
 }
-async function estornarLote(id){
-  if(!admin())return alert("O estorno em lote é restrito ao Administrador.");
-  const imp=importacoes.find(x=>x.id===id);if(!imp||!["concluida","parcial"].includes(imp.status))return;
-  const lote=imp.loteId||imp.id,linhas=vendas.filter(v=>v.empresaId===imp.empresaId&&v.importacaoLoteId===lote&&v.status!=="cancelada");
-  const motivo=prompt(`Estornar a importação ${lote}?\n\n${linhas.length} venda(s) serão retiradas dos indicadores. Informe o motivo do estorno:`);
-  if(motivo===null)return;if(!motivo.trim())return alert("Informe o motivo do estorno.");
-  if(!confirm(`Confirmar estorno em lote de ${linhas.length} venda(s)?\n\nO histórico será preservado e poderá ser auditado pelo ID ${lote}.`))return;
-  busy=true;try{
+async function excluirLote(id){
+  if(!admin())return alert("A exclusão em lote é restrita ao Administrador.");
+  const imp=importacoes.find(x=>x.id===id);if(!imp||!["concluida","parcial","exclusao_parcial"].includes(imp.status))return;
+  const lote=imp.loteId||imp.id,linhas=vendas.filter(v=>v.empresaId===imp.empresaId&&v.importacaoLoteId===lote);
+  const motivo=prompt(`Excluir fisicamente a importação ${lote}?\n\n${linhas.length} venda(s) importada(s) serão apagadas do Firestore. Informe o motivo:`);
+  if(motivo===null)return;if(!motivo.trim())return alert("Informe o motivo da exclusão.");
+  if(!confirm(`ATENÇÃO: confirmar exclusão física do lote ${lote}?\n\nAs vendas importadas serão apagadas do banco. Clientes e configurações criados exclusivamente por este lote também serão removidos quando não tiverem outro vínculo. O log mínimo do lote será preservado para rastreabilidade.`))return;
+  busy=true;let vendasExcluidas=0,clientesExcluidos=0,configsExcluidas=0;
+  try{
     const agora=new Date().toISOString(),uid=state.usuario?.id||"";
-    msg($("salesReportImportMsg"),`Estornando lote ${lote}...`);
-    await executarEmLotes(linhas,v=>atualizarDocumento("vendas",v.id,{status:"cancelada",importacaoEstornada:true,importacaoEstornadaEm:agora,importacaoEstornadaPor:uid,importacaoEstornoMotivo:motivo.trim()}),{tamanho:8});
-    const vendasDepois=await listarDocumentos("vendas"),clientesLote=clientes.filter(x=>x.empresaId===imp.empresaId&&x.importacaoLoteId===lote&&x.status!=="inativo");let inativados=0;
+    msg($("salesReportImportMsg"),`Excluindo lote ${lote}...`);
+    await executarEmLotes(linhas,async v=>{await excluirDocumento("vendas",v.id);vendasExcluidas++},{tamanho:8});
+    const vendasDepois=await listarDocumentos("vendas");
+    const clientesLote=clientes.filter(x=>x.empresaId===imp.empresaId&&x.importacaoLoteId===lote);
     for(const cliente of clientesLote){
-      const usado=vendasDepois.some(v=>v.clienteId===cliente.id&&v.importacaoLoteId!==lote&&v.status!=="cancelada");
-      if(!usado){await atualizarDocumento("clientesComerciais",cliente.id,{status:"inativo",importacaoEstornada:true,importacaoEstornadaEm:agora,importacaoEstornadaPor:uid,importacaoEstornoMotivo:motivo.trim()});inativados++}
+      const usado=vendasDepois.some(v=>v.clienteId===cliente.id);
+      if(!usado){await excluirDocumento("clientesComerciais",cliente.id);clientesExcluidos++}
     }
-    await atualizarDocumento("importacoesVendas",id,{status:"estornada",estornadoEm:agora,estornadoPor:uid,estornoMotivo:motivo.trim(),quantidadeVendasEstornadas:linhas.length,quantidadeClientesInativados:inativados});
-    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} estornado: ${linhas.length} venda(s) retiradas dos indicadores.`,true)
-  }catch(e){console.error("Estorno de importação:",e);msg($("salesReportImportMsg"),e?.message||"Não foi possível estornar o lote. Confira as Rules publicadas.")}
-  finally{busy=false}
+    const configsLote=configs.filter(x=>x.empresaId===imp.empresaId&&x.importacaoLoteId===lote&&x.configuracaoPendente===true);
+    for(const cfg of configsLote){
+      const usado=vendasDepois.some(v=>v.vendedorId===cfg.id);
+      if(!usado){await excluirDocumento("vendedores",cfg.id);configsExcluidas++}
+    }
+    await atualizarDocumento("importacoesVendas",id,{status:"excluida",excluidoEm:agora,excluidoPor:uid,exclusaoMotivo:motivo.trim(),quantidadeVendasExcluidas:vendasExcluidas,quantidadeClientesExcluidos:clientesExcluidos,quantidadeConfigsExcluidas:configsExcluidas});
+    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} excluído fisicamente: ${vendasExcluidas} venda(s), ${clientesExcluidos} cliente(s) e ${configsExcluidas} configuração(ões) automática(s).`,true)
+  }catch(e){
+    console.error("Exclusão de importação:",e);
+    try{await atualizarDocumento("importacoesVendas",id,{status:"exclusao_parcial",erroExclusao:String(e?.message||e).slice(0,500),quantidadeVendasExcluidas:vendasExcluidas,quantidadeClientesExcluidos:clientesExcluidos,quantidadeConfigsExcluidas:configsExcluidas})}catch{}
+    msg($("salesReportImportMsg"),`A exclusão do lote foi interrompida após remover ${vendasExcluidas} venda(s). Execute novamente o botão Excluir lote para concluir. Confira as Rules publicadas.`)
+  }finally{busy=false}
 }
 
 function consolidarVendedores(){
@@ -203,7 +213,7 @@ async function garantirClientes(emp,linhas,lote){
   }
   return mapa
 }
-async function garantirConfigs(emp,linhas){
+async function garantirConfigs(emp,linhas,lote){
   const mapa=new Map();
   const codigos=[...new Set(linhas.map(r=>chaveCodigo(r.vendedorCodigo)))];
   for(const k of codigos){
@@ -211,8 +221,8 @@ async function garantirConfigs(emp,linhas){
     let cfg=cfgPorRh(rh.id);
     if(!cfg){
       if(!podeVendedores())throw new Error(`${rh.nome} está no RH, mas ainda não possui configuração comercial de comissão.`);
-      const id=await criarDocumento("vendedores",{empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true});
-      cfg={id,empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true};configs.push(cfg)
+      const id=await criarDocumento("vendedores",{empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true,origem:"importacao_relatorio_vendas",importacaoLoteId:lote});
+      cfg={id,empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true,origem:"importacao_relatorio_vendas",importacaoLoteId:lote};configs.push(cfg)
     }
     mapa.set(k,{rh,cfg})
   }
@@ -228,7 +238,7 @@ async function confirmar(){
     lote=loteId();
     logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:novas.length,valorPrevisto:novas.reduce((s,x)=>s+n(x.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
     msg($("salesReportImportMsg"),`Lote ${lote} · validando clientes e vendedores...`);
-    const clienteMap=await garantirClientes(emp,novas,lote),vendMap=await garantirConfigs(emp,novas),docs=[];
+    const clienteMap=await garantirClientes(emp,novas,lote),vendMap=await garantirConfigs(emp,novas,lote),docs=[];
     for(const r of novas){
       const cl=clienteMap.get(chaveCodigo(r.clienteCodigo)),v=vendMap.get(chaveCodigo(r.vendedorCodigo));if(!cl||!v)throw new Error("vinculo-incompleto");
       const pct=n(v.cfg.comissaoPct);
