@@ -40,7 +40,7 @@ function unidadeTexto(u){return u==="M²"?"m²":u==="BANDEJA"?"bandejas":"un"}
 function fmt(v,d=2){return n(v).toLocaleString("pt-BR",{maximumFractionDigits:d})}
 function dataHoje(){return new Date().toISOString().slice(0,10)}
 
-function garantirCss(){if(document.querySelector('link[href^="production.css"]'))return;const l=document.createElement("link");l.rel="stylesheet";l.href="production.css?v=3";document.head.appendChild(l)}
+function garantirCss(){if(document.querySelector('link[href^="production.css"]'))return;const l=document.createElement("link");l.rel="stylesheet";l.href="production.css?v=4";document.head.appendChild(l)}
 function garantirMenu(){
   const nav=document.querySelector(".sidebar-menu");if(!nav)return;
   let b=$("menuProducao");
