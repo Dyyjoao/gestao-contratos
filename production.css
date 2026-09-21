@@ -40,3 +40,13 @@
 .production-machine-card{min-height:100%}
 @media(max-width:900px){.production-analysis-grid{grid-template-columns:1fr}.production-summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.production-analysis-grid{padding:0 10px 10px}.production-summary-cards{grid-template-columns:1fr}.production-detail-card{margin:0 10px 10px}}
+
+.production-annual-card{margin-top:14px}.production-annual-head{align-items:flex-end}.production-annual-select{min-width:220px}.production-annual-select select{width:100%}
+.production-annual-summary{display:flex;align-items:baseline;gap:8px;padding:0 16px 4px;color:#667085;font-size:10px}.production-annual-summary strong{color:#17324a;font-size:18px}
+.production-annual-chart{display:grid;grid-template-columns:repeat(12,minmax(42px,1fr));gap:8px;align-items:end;min-height:250px;padding:18px 16px 16px;overflow-x:auto}
+.production-annual-col{display:grid;grid-template-rows:auto 180px auto;gap:6px;align-items:end;min-width:42px;text-align:center}
+.production-annual-value{font-size:9px;font-weight:800;color:#344054;white-space:nowrap}
+.production-annual-track{height:180px;border-radius:8px 8px 4px 4px;background:#eef3f6;display:flex;align-items:flex-end;overflow:hidden}
+.production-annual-track i{display:block;width:100%;min-height:0;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#20ccb8,#10a995)}
+.production-annual-col>span{font-size:9px;color:#667085;font-weight:700}
+@media(max-width:800px){.production-annual-head{align-items:stretch}.production-annual-select{width:100%}.production-annual-chart{grid-template-columns:repeat(12,54px);padding-bottom:12px}}
