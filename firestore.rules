@@ -680,34 +680,50 @@ service cloud.firestore {
         request.resource.data.solicitante is string && request.resource.data.solicitante.size() > 0 &&
         request.resource.data.dataSolicitacao is string && request.resource.data.dataSolicitacao.size() == 10 &&
         request.resource.data.funcao in ['MECÂNICO','ELETRICISTA','OPERADOR','AUTOMAÇÃO'] &&
-        request.resource.data.equipamento is string && request.resource.data.equipamento.size() > 0 &&
+        request.resource.data.local is string && request.resource.data.local.size() > 0 &&
         request.resource.data.descricao is string && request.resource.data.descricao.size() > 0 &&
+        request.resource.data.dataInicioPrevista is string && request.resource.data.dataInicioPrevista.size() == 10 &&
+        request.resource.data.dataConclusaoPrevista is string && request.resource.data.dataConclusaoPrevista.size() == 10 &&
+        request.resource.data.dataInicioPrevista >= request.resource.data.dataSolicitacao &&
+        request.resource.data.dataConclusaoPrevista >= request.resource.data.dataInicioPrevista &&
         request.resource.data.solicitadoPor == request.auth.uid &&
         request.resource.data.dataInicio == '' && request.resource.data.dataFim == '';
-      allow update: if documentoAcessivel(resource.data) &&
+      allow update: if permissao('ordensServico','executar') && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.numero == resource.data.numero &&
         request.resource.data.dataSolicitacao == resource.data.dataSolicitacao &&
-        request.resource.data.solicitadoPor == resource.data.solicitadoPor && (
-          (administrador() && resource.data.status != 'cancelada' &&
-            request.resource.data.status == 'cancelada' &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status','motivoCancelamento','canceladoPor','canceladoEm','atualizadoEm'
-            ])) ||
-          (permissao('ordensServico','executar') &&
-            resource.data.status in ['aberta','em_execucao'] &&
-            request.resource.data.status in ['aberta','em_execucao','concluida'] &&
-            (request.resource.data.status != 'concluida' || (
-              request.resource.data.dataFim is string && request.resource.data.dataFim.size() == 10 &&
-              request.resource.data.realizado is string && request.resource.data.realizado.size() > 0
-            )) &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'tipo','solicitante','funcao','equipamento','descricao','executante',
-              'dataInicio','dataFim','realizado','paradaProducao','trocaPeca',
-              'observacao','status','atualizadoEm'
-            ]))
-        );
+        request.resource.data.solicitadoPor == resource.data.solicitadoPor &&
+        resource.data.status in ['aberta','em_execucao'] &&
+        request.resource.data.status in ['aberta','em_execucao','concluida','cancelada'] &&
+        request.resource.data.solicitante is string && request.resource.data.solicitante.size() > 0 &&
+        request.resource.data.descricao is string && request.resource.data.descricao.size() > 0 &&
+        (
+          (('local' in request.resource.data) && request.resource.data.local is string && request.resource.data.local.size() > 0) ||
+          (('equipamento' in request.resource.data) && request.resource.data.equipamento is string && request.resource.data.equipamento.size() > 0)
+        ) &&
+        (
+          (!(('dataInicioPrevista' in request.resource.data) || ('dataConclusaoPrevista' in request.resource.data))) ||
+          (
+            request.resource.data.dataInicioPrevista is string && request.resource.data.dataInicioPrevista.size() == 10 &&
+            request.resource.data.dataConclusaoPrevista is string && request.resource.data.dataConclusaoPrevista.size() == 10 &&
+            request.resource.data.dataInicioPrevista >= request.resource.data.dataSolicitacao &&
+            request.resource.data.dataConclusaoPrevista >= request.resource.data.dataInicioPrevista
+          )
+        ) &&
+        (request.resource.data.status != 'em_execucao' || (
+          request.resource.data.dataInicio is string && request.resource.data.dataInicio.size() == 10
+        )) &&
+        (request.resource.data.status != 'concluida' || (
+          request.resource.data.dataInicio is string && request.resource.data.dataInicio.size() == 10 &&
+          request.resource.data.dataFim is string && request.resource.data.dataFim.size() == 10
+        )) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'tipo','solicitante','funcao','equipamento','local','descricao','executante',
+          'dataInicioPrevista','dataConclusaoPrevista','dataInicio','dataFim',
+          'paradaProducao','trocaPeca','observacao','status',
+          'canceladoPor','canceladoEm','atualizadoEm'
+        ]);
       allow delete: if false;
     }
 
