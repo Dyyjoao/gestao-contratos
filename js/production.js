@@ -95,7 +95,7 @@ function criarPagina(){
 
   <section class="lista-card">
     <div class="lista-cabecalho production-toolbar"><div><h3>Análise da produção</h3><p>O período principal vem do cabeçalho. Use o intervalo abaixo apenas para refinar por dias.</p><div class="production-analysis-toggle"><button id="prodModoProducao" class="btn-secundario ativo" type="button">Produção</button><button id="prodModoHora" class="btn-secundario" type="button">Produção/hora</button></div></div>
-      <div class="production-filtros"><div class="production-date-range"><label>De <input id="prodFiltroDataIni" type="date"></label><label>Até <input id="prodFiltroDataFim" type="date"></label><button id="prodLimparIntervalo" class="btn-secundario" type="button">Limpar intervalo</button></div><select id="prodFiltroRecurso"><option value="">Todas as produções</option></select><select id="prodFiltroItem"><option value="">Todos os itens</option></select></div>
+      <div class="production-filtros"><div class="production-date-range"><label>De <input id="prodFiltroDataIni" type="date"></label><label>Até <input id="prodFiltroDataFim" type="date"></label><button id="prodLimparIntervalo" class="btn-secundario" type="button">Limpar intervalo</button></div></div>
     </div>
     <div class="production-analysis-grid">
       <div class="production-card production-machine-card"><h4 id="prodGraficoMaquinasTitulo">Máquinas · produção em bandejas</h4><div id="prodGraficoMaquinas" class="production-bars"></div></div>
@@ -160,11 +160,9 @@ function atualizarMetricaForm(){
   calcularMedia()
 }
 function atualizarSelects(){
-  const r=$("prodRecurso"),fr=$("prodFiltroRecurso"),fi=$("prodFiltroItem"),vr=r?.value,vfr=fr?.value,vfi=fi?.value;
+  const r=$("prodRecurso"),vr=r?.value;
   if(r)r.innerHTML=opcoesLista(producoesAtivas());
-  if(fr)fr.innerHTML='<option value="">Todas as produções</option>'+opcoesLista(producoesAtivas(),{vazio:false});
-  const itensFiltro=vfr?itensParaProducao(vfr):itensAtivos();if(fi)fi.innerHTML='<option value="">Todos os itens</option>'+opcoesLista(itensFiltro,{vazio:false});
-  if(r&&vr&&[...r.options].some(o=>o.value===vr))r.value=vr;if(fr&&vfr&&[...fr.options].some(o=>o.value===vfr))fr.value=vfr;if(fi&&vfi&&[...fi.options].some(o=>o.value===vfi))fi.value=vfi;
+  if(r&&vr&&[...r.options].some(o=>o.value===vr))r.value=vr;
   const anual=$("prodAcompanhamentoProducao"),anualAtual=anual?.value||"MAQUINAS_CONSOLIDADO";
   if(anual){
     const recursos=producoesAtivas().filter(x=>tipoBloco(x)!=="maquina").sort((a,b)=>a.localeCompare(b,"pt-BR"));
@@ -201,10 +199,10 @@ function atualizarLimitesIntervalo(){
   if(b){b.min=ini;b.max=fim;if(b.value&&(b.value<ini||b.value>fim))b.value=""}
 }
 function baseFiltrada(){
-  let ini=$("prodFiltroDataIni")?.value||"",fim=$("prodFiltroDataFim")?.value||"";const rec=$("prodFiltroRecurso")?.value||"",item=$("prodFiltroItem")?.value||"";if(ini&&fim&&ini>fim)[ini,fim]=[fim,ini];
+  let ini=$("prodFiltroDataIni")?.value||"",fim=$("prodFiltroDataFim")?.value||"";if(ini&&fim&&ini>fim)[ini,fim]=[fim,ini];
   return registros.filter(x=>{
     const d=String(x.data||"");
-    return dentroPeriodoGeral(d)&&(!ini||d>=ini)&&(!fim||d<=fim)&&(!rec||x.recurso===rec)&&(!item||x.item===item)
+    return dentroPeriodoGeral(d)&&(!ini||d>=ini)&&(!fim||d<=fim)
   })
 }
 function barras(alvo,dados,{sufixo=""}={}){const el=$(alvo);if(!el)return;if(!dados.length){el.innerHTML='<p class="production-empty">Sem dados no filtro selecionado.</p>';return}const max=Math.max(...dados.map(x=>n(x.valor)),1);el.innerHTML=dados.map(x=>`<div class="production-bar-row"><span title="${esc(x.label)}">${esc(x.label)}</span><div><i style="width:${Math.max(2,n(x.valor)/max*100)}%"></i></div><strong>${fmt(x.valor)}${sufixo}</strong></div>`).join("")}
@@ -332,8 +330,7 @@ function ligarEventos(){
   $("btnNovaProducao")?.addEventListener("click",abrirNovo);$("btnAtualizarProducao")?.addEventListener("click",carregar);$("btnCancelarProducao")?.addEventListener("click",()=>{$("producaoFormBox")?.classList.add("hidden");limparForm()});
   $("formProducao")?.addEventListener("submit",salvar);$("prodQuantidade")?.addEventListener("input",calcularMedia);$("prodHoras")?.addEventListener("input",calcularMedia);
   $("prodRecurso")?.addEventListener("change",()=>{atualizarItemDoForm();atualizarMetricaForm()});
-  $("prodFiltroRecurso")?.addEventListener("change",()=>{const fi=$("prodFiltroItem"),atual=fi?.value;const itens=$("prodFiltroRecurso").value?itensParaProducao($("prodFiltroRecurso").value):itensAtivos();if(fi){fi.innerHTML='<option value="">Todos os itens</option>'+opcoesLista(itens,{vazio:false});if(atual&&[...fi.options].some(o=>o.value===atual))fi.value=atual}render()});
-  ["prodFiltroDataIni","prodFiltroDataFim","prodFiltroItem"].forEach(id=>$(id)?.addEventListener("change",render));
+  ["prodFiltroDataIni","prodFiltroDataFim"].forEach(id=>$(id)?.addEventListener("change",render));
   document.querySelectorAll("[data-detalhe]").forEach(b=>b.addEventListener("click",()=>{detalheTipo=detalheTipo===b.dataset.detalhe?"":b.dataset.detalhe;render()}));
   $("prodFecharDetalhe")?.addEventListener("click",()=>{detalheTipo="";render()});
   $("prodModoProducao")?.addEventListener("click",()=>{analiseModo="producao";render()});
