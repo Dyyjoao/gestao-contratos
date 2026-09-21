@@ -2,7 +2,7 @@ import { $, esc, permite, admin, moeda, listarDocumentos, criarDocumento, atuali
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes } from "./import-center.js";
 
-const XLSX_CDN="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+const XLSX_CDNS=["https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js","https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"];
 const CAMPOS={
   clienteCodigo:"CDCLIENTE",
   clienteNome:"NOMEPESSOA",
@@ -47,13 +47,22 @@ const numero=v=>{
 function css(){if($("sales-import-css"))return;const l=document.createElement("link");l.id="sales-import-css";l.rel="stylesheet";l.href="sales-import.css?v=3";document.head.appendChild(l)}
 async function carregarXlsx(){
   if(globalThis.XLSX)return globalThis.XLSX;
-  await new Promise((resolve,reject)=>{
-    const existente=document.querySelector('script[data-sig-xlsx]');
-    if(existente){existente.addEventListener("load",resolve,{once:true});existente.addEventListener("error",reject,{once:true});return}
-    const s=document.createElement("script");s.dataset.sigXlsx="1";s.src=XLSX_CDN;s.async=true;s.onload=resolve;s.onerror=()=>reject(new Error("biblioteca-xls-indisponivel"));document.head.appendChild(s)
-  });
-  if(!globalThis.XLSX)throw new Error("biblioteca-xls-indisponivel");
-  return globalThis.XLSX
+  const antigo=document.querySelector('script[data-sig-xlsx]');
+  if(antigo)antigo.remove();
+  let ultimoErro=null;
+  for(const src of XLSX_CDNS){
+    try{
+      await new Promise((resolve,reject)=>{
+        const s=document.createElement("script");s.dataset.sigXlsx="1";s.dataset.estado="carregando";s.src=src;s.async=true;
+        const timer=setTimeout(()=>{s.dataset.estado="erro";s.remove();reject(new Error("timeout-leitor-excel"))},12000);
+        s.onload=()=>{clearTimeout(timer);s.dataset.estado="ok";resolve()};
+        s.onerror=()=>{clearTimeout(timer);s.dataset.estado="erro";s.remove();reject(new Error("falha-cdn-leitor-excel"))};
+        document.head.appendChild(s)
+      });
+      if(globalThis.XLSX)return globalThis.XLSX
+    }catch(e){ultimoErro=e}
+  }
+  throw ultimoErro||new Error("biblioteca-xls-indisponivel")
 }
 function acharCabecalho(matriz){
   for(let i=0;i<Math.min(40,matriz.length);i++){
@@ -163,7 +172,7 @@ function montar(){
       <div class="tabela-container"><table class="tabela"><thead><tr><th>ID da importação</th><th>Data / arquivo</th><th>Vendas</th><th>Clientes novos</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesReportHistorico"></tbody></table></div>
     </section>`;
   $("salesAviso")?.insertAdjacentElement("afterend",box);
-  btn.onclick=abrir;$("btnSalesReportImportFechar").onclick=fechar;$("btnSalesReportImportLimpar").onclick=limpar;$("btnSalesReportImportAnalisar").onclick=analisar;$("btnSalesReportImportConfirmar").onclick=confirmar;$("btnSalesReportHistoricoAtualizar").onclick=async()=>{await carregarBases();renderHistorico()};$("salesReportArquivo").addEventListener("change",()=>analisar());
+  btn.onclick=abrir;$("btnSalesReportImportFechar").onclick=fechar;$("btnSalesReportImportLimpar").onclick=limpar;$("btnSalesReportImportAnalisar").onclick=analisar;$("btnSalesReportImportConfirmar").onclick=confirmar;$("btnSalesReportHistoricoAtualizar").onclick=async()=>{await carregarBases();renderHistorico()};$("salesReportArquivo").addEventListener("change",e=>{const file=e.target.files?.[0];analise=null;$("salesReportImportResultado")?.classList.add("hidden");msg($("salesReportImportMsg"),file?`Arquivo selecionado: ${file.name}. Clique em Analisar arquivo.`:"")});
   atualizarPermissao();return true
 }
 function atualizarPermissao(){const b=$("btnSalesReportImport");if(b)b.classList.toggle("hidden",!podeImportar())}
@@ -225,10 +234,20 @@ function render(){
   $("salesReportImportResultado")?.classList.remove("hidden");renderHistorico()
 }
 async function analisar(){
-  if(busy)return;const emp=empresaUnicaSelecionadaId(),file=$("salesReportArquivo")?.files?.[0];if(!emp)return msg($("salesReportImportMsg"),"Selecione uma única empresa.");if(!file)return msg($("salesReportImportMsg"),"Selecione o relatório Excel.");
-  busy=true;try{msg($("salesReportImportMsg"),"Lendo relatório...");arquivoAtual=file.name;analise=await lerPlanilha(file);if(!analise.linhas.length)throw new Error("sem-vendas-validas");await carregarBases();render();msg($("salesReportImportMsg"),`Relatório reconhecido: ${analise.linhas.length} venda(s) válida(s).`,true)}
-  catch(e){console.error("Importação de vendas:",e);analise=null;$("salesReportImportResultado")?.classList.add("hidden");msg($("salesReportImportMsg"),e?.message==="biblioteca-xls-indisponivel"?"Não foi possível carregar o leitor de Excel. Verifique a conexão e tente novamente.":"Não reconheci a estrutura deste arquivo. Confira se ele contém CD_CLIENTE, CD_VENDA, CD_FUNCIONARIOVENDA, DATA_VENDA e VALOR_VENDA.")}
-  finally{busy=false}
+  if(busy)return;const emp=empresaUnicaSelecionadaId(),file=$("salesReportArquivo")?.files?.[0],btn=$("btnSalesReportImportAnalisar");if(!emp)return msg($("salesReportImportMsg"),"Selecione uma única empresa.");if(!file)return msg($("salesReportImportMsg"),"Selecione o relatório Excel.");
+  busy=true;if(btn){btn.disabled=true;btn.textContent="Analisando..."}
+  try{
+    msg($("salesReportImportMsg"),"Carregando leitor do Excel...");
+    arquivoAtual=file.name;analise=await lerPlanilha(file);
+    if(!analise.linhas.length)throw new Error("sem-vendas-validas");
+    msg($("salesReportImportMsg"),"Relatório lido. Conferindo clientes, vendedores e pedidos existentes...");
+    await carregarBases();render();msg($("salesReportImportMsg"),`Relatório reconhecido: ${analise.linhas.length} venda(s) válida(s).`,true)
+  }catch(e){
+    console.error("Importação de vendas:",e);analise=null;$("salesReportImportResultado")?.classList.add("hidden");
+    const cod=String(e?.message||e||"");
+    const texto=/biblioteca|cdn|timeout|leitor-excel/i.test(cod)?"Não consegui carregar o leitor de Excel pelos servidores disponíveis. Atualize a página e tente novamente.":cod==="cabecalho-nao-reconhecido"?"Não encontrei o cabeçalho esperado no arquivo. Preciso de CD_CLIENTE, NOME_PESSOA, CD_VENDA, CD_FUNCIONARIOVENDA, NOME_FUNCIONARIO, DATA_VENDA e VALOR_VENDA.":"Não consegui analisar este arquivo. Detalhe técnico: "+cod;
+    msg($("salesReportImportMsg"),texto)
+  }finally{busy=false;if(btn){btn.disabled=false;btn.textContent="Analisar arquivo"}}
 }
 async function garantirClientes(emp,linhas,lote){
   const mapa=new Map(clientes.filter(x=>x.empresaId===emp).map(x=>[chaveCodigo(x.codigo),x]));
