@@ -216,7 +216,7 @@ async function carregar(){
   }catch(e){console.error(e);$("osAviso").textContent="Não foi possível consultar as OS. Confira permissões e Rules publicadas.";$("osAviso").classList.remove("hidden")}finally{busy=false}
 }
 function instalar(){
-  if(!document.querySelector('link[href^="production.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="production.css?v=4";document.head.appendChild(l)}
+  if(!document.querySelector('link[href^="production.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="production.css?v=5";document.head.appendChild(l)}
   montar();menu();$("osNova")?.classList.toggle("hidden",!pode("solicitar"));$("osCadastros")?.classList.toggle("hidden",!admin())
 }
 instalar();
