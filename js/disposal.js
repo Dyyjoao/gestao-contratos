@@ -78,7 +78,7 @@ function montar(){
   <div class="production-kpis">
     <div class="kpi-card"><span>Caixotes no filtro</span><strong id="descarteKpiTotal">—</strong><small>perdas registradas</small></div>
     <div class="kpi-card"><span>Meta mensal</span><strong id="descarteKpiMeta">—</strong><small>caixotes / mês</small></div>
-    <div class="kpi-card"><span>Diferença para meta</span><strong id="descarteKpiDiferenca">—</strong><small id="descarteKpiDiferencaSub">—</small></div>
+    <div class="kpi-card"><span>Desvio mensal da meta</span><strong id="descarteKpiDiferenca">—</strong><small id="descarteKpiDiferencaSub">Somente meses com lançamento</small></div>
     <div class="kpi-card"><span>Lançamentos</span><strong id="descarteKpiRegistros">—</strong><small>registros ativos</small></div>
   </div>
 
@@ -123,7 +123,7 @@ function render(){
   const pior=mesesComLancamento.length?mesesComLancamento.reduce((a,b)=>b.dif>a.dif?b:a):null,dif=pior?.dif??0;
   $("descarteKpiTotal").textContent=`${fmt(total)} cx`;$("descarteKpiMeta").textContent=`${fmt(meta())} cx`;$("descarteKpiRegistros").textContent=String(ativos.length);
   $("descarteKpiDiferenca").textContent=pior?`${dif>0?"+":""}${fmt(dif)} cx`:"—";
-  $("descarteKpiDiferencaSub").textContent=!pior?"Sem lançamento no período":dif>0?`Acima da meta em ${pior.chave.slice(5,7)}/${pior.chave.slice(0,4)}`:`Maior mês com lançamento ainda dentro da meta`;
+  $("descarteKpiDiferencaSub").textContent=!pior?"Sem lançamento no período":dif>0?`Maior excesso mensal · ${pior.chave.slice(5,7)}/${pior.chave.slice(0,4)}`:`Nenhum mês com lançamento excedeu a meta`;
   $("descarteContagem").textContent=`${historico.length} lançamento(s) no filtro`;
   graficoMesMeta();barras("descartePorProducao",Object.entries(producoesAgg).sort((a,b)=>b[1]-a[1]));barras("descartePorResponsavel",Object.entries(responsaveisAgg).sort((a,b)=>b[1]-a[1]));
   $("descarteLista").innerHTML=historico.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${dataBr(x.data)}</td><td>${esc(producaoRegistro(x)||"—")}</td><td>${fmt(x.quantidade)} cx</td><td>${esc(x.responsavel||"—")}</td><td>${x.status==="estornado"?"Estornado":"Ativo"}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&editar()?`<button type="button" class="btn-acao destaque" data-descarte-edit="${esc(x.id)}">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button type="button" class="btn-acao perigo" data-descarte-estorno="${esc(x.id)}">Estornar ADM</button>`:""}</div></td></tr>`).join("")||'<tr><td colspan="6">Nenhuma perda encontrada.</td></tr>';
