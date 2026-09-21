@@ -17,6 +17,6 @@ jobs:
           grep -q 'service-orders.js' app.js
           grep -q 'match /ordensServico/{id}' firestore.rules
           grep -q 'solicitadoPor == request.auth.uid' firestore.rules
-          grep -q 'confirmarAcaoAdministrativa' js/service-orders.js
-          grep -q 'dataFim' js/service-orders.js
+          grep -q 'statusAlteradoEm' js/service-orders.js
+          grep -q 'dataInicioPrevista' js/service-orders.js\n          grep -q 'dataConclusaoPrevista' js/service-orders.js\n          grep -q 'data-os-card-filter' js/service-orders.js
           grep -q 'ordensServico' js/profiles.js
