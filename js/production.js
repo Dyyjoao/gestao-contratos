@@ -15,7 +15,7 @@ const VINCULOS_PADRAO={
   "MAQ.2":["BANDEJA"]
 };
 
-let registros=[],cadastros=[],vinculos=[],responsaveis=[],editId=null,busy=false,detalheTipo="";
+let registros=[],cadastros=[],vinculos=[],responsaveis=[],editId=null,busy=false,detalheTipo="",analiseModo="producao";
 const pagina=()=>$("pagina-producao");
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const norm=v=>String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
@@ -94,11 +94,11 @@ function criarPagina(){
   </section>
 
   <section class="lista-card">
-    <div class="lista-cabecalho production-toolbar"><div><h3>Análise da produção</h3><p>O período principal vem do cabeçalho. Use o intervalo abaixo apenas para refinar por dias.</p></div>
+    <div class="lista-cabecalho production-toolbar"><div><h3>Análise da produção</h3><p>O período principal vem do cabeçalho. Use o intervalo abaixo apenas para refinar por dias.</p><div class="production-analysis-toggle"><button id="prodModoProducao" class="btn-secundario ativo" type="button">Produção</button><button id="prodModoHora" class="btn-secundario" type="button">Produção/hora</button></div></div>
       <div class="production-filtros"><div class="production-date-range"><label>De <input id="prodFiltroDataIni" type="date"></label><label>Até <input id="prodFiltroDataFim" type="date"></label><button id="prodLimparIntervalo" class="btn-secundario" type="button">Limpar intervalo</button></div><select id="prodFiltroRecurso"><option value="">Todas as produções</option></select><select id="prodFiltroItem"><option value="">Todos os itens</option></select></div>
     </div>
     <div class="production-analysis-grid">
-      <div class="production-card production-machine-card"><h4>Máquinas · produção em bandejas</h4><div id="prodGraficoMaquinas" class="production-bars"></div></div>
+      <div class="production-card production-machine-card"><h4 id="prodGraficoMaquinasTitulo">Máquinas · produção em bandejas</h4><div id="prodGraficoMaquinas" class="production-bars"></div></div>
       <div class="production-summary-cards">
         <button id="prodCardLaje" class="production-summary-card" type="button" data-detalhe="laje"><span>Laje</span><strong id="prodCardLajeValor">—</strong><small>m² produzidos · clique para detalhar por produto</small></button>
         <button id="prodCardMourao" class="production-summary-card" type="button" data-detalhe="mourao"><span>Mourão</span><strong id="prodCardMouraoValor">—</strong><small>unidades produzidas · clique para detalhar por produto</small></button>
@@ -209,16 +209,24 @@ function baseFiltrada(){
 }
 function barras(alvo,dados,{sufixo=""}={}){const el=$(alvo);if(!el)return;if(!dados.length){el.innerHTML='<p class="production-empty">Sem dados no filtro selecionado.</p>';return}const max=Math.max(...dados.map(x=>n(x.valor)),1);el.innerHTML=dados.map(x=>`<div class="production-bar-row"><span title="${esc(x.label)}">${esc(x.label)}</span><div><i style="width:${Math.max(2,n(x.valor)/max*100)}%"></i></div><strong>${fmt(x.valor)}${sufixo}</strong></div>`).join("")}
 function somarPor(arr,chave){const out={};arr.forEach(x=>{const k=typeof chave==="function"?chave(x):x[chave]||"Não informado";out[k]=(out[k]||0)+n(x.quantidade)});return out}
+function agregadoPorItem(dados,modo){
+  const mapa={};
+  dados.forEach(x=>{const k=x.item||"Não informado";mapa[k]??={q:0,h:0};mapa[k].q+=n(x.quantidade);mapa[k].h+=n(x.horasTrabalhadas)});
+  return Object.entries(mapa).map(([label,v])=>({label,valor:modo==="hora"?(v.h?v.q/v.h:0):v.q})).sort((a,b)=>b.valor-a.valor)
+}
 function renderDetalheProdutos(arr){
   const box=$("prodDetalheProdutos"),graf=$("prodGraficoDetalhe");if(!box||!graf)return;
   if(!detalheTipo){box.classList.add("hidden");return}
-  const isLaje=detalheTipo==="laje",dados=arr.filter(x=>tipoBloco(x.recurso)===detalheTipo),un=isLaje?" m²":" un",titulo=isLaje?"Laje · produção por produto":"Mourão · produção por produto";
+  const isLaje=detalheTipo==="laje",dados=arr.filter(x=>tipoBloco(x.recurso)===detalheTipo),modoHora=analiseModo==="hora";
+  const un=modoHora?(isLaje?" m²/h":" un/h"):(isLaje?" m²":" un");
+  const titulo=isLaje?(modoHora?"Laje · produção/hora por produto":"Laje · produção por produto"):(modoHora?"Mourão · produção/hora por produto":"Mourão · produção por produto");
   $("prodDetalheTitulo").textContent=titulo;
-  $("prodDetalheSub").textContent=isLaje?"Distribuição do total produzido em m².":"Distribuição do total produzido em unidades.";
-  barras("prodGraficoDetalhe",Object.entries(somarPor(dados,"item")).map(([label,valor])=>({label,valor})).sort((a,b)=>b.valor-a.valor),{sufixo:un});
+  $("prodDetalheSub").textContent=modoHora?"Produtividade calculada por item: produção total ÷ horas lançadas.":(isLaje?"Distribuição do total produzido em m².":"Distribuição do total produzido em unidades.");
+  barras("prodGraficoDetalhe",agregadoPorItem(dados,modoHora?"hora":"producao"),{sufixo:un});
   box.classList.remove("hidden");
   document.querySelectorAll("[data-detalhe]").forEach(b=>b.classList.toggle("ativo",b.dataset.detalhe===detalheTipo))
 }
+
 
 function renderAcompanhamentoAnual(){
   const host=$("prodAcompanhamentoGrafico"),sel=$("prodAcompanhamentoProducao");if(!host||!sel)return;
@@ -257,11 +265,22 @@ function render(){
   const qMaq=maquinas.reduce((s,x)=>s+n(x.quantidade),0),hMaq=maquinas.reduce((s,x)=>s+n(x.horasTrabalhadas),0),qLaje=lajes.reduce((s,x)=>s+n(x.quantidade),0),qMourao=mourao.reduce((s,x)=>s+n(x.quantidade),0);
   $("prodKpiMaquinas").textContent=fmt(qMaq);$("prodKpiLaje").textContent=fmt(qLaje);$("prodKpiMourao").textContent=fmt(qMourao,0);$("prodKpiMediaMaq").textContent=hMaq?`${fmt(qMaq/hMaq)} b/h`:"—";$("prodKpiRegs").textContent=String(arr.length);$("prodQtdRegistros").textContent=`${historico.length} lançamento(s) no filtro · ${arr.length} ativo(s)`;
 
-  const maq1=maquinas.filter(x=>["MAQ.1","MAQ1"].includes(norm(x.recurso).replaceAll(" ",""))).reduce((s,x)=>s+n(x.quantidade),0);
-  const maq2=maquinas.filter(x=>["MAQ.2","MAQ2"].includes(norm(x.recurso).replaceAll(" ",""))).reduce((s,x)=>s+n(x.quantidade),0);
-  barras("prodGraficoMaquinas",[{label:"MAQ.1",valor:maq1},{label:"MAQ.2",valor:maq2},{label:"Consolidado",valor:maq1+maq2}],{sufixo:" b"});
-  if($("prodCardLajeValor"))$("prodCardLajeValor").textContent=`${fmt(qLaje)} m²`;
-  if($("prodCardMouraoValor"))$("prodCardMouraoValor").textContent=`${fmt(qMourao,0)} un`;
+  const modoHora=analiseModo==="hora";
+  $("prodModoProducao")?.classList.toggle("ativo",!modoHora);$("prodModoHora")?.classList.toggle("ativo",modoHora);
+  const maq1Docs=maquinas.filter(x=>["MAQ.1","MAQ1"].includes(norm(x.recurso).replaceAll(" ",""))),maq2Docs=maquinas.filter(x=>["MAQ.2","MAQ2"].includes(norm(x.recurso).replaceAll(" ","")));
+  const maq1Q=maq1Docs.reduce((s,x)=>s+n(x.quantidade),0),maq2Q=maq2Docs.reduce((s,x)=>s+n(x.quantidade),0),maq1H=maq1Docs.reduce((s,x)=>s+n(x.horasTrabalhadas),0),maq2H=maq2Docs.reduce((s,x)=>s+n(x.horasTrabalhadas),0);
+  const maqDados=modoHora
+    ?[{label:"MAQ.1",valor:maq1H?maq1Q/maq1H:0},{label:"MAQ.2",valor:maq2H?maq2Q/maq2H:0},{label:"Consolidado",valor:(maq1H+maq2H)?(maq1Q+maq2Q)/(maq1H+maq2H):0}]
+    :[{label:"MAQ.1",valor:maq1Q},{label:"MAQ.2",valor:maq2Q},{label:"Consolidado",valor:maq1Q+maq2Q}];
+  if($("prodGraficoMaquinasTitulo"))$("prodGraficoMaquinasTitulo").textContent=modoHora?"Máquinas · produção por hora":"Máquinas · produção em bandejas";
+  barras("prodGraficoMaquinas",maqDados,{sufixo:modoHora?" b/h":" b"});
+
+  const hLaje=lajes.reduce((s,x)=>s+n(x.horasTrabalhadas),0),hMourao=mourao.reduce((s,x)=>s+n(x.horasTrabalhadas),0);
+  if($("prodCardLajeValor"))$("prodCardLajeValor").textContent=modoHora?(hLaje?`${fmt(qLaje/hLaje)} m²/h`:"—"):`${fmt(qLaje)} m²`;
+  if($("prodCardMouraoValor"))$("prodCardMouraoValor").textContent=modoHora?(hMourao?`${fmt(qMourao/hMourao)} un/h`:"—"):`${fmt(qMourao,0)} un`;
+  const lajeSmall=$("prodCardLaje")?.querySelector("small"),mouraoSmall=$("prodCardMourao")?.querySelector("small");
+  if(lajeSmall)lajeSmall.textContent=modoHora?"m² por hora · clique para detalhar por produto":"m² produzidos · clique para detalhar por produto";
+  if(mouraoSmall)mouraoSmall.textContent=modoHora?"unidades por hora · clique para detalhar por produto":"unidades produzidas · clique para detalhar por produto";
   renderDetalheProdutos(arr);
   renderAcompanhamentoAnual();
 
@@ -317,6 +336,8 @@ function ligarEventos(){
   ["prodFiltroDataIni","prodFiltroDataFim","prodFiltroItem"].forEach(id=>$(id)?.addEventListener("change",render));
   document.querySelectorAll("[data-detalhe]").forEach(b=>b.addEventListener("click",()=>{detalheTipo=detalheTipo===b.dataset.detalhe?"":b.dataset.detalhe;render()}));
   $("prodFecharDetalhe")?.addEventListener("click",()=>{detalheTipo="";render()});
+  $("prodModoProducao")?.addEventListener("click",()=>{analiseModo="producao";render()});
+  $("prodModoHora")?.addEventListener("click",()=>{analiseModo="hora";render()});
   $("prodAcompanhamentoProducao")?.addEventListener("change",renderAcompanhamentoAnual);
   $("prodLimparIntervalo")?.addEventListener("click",()=>{if($("prodFiltroDataIni"))$("prodFiltroDataIni").value="";if($("prodFiltroDataFim"))$("prodFiltroDataFim").value="";render()});
   $("btnProducaoCadastros")?.addEventListener("click",()=>{if(!podeCadastros())return;$("producaoCadastrosBox")?.classList.remove("hidden");renderCadastros();$("producaoCadastrosBox")?.scrollIntoView({behavior:"smooth",block:"start"})});
