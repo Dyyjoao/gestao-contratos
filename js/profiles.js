@@ -3,13 +3,13 @@ import { $, on, esc, norm, msg, db, state, abrirPagina, carregarAdmin, atualizar
 
 const DEF=[
  ["dashboard","Dashboard",[["visualizar","Visualizar"]]],
- ["producao","Operação · Produção",[["visualizar","Visualizar"],["lancar","Registrar produção"],["editar","Editar lançamentos"],["cadastros","Gerir máquinas, itens e concretadores"]]],
- ["descarte","Operação · Descarte",[["visualizar","Visualizar"],["lancar","Registrar descarte"],["editar","Editar lançamentos"]]],
+ ["producao","Indústria · Produção",[["visualizar","Visualizar"],["lancar","Registrar produção"],["editar","Editar lançamentos"],["cadastros","Gerir produções, itens e vínculos"]]],
+ ["descarte","Indústria · Perdas",[["visualizar","Visualizar"],["lancar","Registrar perdas"],["editar","Editar lançamentos"]]],
  ["visitas","Comercial · Visitas e contatos",[["visualizar","Visualizar próprios"],["registrar","Registrar contato"],["editar","Editar próprios"],["supervisionar","Acompanhar equipe"]]],
  ["orcamentos","Comercial · Orçamentos",[["visualizar","Visualizar próprios"],["registrar","Registrar orçamento"],["editar","Editar próprios e registrar follow-up"],["supervisionar","Acompanhar equipe"]]],
  ["palletMovimentos","Logística · Entrega e recolhimento",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["palletInventario","Logística · Inventário de pallets",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["ordensServico","Manutenção · Ordens de Serviço",[["visualizar","Visualizar"],["solicitar","Solicitar OS"],["executar","Executar e concluir OS"]]],
+ ["ordensServico","Indústria · Ordens de Serviço",[["visualizar","Visualizar"],["solicitar","Solicitar OS"],["executar","Executar e concluir OS"]]],
  ["rhAvaliacoes360","RH · Avaliação de desempenho 360°",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["rhAcoes","RH · Endomarketing, melhorias e treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["rhColaboradores","RH · Colaboradores e quadro",[["visualizar","Visualizar"],["lancar","Cadastrar"],["editar","Editar vínculos"]]],
