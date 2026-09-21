@@ -693,7 +693,7 @@ service cloud.firestore {
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.numero == resource.data.numero &&
         request.resource.data.dataSolicitacao == resource.data.dataSolicitacao &&
-        request.resource.data.solicitadoPor == resource.data.solicitadoPor &&
+        (!('solicitadoPor' in resource.data) || request.resource.data.solicitadoPor == resource.data.solicitadoPor) &&
         resource.data.status in ['aberta','em_execucao'] &&
         request.resource.data.status in ['aberta','em_execucao','concluida','cancelada'] &&
         request.resource.data.solicitante is string && request.resource.data.solicitante.size() > 0 &&
@@ -722,7 +722,7 @@ service cloud.firestore {
           'tipo','solicitante','funcao','equipamento','local','descricao','executante',
           'dataInicioPrevista','dataConclusaoPrevista','dataInicio','dataFim',
           'paradaProducao','trocaPeca','observacao','status',
-          'canceladoPor','canceladoEm','atualizadoEm'
+          'canceladoPor','canceladoEm','statusAlteradoEm','statusAlteradoPor','atualizadoEm'
         ]);
       allow delete: if false;
     }
