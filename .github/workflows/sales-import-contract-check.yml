@@ -41,7 +41,11 @@ jobs:
           grep -q 'codigoVendedor' js/hr-people.js
           grep -q 'importacaoLoteId' js/sales-report-import.js
           grep -q 'importacoesVendas' js/sales-report-import.js
-          grep -q 'Estornar lote' js/sales-report-import.js
+          grep -q 'importacoesVendasAlteracoes' js/sales-report-import.js
+          grep -q 'classificarLinha' js/sales-report-import.js
+          grep -q 'vendaPorPedido' js/sales-report-import.js
+          grep -q 'vendaImportadaSincronizavel' firestore.rules
+          grep -q 'Excluir lote' js/sales-report-import.js
           grep -q 'match /importacoesVendas/{id}' firestore.rules
           grep -q 'match /clientesComerciais/{id}' firestore.rules
 
