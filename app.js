@@ -41,6 +41,7 @@ import "./js/module-settings.js";
 import "./js/workforce-dashboard.js";
 import "./js/customer-complaints.js";
 import "./js/fleet-fuel.js?v=15";
+import "./js/admin-fuel-settings.js?v=2";
 import "./js/area-navigation.js";
 import "./js/governance.js";
 import "./js/governance-security.js";
