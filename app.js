@@ -30,7 +30,7 @@ import "./js/disposal.js?v=9";
 import "./js/commercial-workflow.js";
 import "./js/pallets.js";
 import "./js/pallet-dashboard.js";
-import "./js/service-orders.js?v=6";
+import "./js/service-orders.js?v=7";
 import "./js/service-orders-dashboard.js?v=2";
 import "./js/workforce-safety.js";
 import "./js/hr-people.js?v=3";
