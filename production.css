@@ -24,3 +24,19 @@
 .production-date-range input{min-width:132px;border:1px solid #dbe3ea;border-radius:8px;padding:8px 9px;background:#fff;color:#183247}
 .production-date-range .btn-secundario{padding:8px 10px;white-space:nowrap}
 @media(max-width:700px){.production-date-range{width:100%;display:grid;grid-template-columns:1fr 1fr}.production-date-range label,.production-date-range input{width:100%}.production-date-range .btn-secundario{grid-column:1/-1;width:100%}}
+
+.production-analysis-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:14px;padding:0 16px 16px}
+.production-summary-cards{display:grid;grid-template-columns:1fr;gap:12px}
+.production-summary-card{appearance:none;width:100%;border:1px solid #dfe7ed;border-radius:14px;background:#fff;padding:18px;text-align:left;display:grid;gap:6px;cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease,background .15s ease}
+.production-summary-card:hover{transform:translateY(-1px);border-color:#9dcfc8;box-shadow:0 8px 20px rgba(20,45,65,.08)}
+.production-summary-card.ativo{border-color:#10a995;background:#eefaf8;box-shadow:0 0 0 2px rgba(16,169,149,.10)}
+.production-summary-card span{font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;color:#667085}
+.production-summary-card strong{font-size:28px;line-height:1.05;color:#17324a}
+.production-summary-card small{font-size:10px;color:#667085}
+.production-detail-card{margin:0 16px 16px}
+.production-detail-card.hidden{display:none}
+.production-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.production-detail-head h4{margin:0 0 4px}.production-detail-head p{margin:0;color:#667085;font-size:10px}
+.production-machine-card{min-height:100%}
+@media(max-width:900px){.production-analysis-grid{grid-template-columns:1fr}.production-summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.production-analysis-grid{padding:0 10px 10px}.production-summary-cards{grid-template-columns:1fr}.production-detail-card{margin:0 10px 10px}}
