@@ -1,5 +1,5 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao } from "./shared.js";
+import { $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao, periodoAno, periodoChave } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria } from "./admin-actions.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 
@@ -95,7 +95,7 @@ function criarPagina(){
 
   <section class="lista-card">
     <div class="lista-cabecalho production-toolbar"><div><h3>Análise da produção</h3><p>Totais separados por unidade de medida para evitar somar bandejas, m² e unidades como se fossem iguais.</p></div>
-      <div class="production-filtros"><select id="prodFiltroAno"></select><select id="prodFiltroMes"><option value="">Ano inteiro</option>${Array.from({length:12},(_,i)=>`<option value="${String(i+1).padStart(2,"0")}">${new Date(2026,i,1).toLocaleString("pt-BR",{month:"long"})}</option>`).join("")}</select><select id="prodFiltroRecurso"><option value="">Todas as produções</option></select><select id="prodFiltroItem"><option value="">Todos os itens</option></select></div>
+      <div class="production-filtros"><div class="production-date-range"><label>De <input id="prodFiltroDataIni" type="date"></label><label>Até <input id="prodFiltroDataFim" type="date"></label><button id="prodLimparIntervalo" class="btn-secundario" type="button">Limpar intervalo</button></div><select id="prodFiltroRecurso"><option value="">Todas as produções</option></select><select id="prodFiltroItem"><option value="">Todos os itens</option></select></div>
     </div>
     <div class="production-charts production-charts-industria">
       <div class="production-card"><h4>Máquinas · total por máquina</h4><div id="prodGraficoMaquinas" class="production-bars"></div></div>
@@ -160,9 +160,22 @@ function atualizarVinculoSelects(){
   if(r){r.innerHTML=opcoesLista(producoesAtivas());if(vr&&[...r.options].some(o=>o.value===vr))r.value=vr}
   if(i){i.innerHTML=opcoesLista(itensAtivos());if(vi&&[...i.options].some(o=>o.value===vi))i.value=vi}
 }
-function anosDisponiveis(){const atual=new Date().getFullYear(),set=new Set([atual,...registros.map(x=>Number(String(x.data||"").slice(0,4))).filter(Boolean)]);return [...set].sort((a,b)=>b-a)}
-function atualizarFiltroAno(){const s=$("prodFiltroAno"),atual=s?.value||String(new Date().getFullYear());if(!s)return;s.innerHTML=anosDisponiveis().map(a=>`<option value="${a}">${a}</option>`).join("");if([...s.options].some(o=>o.value===atual))s.value=atual}
-function baseFiltrada(){const ano=$("prodFiltroAno")?.value||"",mes=$("prodFiltroMes")?.value||"",rec=$("prodFiltroRecurso")?.value||"",item=$("prodFiltroItem")?.value||"";return registros.filter(x=>(!ano||String(x.data||"").startsWith(ano))&&(!mes||String(x.data||"").slice(5,7)===mes)&&(!rec||x.recurso===rec)&&(!item||x.item===item))}
+function dentroPeriodoGeral(data){
+  const d=String(data||""),ano=String(periodoAno()),p=periodoChave();
+  if(!d.startsWith(ano))return false;
+  if(/^m\d{2}$/.test(p))return d.slice(5,7)===p.slice(1);
+  if(/^t[1-4]$/.test(p)){const m=Number(d.slice(5,7)),t=Number(p.slice(1));return Math.ceil(m/3)===t}
+  const meses={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+  if(meses[p])return Number(d.slice(5,7))===meses[p];
+  return true
+}
+function baseFiltrada(){
+  const ini=$("prodFiltroDataIni")?.value||"",fim=$("prodFiltroDataFim")?.value||"",rec=$("prodFiltroRecurso")?.value||"",item=$("prodFiltroItem")?.value||"";
+  return registros.filter(x=>{
+    const d=String(x.data||"");
+    return dentroPeriodoGeral(d)&&(!ini||d>=ini)&&(!fim||d<=fim)&&(!rec||x.recurso===rec)&&(!item||x.item===item)
+  })
+}
 function barras(alvo,dados,{sufixo=""}={}){const el=$(alvo);if(!el)return;if(!dados.length){el.innerHTML='<p class="production-empty">Sem dados no filtro selecionado.</p>';return}const max=Math.max(...dados.map(x=>n(x.valor)),1);el.innerHTML=dados.map(x=>`<div class="production-bar-row"><span title="${esc(x.label)}">${esc(x.label)}</span><div><i style="width:${Math.max(2,n(x.valor)/max*100)}%"></i></div><strong>${fmt(x.valor)}${sufixo}</strong></div>`).join("")}
 function somarPor(arr,chave){const out={};arr.forEach(x=>{const k=typeof chave==="function"?chave(x):x[chave]||"Não informado";out[k]=(out[k]||0)+n(x.quantidade)});return out}
 function renderResumoItens(arr){
@@ -198,8 +211,8 @@ async function carregar(){
   try{
     const [r,c,v,p]=await Promise.all([listarDocumentos("producaoLancamentos"),listarDocumentos("operacaoCadastros"),listarDocumentos("producaoItensConfig"),colaboradoresPorFuncao("PRODUCAO").catch(()=>[])]);
     registros=r.filter(x=>x.empresaId===emp());cadastros=c.filter(x=>x.empresaId===emp());vinculos=v.filter(x=>x.empresaId===emp());responsaveis=p.filter(x=>x.empresaId===emp());
-    atualizarSelects();atualizarFiltroAno();render();renderCadastros();$("producaoAviso")?.classList.add("hidden")
-  }catch(e){console.error(e);const a=$("producaoAviso");if(a){a.classList.remove("hidden");a.textContent="Não foi possível carregar a Produção. Confira permissões, vínculos do RH e Firestore Rules."}registros=[];cadastros=[];vinculos=[];responsaveis=[];atualizarSelects();atualizarFiltroAno();render();renderCadastros()}finally{busy=false}
+    atualizarSelects();render();renderCadastros();$("producaoAviso")?.classList.add("hidden")
+  }catch(e){console.error(e);const a=$("producaoAviso");if(a){a.classList.remove("hidden");a.textContent="Não foi possível carregar a Produção. Confira permissões, vínculos do RH e Firestore Rules."}registros=[];cadastros=[];vinculos=[];responsaveis=[];atualizarSelects();render();renderCadastros()}finally{busy=false}
 }
 
 function calcularMedia(){const r=$("prodRecurso")?.value,q=n($("prodQuantidade")?.value),h=n($("prodHoras")?.value);if($("prodMedia"))$("prodMedia").value=tipoBloco(r)==="maquina"?(h?`${fmt(q/h)} bandejas/h`:"—"):"Não aplicável"}
@@ -231,7 +244,8 @@ function ligarEventos(){
   $("formProducao")?.addEventListener("submit",salvar);$("prodQuantidade")?.addEventListener("input",calcularMedia);$("prodHoras")?.addEventListener("input",calcularMedia);
   $("prodRecurso")?.addEventListener("change",()=>{atualizarItemDoForm();atualizarMetricaForm()});
   $("prodFiltroRecurso")?.addEventListener("change",()=>{const fi=$("prodFiltroItem"),atual=fi?.value;const itens=$("prodFiltroRecurso").value?itensParaProducao($("prodFiltroRecurso").value):itensAtivos();if(fi){fi.innerHTML='<option value="">Todos os itens</option>'+opcoesLista(itens,{vazio:false});if(atual&&[...fi.options].some(o=>o.value===atual))fi.value=atual}render()});
-  ["prodFiltroAno","prodFiltroMes","prodFiltroItem"].forEach(id=>$(id)?.addEventListener("change",render));
+  ["prodFiltroDataIni","prodFiltroDataFim","prodFiltroItem"].forEach(id=>$(id)?.addEventListener("change",render));
+  $("prodLimparIntervalo")?.addEventListener("click",()=>{if($("prodFiltroDataIni"))$("prodFiltroDataIni").value="";if($("prodFiltroDataFim"))$("prodFiltroDataFim").value="";render()});
   $("btnProducaoCadastros")?.addEventListener("click",()=>{if(!podeCadastros())return;$("producaoCadastrosBox")?.classList.remove("hidden");renderCadastros();$("producaoCadastrosBox")?.scrollIntoView({behavior:"smooth",block:"start"})});
   $("btnFecharCadastrosProducao")?.addEventListener("click",()=>$("producaoCadastrosBox")?.classList.add("hidden"));
   document.querySelectorAll("[data-master-add]").forEach(b=>b.addEventListener("click",()=>adicionarCadastro(b.dataset.masterAdd)));
@@ -243,3 +257,5 @@ instalar();
 window.addEventListener("sig:ready",()=>{instalar();if(podeVer()&&!pagina()?.classList.contains("hidden"))carregar()});
 window.addEventListener("sig:empresa-contexto",()=>{if(!pagina()?.classList.contains("hidden"))carregar()});
 window.addEventListener("sig:data-changed",e=>{if(["producao","rh"].includes(e.detail?.modulo)&&!pagina()?.classList.contains("hidden"))carregar()});
+window.addEventListener("sig:periodo-changed",()=>{if(!pagina()?.classList.contains("hidden"))render()});
+window.addEventListener("sig:periodo-alterado",()=>{if(!pagina()?.classList.contains("hidden"))render()});
