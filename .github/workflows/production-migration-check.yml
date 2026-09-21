@@ -26,23 +26,23 @@ jobs:
           grep -q 'production.js' app.js
           grep -q 'production-dashboard.js' app.js
           grep -q 'id="pagina-producao"' js/production.js
-          grep -q 'Quantidade produzida' js/production.js
+          grep -q 'Bandejas produzidas\|Área produzida\|Unidades produzidas' js/production.js
           grep -q 'Horas trabalhadas' js/production.js
-          grep -q 'Produção por hora' js/production.js
-          grep -q 'Concretador' js/production.js
-          grep -q 'Para LAJE' js/production.js
+          grep -q 'Produtividade da máquina' js/production.js
+          grep -q 'Responsável da produção' js/production.js
+          grep -q 'Produção × Item' js/production.js
           grep -q 'BANDEJA' js/production.js
           grep -q 'producaoLancamentos' js/production.js
           grep -q 'operacaoCadastros' js/production.js
           grep -q 'Estornar ADM' js/production.js
           grep -q 'menuOperacao' js/area-navigation.js
           grep -q 'areaNav-producao' js/area-navigation.js || grep -q 'producao' js/area-navigation.js
-          grep -q 'Operação · Produção' js/production-dashboard.js
+          grep -q 'Indústria · Produção' js/production-dashboard.js
           grep -q 'disposal.js' app.js
           grep -q 'disposal-dashboard.js' app.js
           grep -q 'descarteLancamentos' js/disposal.js
           grep -q 'match /descarteLancamentos/{id}' firestore.rules
           grep -q 'allow delete: if false;' firestore.rules
-          grep -q '\["descarte","Operação · Descarte"' js/profiles.js
-          grep -q 'descarte:{label:"Descarte"' js/area-navigation.js
+          grep -q '\["descarte","Indústria · Perdas"' js/profiles.js
+          grep -q 'descarte:{label:"Perdas"' js/area-navigation.js
           test -f production.css
