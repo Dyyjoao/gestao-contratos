@@ -31,7 +31,7 @@ const telaLogin=$("telaLogin"),sistema=$("sistema"),formLogin=$("formLogin"),ema
 const MENUS={
   dashboard:["menuDashboard","dashboard"],contratos:["menuContratos","contratos"],prestadores:["menuPrestadores","prestadores"],frota:["menuFrota","frota"],almoxarifado:["menuAlmoxarifado","almoxarifado"],cotacoes:["menuCotacoes","cotacoes"],controladoria:["menuControladoria","controladoria"]
 };
-const TITULOS={dashboard:"Dashboard",contratos:"Contratos",prestadores:"Prestadores & Oficinas",frota:"Frota",combustivel:"Combustível e Diesel",almoxarifado:"Almoxarifado",cotacoes:"Solicitações & Cotações",controladoria:"Controladoria & Planejamento",administracao:"Administração",empresas:"Empresas",usuarios:"Usuários",perfis:"Perfis de Acesso",grupo:"Grupo Empresarial"};
+const TITULOS={dashboard:"Dashboard",contratos:"Contratos",prestadores:"Prestadores & Oficinas",frota:"Frota",combustivel:"Combustível e Diesel",almoxarifado:"Almoxarifado",cotacoes:"Solicitações & Cotações",controladoria:"Controladoria & Planejamento",administracao:"Administração","configuracao-bomba":"Configuração da bomba",empresas:"Empresas",usuarios:"Usuários",perfis:"Perfis de Acesso",grupo:"Grupo Empresarial"};
 let loginBusy=false;
 
 function setBusy(v,t="Entrando..."){loginBusy=v;if(btnEntrar){btnEntrar.disabled=v;btnEntrar.textContent=v?"Entrando...":"Entrar"}if(v)msg(mensagemLogin,t)}
@@ -41,7 +41,7 @@ export function abrirPagina(nome){
   const p=$(`pagina-${nome}`);if(!p)return;
   document.querySelectorAll(".pagina").forEach(x=>x.classList.add("hidden"));p.classList.remove("hidden");
   document.querySelectorAll(".menu-item").forEach(x=>x.classList.remove("ativo"));
-  const administrativa=["administracao","empresas","usuarios","perfis","grupo"].includes(nome);
+  const administrativa=["administracao","configuracao-bomba","empresas","usuarios","perfis","grupo"].includes(nome);
   (administrativa?$("menuAdministracao"):document.querySelector(`.menu-item[data-pagina="${nome}"]`))?.classList.add("ativo");
   if(tituloPagina)tituloPagina.textContent=TITULOS[nome]||"SIG";
   if(subtitulo)subtitulo.textContent=state.grupo?.nome||"Sistema Integrado de Gestão";
