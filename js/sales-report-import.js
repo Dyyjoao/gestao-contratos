@@ -212,10 +212,37 @@ function vendaPorPedido(r,emp){
   return{__ambigua:true,candidatas}
 }
 function vendaImportada(v){return !!v&&(v.origemImportacao==="relatorio_vendas"||String(v.importacaoLoteId||"").startsWith("IMP-VND-"))}
+function parcelasAntigas(v){
+  if(Array.isArray(v?.parcelas)&&v.parcelas.length)return v.parcelas.map((p,i)=>({
+    id:p.id||`P${String(i+1).padStart(3,"0")}`,ordem:n(p.ordem)||i+1,vencimento:String(p.vencimento||""),valor:arredondarCentavos(n(p.valor)),
+    valorRecebido:arredondarCentavos(n(p.valorRecebido)),dataUltimoRecebimento:p.dataUltimoRecebimento||null
+  }));
+  return[]
+}
+function estruturaParcelasMudou(r,v){
+  const antigas=parcelasAntigas(v);
+  if(!antigas.length)return true;
+  if(antigas.length!==r.parcelas.length)return true;
+  return r.parcelas.some((p,i)=>{
+    const a=antigas[i];
+    return !a||a.id!==p.id||a.vencimento!==p.vencimento||Math.abs(n(a.valor)-n(p.valor))>0.009
+  })
+}
+function conflitoFinanceiroParcelas(r,v){
+  const antigas=parcelasAntigas(v);
+  if(!antigas.length)return n(v?.valorRecebido)>n(r.valor)+0.009;
+  const novas=new Map(r.parcelas.map(p=>[p.id,p]));
+  return antigas.some(a=>{
+    if(n(a.valorRecebido)<=0)return false;
+    const nova=novas.get(a.id);
+    return !nova||n(a.valorRecebido)>n(nova.valor)+0.009
+  })
+}
 function linhaMudou(r,v,rh,cfg,cl){
   if(!v)return true;
   return String(v.data||"")!==r.data||
     Math.abs(n(v.valor)-n(r.valor))>0.009||
+    estruturaParcelasMudou(r,v)||
     chaveCodigo(v.vendedorCodigo||"")!==chaveCodigo(r.vendedorCodigo)||
     String(v.vendedorRhId||"")!==String(rh?.id||"")||
     chaveCodigo(v.clienteCodigo||"")!==chaveCodigo(r.clienteCodigo)||
@@ -226,10 +253,9 @@ function linhaMudou(r,v,rh,cfg,cl){
 function classificarLinha(r,emp){
   const existente=vendaPorPedido(r,emp),rh=rhPorCodigo(r.vendedorCodigo),cfg=rh?cfgPorRh(rh.id):null,cl=clientePorCodigo(r.clienteCodigo,emp);
   if(!existente)return{tipo:"nova",existente,rh,cfg,cl};
-  if(existente.__ambigua)return{tipo:"conflito",motivo:"Pedido encontrado mais de uma vez na base; informe/revise a loja",existente:null,rh,cfg,cl};
+  if(existente.__ambigua)return{tipo:"conflito",motivo:"Pedido encontrado mais de uma vez na base; revise a origem antes de importar",existente:null,rh,cfg,cl};
   if(!vendaImportada(existente))return{tipo:"conflito",motivo:"Pedido já existe fora do importador",existente,rh,cfg,cl};
-  if(["aprovada","paga"].includes(String(existente.comissaoStatus||""))&&linhaMudou(r,existente,rh,cfg,cl))return{tipo:"conflito",motivo:"Registro protegido por processamento financeiro",existente,rh,cfg,cl};
-  if(n(existente.valorRecebido)>n(r.valor)+0.009)return{tipo:"conflito",motivo:"Recebido maior que o novo valor da venda",existente,rh,cfg,cl};
+  if(conflitoFinanceiroParcelas(r,existente))return{tipo:"conflito",motivo:"Nova estrutura de parcelas conflita com recebimentos já baixados",existente,rh,cfg,cl};
   return{tipo:linhaMudou(r,existente,rh,cfg,cl)?"atualizar":"igual",existente,rh,cfg,cl}
 }
 function montar(){
