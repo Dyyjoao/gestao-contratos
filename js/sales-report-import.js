@@ -4,18 +4,19 @@ import { normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes }
 
 const XLSX_CDNS=["./vendor/xlsx.full.min.js?v=1","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js","https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"];
 const CAMPOS={
-  clienteCodigo:"CDCLIENTE",
-  clienteNome:"NOMEPESSOA",
-  clienteCidade:"CIDADEPESSOA",
-  clienteUf:"UFPESSOA",
-  vendaCodigo:"CDVENDA",
-  lojaCodigo:"CDLOJA",
-  vendedorCodigo:"CDFUNCIONARIOVENDA",
-  vendedorNome:"NOMEFUNCIONARIO",
-  dataVenda:"DATAVENDA",
-  valorVenda:"VALORVENDA"
+  clienteCodigo:["CDCLIENTE"],
+  clienteNome:["NOMEPESSOA"],
+  clienteCidade:["CIDADEPESSOA"],
+  clienteUf:["UFPESSOA"],
+  vendaCodigo:["CDVENDA"],
+  lojaCodigo:["CDLOJA"],
+  vendedorCodigo:["CDFUNCIONARIOVENDA"],
+  vendedorNome:["NOMEFUNCIONARIO"],
+  dataVenda:["DATAVENDA"],
+  valorVenda:["VALORRECEITA","VALORVENDA"],
+  vencimento:["VENCIMENTORECEITA"]
 };
-const OBRIGATORIOS=["CDCLIENTE","NOMEPESSOA","CDVENDA","CDFUNCIONARIOVENDA","NOMEFUNCIONARIO","DATAVENDA","VALORVENDA"];
+const OBRIGATORIOS=["clienteCodigo","clienteNome","vendaCodigo","vendedorCodigo","vendedorNome","dataVenda","valorVenda","vencimento"];
 
 let arquivoAtual="",analise=null,vendedoresRh=[],configs=[],vendas=[],clientes=[],importacoes=[],snapshots=[],busy=false;
 const pagina=()=>$("pagina-vendas");
@@ -83,18 +84,46 @@ async function carregarXlsx(){
 }
 function acharCabecalho(matriz){
   for(let i=0;i<Math.min(40,matriz.length);i++){
-    const norm=(matriz[i]||[]).map(normalizarChave);
-    const presentes=new Set(norm);
-    if(OBRIGATORIOS.every(x=>presentes.has(x))){
-      const indices={};Object.entries(CAMPOS).forEach(([k,h])=>indices[k]=norm.indexOf(h));
-      return{linha:i,indices}
-    }
+    const norm=(matriz[i]||[]).map(normalizarChave),indices={};
+    Object.entries(CAMPOS).forEach(([k,aliases])=>{
+      indices[k]=-1;
+      for(const alias of aliases){const pos=norm.indexOf(alias);if(pos>=0){indices[k]=pos;break}}
+    });
+    if(OBRIGATORIOS.every(k=>indices[k]>=0))return{linha:i,indices}
   }
   return null
 }
+function consolidarPedidosRelatorio(linhas,erros){
+  const mapa=new Map(),invalidos=new Set();
+  linhas.forEach(r=>{
+    const chave=`${codigo(r.lojaCodigo)||"SEMLOJA"}|${codigo(r.vendaCodigo)}`,z=mapa.get(chave);
+    if(!z){
+      mapa.set(chave,{...r,parcelas:[{linha:r.linha,vencimento:r.vencimento,valor:r.valor}]});return
+    }
+    const divergente=z.clienteCodigo!==r.clienteCodigo||z.vendedorCodigo!==r.vendedorCodigo||z.data!==r.data||z.lojaCodigo!==r.lojaCodigo;
+    if(divergente){
+      invalidos.add(chave);
+      erros.push(`Pedido ${r.vendaCodigo}: cliente, vendedor, loja ou data divergente entre as parcelas.`);
+      return
+    }
+    z.parcelas.push({linha:r.linha,vencimento:r.vencimento,valor:r.valor})
+  });
+  const pedidos=[];
+  mapa.forEach((z,chave)=>{
+    if(invalidos.has(chave))return;
+    z.parcelas.sort((a,b)=>String(a.vencimento).localeCompare(String(b.vencimento))||a.linha-b.linha);
+    z.parcelas=z.parcelas.map((p,i)=>({id:`P${String(i+1).padStart(3,"0")}`,ordem:i+1,vencimento:p.vencimento,valor:arredondarCentavos(p.valor)}));
+    z.valor=arredondarCentavos(z.parcelas.reduce((s,p)=>s+p.valor,0));
+    z.quantidadeParcelas=z.parcelas.length;
+    delete z.vencimento;
+    pedidos.push(z)
+  });
+  pedidos.sort((a,b)=>String(a.data).localeCompare(String(b.data))||String(a.vendaCodigo).localeCompare(String(b.vendaCodigo)));
+  return pedidos
+}
 export function parseMatrizRelatorioVendas(matriz){
   const cab=acharCabecalho(matriz);if(!cab)throw new Error("cabecalho-nao-reconhecido");
-  const linhas=[],erros=[];
+  const linhasBrutas=[],erros=[];
   for(let i=cab.linha+1;i<matriz.length;i++){
     const r=matriz[i]||[],get=k=>cab.indices[k]>=0?r[cab.indices[k]]:"";
     const row={
@@ -108,6 +137,7 @@ export function parseMatrizRelatorioVendas(matriz){
       vendedorCodigo:codigo(get("vendedorCodigo")),
       vendedorNome:String(get("vendedorNome")??"").trim(),
       data:dataIso(get("dataVenda")),
+      vencimento:dataIso(get("vencimento")),
       valor:arredondarCentavos(numero(get("valorVenda")))
     };
     if(!Object.values(row).some(Boolean))continue;
@@ -118,11 +148,13 @@ export function parseMatrizRelatorioVendas(matriz){
     if(!row.vendedorCodigo)faltas.push("código do vendedor");
     if(!row.vendedorNome)faltas.push("nome do vendedor");
     if(!row.data)faltas.push("data da venda");
-    if(!(row.valor>0))faltas.push("valor da venda");
+    if(!row.vencimento)faltas.push("vencimento da parcela");
+    if(!(row.valor>0))faltas.push("valor da parcela");
     row.erro=faltas.length?`Linha ${row.linha}: ${faltas.join(", ")} inválido(s).`:"";
-    if(row.erro)erros.push(row.erro);else linhas.push(row)
+    if(row.erro)erros.push(row.erro);else linhasBrutas.push(row)
   }
-  return{linhas,erros,total:linhas.reduce((s,x)=>s+x.valor,0)}
+  const linhas=consolidarPedidosRelatorio(linhasBrutas,erros);
+  return{linhas,erros,total:arredondarCentavos(linhas.reduce((s,x)=>s+x.valor,0)),quantidadeParcelas:linhas.reduce((s,x)=>s+x.parcelas.length,0)}
 }
 function parseTextoDelimitado(texto,separador="|"){
   const matriz=[];let linha=[],celula="",aspas=false;
