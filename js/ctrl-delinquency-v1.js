@@ -1,7 +1,10 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, listarDocumentos, empresasSelecionadasIds, nomeEmpresa, moeda, dataBr, emitirAlteracao, db, doc, runTransaction, serverTimestamp, state } from "./shared.js";
+import { $, esc, msg, permite, listarDocumentos, empresasSelecionadasIds, nomeEmpresa, moeda, dataBr, periodoAno, periodoChave, emitirAlteracao, db, doc, runTransaction, serverTimestamp, state } from "./shared.js";
 
-let vendas=[],recebimentos=[],carregando=false,tratamentoId=null;
+const PERIODOS={total:[0,1,2,3,4,5,6,7,8,9,10,11],t1:[0,1,2],t2:[3,4,5],t3:[6,7,8],t4:[9,10,11]};
+for(let i=0;i<12;i++)PERIODOS[`m${String(i+1).padStart(2,"0")}`]=[i];
+const NOMES_MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+let vendas=[],recebimentos=[],carregando=false,tratamentoId=null,filtroEscopo="acumulado";
 const pagina=()=>$("pagina-ctrl-inadimplencia-v1");
 const hoje=()=>new Date().toISOString().slice(0,10);
 const competenciaAtual=()=>new Date().toISOString().slice(0,7);
@@ -11,6 +14,23 @@ const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 
 function fimMes(comp){const[a,m]=String(comp||"").split("-").map(Number);if(!a||!m)return hoje();return new Date(a,m,0,12).toISOString().slice(0,10)}
 function dataReferencia(){const comp=$("inadCompetencia")?.value||competenciaAtual(),fim=fimMes(comp);return fim>hoje()?hoje():fim}
+function isoData(a,m,d){return `${String(a).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+function indicesPeriodo(){return PERIODOS[periodoChave()]||PERIODOS.total}
+function limitesPeriodoSelecionado(){
+  const ano=periodoAno(),meses=indicesPeriodo(),primeiro=Math.min(...meses),ultimo=Math.max(...meses),ultimoDia=new Date(ano,ultimo+1,0).getDate();
+  return{inicio:isoData(ano,primeiro+1,1),fim:isoData(ano,ultimo+1,ultimoDia)}
+}
+function nomePeriodoSelecionado(){
+  const chave=periodoChave(),ano=periodoAno();
+  if(chave==="total")return `Ano ${ano}`;
+  if(/^t[1-4]$/.test(chave))return `${chave.slice(1)}º trimestre · ${ano}`;
+  const m=Number(String(chave).slice(1))-1;return Number.isFinite(m)&&m>=0&&m<12?`${NOMES_MESES[m]} / ${ano}`:`Ano ${ano}`
+}
+function parcelaNoPeriodo(v,p){
+  const lim=limitesPeriodoSelecionado(),d=String(p?.vencimento||"").slice(0,10);
+  if(d)return d>=lim.inicio&&d<=lim.fim;
+  const venda=String(v?.data||"").slice(0,10);return !!venda&&venda>=lim.inicio&&venda<=lim.fim
+}
 function diffDias(venc,ref=dataReferencia()){if(!venc)return 0;const a=new Date(`${venc}T12:00:00`),b=new Date(`${ref}T12:00:00`);return Math.max(0,Math.floor((b-a)/86400000))}
 function parcelasVenda(v){
   if(Array.isArray(v?.parcelas)&&v.parcelas.length)return v.parcelas.map((p,i)=>({
@@ -45,7 +65,15 @@ function competenciaVenda(v){return String(v.data||"").slice(0,7)}
 function todasParcelas(){const comp=$("inadCompetencia")?.value||competenciaAtual();return vendas.filter(v=>!competenciaVenda(v)||competenciaVenda(v)<=comp).flatMap(v=>parcelasVenda(v).map(p=>({v,p})))}
 function parcelasVisiveis(){
   const filtro=$("inadFiltro")?.value||"todos",busca=String($("inadBusca")?.value||"").trim().toLowerCase(),ref=dataReferencia();
-  return todasParcelas().filter(({v,p})=>{const b=bucket(v,p,ref),st=statusParcela(v,p,ref);if(filtro!=="todos"&&b!==filtro&&st!==filtro)return false;if(busca&&!`${v.cliente||""} ${v.documento||""} ${v.vendedorNome||""}`.toLowerCase().includes(busca))return false;return true})
+  return todasParcelas().filter(({v,p})=>{
+    const b=bucket(v,p,ref),st=statusParcela(v,p,ref);
+    if(filtroEscopo==="periodo"&&!parcelaNoPeriodo(v,p))return false;
+    if(filtro==="aberto"&&saldoParcela(v,p,ref)<=0)return false;
+    else if(filtro==="vencidos"&&!["1_30","31_60","61_90","90_mais"].includes(b))return false;
+    else if(!["todos","aberto","vencidos"].includes(filtro)&&b!==filtro&&st!==filtro)return false;
+    if(busca&&!`${v.cliente||""} ${v.documento||""} ${v.vendedorNome||""}`.toLowerCase().includes(busca))return false;
+    return true
+  })
 }
 function css(){if($("inad-css"))return;const s=document.createElement("style");s.id="inad-css";s.textContent=`
 .inad-toolbar{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inad-toolbar .campo{min-width:150px}.inad-aging{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}.inad-aging-card{border:1px solid #e3e8ef;border-radius:12px;background:#fff;padding:12px}.inad-aging-card span{display:block;color:#667085;font-size:11px}.inad-aging-card strong{display:block;font-size:18px;margin:5px 0}.inad-aging-card small{color:#667085}.inad-aging-card.atraso{border-left:4px solid #e16b21}.inad-aging-card.critico{border-left:4px solid #b42318}.inad-aging-card.pendente{border-left:4px solid #98a2b3}.inad-linha-vencida td{background:#fffaf7}.inad-linha-critica td{background:#fff7f6}.inad-linha-sem-venc td{background:#fafafa}.inad-acoes{display:flex;gap:5px;flex-wrap:wrap}.inad-info{display:block;font-size:10px;color:#667085;margin-top:2px}.inad-table td:nth-child(5),.inad-table td:nth-child(6),.inad-table td:nth-child(7){white-space:nowrap}.inad-scroll-10{max-height:510px;overflow:auto}.inad-scroll-10 table{margin:0}.inad-scroll-10 thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}.inad-origem{padding:9px 12px;border:1px solid #dfe5ea;border-radius:10px;background:#f8fafb;color:#667085;font-size:11px;margin-bottom:12px}.inad-origem strong{color:#0b1f33}@media(max-width:1100px){.inad-aging{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.inad-aging{grid-template-columns:1fr 1fr}.inad-toolbar .campo{min-width:120px}}
