@@ -26,7 +26,7 @@ const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const codigo=v=>String(v??"").trim().toUpperCase();
 const chaveCodigo=v=>normalizarChave(codigo(v));
 const loteId=()=>{const d=new Date(),p=v=>String(v).padStart(2,"0"),s=Math.random().toString(36).slice(2,6).toUpperCase();return `IMP-VND-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${s}`};
-const statusImportacao=s=>({processando:"Processando",concluida:"Concluída",parcial:"Parcial",erro:"Erro",exclusao_parcial:"Exclusão parcial",excluida:"Excluída"})[s]||s||"—";
+const statusImportacao=s=>({processando:"Processando",excluindo:"Excluindo...",concluida:"Concluída",parcial:"Parcial",erro:"Erro",exclusao_parcial:"Exclusão parcial",excluida:"Excluída"})[s]||s||"—";
 
 const dataIso=v=>{
   const iso=(a,m,d)=>`${String(a).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
@@ -62,7 +62,7 @@ function msg(el,texto,sucesso=false){
   el.textContent=String(texto??"");
   el.classList.toggle("sucesso",!!sucesso&&!!texto);
 }
-function css(){if($("sales-import-css"))return;const l=document.createElement("link");l.id="sales-import-css";l.rel="stylesheet";l.href="sales-import.css?v=3";document.head.appendChild(l)}
+function css(){if($("sales-import-css"))return;const l=document.createElement("link");l.id="sales-import-css";l.rel="stylesheet";l.href="sales-import.css?v=4";document.head.appendChild(l)}
 async function carregarXlsx(){
   if(globalThis.XLSX)return globalThis.XLSX;
   const antigo=document.querySelector('script[data-sig-xlsx]');
@@ -274,7 +274,7 @@ function montar(){
     </div>
     <section class="lista-card sales-import-history">
       <div class="lista-cabecalho"><div><h3>Histórico de importações</h3><p>Controle por lote. A exclusão em lote remove fisicamente os registros importados incorretamente e mantém somente o log mínimo da operação.</p></div><button id="btnSalesReportHistoricoAtualizar" class="btn-secundario" type="button">Atualizar histórico</button></div>
-      <div class="tabela-container"><table class="tabela"><thead><tr><th>ID da importação</th><th>Data / arquivo</th><th>Vendas</th><th>Clientes novos</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesReportHistorico"></tbody></table></div>
+      <div class="tabela-container sales-import-history-scroll"><table class="tabela"><thead><tr><th>ID da importação</th><th>Data / arquivo</th><th>Vendas</th><th>Clientes novos</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesReportHistorico"></tbody></table></div>
     </section>`;
   $("salesAviso")?.insertAdjacentElement("afterend",box);
   btn.onclick=abrir;$("btnSalesReportImportFechar").onclick=fechar;$("btnSalesReportImportLimpar").onclick=limpar;$("btnSalesReportImportAnalisar").onclick=analisar;$("btnSalesReportImportConfirmar").onclick=confirmar;$("btnSalesReportHistoricoAtualizar").onclick=async()=>{await carregarBases();renderHistorico()};$("salesReportArquivo").addEventListener("change",e=>{const file=e.target.files?.[0];analise=null;$("salesReportImportResultado")?.classList.add("hidden");msg($("salesReportImportMsg"),file?`Arquivo selecionado: ${file.name}. Clique em Analisar arquivo.`:"")});
