@@ -417,7 +417,7 @@ async function confirmar(){
   busy=true;let logId="",lote="",criadas=0,atualizadas=0;
   try{
     lote=loteId();
-    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:operacoes.length,quantidadeNovasPrevista:novas,quantidadeAtualizacoesPrevista:atualizacoes,quantidadeConflitos:conflitos.length,valorPrevisto:operacoes.reduce((s,x)=>s+n(x.r.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
+    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:operacoes.length,quantidadeNovasPrevista:novas,quantidadeAtualizacoesPrevista:atualizacoes,quantidadeConflitos:conflitos.length,quantidadeParcelasPrevista:qtdParcelas,valorPrevisto:operacoes.reduce((s,x)=>s+n(x.r.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
     msg($("salesReportImportMsg"),`Lote ${lote} · validando clientes e vendedores...`);
     const linhasOp=operacoes.map(x=>x.r),clienteMap=await garantirClientes(emp,linhasOp,lote),vendMap=await garantirConfigs(emp,linhasOp,lote);
     for(let i=0;i<operacoes.length;i++){
@@ -432,8 +432,8 @@ async function confirmar(){
       }
     }
     await carregarBases();const qtdClientes=clientes.filter(x=>x.empresaId===emp&&x.importacaoLoteId===lote).length;
-    await atualizarDocumento("importacoesVendas",logId,{status:"concluida",quantidadeVendas:criadas+atualizadas,quantidadeVendasNovas:criadas,quantidadeVendasAtualizadas:atualizadas,quantidadeClientesNovos:qtdClientes,valorTotal:operacoes.reduce((s,x)=>s+n(x.r.valor),0),concluidoEm:new Date().toISOString()});
-    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} concluído: ${criadas} nova(s) e ${atualizadas} atualizada(s).`,true)
+    await atualizarDocumento("importacoesVendas",logId,{status:"concluida",quantidadeVendas:criadas+atualizadas,quantidadeVendasNovas:criadas,quantidadeVendasAtualizadas:atualizadas,quantidadeClientesNovos:qtdClientes,quantidadeParcelas:qtdParcelas,valorTotal:operacoes.reduce((s,x)=>s+n(x.r.valor),0),concluidoEm:new Date().toISOString()});
+    await carregarBases();renderHistorico();if(analise)render();emitirAlteracao("vendas");msg($("salesReportImportMsg"),`Lote ${lote} concluído: ${criadas} pedido(s) novo(s), ${atualizadas} atualizado(s) e ${qtdParcelas} parcela(s) processada(s).`,true)
   }catch(e){
     console.error(e);
     if(logId){try{await atualizarDocumento("importacoesVendas",logId,{status:criadas||atualizadas?"parcial":"erro",quantidadeVendasNovas:criadas,quantidadeVendasAtualizadas:atualizadas,erro:String(e?.message||e).slice(0,500),finalizadoEm:new Date().toISOString()});await carregarBases();renderHistorico()}catch(logErr){console.error("Falha ao registrar log da importação",logErr)}}
