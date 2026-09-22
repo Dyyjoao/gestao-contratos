@@ -28,11 +28,23 @@ const loteId=()=>{const d=new Date(),p=v=>String(v).padStart(2,"0"),s=Math.rando
 const statusImportacao=s=>({processando:"Processando",concluida:"Concluída",parcial:"Parcial",erro:"Erro",exclusao_parcial:"Exclusão parcial",excluida:"Excluída"})[s]||s||"—";
 
 const dataIso=v=>{
-  if(v instanceof Date&&!Number.isNaN(v.getTime()))return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`;
+  const iso=(a,m,d)=>`${String(a).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  if(v instanceof Date&&!Number.isNaN(v.getTime()))return iso(v.getFullYear(),v.getMonth()+1,v.getDate());
+  if(typeof v==="number"&&Number.isFinite(v)&&v>20000&&v<100000){
+    const dt=new Date(Date.UTC(1899,11,30)+Math.floor(v)*86400000);
+    return iso(dt.getUTCFullYear(),dt.getUTCMonth()+1,dt.getUTCDate())
+  }
   const s=String(v??"").trim();
   if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
-  let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
-  if(m){let a=Number(m[3]);if(m[3].length===2)a+=a>=70?1900:2000;const d=Number(m[1]),mes=Number(m[2]);if(mes>=1&&mes<=12&&d>=1&&d<=31)return `${String(a).padStart(4,"0")}-${String(mes).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+  if(/^\d{4,5}(?:[.,]\d+)?$/.test(s)){
+    const serial=Number(s.replace(",","."));
+    if(Number.isFinite(serial)&&serial>20000&&serial<100000){
+      const dt=new Date(Date.UTC(1899,11,30)+Math.floor(serial)*86400000);
+      return iso(dt.getUTCFullYear(),dt.getUTCMonth()+1,dt.getUTCDate())
+    }
+  }
+  const m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})(?:\s+.*)?$/);
+  if(m){let a=Number(m[3]);if(m[3].length===2)a+=a>=70?1900:2000;const d=Number(m[1]),mes=Number(m[2]);if(mes>=1&&mes<=12&&d>=1&&d<=31)return iso(a,mes,d)}
   return""
 };
 const numero=v=>{
@@ -111,7 +123,7 @@ async function lerPlanilha(file){
   const XLSX=await carregarXlsx(),buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array",cellDates:true});
   let ultimoErro=null;
   for(const nome of wb.SheetNames){
-    const matriz=XLSX.utils.sheet_to_json(wb.Sheets[nome],{header:1,defval:"",raw:false});
+    const matriz=XLSX.utils.sheet_to_json(wb.Sheets[nome],{header:1,defval:"",raw:true});
     try{return{...parseMatrizRelatorioVendas(matriz),aba:nome}}catch(e){ultimoErro=e}
   }
   throw ultimoErro||new Error("cabecalho-nao-reconhecido")
@@ -239,7 +251,7 @@ async function analisar(){
   try{
     msg($("salesReportImportMsg"),"Carregando leitor do Excel...");
     arquivoAtual=file.name;analise=await lerPlanilha(file);
-    if(!analise.linhas.length)throw new Error("sem-vendas-validas");
+    if(!analise.linhas.length)throw new Error(analise.erros?.slice(0,3).join(" | ")||"sem-vendas-validas");
     msg($("salesReportImportMsg"),"Relatório lido. Conferindo clientes, vendedores e pedidos existentes...");
     await carregarBases();render();msg($("salesReportImportMsg"),`Relatório reconhecido: ${analise.linhas.length} venda(s) válida(s).`,true)
   }catch(e){
