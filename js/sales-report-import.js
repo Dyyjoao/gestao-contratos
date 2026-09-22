@@ -412,8 +412,8 @@ async function confirmar(){
   if(busy||!analise||!podeImportar())return;const emp=empresaUnicaSelecionadaId();if(!emp)return alert("Selecione uma única empresa.");
   const classes=analise.linhas.map(r=>({r,...classificarLinha(r,emp)})),operacoes=classes.filter(x=>x.tipo==="nova"||x.tipo==="atualizar"),conflitos=classes.filter(x=>x.tipo==="conflito");
   if(!operacoes.length)return alert(conflitos.length?"Não há vendas prontas para importar. Revise os conflitos apresentados.":"O relatório já está totalmente atualizado no SIG.");
-  const lojas=[...new Set(operacoes.map(x=>x.r.lojaCodigo).filter(Boolean))],novas=operacoes.filter(x=>x.tipo==="nova").length,atualizacoes=operacoes.filter(x=>x.tipo==="atualizar").length;
-  if(!confirm(`Processar ${operacoes.length} venda(s) para ${nomeEmpresa(emp)}?\n\n${novas} nova(s) · ${atualizacoes} atualização(ões) · ${conflitos.length} conflito(s) ignorado(s).\nLoja(s): ${lojas.length?lojas.join(", "):"não identificada"}.\n\nPedidos já existentes serão atualizados quando data, valor, vendedor ou cliente tiverem mudado. A operação receberá um ID de lote rastreável.`))return;
+  const lojas=[...new Set(operacoes.map(x=>x.r.lojaCodigo).filter(Boolean))],novas=operacoes.filter(x=>x.tipo==="nova").length,atualizacoes=operacoes.filter(x=>x.tipo==="atualizar").length,qtdParcelas=operacoes.reduce((s,x)=>s+(x.r.parcelas?.length||0),0);
+  if(!confirm(`Processar ${operacoes.length} pedido(s) / ${qtdParcelas} parcela(s) para ${nomeEmpresa(emp)}?\n\n${novas} novo(s) · ${atualizacoes} atualização(ões) · ${conflitos.length} conflito(s) ignorado(s).\nLoja(s): ${lojas.length?lojas.join(", "):"não identificada"}.\n\nCada pedido será gravado uma única vez com sua grade de vencimentos. Recebimentos existentes serão preservados.`))return;
   busy=true;let logId="",lote="",criadas=0,atualizadas=0;
   try{
     lote=loteId();
