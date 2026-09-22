@@ -146,7 +146,7 @@ function montar(){
       <div class="lista-cabecalho sales-chart-head"><div><h3>Evolução mensal</h3><p id="salesContexto">—</p></div><select id="salesModoGrafico"><option value="valor">R$ · valores</option><option value="percentual">% · percentuais</option></select></div>
       <div id="salesChart" class="sales-chart"></div>
     </section>
-    <section class="lista-card"><div class="lista-cabecalho"><div><h3>Ranking comercial</h3><p>Vendido, recebido e participação de cada vendedor no total do período.</p></div></div><div id="salesRanking" class="sales-ranking"></div></section>
+    <section class="lista-card"><div class="lista-cabecalho sales-chart-head"><div><h3>Ranking comercial</h3><p>Desempenho de cada vendedor no período selecionado.</p></div><select id="salesModoRanking"><option value="valor">R$ · valores</option><option value="percentual">% · participação</option></select></div><div id="salesRanking" class="sales-ranking"></div></section>
   </div>
 
   <section class="lista-card sales-clientes">
@@ -196,6 +196,7 @@ function montar(){
   $("salesFiltroVendedor")?.addEventListener("change",render);
   $("salesFiltroStatus")?.addEventListener("change",render);
   $("salesModoGrafico")?.addEventListener("change",render);
+  $("salesModoRanking")?.addEventListener("change",render);
   $("salesClientesMetrica")?.addEventListener("change",render);
   $("salesClientesOrdem")?.addEventListener("change",render);
 }
@@ -372,17 +373,22 @@ function render(){
   vendas.filter(v=>valida(v)&&dataRecebimento(v)&&anoData(dataRecebimento(v))===ano).forEach(v=>{const m=mesData(dataRecebimento(v));if(m>=0)recs[m]+=recebido(v)});
   const metaMes=Array(12).fill(metaMensalEquipe);chart(vals,recs,metaMes);
 
-  const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*metaFator;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0),participacao:total?tot/total*100:0}}).sort((a,b)=>b.tot-a.tot);
+  const totalRecebidoRanking=recPer.reduce((s,v)=>s+recebido(v),0),modoRanking=$("salesModoRanking")?.value||"valor";
+  const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*metaFator;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0),pctVendido:total?tot/total*100:0,pctRecebido:totalRecebidoRanking?rr/totalRecebidoRanking*100:0}}).sort((a,b)=>b.tot-a.tot);
   const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?`
     <div class="sales-rank-head">
-      <span>#</span><span>Vendedor</span><span>Valor vendido</span><span>Valor recebido</span><span>% do total vendido</span>
+      <span>#</span><span>Vendedor</span><span>${modoRanking==="percentual"?"% vendido":"Valor vendido"}</span><span>${modoRanking==="percentual"?"% recebido":"Valor recebido"}</span>
     </div>
     ${rank.map((r,i)=>`<div class="sales-rank-row">
       <b>${i+1}</b>
       <span class="sales-rank-vendedor"><strong>${esc(r.p.nome)}</strong><small>${r.meta?"Ating. da meta "+r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"Meta não configurada"}</small></span>
-      <strong class="sales-rank-valor">${moeda(r.tot)}</strong>
-      <strong class="sales-rank-valor">${moeda(r.rec)}</strong>
-      <span class="sales-rank-share"><strong>${r.participacao.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.participacao))}%"></b></i></span>
+      ${modoRanking==="percentual"?`
+        <span class="sales-rank-share"><strong>${r.pctVendido.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.pctVendido))}%"></b></i></span>
+        <span class="sales-rank-share"><strong>${r.pctRecebido.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.pctRecebido))}%"></b></i></span>
+      `:`
+        <strong class="sales-rank-valor">${moeda(r.tot)}</strong>
+        <strong class="sales-rank-valor">${moeda(r.rec)}</strong>
+      `}
     </div>`).join("")}
   `:'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
 
