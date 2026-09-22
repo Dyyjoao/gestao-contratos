@@ -80,7 +80,7 @@ function montar(){
   if(pagina())return;
   css();
   const main=document.querySelector("main.conteudo");if(!main)return;
-  const s=document.createElement("section");s.id="pagina-vendas";s.className="pagina hidden";s.innerHTML=\`
+  const s=document.createElement("section");s.id="pagina-vendas";s.className="pagina hidden";s.innerHTML=`
   <div class="pagina-cabecalho">
     <div><span class="eyebrow">COMERCIAL</span><h2>Vendas</h2><p>Visão comercial de vendas, evolução, vendedores e clientes.</p></div>
     <div class="acoes-cabecalho"><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
@@ -146,7 +146,7 @@ function montar(){
   <section class="lista-card">
     <div class="lista-cabecalho"><div><h3>Vendas registradas</h3><p id="salesResumo">—</p></div><div class="sales-filtros"><select id="salesFiltroVendedor"><option value="">Todos os vendedores</option></select><select id="salesFiltroStatus"><option value="">Todos os status</option><option value="confirmada">Confirmadas</option><option value="cancelada">Canceladas</option></select></div></div>
     <div class="tabela-container"><table class="tabela sales-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente / referência</th><th>Valor vendido</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
-  </section>\`;
+  </section>`;
   main.appendChild(s);
 
   sincronizarFiltroDatas(true);
@@ -242,12 +242,12 @@ async function salvarConfig(e){
 
 function preencherVendedores(){
   const sel=$("salesVendedor"),f=$("salesFiltroVendedor"),eq=equipeVendedores().sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
-  if(sel)sel.innerHTML='<option value="">Selecione...</option>'+eq.map(({p,cfg})=>\`<option value="\${cfg?.id||""}" \${cfg?"":"disabled"}>\${esc(p.nome)}\${cfg?"":" · cadastro comercial pendente"}</option>\`).join("");
+  if(sel)sel.innerHTML='<option value="">Selecione...</option>'+eq.map(({p,cfg})=>`<option value="${cfg?.id||""}" ${cfg?"":"disabled"}>${esc(p.nome)}${cfg?"":" · cadastro comercial pendente"}</option>`).join("");
   if(f){
     const atual=f.value,mapa=new Map();
     vendas.forEach(v=>{if(v.vendedorId)mapa.set(v.vendedorId,v.vendedorNome||nomeVend(v.vendedorId))});
     eq.filter(x=>x.cfg).forEach(({p,cfg})=>mapa.set(cfg.id,p.nome));
-    f.innerHTML='<option value="">Todos os vendedores</option>'+[...mapa.entries()].sort((a,b)=>String(a[1]||"").localeCompare(String(b[1]||""),"pt-BR")).map(([id,nome])=>\`<option value="\${esc(id)}">\${esc(nome)}</option>\`).join("");
+    f.innerHTML='<option value="">Todos os vendedores</option>'+[...mapa.entries()].sort((a,b)=>String(a[1]||"").localeCompare(String(b[1]||""),"pt-BR")).map(([id,nome])=>`<option value="${esc(id)}">${esc(nome)}</option>`).join("");
     if([...f.options].some(o=>o.value===atual))f.value=atual
   }
 }
@@ -282,8 +282,8 @@ function chart(vendidos){
   const el=$("salesChart");if(!el)return;const modo=$("salesModoGrafico")?.value||"valor",totalAno=vendidos.reduce((s,v)=>s+n(v),0);
   const a=modo==="percentual"?vendidos.map(v=>totalAno?v/totalAno*100:0):vendidos;
   const leg=modo==="percentual"?"Participação nas vendas do ano":"Valor vendido";
-  const max=Math.max(1,...a),w=900,h=265,p=34,x=i=>p+i*((w-p*2)/11),y=v=>h-p-n(v)/max*(h-p*2),path=arr=>arr.map((v,i)=>\`\${x(i)},\${y(v)}\`).join(" "),fmt=v=>modo==="percentual"?\`\${n(v).toLocaleString("pt-BR",{maximumFractionDigits:1})}%\`:moeda(v).replace(",00","");
-  el.innerHTML=\`<div class="sales-legend"><span><i></i>\${leg}</span></div><svg viewBox="0 0 \${w} \${h}"><line x1="\${p}" y1="\${h-p}" x2="\${w-p}" y2="\${h-p}" class="sales-axis-line"/><polyline class="sales-line" points="\${path(a)}"/>\${MESES.map((m,i)=>\`<text x="\${x(i)}" y="\${h-8}" text-anchor="middle">\${m}</text>\`).join("")}\${a.map((v,i)=>v>0?\`<text class="sales-value-label" x="\${x(i)}" y="\${Math.max(10,y(v)-8)}" text-anchor="middle">\${fmt(v)}</text>\`:"").join("")}</svg>\`;
+  const max=Math.max(1,...a),w=900,h=265,p=34,x=i=>p+i*((w-p*2)/11),y=v=>h-p-n(v)/max*(h-p*2),path=arr=>arr.map((v,i)=>`${x(i)},${y(v)}`).join(" "),fmt=v=>modo==="percentual"?`${n(v).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:moeda(v).replace(",00","");
+  el.innerHTML=`<div class="sales-legend"><span><i></i>${leg}</span></div><svg viewBox="0 0 ${w} ${h}"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" class="sales-axis-line"/><polyline class="sales-line" points="${path(a)}"/>${MESES.map((m,i)=>`<text x="${x(i)}" y="${h-8}" text-anchor="middle">${m}</text>`).join("")}${a.map((v,i)=>v>0?`<text class="sales-value-label" x="${x(i)}" y="${Math.max(10,y(v)-8)}" text-anchor="middle">${fmt(v)}</text>`:"").join("")}</svg>`;
 }
 
 
@@ -299,9 +299,9 @@ function renderClientes(validas){
   else if(ordem==="az")itens.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   else itens.sort((a,b)=>b.nome.localeCompare(a.nome,"pt-BR"));
   const total=itens.reduce((s,x)=>s+x.vendido,0),max=Math.max(1,...itens.map(x=>x.vendido)),top=itens.slice(0,12);
-  const resumo=$("salesClientesResumo");if(resumo)resumo.innerHTML=\`<span><strong>\${itens.length}</strong> cliente(s)</span><span>Total vendido: <strong>\${moeda(total)}</strong></span>\`;
-  const graf=$("salesClientesGrafico");if(graf)graf.innerHTML=top.length?top.map((x,i)=>\`<div class="sales-cliente-bar"><span class="sales-cliente-pos">\${i+1}</span><strong title="\${esc(x.nome)}">\${esc(x.nome)}</strong><i><b style="width:\${Math.max(2,x.vendido/max*100)}%"></b></i><em>\${moeda(x.vendido)}</em><small>\${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>\`).join(""):'<div class="empty-state">Sem clientes no período.</div>';
-  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>\`<tr><td>\${i+1}</td><td><strong>\${esc(x.nome)}</strong></td><td>\${x.qtd}</td><td>\${moeda(x.vendido)}</td><td>\${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>\`).join(""):'<tr><td colspan="5">Nenhum cliente no período selecionado.</td></tr>'
+  const resumo=$("salesClientesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span>`;
+  const graf=$("salesClientesGrafico");if(graf)graf.innerHTML=top.length?top.map((x,i)=>`<div class="sales-cliente-bar"><span class="sales-cliente-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(2,x.vendido/max*100)}%"></b></i><em>${moeda(x.vendido)}</em><small>${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem clientes no período.</div>';
+  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr><td>${i+1}</td><td><strong>${esc(x.nome)}</strong></td><td>${x.qtd}</td><td>${moeda(x.vendido)}</td><td>${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="5">Nenhum cliente no período selecionado.</td></tr>'
 }
 
 function renderAbc(validas){
@@ -332,7 +332,7 @@ function render(){
   const ano=periodoAno(),per=periodoVendas(),valid=per.filter(valida),total=valid.reduce((s,v)=>s+n(v.valor),0),q=valid.length;
   const clientes=new Set(valid.map(v=>String(v.clienteId||v.cliente||"").trim().toLocaleLowerCase("pt-BR")).filter(Boolean));
   setText("salesKpiVendas",moeda(total));setText("salesKpiQtd",q.toLocaleString("pt-BR"));setText("salesKpiTicket",moeda(q?total/q:0));setText("salesKpiClientes",clientes.size.toLocaleString("pt-BR"));
-  setText("salesContexto",\`\${empresasSelecionadasIds().length>1?"Empresas consolidadas":"Empresa selecionada"} · Ano \${ano}\`);
+  setText("salesContexto",`${empresasSelecionadasIds().length>1?"Empresas consolidadas":"Empresa selecionada"} · Ano ${ano}`);
 
   const vals=Array(12).fill(0);
   vendas.filter(v=>valida(v)&&anoData(v.data)===ano).forEach(v=>{const m=mesData(v.data);if(m>=0)vals[m]+=n(v.valor)});
@@ -341,16 +341,16 @@ function render(){
   const modoRanking=$("salesModoRanking")?.value||"valor",mapa=new Map();
   valid.forEach(v=>{const chave=String(v.vendedorId||v.vendedorNome||"sem-vendedor"),r=mapa.get(chave)||{id:v.vendedorId||"",nome:v.vendedorNome||nomeVend(v.vendedorId),tot:0,qtd:0};r.tot+=n(v.valor);r.qtd++;mapa.set(chave,r)});
   const rank=[...mapa.values()].map(r=>({...r,pct:total?r.tot/total*100:0})).sort((a,b)=>b.tot-a.tot);
-  const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?\`
-    <div class="sales-rank-head"><span>#</span><span>Vendedor</span><span>\${modoRanking==="percentual"?"% do total vendido":"Valor vendido"}</span></div>
-    \${rank.map((r,i)=>\`<div class="sales-rank-row"><b>\${i+1}</b><span class="sales-rank-vendedor"><strong>\${esc(r.nome)}</strong><small>\${r.qtd} venda(s)</small></span>\${modoRanking==="percentual"?\`<span class="sales-rank-share"><strong>\${r.pct.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:\${Math.max(0,Math.min(100,r.pct))}%"></b></i></span>\`:\`<strong class="sales-rank-valor">\${moeda(r.tot)}</strong>\`}</div>\`).join("")}
-  \`:'<div class="empty-state">Sem vendas no período selecionado.</div>';
+  const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?`
+    <div class="sales-rank-head"><span>#</span><span>Vendedor</span><span>${modoRanking==="percentual"?"% do total vendido":"Valor vendido"}</span></div>
+    ${rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span class="sales-rank-vendedor"><strong>${esc(r.nome)}</strong><small>${r.qtd} venda(s)</small></span>${modoRanking==="percentual"?`<span class="sales-rank-share"><strong>${r.pct.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.pct))}%"></b></i></span>`:`<strong class="sales-rank-valor">${moeda(r.tot)}</strong>`}</div>`).join("")}
+  `:'<div class="empty-state">Sem vendas no período selecionado.</div>';
 
   renderClientes(valid);
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
-  setText("salesResumo",\`\${lista.length} venda(s) no período selecionado\`);
-  if(tb)tb.innerHTML=lista.length?lista.map(v=>\`<tr class="\${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>\${formatData(v.data)}</strong></td><td>\${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>\${esc(v.cliente||"—")}</strong><small>\${esc(v.documento||v.descricao||"")}</small></td><td><strong>\${moeda(v.valor)}</strong></td><td><span class="\${v.status==="cancelada"?"status-inativo":"status-ativo"}">\${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">\${podeEditar()?\`<button class="btn-acao" data-sales-edit="\${v.id}" type="button">Editar</button>\`:""}\${podeEditar()&&v.status!=="cancelada"?\`<button class="btn-acao" data-sales-cancela="\${v.id}" type="button">Cancelar</button>\`:""}</div></td></tr>\`).join(""):'<tr><td colspan="6">Nenhuma venda no período.</td></tr>';
+  setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
+  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>${esc(v.documento||v.descricao||"")}</small></td><td><strong>${moeda(v.valor)}</strong></td><td><span class="${v.status==="cancelada"?"status-inativo":"status-ativo"}">${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="6">Nenhuma venda no período.</td></tr>';
   document.querySelectorAll("[data-sales-edit]").forEach(b=>b.onclick=()=>abrirVenda(vendas.find(v=>v.id===b.dataset.salesEdit)));document.querySelectorAll("[data-sales-cancela]").forEach(b=>b.onclick=()=>cancelarVenda(b.dataset.salesCancela));
 }
 
