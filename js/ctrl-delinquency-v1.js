@@ -145,9 +145,16 @@ function calcular(){
 }
 function renderRecebimentos(){
   const comp=$("inadCompetencia")?.value||competenciaAtual(),arr=recebimentos.filter(r=>String(r.dataRecebimento||"").slice(0,7)<=comp).sort((a,b)=>String(b.dataRecebimento||"").localeCompare(String(a.dataRecebimento||""))||String(b.importadoEm||"").localeCompare(String(a.importadoEm||"")));
-  $("inadRecebimentosResumo").textContent=`${arr.length} recebimento(s) importado(s) até ${comp.split("-").reverse().join("/")}`;
-  const tb=$("inadRecebimentosLista");if(!tb)return;if(!arr.length){tb.innerHTML='<tr><td colspan="5">Nenhum recebimento importado para a referência.</td></tr>';return}
-  tb.innerHTML=arr.map(r=>{const al=(Array.isArray(r.alocacoes)?r.alocacoes:[]).map(a=>`${a.parcelaId} · ${moeda(n(a.valor))}`).join(" + "),principal=n(r.valorPrincipal||r.alocacoes?.reduce((s,a)=>s+n(a.valor),0)),acresc=n(r.valorAcrescimos);return`<tr><td>${dataBr(r.dataRecebimento)}</td><td><strong>${esc(r.pedido||"—")}</strong></td><td>${esc(r.clienteNome||r.cliente||"—")}</td><td><strong>${moeda(n(r.valor))}</strong><span class="inad-info">Principal ${moeda(principal)}${acresc>0?" · acréscimos "+moeda(acresc):""}</span></td><td>${esc(al||"—")}</td></tr>`}).join("")
+  const pendentes=arr.filter(r=>n(r.valorPendenteClassificacao)>0.009).length;
+  $("inadRecebimentosResumo").textContent=arr.length+" recebimento(s) importado(s) até "+comp.split("-").reverse().join("/")+(pendentes?" · "+pendentes+" excedente(s) pendente(s)":"");
+  const tb=$("inadRecebimentosLista");if(!tb)return;if(!arr.length){tb.innerHTML='<tr><td colspan="7">Nenhum recebimento importado para a referência.</td></tr>';return}
+  tb.innerHTML=arr.map(r=>{
+    const al=(Array.isArray(r.alocacoes)?r.alocacoes:[]).map(a=>a.parcelaId+" · "+moeda(n(a.valor))).join(" + "),principal=n(r.valorPrincipal||r.alocacoes?.reduce((s,a)=>s+n(a.valor),0)),acresc=n(r.valorAcrescimos),antecip=n(r.valorAntecipado),pend=n(r.valorPendenteClassificacao);
+    const classificacao=pend>0?'<span class="status-pendente">Pendente '+moeda(pend)+'</span>':(acresc>0||antecip>0?'<span class="status-ativo">Tratado</span>':'<span class="status-ativo">Sem excedente</span>');
+    const detalhe=(acresc>0?"Juros "+moeda(acresc):"")+(acresc>0&&antecip>0?" · ":"")+(antecip>0?"Parcelas "+moeda(antecip):"");
+    return'<tr><td>'+dataBr(r.dataRecebimento)+'</td><td><strong>'+esc(r.pedido||"—")+'</strong></td><td>'+esc(r.clienteNome||r.cliente||"—")+'</td><td><strong>'+moeda(n(r.valor))+'</strong><span class="inad-info">Principal '+moeda(principal)+'</span></td><td>'+classificacao+(detalhe?'<span class="inad-info">'+esc(detalhe)+'</span>':'')+'</td><td>'+esc(al||"—")+'</td><td>'+(pend>0&&podeEditar()?'<button class="btn-acao destaque" data-inad-excedente="'+esc(r.id)+'" type="button">Tratar excedente</button>':'—')+'</td></tr>'
+  }).join("");
+  document.querySelectorAll("[data-inad-excedente]").forEach(b=>b.onclick=()=>abrirTratamentoExcedente(b.dataset.inadExcedente))
 }
 function render(){
   criarPagina();const ref=dataReferencia(),c=calcular();$("inadDataRef").textContent=`Posição em ${dataBr(ref)}`;$("inadCarteira").textContent=moeda(c.carteira);$("inadVencido").textContent=moeda(c.valorVencido);$("inadIndice").textContent=pct(c.valorVencido,c.carteira);$("inadRecebidoRef").textContent=moeda(c.recebidoRef);
