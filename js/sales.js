@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=11";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=12";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -73,6 +73,12 @@ function fatorMetaMes(mes){
 }
 function statusComLabel(s){return({aguardando_recebimento:"Aguardando recebimento",aguardando_faturamento:"Aguardando recebimento",provisionada:"Provisionada",aprovada:"Aprovada",paga:"Paga"})[s]||"Provisionada"}
 function formatData(v){return v?String(v).slice(0,10).split("-").reverse().join("/"):"—"}
+function resumoParcelas(v){
+  const ps=Array.isArray(v?.parcelas)?v.parcelas.filter(p=>n(p.valor)>0):[];
+  if(!ps.length)return"";
+  const ord=[...ps].sort((a,b)=>String(a.vencimento||"").localeCompare(String(b.vencimento||""))||n(a.ordem)-n(b.ordem)),ini=ord[0]?.vencimento||"",fim=ord[ord.length-1]?.vencimento||"";
+  return `${ps.length} parcela(s)${ini?" · "+formatData(ini):""}${fim&&fim!==ini?" → "+formatData(fim):""}`
+}
 function setText(id,v){if($(id))$(id).textContent=v}
 
 
@@ -145,7 +151,7 @@ function montar(){
 
   <section class="lista-card">
     <div class="lista-cabecalho"><div><h3>Vendas registradas</h3><p id="salesResumo">—</p></div><div class="sales-filtros"><select id="salesFiltroVendedor"><option value="">Todos os vendedores</option></select><select id="salesFiltroStatus"><option value="">Todos os status</option><option value="confirmada">Confirmadas</option><option value="cancelada">Canceladas</option></select></div></div>
-    <div class="tabela-container"><table class="tabela sales-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente / referência</th><th>Valor vendido</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
+    <div class="tabela-container sales-history-scroll"><table class="tabela sales-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente / referência</th><th>Valor vendido</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
   </section>`;
   main.appendChild(s);
 
@@ -350,7 +356,7 @@ function render(){
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
-  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>${esc(v.documento||v.descricao||"")}</small></td><td><strong>${moeda(v.valor)}</strong></td><td><span class="${v.status==="cancelada"?"status-inativo":"status-ativo"}">${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="6">Nenhuma venda no período.</td></tr>';
+  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>Pedido ${esc(v.documento||"—")}</small>${resumoParcelas(v)?`<small>${esc(resumoParcelas(v))}</small>`:""}</td><td><strong>${moeda(v.valor)}</strong></td><td><span class="${v.status==="cancelada"?"status-inativo":"status-ativo"}">${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="6">Nenhuma venda no período.</td></tr>';
   document.querySelectorAll("[data-sales-edit]").forEach(b=>b.onclick=()=>abrirVenda(vendas.find(v=>v.id===b.dataset.salesEdit)));document.querySelectorAll("[data-sales-cancela]").forEach(b=>b.onclick=()=>cancelarVenda(b.dataset.salesCancela));
 }
 
