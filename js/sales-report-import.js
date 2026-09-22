@@ -119,7 +119,37 @@ export function parseMatrizRelatorioVendas(matriz){
   }
   return{linhas,erros,total:linhas.reduce((s,x)=>s+x.valor,0)}
 }
+function parseTextoDelimitado(texto,separador="|"){
+  const matriz=[];let linha=[],celula="",aspas=false;
+  const fecharLinha=()=>{linha.push(celula);celula="";if(linha.some(v=>String(v??"").trim()!==""))matriz.push(linha);linha=[]};
+  for(let i=0;i<texto.length;i++){
+    const ch=texto[i];
+    if(aspas){
+      if(ch==='"'&&texto[i+1]==='"'){celula+='"';i++;continue}
+      if(ch==='"'){aspas=false;continue}
+      celula+=ch;continue
+    }
+    if(ch==='"'){aspas=true;continue}
+    if(ch===separador){linha.push(celula);celula="";continue}
+    if(ch==="\n"){fecharLinha();continue}
+    if(ch==="\r"){if(texto[i+1]!=="\n")fecharLinha();continue}
+    celula+=ch
+  }
+  if(celula!==""||linha.length)fecharLinha();
+  if(matriz[0]?.length)matriz[0][0]=String(matriz[0][0]).replace(/^\uFEFF/,"");
+  return matriz
+}
+async function lerCsvPipe(file){
+  const buf=await file.arrayBuffer();let texto="";
+  try{texto=new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch{texto=new TextDecoder("windows-1252").decode(buf)}
+  texto=texto.replace(/^\uFEFF/,"");
+  if(!texto.includes("|"))throw new Error("csv-separador-invalido");
+  const matriz=parseTextoDelimitado(texto,"|");
+  return{...parseMatrizRelatorioVendas(matriz),aba:"CSV |"}
+}
 async function lerPlanilha(file){
+  const nomeArquivo=String(file?.name||"").toLowerCase(),tipoArquivo=String(file?.type||"").toLowerCase();
+  if(nomeArquivo.endsWith(".csv")||tipoArquivo.includes("csv")||tipoArquivo.startsWith("text/"))return lerCsvPipe(file);
   const XLSX=await carregarXlsx(),buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array",cellDates:true});
   let ultimoErro=null;
   for(const nome of wb.SheetNames){
@@ -169,8 +199,8 @@ function montar(){
   const p=pagina();if(!p||$("salesReportImportBox"))return false;css();
   const acoes=p.querySelector(".pagina-cabecalho .acoes-cabecalho"),btn=document.createElement("button");btn.id="btnSalesReportImport";btn.className="btn-secundario";btn.type="button";btn.textContent="Importar vendas";acoes?.insertBefore(btn,$("btnSalesVenda")||null);
   const box=document.createElement("section");box.id="salesReportImportBox";box.className="form-card hidden sales-import-box";box.innerHTML=`
-    <div class="form-card-titulo"><div><h3>Importar relatório de vendas</h3><p>Compatível com o relatório Excel contendo CD_CLIENTE, CD_VENDA, CD_FUNCIONARIOVENDA, DATA_VENDA e VALOR_VENDA. Clientes são localizados pelo código e vendedores pelo código vinculado no RH. Pedidos já existentes são sincronizados pela chave do pedido.</p></div><button id="btnSalesReportImportFechar" class="btn-secundario" type="button">Fechar</button></div>
-    <div class="sales-import-grid"><div class="campo"><label for="salesReportArquivo">Arquivo Excel</label><input id="salesReportArquivo" type="file" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"><small>O arquivo é lido no navegador; o XLS bruto não é gravado no Firebase.</small></div><div class="campo campo-span-2"><label>Estrutura reconhecida</label><div class="sales-import-schema"><strong>Venda:</strong> DATA_VENDA · CD_VENDA · VALOR_VENDA<br><strong>Cliente:</strong> CD_CLIENTE · NOME_PESSOA · CIDADE_PESSOA · UF_PESSOA<br><strong>Vendedor:</strong> CD_FUNCIONARIOVENDA · NOME_FUNCIONARIO</div></div></div>
+    <div class="form-card-titulo"><div><h3>Importar relatório de vendas</h3><p>Compatível com Excel (.xls/.xlsx) e CSV separado por | contendo CD_CLIENTE, CD_VENDA, CD_FUNCIONARIOVENDA, DATA_VENDA e VALOR_VENDA. Clientes são localizados pelo código e vendedores pelo código vinculado no RH. Pedidos já existentes são sincronizados pela chave do pedido.</p></div><button id="btnSalesReportImportFechar" class="btn-secundario" type="button">Fechar</button></div>
+    <div class="sales-import-grid"><div class="campo"><label for="salesReportArquivo">Arquivo Excel</label><input id="salesReportArquivo" type="file" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"><small>O arquivo é lido no navegador; CSV separado por | é processado diretamente e o arquivo bruto não é gravado no Firebase.</small></div><div class="campo campo-span-2"><label>Estrutura reconhecida</label><div class="sales-import-schema"><strong>Venda:</strong> DATA_VENDA · CD_VENDA · VALOR_VENDA<br><strong>Cliente:</strong> CD_CLIENTE · NOME_PESSOA · CIDADE_PESSOA · UF_PESSOA<br><strong>Vendedor:</strong> CD_FUNCIONARIOVENDA · NOME_FUNCIONARIO</div></div></div>
     <div class="form-acoes"><button id="btnSalesReportImportLimpar" class="btn-secundario" type="button">Limpar</button><button id="btnSalesReportImportAnalisar" class="btn-primario" type="button">Analisar arquivo</button></div>
     <p id="salesReportImportMsg" class="mensagem-form"></p>
     <div id="salesReportImportResultado" class="hidden">
@@ -249,7 +279,7 @@ async function analisar(){
   if(busy)return;const emp=empresaUnicaSelecionadaId(),file=$("salesReportArquivo")?.files?.[0],btn=$("btnSalesReportImportAnalisar");if(!emp)return msg($("salesReportImportMsg"),"Selecione uma única empresa.");if(!file)return msg($("salesReportImportMsg"),"Selecione o relatório Excel.");
   busy=true;if(btn){btn.disabled=true;btn.textContent="Analisando..."}
   try{
-    msg($("salesReportImportMsg"),"Carregando leitor do Excel...");
+    msg($("salesReportImportMsg"),String(file.name||"").toLowerCase().endsWith(".csv")?"Lendo CSV separado por |...":"Carregando leitor do Excel...");
     arquivoAtual=file.name;analise=await lerPlanilha(file);
     if(!analise.linhas.length)throw new Error(analise.erros?.slice(0,3).join(" | ")||"sem-vendas-validas");
     msg($("salesReportImportMsg"),"Relatório lido. Conferindo clientes, vendedores e pedidos existentes...");
@@ -257,7 +287,7 @@ async function analisar(){
   }catch(e){
     console.error("Importação de vendas:",e);analise=null;$("salesReportImportResultado")?.classList.add("hidden");
     const cod=String(e?.message||e||"");
-    const texto=/biblioteca|cdn|timeout|leitor-excel/i.test(cod)?"Não consegui carregar o leitor de Excel pelos servidores disponíveis. Atualize a página e tente novamente.":cod==="cabecalho-nao-reconhecido"?"Não encontrei o cabeçalho esperado no arquivo. Preciso de CD_CLIENTE, NOME_PESSOA, CD_VENDA, CD_FUNCIONARIOVENDA, NOME_FUNCIONARIO, DATA_VENDA e VALOR_VENDA.":"Não consegui analisar este arquivo. Detalhe técnico: "+cod;
+    const texto=cod==="csv-separador-invalido"?"O CSV precisa estar separado por | (barra vertical).":/biblioteca|cdn|timeout|leitor-excel/i.test(cod)?"Não consegui carregar o leitor de Excel pelos servidores disponíveis. Atualize a página e tente novamente.":cod==="cabecalho-nao-reconhecido"?"Não encontrei o cabeçalho esperado no arquivo. Preciso de CD_CLIENTE, NOME_PESSOA, CD_VENDA, CD_FUNCIONARIOVENDA, NOME_FUNCIONARIO, DATA_VENDA e VALOR_VENDA.":"Não consegui analisar este arquivo. Detalhe técnico: "+cod;
     msg($("salesReportImportMsg"),texto)
   }finally{busy=false;if(btn){btn.disabled=false;btn.textContent="Analisar arquivo"}}
 }
