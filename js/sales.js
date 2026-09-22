@@ -34,9 +34,43 @@ function equipeVendedores(){return vendedoresRh.map(p=>({p,cfg:pessoaCfg(p,"vend
 function equipeSupervisores(){return supervisoresRh.map(p=>({p,cfg:pessoaCfg(p,"supervisor")}))}
 function cfgVenda(id){return configs.find(c=>c.id===id)}
 function nomeVend(id,nome=""){return cfgVenda(id)?.nome||nome||"Vendedor não encontrado"}
+let assinaturaPeriodoDatas="";
+function isoData(a,m,d){return `${String(a).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+function limitesPeriodoPrincipal(){
+  const ano=periodoAno(),meses=indices(),primeiro=Math.min(...meses),ultimo=Math.max(...meses);
+  const ultimoDia=new Date(ano,ultimo+1,0).getDate();
+  return{inicio:isoData(ano,primeiro+1,1),fim:isoData(ano,ultimo+1,ultimoDia)}
+}
+function sincronizarFiltroDatas(forcar=false){
+  const ini=$("salesDataInicial"),fim=$("salesDataFinal");if(!ini||!fim)return;
+  const lim=limitesPeriodoPrincipal(),assinatura=`${periodoAno()}|${periodoChave()}`;
+  ini.min=lim.inicio;ini.max=lim.fim;fim.min=lim.inicio;fim.max=lim.fim;
+  if(forcar||assinatura!==assinaturaPeriodoDatas){
+    ini.value=lim.inicio;fim.value=lim.fim;assinaturaPeriodoDatas=assinatura
+  }else{
+    if(!ini.value||ini.value<lim.inicio||ini.value>lim.fim)ini.value=lim.inicio;
+    if(!fim.value||fim.value<lim.inicio||fim.value>lim.fim)fim.value=lim.fim;
+    if(ini.value>fim.value)fim.value=ini.value
+  }
+  const info=$("salesPeriodoDetalhe");
+  if(info)info.textContent=`Disponível no período principal: ${formatData(lim.inicio)} a ${formatData(lim.fim)}`
+}
 function periodoInclui(data){const a=periodoAno(),idx=new Set(indices()),m=mesData(data);return anoData(data)===a&&idx.has(m)}
-function periodoVendas(){return vendas.filter(v=>periodoInclui(v.data))}
-function periodoRecebimentos(){return vendas.filter(v=>valida(v)&&dataRecebimento(v)&&periodoInclui(dataRecebimento(v)))}
+function filtroDataInclui(data){
+  if(!periodoInclui(data))return false;
+  const d=String(data||"").slice(0,10),ini=$("salesDataInicial")?.value||"",fim=$("salesDataFinal")?.value||"";
+  return(!ini||d>=ini)&&(!fim||d<=fim)
+}
+function periodoVendas(){return vendas.filter(v=>filtroDataInclui(v.data))}
+function periodoRecebimentos(){return vendas.filter(v=>valida(v)&&dataRecebimento(v)&&filtroDataInclui(dataRecebimento(v)))}
+function fatorMetaMes(mes){
+  const ano=periodoAno(),lim=limitesPeriodoPrincipal(),ini=$("salesDataInicial")?.value||lim.inicio,fim=$("salesDataFinal")?.value||lim.fim;
+  if(!indices().includes(mes))return 0;
+  const totalDias=new Date(ano,mes+1,0).getDate(),mesIni=isoData(ano,mes+1,1),mesFim=isoData(ano,mes+1,totalDias);
+  const a=ini>mesIni?ini:mesIni,b=fim<mesFim?fim:mesFim;if(a>b)return 0;
+  const dias=Math.floor((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000)+1;
+  return dias/totalDias
+}
 function statusComLabel(s){return({aguardando_recebimento:"Aguardando recebimento",aguardando_faturamento:"Aguardando recebimento",provisionada:"Provisionada",aprovada:"Aprovada",paga:"Paga"})[s]||"Provisionada"}
 function formatData(v){return v?String(v).slice(0,10).split("-").reverse().join("/"):"—"}
 function setText(id,v){if($(id))$(id).textContent=v}
@@ -51,6 +85,16 @@ function montar(){
     <div class="acoes-cabecalho"><button id="btnSalesConfigVendedores" class="btn-secundario" type="button">Configurar vendedores</button><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
   </div>
   <div id="salesAviso" class="modulo-aviso hidden"></div>
+
+  <section class="sales-periodo-detalhado">
+    <div class="sales-periodo-detalhado-info">
+      <strong>Filtro por data</strong>
+      <small id="salesPeriodoDetalhe">Intervalo limitado pelo período principal.</small>
+    </div>
+    <label>De <input id="salesDataInicial" type="date"></label>
+    <label>Até <input id="salesDataFinal" type="date"></label>
+    <button id="btnSalesPeriodoLimpar" class="btn-secundario" type="button">Período completo</button>
+  </section>
 
   <div class="kpi-grid sales-kpis">
     <div class="kpi-card"><span>Vendido no período</span><strong id="salesKpiVendas">—</strong><small id="salesKpiQtd">—</small></div>
@@ -138,6 +182,9 @@ function montar(){
   main.appendChild(s);
 
   $("btnSalesConfigVendedores")?.addEventListener("click",()=>{$("salesEquipeSection")?.scrollIntoView({behavior:"smooth",block:"start"})});
+  sincronizarFiltroDatas(true);
+  ["salesDataInicial","salesDataFinal"].forEach(id=>$(id)?.addEventListener("change",()=>{sincronizarFiltroDatas(false);render()}));
+  $("btnSalesPeriodoLimpar")?.addEventListener("click",()=>{sincronizarFiltroDatas(true);render()});
   $("btnSalesAtualizar")?.addEventListener("click",carregar);
   $("btnSalesVenda")?.addEventListener("click",()=>abrirVenda());
   $("btnSalesVendaCancelar")?.addEventListener("click",fecharVenda);
@@ -313,14 +360,16 @@ function renderEquipe(){
 
 function render(){
   if(!pagina())return;
+  sincronizarFiltroDatas(false);
   const ano=periodoAno(),idx=indices(),per=periodoVendas(),valid=per.filter(valida),recPer=periodoRecebimentos(),eq=equipeVendedores(),ativos=eq.filter(x=>x.cfg&&x.cfg.status!=="inativo");
-  const total=valid.reduce((s,v)=>s+n(v.valor),0),rec=recPer.reduce((s,v)=>s+recebido(v),0),aberto=Math.max(0,valid.reduce((s,v)=>s+Math.max(0,n(v.valor)-recebido(v)),0)),meta=ativos.reduce((s,x)=>s+n(x.cfg.metaMensal)*idx.length,0),com=recPer.reduce((s,v)=>s+n(v.comissaoValor),0),q=valid.length;
-  setText("salesKpiVendas",moeda(total));setText("salesKpiQtd",`${q} venda(s) válida(s)`);setText("salesKpiRecebido",moeda(rec));setText("salesKpiRecQtd",`${recPer.length} recebimento(s)`);setText("salesKpiAberto",moeda(aberto));setText("salesKpiMeta",moeda(meta));setText("salesKpiAting",meta?`${(total/meta*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:"—");setText("salesKpiAtingSub",meta?(total>=meta?"Meta atingida":"Abaixo da meta"):"Meta não configurada");setText("salesKpiTicket",moeda(q?total/q:0));setText("salesKpiComissao",moeda(com));setText("salesKpiSupervisor","Congelada");setText("salesContexto",`${empresasSelecionadasIds().length>1?"Empresas consolidadas":"Empresa selecionada"} · ${ano}`);
+  const metaMensalEquipe=ativos.reduce((s,x)=>s+n(x.cfg.metaMensal),0),metaFator=idx.reduce((s,m)=>s+fatorMetaMes(m),0);
+  const total=valid.reduce((s,v)=>s+n(v.valor),0),rec=recPer.reduce((s,v)=>s+recebido(v),0),aberto=Math.max(0,valid.reduce((s,v)=>s+Math.max(0,n(v.valor)-recebido(v)),0)),meta=metaMensalEquipe*metaFator,com=recPer.reduce((s,v)=>s+n(v.comissaoValor),0),q=valid.length;
+  setText("salesKpiVendas",moeda(total));setText("salesKpiQtd",`${q} venda(s) válida(s)`);setText("salesKpiRecebido",moeda(rec));setText("salesKpiRecQtd",`${recPer.length} recebimento(s)`);setText("salesKpiAberto",moeda(aberto));setText("salesKpiMeta",moeda(meta));setText("salesKpiAting",meta?`${(total/meta*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:"—");setText("salesKpiAtingSub",meta?(total>=meta?"Meta atingida":"Abaixo da meta"):"Meta não configurada");setText("salesKpiTicket",moeda(q?total/q:0));setText("salesKpiComissao",moeda(com));setText("salesKpiSupervisor","Congelada");setText("salesContexto",`${empresasSelecionadasIds().length>1?"Empresas consolidadas":"Empresa selecionada"} · ${formatData($("salesDataInicial")?.value)} a ${formatData($("salesDataFinal")?.value)}`);
 
-  const vals=Array(12).fill(0),recs=Array(12).fill(0);vendas.filter(v=>valida(v)&&anoData(v.data)===ano).forEach(v=>{const m=mesData(v.data);if(m>=0)vals[m]+=n(v.valor)});vendas.filter(v=>valida(v)&&dataRecebimento(v)&&anoData(dataRecebimento(v))===ano).forEach(v=>{const m=mesData(dataRecebimento(v));if(m>=0)recs[m]+=recebido(v)});
-  const metaMes=Array(12).fill(ativos.reduce((s,x)=>s+n(x.cfg.metaMensal),0));chart(vals,recs,metaMes);
+  const vals=Array(12).fill(0),recs=Array(12).fill(0);vendas.filter(v=>valida(v)&&filtroDataInclui(v.data)).forEach(v=>{const m=mesData(v.data);if(m>=0)vals[m]+=n(v.valor)});vendas.filter(v=>valida(v)&&dataRecebimento(v)&&filtroDataInclui(dataRecebimento(v))).forEach(v=>{const m=mesData(dataRecebimento(v));if(m>=0)recs[m]+=recebido(v)});
+  const metaMes=Array(12).fill(0).map((_,m)=>metaMensalEquipe*fatorMetaMes(m));chart(vals,recs,metaMes);
 
-  const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*idx.length;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0)}}).sort((a,b)=>b.tot-a.tot);
+  const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*metaFator;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0)}}).sort((a,b)=>b.tot-a.tot);
   const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span><strong>${esc(r.p.nome)}</strong><small>Vendido ${moeda(r.tot)} · recebido ${moeda(r.rec)}</small></span><span>${r.meta?r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—"}</span><strong>${moeda(r.com)}</strong></div>`).join(""):'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
 
   renderClientes(valid);renderEquipe();
@@ -342,5 +391,5 @@ async function carregar(){
 export async function abrir(){if(!podeVer())return alert("Seu perfil não possui acesso a Vendas & Comissões.");montar();abrirPagina("vendas");$("menuVendas")?.classList.add("ativo");esconderBotoes();await carregar()}
 montar();
 window.addEventListener("sig:empresa-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
-window.addEventListener("sig:periodo-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))render()});
+window.addEventListener("sig:periodo-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden")){sincronizarFiltroDatas(true);render()}});
 window.addEventListener("sig:data-changed",e=>{if(["vendas","rh"].includes(e.detail?.modulo)&&pagina()&&!pagina().classList.contains("hidden"))carregar()});
