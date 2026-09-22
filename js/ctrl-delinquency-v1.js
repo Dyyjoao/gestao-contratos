@@ -64,28 +64,6 @@ function criarPagina(){if(pagina())return;css();const main=document.querySelecto
   $("inadCompetencia").value=competenciaAtual();$("btnInadAtualizar")?.addEventListener("click",carregar);$("inadCompetencia")?.addEventListener("change",render);$("inadFiltro")?.addEventListener("change",render);$("inadBusca")?.addEventListener("input",render)
 }
 
-function ajustarBaixa(){
-  const v=vendas.find(x=>x.id===editId),vr=n($("inadValorRecebido")?.value);
-  if(vr>0&&!$("inadDataRecebimento")?.value)$("inadDataRecebimento").value=hoje();
-  if(v&&vr>=valorOriginal(v))$("inadStatusFinanceiro").value="aberto"
-}
-function fecharForm(){editId=null;$("formInad")?.reset();$("inadFormBox")?.classList.add("hidden");msg($("inadMensagem"),"")}
-function abrirForm(v){if(!podeEditar())return alert("Seu perfil possui acesso de consulta, mas não permissão para atualizar a carteira.");if(!v)return;editId=v.id;$("formInad")?.reset();$("inadFormTitulo").textContent="Atualizar recebível";$("inadEmpresa").value=nomeEmpresa(v.empresaId);$("inadDocumento").value=v.documento||"";$("inadVendaData").value=dataBr(v.data);$("inadCliente").value=v.cliente||"";$("inadVendedor").value=v.vendedorNome||"";$("inadValorOriginal").value=moeda(valorOriginal(v));$("inadVencimento").value=v.vencimento||"";$("inadValorRecebido").value=valorRecebido(v)||0;$("inadDataRecebimento").value=dataRecebimento(v)||"";$("inadStatusFinanceiro").value=v.statusFinanceiro==="negociado"?"negociado":"aberto";$("inadObservacaoFinanceira").value=v.observacaoFinanceira||"";$("inadFormBox").classList.remove("hidden");$("inadFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
-
-async function salvar(e){
-  e.preventDefault();if(!podeEditar()||!editId)return;
-  const v=vendas.find(x=>x.id===editId);if(!v)return msg($("inadMensagem"),"Venda não localizada.");
-  const original=valorOriginal(v),vr=n($("inadValorRecebido").value),venc=$("inadVencimento").value||null,dr=$("inadDataRecebimento").value||null;
-  if(vr<0||vr>original)return msg($("inadMensagem"),"O valor recebido deve ficar entre zero e o valor da venda.");
-  if(vr>0&&!dr)return msg($("inadMensagem"),"Informe a data da baixa para o valor recebido.");
-  const pctCom=n(v.comissaoPct),comStatusAtual=String(v.comissaoStatus||"");
-  let comStatus=vr>0?"provisionada":"aguardando_recebimento";
-  if(["aprovada","paga"].includes(comStatusAtual))comStatus=comStatusAtual;
-  const d={vencimento:venc,valorRecebido:vr,dataRecebimento:vr>0?dr:null,statusFinanceiro:$("inadStatusFinanceiro").value,observacaoFinanceira:$("inadObservacaoFinanceira").value.trim(),comissaoBaseValor:vr,comissaoValor:vr*pctCom/100,comissaoStatus:comStatus};
-  try{msg($("inadMensagem"),"Salvando...");await atualizarDocumento("vendas",v.id,d);fecharForm();await carregar();emitirAlteracao("vendas");msg($("inadAviso"),"Recebimento atualizado na própria venda.",true);$("inadAviso")?.classList.remove("hidden")}catch(err){console.error("Inadimplência:",err);msg($("inadMensagem"),"Não foi possível atualizar a venda. Verifique permissões e regras do Firebase.")}
-}
-async function marcarRecebido(id){if(!podeEditar())return;const v=vendas.find(x=>x.id===id);if(!v)return;if(!confirm(`Marcar ${v.documento||"esta venda"} como totalmente recebida hoje?`))return;const pctCom=n(v.comissaoPct),vr=valorOriginal(v),st=["aprovada","paga"].includes(String(v.comissaoStatus||""))?v.comissaoStatus:"provisionada";await atualizarDocumento("vendas",id,{valorRecebido:vr,dataRecebimento:hoje(),comissaoBaseValor:vr,comissaoValor:vr*pctCom/100,comissaoStatus:st,statusFinanceiro:"aberto"});await carregar();emitirAlteracao("vendas")}
-
 function calcular(){
   const comp=$("inadCompetencia")?.value||competenciaAtual(),arr=vendas.filter(v=>competenciaVenda(v)<=comp&&v.status!=="cancelada"),ativos=arr.filter(abertoNaReferencia),carteira=ativos.reduce((s,v)=>s+saldo(v),0),vencidos=ativos.filter(v=>["1_30","31_60","61_90","90_mais"].includes(bucket(v))),valorVencido=vencidos.reduce((s,v)=>s+saldo(v),0),faixas={sem_vencimento:[],a_vencer:[],"1_30":[],"31_60":[],"61_90":[],"90_mais":[]};
   ativos.forEach(v=>{const b=bucket(v);if(faixas[b])faixas[b].push(v)});
