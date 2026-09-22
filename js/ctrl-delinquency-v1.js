@@ -196,7 +196,12 @@ function calcular(){
   const ref=dataReferencia(),arr=todasParcelas().filter(({v})=>v.status!=="cancelada"),ativos=arr.filter(({v,p})=>saldoParcela(v,p,ref)>0),carteira=ativos.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),vencidos=ativos.filter(({v,p})=>["1_30","31_60","61_90","90_mais"].includes(bucket(v,p,ref))),valorVencido=vencidos.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),faixas={sem_vencimento:[],a_vencer:[],"1_30":[],"31_60":[],"61_90":[],"90_mais":[]};
   ativos.forEach(x=>{const b=bucket(x.v,x.p,ref);if(faixas[b])faixas[b].push(x)});
   const soma=k=>faixas[k].reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),recebidoRef=arr.reduce((s,{v,p})=>s+recebidoParcela(v,p,ref),0);
-  return{carteira,valorVencido,faixas,soma,recebidoRef}
+
+  const arrPeriodo=arr.filter(({v,p})=>parcelaNoPeriodo(v,p)),ativosPeriodo=arrPeriodo.filter(({v,p})=>saldoParcela(v,p,ref)>0),faixasPeriodo={sem_vencimento:[],a_vencer:[],"1_30":[],"31_60":[],"61_90":[],"90_mais":[]};
+  ativosPeriodo.forEach(x=>{const b=bucket(x.v,x.p,ref);if(faixasPeriodo[b])faixasPeriodo[b].push(x)});
+  const somaPeriodo=k=>faixasPeriodo[k].reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),vencidosPeriodo=ativosPeriodo.filter(({v,p})=>["1_30","31_60","61_90","90_mais"].includes(bucket(v,p,ref))),inadPeriodo=vencidosPeriodo.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
+  const vencidoOriginalPeriodo=arrPeriodo.filter(({p})=>p.vencimento&&p.vencimento<=ref).reduce((s,{p})=>s+n(p.valor),0);
+  return{carteira,valorVencido,faixas,soma,recebidoRef,faixasPeriodo,somaPeriodo,inadPeriodo,vencidoOriginalPeriodo}
 }
 function renderRecebimentos(){
   const comp=$("inadCompetencia")?.value||competenciaAtual(),arr=recebimentos.filter(r=>String(r.dataRecebimento||"").slice(0,7)<=comp).sort((a,b)=>String(b.dataRecebimento||"").localeCompare(String(a.dataRecebimento||""))||String(b.importadoEm||"").localeCompare(String(a.importadoEm||"")));
@@ -212,9 +217,12 @@ function renderRecebimentos(){
   document.querySelectorAll("[data-inad-excedente]").forEach(b=>b.onclick=()=>abrirTratamentoExcedente(b.dataset.inadExcedente))
 }
 function render(){
-  criarPagina();const ref=dataReferencia(),c=calcular();$("inadDataRef").textContent=`Posição em ${dataBr(ref)}`;$("inadCarteira").textContent=moeda(c.carteira);$("inadVencido").textContent=moeda(c.valorVencido);$("inadIndice").textContent=pct(c.valorVencido,c.carteira);$("inadRecebidoRef").textContent=moeda(c.recebidoRef);
+  criarPagina();const ref=dataReferencia(),c=calcular(),periodoNome=nomePeriodoSelecionado();$("inadDataRef").textContent=`Posição em ${dataBr(ref)}`;$("inadCarteira").textContent=moeda(c.carteira);$("inadVencido").textContent=moeda(c.valorVencido);$("inadIndice").textContent=pct(c.valorVencido,c.carteira);$("inadRecebidoRef").textContent=moeda(c.recebidoRef);
+  $("inadPeriodoValor").textContent=moeda(c.inadPeriodo);$("inadPeriodoPct").textContent=pct(c.inadPeriodo,c.vencidoOriginalPeriodo);$("inadPeriodoValorSub").textContent=`saldo vencido · ${periodoNome}`;$("inadPeriodoPctSub").textContent=`sobre ${moeda(c.vencidoOriginalPeriodo)} vencido no período`;$("inadPeriodoTitulo").textContent=`${periodoNome} · posição em ${dataBr(ref)}`;
   [["sem_vencimento","ageSemVenc","ageSemVencQtd"],["a_vencer","ageAVencer","ageAVencerQtd"],["1_30","age130","age130Qtd"],["31_60","age3160","age3160Qtd"],["61_90","age6190","age6190Qtd"],["90_mais","age90","age90Qtd"]].forEach(([k,v,q])=>{$(v).textContent=moeda(c.soma(k));$(q).textContent=`${c.faixas[k].length} parcela(s)`});
-  const arr=parcelasVisiveis().sort((a,b)=>String(a.p.vencimento||"9999-99-99").localeCompare(String(b.p.vencimento||"9999-99-99"))||String(a.v.documento||"").localeCompare(String(b.v.documento||""))||n(a.p.ordem)-n(b.p.ordem));$("inadResumoLista").textContent=`${arr.length} parcela(s) · referência ${dataBr(ref)}`;const tb=$("inadLista");if(!tb)return;if(!arr.length){tb.innerHTML='<tr><td colspan="8">Nenhuma parcela encontrada para os filtros selecionados.</td></tr>';renderRecebimentos();return}
+  [["sem_vencimento","pAgeSemVenc","pAgeSemVencQtd"],["a_vencer","pAgeAVencer","pAgeAVencerQtd"],["1_30","pAge130","pAge130Qtd"],["31_60","pAge3160","pAge3160Qtd"],["61_90","pAge6190","pAge6190Qtd"],["90_mais","pAge90","pAge90Qtd"]].forEach(([k,v,q])=>{$(v).textContent=moeda(c.somaPeriodo(k));$(q).textContent=`${c.faixasPeriodo[k].length} parcela(s)`});
+  document.querySelectorAll("[data-inad-filter]").forEach(card=>card.classList.toggle("filtro-ativo",(card.dataset.inadScope||"acumulado")===filtroEscopo&&card.dataset.inadFilter===($("inadFiltro")?.value||"todos")));
+  const arr=parcelasVisiveis().sort((a,b)=>String(a.p.vencimento||"9999-99-99").localeCompare(String(b.p.vencimento||"9999-99-99"))||String(a.v.documento||"").localeCompare(String(b.v.documento||""))||n(a.p.ordem)-n(b.p.ordem));$("inadResumoLista").textContent=`${arr.length} parcela(s) · ${filtroEscopo==="periodo"?periodoNome:"acumulado"} · referência ${dataBr(ref)}`;const tb=$("inadLista");if(!tb)return;if(!arr.length){tb.innerHTML='<tr><td colspan="8">Nenhuma parcela encontrada para os filtros selecionados.</td></tr>';renderRecebimentos();return}
   tb.innerHTML=arr.map(({v,p})=>{const b=bucket(v,p,ref),dias=["a_vencer","fora","sem_vencimento"].includes(b)?0:diffDias(p.vencimento,ref),cls=b==="90_mais"?"inad-linha-critica":["1_30","31_60","61_90"].includes(b)?"inad-linha-vencida":b==="sem_vencimento"?"inad-linha-sem-venc":"",st=statusParcela(v,p,ref),rec=recebidoParcela(v,p,ref);return`<tr class="${cls}"><td><strong>${esc(v.documento||"—")} · ${esc(p.id)}</strong><span class="inad-info">${dataBr(v.data)} · ${esc(v.vendedorNome||"—")}</span></td><td><strong>${esc(v.cliente||"—")}</strong><span class="inad-info">${esc(nomeEmpresa(v.empresaId))}</span></td><td>${p.vencimento?dataBr(p.vencimento):'<span class="status-pendente">Sem vencimento</span>'}</td><td>${dias?`${dias} d`:"—"}</td><td>${moeda(n(p.valor))}</td><td>${rec>0?moeda(rec):"—"}</td><td><strong>${moeda(saldoParcela(v,p,ref))}</strong></td><td><span class="${statusClasse(st)}">${statusNome(st)}</span><span class="inad-info">${b==="a_vencer"?"A vencer":b==="sem_vencimento"?"Definir vencimento":b==="fora"?"Liquidado":b.replace("_","–")}</span></td></tr>`}).join("");
   renderRecebimentos()
 }
@@ -229,4 +237,5 @@ export async function abrir(){criarPagina();if(!podeVer())return alert("Seu perf
 
 criarPagina();
 window.addEventListener("sig:empresa-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
+window.addEventListener("sig:periodo-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))render()});
 window.addEventListener("sig:data-changed",e=>{if(["vendas","recebimentos"].includes(e.detail?.modulo)&&pagina()&&!pagina().classList.contains("hidden"))carregar()});
