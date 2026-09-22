@@ -1105,7 +1105,7 @@ service cloud.firestore {
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
-      allow delete: if administrador() && documentoAcessivel(resource.data) &&
+      allow delete: if (administrador() || vendasLancar()) && documentoAcessivel(resource.data) &&
         ('importacaoLoteId' in resource.data) &&
         resource.data.importacaoLoteId is string && resource.data.importacaoLoteId.size() > 0 &&
         ('configuracaoPendente' in resource.data) && resource.data.configuracaoPendente == true &&
@@ -1119,7 +1119,7 @@ service cloud.firestore {
         request.resource.data.vendaId is string && request.resource.data.vendaId.size() > 0 &&
         request.resource.data.antes is map;
       allow update: if false;
-      allow delete: if administrador() && documentoAcessivel(resource.data);
+      allow delete: if (administrador() || vendasLancar()) && documentoAcessivel(resource.data);
     }
 
     match /importacoesVendas/{id} {
@@ -1135,7 +1135,7 @@ service cloud.firestore {
             'quantidadeClientesNovos','quantidadeParcelas','valorTotal','concluidoEm',
             'erro','finalizadoEm','atualizadoEm'
           ])) ||
-          (administrador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          ((administrador() || vendasLancar()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','excluidoEm','excluidoPor','exclusaoMotivo',
             'quantidadeVendasExcluidas','quantidadeVendasRestauradas',
             'quantidadeClientesExcluidos','quantidadeConfigsExcluidas','quantidadeSnapshotsExcluidos',
@@ -1157,7 +1157,7 @@ service cloud.firestore {
         request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.codigo is string && request.resource.data.codigo.size() > 0 &&
         request.resource.data.nome is string && request.resource.data.nome.size() > 0;
-      allow delete: if administrador() && documentoAcessivel(resource.data) &&
+      allow delete: if (administrador() || vendasLancar()) && documentoAcessivel(resource.data) &&
         ('importacaoLoteId' in resource.data) &&
         resource.data.importacaoLoteId is string && resource.data.importacaoLoteId.size() > 0 &&
         ('origem' in resource.data) && resource.data.origem == 'importacao_relatorio_vendas';
@@ -1193,7 +1193,7 @@ service cloud.firestore {
               'comissaoPct','comissaoBaseValor','comissaoValor','comissaoStatus','atualizadoEm'
             ]))
         );
-      allow delete: if administrador() && documentoAcessivel(resource.data) &&
+      allow delete: if (administrador() || vendasLancar()) && documentoAcessivel(resource.data) &&
         ('importacaoLoteId' in resource.data) &&
         resource.data.importacaoLoteId is string && resource.data.importacaoLoteId.size() > 0 &&
         ('origemImportacao' in resource.data) && resource.data.origemImportacao == 'relatorio_vendas';
