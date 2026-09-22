@@ -67,3 +67,5 @@
 .sales-history-scroll{max-height:510px;overflow:auto}.sales-history-scroll .sales-table{margin:0}.sales-history-scroll .sales-table thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}
 
 .sales-clientes-scroll{max-height:510px;overflow-y:auto;overflow-x:hidden}.sales-clientes-scroll .tabela{margin:0}.sales-clientes-scroll .tabela thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}
+
+.sales-import-history-scroll{max-height:510px;overflow-y:auto;overflow-x:auto}.sales-import-history-scroll .tabela{margin:0}.sales-import-history-scroll .tabela thead th{position:sticky;top:0;z-index:3;background:#fff;box-shadow:0 1px 0 #edf0f3}.sales-import-history-scroll tbody tr{height:46px}
