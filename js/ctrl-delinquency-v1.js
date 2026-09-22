@@ -78,6 +78,65 @@ function criarPagina(){if(pagina())return;css();const main=document.querySelecto
   $("formInadExcedente")?.addEventListener("submit",salvarTratamentoExcedente);$("btnInadExcedenteCancelar")?.addEventListener("click",fecharTratamentoExcedente);$("btnInadExcedenteTudoJuros")?.addEventListener("click",()=>preencherTratamento("juros"));$("btnInadExcedenteTudoParcelas")?.addEventListener("click",()=>preencherTratamento("parcelas"))
 }
 
+
+function saldoPrincipalVenda(v){
+  return parcelasVenda(v).reduce((s,p)=>s+Math.max(0,n(p.valor)-n(p.valorRecebido)),0)
+}
+function aplicarAntecipacaoParcelas(parcelas,valor,data){
+  let restante=Math.round(n(valor)*100)/100,alocacoes=[];
+  if(restante<=0)return{parcelas,alocacoes,restante:0};
+  const ord=[...parcelas].sort((a,b)=>String(a.vencimento||"9999-99-99").localeCompare(String(b.vencimento||"9999-99-99"))||n(a.ordem)-n(b.ordem));
+  for(const p of ord){
+    if(restante<=0.009)break;
+    const saldo=Math.round(Math.max(0,n(p.valor)-n(p.valorRecebido))*100)/100;if(saldo<=0)continue;
+    const usar=Math.round(Math.min(saldo,restante)*100)/100;
+    p.valorRecebido=Math.round((n(p.valorRecebido)+usar)*100)/100;
+    p.dataUltimoRecebimento=!p.dataUltimoRecebimento||data>p.dataUltimoRecebimento?data:p.dataUltimoRecebimento;
+    restante=Math.round((restante-usar)*100)/100;
+    alocacoes.push({parcelaId:p.id,ordem:p.ordem,vencimento:p.vencimento,valor:usar,tipo:"antecipacao"})
+  }
+  return{parcelas,alocacoes,restante}
+}
+function fecharTratamentoExcedente(){
+  tratamentoId=null;$("formInadExcedente")?.reset();$("inadExcedenteBox")?.classList.add("hidden");msg($("inadExcedenteMsg"),"")
+}
+function abrirTratamentoExcedente(id){
+  if(!podeEditar())return alert("Seu perfil não possui permissão para tratar excedentes.");
+  const r=recebimentos.find(x=>x.id===id),v=r?vendas.find(x=>x.id===r.vendaId):null;if(!r||!v)return;
+  const pend=n(r.valorPendenteClassificacao);if(pend<=0)return;
+  tratamentoId=id;$("formInadExcedente")?.reset();$("inadExcedentePedido").value=r.pedido||v.documento||"";$("inadExcedenteTotal").value=moeda(pend);$("inadExcedenteSaldo").value=moeda(saldoPrincipalVenda(v));$("inadExcedenteJuros").value="0";$("inadExcedenteParcelas").value="0";$("inadExcedenteObs").value="";$("inadExcedenteBox").classList.remove("hidden");$("inadExcedenteBox").scrollIntoView({behavior:"smooth",block:"start"});msg($("inadExcedenteMsg"),"Classifique integralmente "+moeda(pend)+" entre juros/acréscimos e baixa das próximas parcelas.")
+}
+function preencherTratamento(tipo){
+  const r=recebimentos.find(x=>x.id===tratamentoId),v=r?vendas.find(x=>x.id===r.vendaId):null;if(!r||!v)return;
+  const pend=Math.round(n(r.valorPendenteClassificacao)*100)/100,saldo=Math.round(saldoPrincipalVenda(v)*100)/100;
+  if(tipo==="juros"){$("inadExcedenteJuros").value=pend;$("inadExcedenteParcelas").value=0;msg($("inadExcedenteMsg"),"Todo o excedente será classificado como juros/acréscimos.")}
+  else{const usar=Math.min(pend,saldo);$("inadExcedenteJuros").value=0;$("inadExcedenteParcelas").value=usar;msg($("inadExcedenteMsg"),usar<pend?"Há somente "+moeda(saldo)+" de principal em aberto. Classifique o restante de "+moeda(pend-usar)+" como juros/acréscimos.":"Todo o excedente será aplicado às próximas parcelas por FIFO.")}
+}
+async function salvarTratamentoExcedente(e){
+  e.preventDefault();if(!podeEditar()||!tratamentoId)return;
+  const local=recebimentos.find(x=>x.id===tratamentoId);if(!local)return;
+  const juros=Math.round(n($("inadExcedenteJuros").value)*100)/100,antecipar=Math.round(n($("inadExcedenteParcelas").value)*100)/100;
+  if(juros<0||antecipar<0)return msg($("inadExcedenteMsg"),"Os valores não podem ser negativos.");
+  try{
+    msg($("inadExcedenteMsg"),"Salvando tratamento...");
+    await runTransaction(db,async tx=>{
+      const rRef=doc(db,"recebimentosVendas",tratamentoId),vRef=doc(db,"vendas",local.vendaId),rSnap=await tx.get(rRef),vSnap=await tx.get(vRef);
+      if(!rSnap.exists()||!vSnap.exists())throw new Error("registro-nao-encontrado");
+      const r=rSnap.data(),v=vSnap.data(),pend=Math.round(n(r.valorPendenteClassificacao)*100)/100,totalTratado=Math.round((juros+antecipar)*100)/100;
+      if(pend<=0)throw new Error("excedente-ja-tratado");
+      if(Math.abs(totalTratado-pend)>0.009)throw new Error("classifique exatamente "+moeda(pend));
+      const parcelas=parcelasVenda(v),ap=aplicarAntecipacaoParcelas(parcelas,antecipar,r.dataRecebimento||hoje());
+      if(ap.restante>0.009)throw new Error("principal-insuficiente; restam "+moeda(ap.restante)+" para classificar como juros/acréscimos");
+      const totalRec=Math.round(ap.parcelas.reduce((s,p)=>s+n(p.valorRecebido),0)*100)/100,base=v.baseComissao||"recebido",pct=n(v.comissaoPct),comBase=base==="venda"?n(v.valor):totalRec,comStatus=["aprovada","paga"].includes(String(v.comissaoStatus||""))?v.comissaoStatus:(totalRec>0?"provisionada":"aguardando_recebimento"),dataRec=!v.dataRecebimento||String(r.dataRecebimento||"")>String(v.dataRecebimento||"")?r.dataRecebimento:v.dataRecebimento;
+      if(antecipar>0)tx.update(vRef,{parcelas:ap.parcelas,parcelasVersao:1,valorRecebido:totalRec,dataRecebimento:dataRec,statusFinanceiro:totalRec>=n(v.valor)-0.009?"recebido":"parcial",comissaoBaseValor:comBase,comissaoValor:comBase*pct/100,comissaoStatus:comStatus,atualizadoEm:serverTimestamp()});
+      const novoPrincipal=Math.round((n(r.valorPrincipal)+antecipar)*100)/100,novoJuros=Math.round((n(r.valorAcrescimos)+juros)*100)/100,novoAntecipado=Math.round((n(r.valorAntecipado)+antecipar)*100)/100,alocacoes=[...(Array.isArray(r.alocacoes)?r.alocacoes:[]),...ap.alocacoes],tratamentos=[...(Array.isArray(r.tratamentos)?r.tratamentos:[]),{em:new Date().toISOString(),por:state.usuario?.id||"",jurosAcrescimos:juros,baixaParcelas:antecipar,alocacoes:ap.alocacoes,observacao:$("inadExcedenteObs").value.trim()}];
+      const tipo=novoJuros>0&&novoAntecipado>0?"excedente_misto":novoJuros>0?"excedente_juros":novoAntecipado>0?"excedente_parcelas":r.tipoBaixa||"quitacao";
+      tx.update(rRef,{valorPrincipal:novoPrincipal,valorAcrescimos:novoJuros,valorAntecipado:novoAntecipado,valorPendenteClassificacao:0,statusTratamento:"concluido",tipoBaixa:tipo,alocacoes,tratamentos,tratadoEm:serverTimestamp(),tratadoPor:state.usuario?.id||"",atualizadoEm:serverTimestamp()})
+    });
+    fecharTratamentoExcedente();await carregar();emitirAlteracao("vendas");emitirAlteracao("recebimentos")
+  }catch(err){console.error("Tratamento de excedente:",err);msg($("inadExcedenteMsg"),String(err?.message||err).replace("FirebaseError: ",""))}
+}
+
 function calcular(){
   const ref=dataReferencia(),arr=todasParcelas().filter(({v})=>v.status!=="cancelada"),ativos=arr.filter(({v,p})=>saldoParcela(v,p,ref)>0),carteira=ativos.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),vencidos=ativos.filter(({v,p})=>["1_30","31_60","61_90","90_mais"].includes(bucket(v,p,ref))),valorVencido=vencidos.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),faixas={sem_vencimento:[],a_vencer:[],"1_30":[],"31_60":[],"61_90":[],"90_mais":[]};
   ativos.forEach(x=>{const b=bucket(x.v,x.p,ref);if(faixas[b])faixas[b].push(x)});
