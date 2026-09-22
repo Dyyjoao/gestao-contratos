@@ -76,12 +76,13 @@ jobs:
             const imp=await import('./js/sales-report-import.js');
             const matrix=[
               ['CD_CLIENTE','NOME_PESSOA','CIDADE_PESSOA','UF_PESSOA','CD_VENDA','CD_LOJA','CD_FUNCIONARIOVENDA','NOME_FUNCIONARIO','DATA_VENDA','VALOR_VENDA'],
-              ['1001','CLIENTE TESTE','SERRA','ES','50001','01','77','VENDEDOR TESTE','21/09/2026','1.234,56']
+              [1001,'CLIENTE TESTE','SERRA','ES',50001,1,'77','VENDEDOR TESTE',46267.356944444444,1234.56]
             ];
             const r=imp.parseMatrizRelatorioVendas(matrix);
             if(r.linhas.length!==1)throw new Error('linhas '+r.linhas.length);
             if(r.linhas[0].clienteCodigo!=='1001')throw new Error('cliente');
             if(r.linhas[0].vendedorCodigo!=='77')throw new Error('vendedor');
+            if(r.linhas[0].data!=='2026-09-02')throw new Error('data '+r.linhas[0].data);
             if(Math.abs(r.linhas[0].valor-1234.56)>0.001)throw new Error('valor '+r.linhas[0].valor);
             if(!document.getElementById('btnSalesReportImport'))throw new Error('botão importação ausente');
             if(!document.getElementById('salesReportHistorico'))throw new Error('histórico de importações ausente');
