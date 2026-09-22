@@ -158,6 +158,7 @@ service cloud.firestore {
         novo.baseComissao == antigo.baseComissao &&
         novo.comissaoPct == antigo.comissaoPct &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'parcelas','parcelasVersao','recebimentoChaves',
           'vencimento','valorRecebido','dataRecebimento','statusFinanceiro','observacaoFinanceira',
           'comissaoBaseValor','comissaoValor','comissaoStatus','atualizadoEm'
         ]);
@@ -179,7 +180,7 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'data','vendedorId','vendedorRhId','vendedorNome','vendedorCodigo','vendedorNomeOrigem',
           'clienteId','clienteCodigo','cliente','clienteNomeOrigem','lojaOrigem',
-          'descricao','itens','valor','baseComissao','comissaoPct','comissaoBaseValor','comissaoValor',
+          'descricao','itens','valor','parcelas','parcelasVersao','baseComissao','comissaoPct','comissaoBaseValor','comissaoValor',
           'comissaoStatus','status','observacao','origemImportacao','arquivoImportacao','importacaoChave',
           'ultimaImportacaoLoteId','ultimaImportacaoEm','atualizadoEm'
         ]);
@@ -1244,6 +1245,22 @@ service cloud.firestore {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaRealizado() && documentoAcessivel(request.resource.data);
       allow update: if fpaRealizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
+      allow delete: if false;
+    }
+
+    match /recebimentosVendas/{id} {
+      allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /importacoesRecebimentos/{id} {
+      allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data);
+      allow update: if inadimplenciaEditar() && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
     }
 
