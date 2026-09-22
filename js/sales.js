@@ -123,7 +123,7 @@ function montar(){
   </section>
 
   <section id="salesVendaBox" class="form-card hidden">
-    <div class="form-card-titulo"><div><h3 id="salesVendaTitulo">Nova venda</h3><p>A comissão do vendedor é calculada exclusivamente sobre o valor efetivamente recebido.</p></div></div>
+    <div class="form-card-titulo"><div><h3 id="salesVendaTitulo">Nova venda</h3><p>Registre aqui somente os dados comerciais. Recebimentos e baixa financeira são tratados em Inadimplência.</p></div></div>
     <form id="formSalesVenda"><div class="form-grid form-grid-3">
       <div class="campo"><label for="salesEmpresa">Empresa</label><input id="salesEmpresa" disabled></div>
       <div class="campo"><label for="salesData">Data da venda</label><input id="salesData" type="date" required></div>
@@ -131,8 +131,7 @@ function montar(){
       <div class="campo campo-span-2"><label for="salesCliente">Cliente</label><input id="salesCliente" required></div>
       <div class="campo"><label for="salesDocumento">Pedido / NF / referência</label><input id="salesDocumento"></div>
       <div class="campo"><label for="salesValor">Valor da venda</label><input id="salesValor" type="number" min="0.01" step="0.01" required><small>Valor financeiro total do pedido/venda.</small></div>
-      <div class="campo"><label for="salesDataRec">Data do recebimento</label><input id="salesDataRec" type="date"></div>
-      <div class="campo"><label for="salesValorRec">Valor recebido</label><input id="salesValorRec" type="number" min="0" step="0.01"><small>Admite recebimento parcial.</small></div>
+      <div class="campo campo-span-2"><label>Recebimento da venda</label><div class="sales-recebimento-info">Controlado exclusivamente em <strong>Inadimplência</strong>. Esta tela não altera valor nem data de recebimento.</div></div>
       <div class="campo"><label for="salesPct">Comissão vendedor (%)</label><input id="salesPct" disabled></div>
       <div class="campo"><label for="salesComissao">Comissão calculada</label><input id="salesComissao" disabled></div>
       <div class="campo"><label for="salesStatus">Status da venda</label><select id="salesStatus"><option value="confirmada">Confirmada</option><option value="cancelada">Cancelada</option></select></div>
@@ -192,7 +191,6 @@ function montar(){
   $("formSalesConfig")?.addEventListener("submit",salvarConfig);
   $("formSalesVenda")?.addEventListener("submit",salvarVenda);
   $("salesVendedor")?.addEventListener("change",aplicarRegraVendedor);
-  ["salesValorRec"].forEach(id=>$(id)?.addEventListener("input",calcularComissao));
   $("salesFiltroVendedor")?.addEventListener("change",render);
   $("salesFiltroStatus")?.addEventListener("change",render);
   $("salesModoGrafico")?.addEventListener("change",render);
@@ -288,24 +286,24 @@ function abrirVenda(v=null){
   const emp=contextoUnico();if(!emp)return;
   editVendaId=v?.id||"";$("formSalesVenda")?.reset();$("salesVendaTitulo").textContent=v?"Editar venda":"Nova venda";$("salesEmpresa").value=nomeEmpresa(emp);
   $("salesData").value=v?.data||hoje();$("salesVendedor").value=v?.vendedorId||"";$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";
-  $("salesDataRec").value=dataRecebimento(v)||"";$("salesValorRec").value=recebido(v)||"";$("salesPct").value=v?n(v.comissaoPct):"";
+  $("salesPct").value=v?n(v.comissaoPct):"";
   $("salesStatus").value=v?.status||"confirmada";$("salesComStatus").value=comStatus(v);$("salesObs").value=v?.observacao||"";$("salesValor").value=v?n(v.valor):"";
   if(!v)aplicarRegraVendedor();calcularComissao();$("salesComStatus").disabled=!podeComissoes();$("salesVendaBox").classList.remove("hidden");$("salesVendaBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function aplicarRegraVendedor(){if(editVendaId)return;const cfg=cfgVenda($("salesVendedor")?.value);$("salesPct").value=cfg?n(cfg.comissaoPct):"";calcularComissao()}
-function calcularComissao(){const valor=n($("salesValorRec")?.value),pct=n($("salesPct")?.value);$("salesComissao").value=moeda(valor*pct/100);if(!editVendaId&&$("salesComStatus"))$("salesComStatus").value=valor>0?"provisionada":"aguardando_recebimento"}
+function calcularComissao(){const atual=editVendaId?vendas.find(x=>x.id===editVendaId):null,valor=recebido(atual),pct=n($("salesPct")?.value);$("salesComissao").value=moeda(valor*pct/100);if(!editVendaId&&$("salesComStatus"))$("salesComStatus").value="aguardando_recebimento"}
 
 async function salvarVenda(e){
   e.preventDefault();const nova=!editVendaId;if(nova&&!podeLancar())return;if(!nova&&!podeEditar())return;
   const emp=contextoUnico();if(!emp)return;const cfg=cfgVenda($("salesVendedor").value);if(!cfg)return msg($("salesVendaMsg"),"Selecione um vendedor configurado a partir do RH.");
-  const valor=n($("salesValor").value),valorRec=n($("salesValorRec").value),pct=n($("salesPct").value);
+  const atual=nova?null:vendas.find(x=>x.id===editVendaId);if(!nova&&(!atual||atual.empresaId!==emp))return msg($("salesVendaMsg"),"Venda não localizada para a empresa selecionada.");
+  const valor=n($("salesValor").value),valorRec=nova?0:recebido(atual),dataRec=nova?null:dataRecebimento(atual),pct=n($("salesPct").value);
   if(valor<=0)return msg($("salesVendaMsg"),"O valor da venda deve ser maior que zero.");
-  if(valorRec>valor)return msg($("salesVendaMsg"),"O valor recebido não pode superar o valor da venda.");
-  if(valorRec>0&&!$("salesDataRec").value)return msg($("salesVendaMsg"),"Informe a data do recebimento.");
-  let st=$("salesComStatus").value;if(valorRec<=0)st="aguardando_recebimento";else if(st==="aguardando_recebimento")st="provisionada";
-  if(!podeComissoes()&&editVendaId)st=comStatus(vendas.find(x=>x.id===editVendaId));
-  const d={data:$("salesData").value,dataRecebimento:$("salesDataRec").value||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:"",itens:[],valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
-  try{msg($("salesVendaMsg"),"Salvando...");if(editVendaId){const at=vendas.find(x=>x.id===editVendaId);if(!at||at.empresaId!==emp)throw new Error("empresa-divergente");await atualizarDocumento("vendas",editVendaId,d)}else await criarDocumento("vendas",{...d,empresaId:emp});fecharVenda();await carregar();emitirAlteracao("vendas")}
+  if(valorRec>valor)return msg($("salesVendaMsg"),"O valor da venda não pode ficar abaixo do valor já recebido na Inadimplência.");
+  let st=nova?"aguardando_recebimento":comStatus(atual);
+  if(!nova&&podeComissoes())st=$("salesComStatus").value;
+  const d={data:$("salesData").value,dataRecebimento:dataRec||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:"",itens:[],valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
+  try{msg($("salesVendaMsg"),"Salvando...");if(editVendaId)await atualizarDocumento("vendas",editVendaId,d);else await criarDocumento("vendas",{...d,empresaId:emp});fecharVenda();await carregar();emitirAlteracao("vendas")}
   catch(err){console.error(err);msg($("salesVendaMsg"),"Não foi possível salvar a venda.")}
 }
 
