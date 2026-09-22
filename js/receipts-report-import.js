@@ -43,7 +43,7 @@ function simular(emp){
     if(v.__ambigua){out.push({r,tipo:"conflito",motivo:"Pedido duplicado em Vendas"});continue}
     if(v.clienteCodigo&&chaveCodigo(v.clienteCodigo)!==chaveCodigo(r.clienteCodigo)){out.push({r,tipo:"conflito",motivo:"Código do cliente diverge da venda"});continue}
     const base=estados.get(v.id)||parcelasVenda(v),copia=base.map(p=>({...p})),baixa=aplicarFifo(copia,r.valor,r.dataRecebimento);
-    if(baixa.semPrincipal){out.push({r,v,tipo:"conflito",motivo:"Pedido sem parcela de principal em aberto; revisar possível juros isolado, duplicidade ou ajuste"});continue}
+    if(baixa.semPrincipal){out.push({r,v,tipo:"nova",alocacoes:[],valorPrincipal:0,valorExcedentePendente:r.valor,parcial:false,semPrincipal:true,saldoDepois:0});continue}
     estados.set(v.id,baixa.parcelas);
     out.push({r,v,tipo:"nova",alocacoes:baixa.alocacoes,valorPrincipal:baixa.valorPrincipal,valorExcedentePendente:baixa.valorExcedentePendente,parcial:baixa.parcial,saldoDepois:baixa.saldoDepois})
   }
@@ -78,11 +78,10 @@ async function confirmar(){
     await carregarBases();classes=simular(emp);validos=classes.filter(x=>x.tipo==="nova");
     for(const x of validos){
       const r=x.r,v=vendas.find(z=>z.id===x.v.id);if(!v)throw new Error("venda-nao-encontrada");
-      const ps=parcelasVenda(v),baixa=aplicarFifo(ps,r.valor,r.dataRecebimento);if(baixa.semPrincipal)throw new Error("pedido-sem-principal-aberto");
+      const ps=parcelasVenda(v),baixa=aplicarFifo(ps,r.valor,r.dataRecebimento);
       const totalRec=arredondarCentavos(baixa.parcelas.reduce((s,p)=>s+n(p.valorRecebido),0)),base=v.baseComissao||"recebido",pct=n(v.comissaoPct),comBase=base==="venda"?n(v.valor):totalRec,comStatus=["aprovada","paga"].includes(String(v.comissaoStatus||""))?v.comissaoStatus:(totalRec>0?"provisionada":"aguardando_recebimento"),chaves=[...new Set([...(Array.isArray(v.recebimentoChaves)?v.recebimentoChaves:[]),r.chaveRecebimento])],dataRec=!v.dataRecebimento||r.dataRecebimento>v.dataRecebimento?r.dataRecebimento:v.dataRecebimento;
-      await atualizarDocumento("vendas",v.id,{parcelas:baixa.parcelas,parcelasVersao:1,valorRecebido:totalRec,dataRecebimento:dataRec,statusFinanceiro:totalRec>=n(v.valor)-0.009?"recebido":"parcial",recebimentoChaves:chaves,comissaoBaseValor:comBase,comissaoValor:comBase*pct/100,comissaoStatus:comStatus});
-      Object.assign(v,{parcelas:baixa.parcelas,valorRecebido:totalRec,dataRecebimento:dataRec,recebimentoChaves:chaves});
-      const pend=arredondarCentavos(n(baixa.valorExcedentePendente));
+      if(!baixa.semPrincipal){await atualizarDocumento("vendas",v.id,{parcelas:baixa.parcelas,parcelasVersao:1,valorRecebido:totalRec,dataRecebimento:dataRec,statusFinanceiro:totalRec>=n(v.valor)-0.009?"recebido":"parcial",recebimentoChaves:chaves,comissaoBaseValor:comBase,comissaoValor:comBase*pct/100,comissaoStatus:comStatus});Object.assign(v,{parcelas:baixa.parcelas,valorRecebido:totalRec,dataRecebimento:dataRec,recebimentoChaves:chaves})}
+      const pend=arredondarCentavos(baixa.semPrincipal?r.valor:n(baixa.valorExcedentePendente));
       await criarDocumento("recebimentosVendas",{empresaId:emp,loteId:lote,chaveRecebimento:r.chaveRecebimento,origem:"relatorio_recebimentos",arquivo:arquivoAtual,pedido:r.pedido,clienteCodigo:r.clienteCodigo,clienteNome:r.clienteNome,valor:r.valor,valorPrincipal:baixa.valorPrincipal,valorAcrescimos:0,valorAntecipado:0,valorPendenteClassificacao:pend,statusTratamento:pend>0?"pendente":"concluido",tipoBaixa:baixa.parcial?"parcial":pend>0?"quitacao_com_excedente_pendente":"quitacao",dataRecebimento:r.dataRecebimento,vendaId:v.id,alocacoes:baixa.alocacoes,tratamentos:[],importadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
       recebimentos.push({empresaId:emp,chaveRecebimento:r.chaveRecebimento,vendaId:v.id,pedido:r.pedido,clienteCodigo:r.clienteCodigo,clienteNome:r.clienteNome,valor:r.valor,valorPrincipal:baixa.valorPrincipal,valorAcrescimos:0,valorAntecipado:0,valorPendenteClassificacao:pend,statusTratamento:pend>0?"pendente":"concluido",dataRecebimento:r.dataRecebimento,alocacoes:baixa.alocacoes});feitos++;msg($("receiptImportMsg"),`Lote ${lote} · processando ${feitos} de ${validos.length}...`)
     }
