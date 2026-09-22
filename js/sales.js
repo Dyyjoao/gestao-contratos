@@ -48,7 +48,7 @@ function montar(){
   const s=document.createElement("section");s.id="pagina-vendas";s.className="pagina hidden";s.innerHTML=`
   <div class="pagina-cabecalho">
     <div><span class="eyebrow">COMERCIAL</span><h2>Vendas & Comissões</h2><p>Vendas, recebimentos, metas, comissões e curva ABC por valor vendido.</p></div>
-    <div class="acoes-cabecalho"><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesItem" class="btn-secundario" type="button">+ Item</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
+    <div class="acoes-cabecalho"><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
   </div>
   <div id="salesAviso" class="modulo-aviso hidden"></div>
 
@@ -78,17 +78,6 @@ function montar(){
     </form>
   </section>
 
-  <section id="salesItemBox" class="form-card hidden">
-    <div class="form-card-titulo"><div><h3 id="salesItemTitulo">Novo item comercial</h3><p>Base central de materiais/itens usados nas vendas e na Curva ABC.</p></div></div>
-    <form id="formSalesItem"><div class="form-grid form-grid-3">
-      <div class="campo"><label for="salesItemCodigo">Código</label><input id="salesItemCodigo" maxlength="40"></div>
-      <div class="campo campo-span-2"><label for="salesItemNome">Descrição do item</label><input id="salesItemNome" required></div>
-      <div class="campo"><label for="salesItemCategoria">Categoria</label><input id="salesItemCategoria" placeholder="Ex.: Blocos, agregados, serviços"></div>
-      <div class="campo"><label for="salesItemUnidade">Unidade</label><input id="salesItemUnidade" placeholder="UN, M³, TON..." maxlength="12"></div>
-      <div class="campo"><label for="salesItemStatus">Status</label><select id="salesItemStatus"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
-    </div><div class="form-acoes"><button id="btnSalesItemCancelar" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar item</button></div><p id="salesItemMsg" class="mensagem-form"></p></form>
-  </section>
-
   <section id="salesVendaBox" class="form-card hidden">
     <div class="form-card-titulo"><div><h3 id="salesVendaTitulo">Nova venda</h3><p>A comissão do vendedor é calculada exclusivamente sobre o valor efetivamente recebido.</p></div></div>
     <form id="formSalesVenda"><div class="form-grid form-grid-3">
@@ -97,11 +86,7 @@ function montar(){
       <div class="campo"><label for="salesVendedor">Vendedor</label><select id="salesVendedor" required></select><small>Origem: RH · admissão/cargo com função Vendedor / Comercial.</small></div>
       <div class="campo campo-span-2"><label for="salesCliente">Cliente</label><input id="salesCliente" required></div>
       <div class="campo"><label for="salesDocumento">Pedido / NF / referência</label><input id="salesDocumento"></div>
-      <div class="campo campo-span-3 sales-itens-venda">
-        <div class="sales-itens-head"><div><label>Itens da venda</label><small>Uma venda pode conter materiais variados.</small></div><button id="btnSalesAdicionarItemVenda" class="btn-secundario" type="button">+ Adicionar item</button></div>
-        <div class="tabela-container"><table class="tabela"><thead><tr><th>Item</th><th>Qtd.</th><th>Unidade</th><th>Valor unitário</th><th>Total</th><th></th></tr></thead><tbody id="salesItensVendaLista"></tbody></table></div>
-      </div>
-      <div class="campo"><label for="salesValor">Valor total da venda</label><input id="salesValor" type="number" disabled></div>
+      <div class="campo"><label for="salesValor">Valor da venda</label><input id="salesValor" type="number" min="0.01" step="0.01" required><small>Valor financeiro total do pedido/venda.</small></div>
       <div class="campo"><label for="salesDataRec">Data do recebimento</label><input id="salesDataRec" type="date"></div>
       <div class="campo"><label for="salesValorRec">Valor recebido</label><input id="salesValorRec" type="number" min="0" step="0.01"><small>Admite recebimento parcial.</small></div>
       <div class="campo"><label for="salesPct">Comissão vendedor (%)</label><input id="salesPct" disabled></div>
@@ -141,38 +126,23 @@ function montar(){
     <div class="tabela-container"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendido</th><th>Recebido</th><th>A receber</th><th>% da métrica</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
   </section>
 
-  <section class="lista-card sales-abc">
-    <div class="lista-cabecalho"><div><h3>Curva ABC · materiais vendidos</h3><p>Classificação por valor vendido, não por quantidade.</p></div></div>
-    <div id="salesAbcResumo" class="sales-abc-resumo"></div>
-    <div class="tabela-container"><table class="tabela"><thead><tr><th>Classe</th><th>Material / item</th><th>Valor vendido</th><th>% do total</th><th>% acumulado</th><th>Participação</th></tr></thead><tbody id="salesAbcLista"></tbody></table></div>
-  </section>
-
   <section class="lista-card">
     <div class="lista-cabecalho"><div><h3>Vendas registradas</h3><p id="salesResumo">—</p></div><div class="sales-filtros"><select id="salesFiltroVendedor"><option value="">Todos os vendedores</option></select><select id="salesFiltroStatus"><option value="">Todos os status</option><option value="confirmada">Confirmadas</option><option value="cancelada">Canceladas</option></select></div></div>
-    <div class="tabela-container"><table class="tabela sales-table"><thead><tr><th>Venda / recebimento</th><th>Vendedor</th><th>Cliente / item</th><th>Vendido</th><th>Recebido</th><th>Comissão</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
-  </section>
-
-  <section class="lista-card sales-itens-cadastro">
-    <div class="lista-cabecalho"><div><h3>Base de itens comerciais</h3><p>Cadastro único usado no lançamento das vendas e na análise por material.</p></div><input id="salesBuscaItem" class="campo-busca" type="search" placeholder="Buscar item, código ou categoria"></div>
-    <div class="tabela-container"><table class="tabela"><thead><tr><th>Código</th><th>Item</th><th>Categoria</th><th>Unidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesItensCadastroLista"></tbody></table></div>
+    <div class="tabela-container"><table class="tabela sales-table"><thead><tr><th>Venda / recebimento</th><th>Vendedor</th><th>Cliente / referência</th><th>Vendido</th><th>Recebido</th><th>Comissão</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
   </section>
 
   <section class="lista-card">
-    <div class="lista-cabecalho"><div><h3>Equipe comercial</h3><p>Colaboradores ativos vindos do RH. Não há cadastro paralelo de vendedor.</p></div></div>
+    <div class="lista-cabecalho"><div><h3>Equipe comercial & comissões</h3><p>Colaboradores ativos vindos do RH. A configuração de comissão é feita aqui; importações podem inicializar vendedores pendentes em 0%.</p></div></div>
     <div class="tabela-container"><table class="tabela"><thead><tr><th>Colaborador</th><th>Função</th><th>Meta mensal</th><th>Comissão</th><th>Base</th><th>Ações</th></tr></thead><tbody id="salesEquipeLista"></tbody></table></div>
   </section>`;
   main.appendChild(s);
 
   $("btnSalesAtualizar")?.addEventListener("click",carregar);
   $("btnSalesVenda")?.addEventListener("click",()=>abrirVenda());
-  $("btnSalesItem")?.addEventListener("click",()=>abrirItem());
-  $("btnSalesAdicionarItemVenda")?.addEventListener("click",()=>adicionarLinhaItem());
   $("btnSalesVendaCancelar")?.addEventListener("click",fecharVenda);
-  $("btnSalesItemCancelar")?.addEventListener("click",fecharItem);
   $("btnSalesCfgCancelar")?.addEventListener("click",fecharConfig);
   $("formSalesConfig")?.addEventListener("submit",salvarConfig);
   $("formSalesVenda")?.addEventListener("submit",salvarVenda);
-  $("formSalesItem")?.addEventListener("submit",salvarItem);
   $("salesVendedor")?.addEventListener("change",aplicarRegraVendedor);
   ["salesValorRec"].forEach(id=>$(id)?.addEventListener("input",calcularComissao));
   $("salesFiltroVendedor")?.addEventListener("change",render);
@@ -180,7 +150,6 @@ function montar(){
   $("salesModoGrafico")?.addEventListener("change",render);
   $("salesClientesMetrica")?.addEventListener("change",render);
   $("salesClientesOrdem")?.addEventListener("change",render);
-  $("salesBuscaItem")?.addEventListener("input",renderItensCadastro);
 }
 
 function contextoUnico(){const emp=empresaUnicaSelecionadaId();if(!emp){alert("Para cadastrar ou editar, selecione uma única empresa no cabeçalho.");return""}return emp}
@@ -271,11 +240,7 @@ function abrirVenda(v=null){
   editVendaId=v?.id||"";$("formSalesVenda")?.reset();$("salesVendaTitulo").textContent=v?"Editar venda":"Nova venda";$("salesEmpresa").value=nomeEmpresa(emp);
   $("salesData").value=v?.data||hoje();$("salesVendedor").value=v?.vendedorId||"";$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";
   $("salesDataRec").value=dataRecebimento(v)||"";$("salesValorRec").value=recebido(v)||"";$("salesPct").value=v?n(v.comissaoPct):"";
-  $("salesStatus").value=v?.status||"confirmada";$("salesComStatus").value=comStatus(v);$("salesObs").value=v?.observacao||"";
-  const tb=$("salesItensVendaLista");if(tb)tb.innerHTML="";
-  const itens=Array.isArray(v?.itens)&&v.itens.length?v.itens:[];
-  if(itens.length)itens.forEach(adicionarLinhaItem);else adicionarLinhaItem();
-  if(v&&!itens.length){const match=itensComerciais.find(x=>String(x.nome||"").trim().toLocaleLowerCase("pt-BR")===String(v.descricao||"").trim().toLocaleLowerCase("pt-BR"));const tr=$("salesItensVendaLista")?.lastElementChild;if(match&&tr){tr.querySelector("[data-item-id]").value=match.id;tr.querySelector("[data-item-qtd]").value=1;tr.querySelector("[data-item-vu]").value=n(v.valor);recalcularLinhaItem(tr)}}
+  $("salesStatus").value=v?.status||"confirmada";$("salesComStatus").value=comStatus(v);$("salesObs").value=v?.observacao||"";$("salesValor").value=v?n(v.valor):"";
   if(!v)aplicarRegraVendedor();calcularComissao();$("salesComStatus").disabled=!podeComissoes();$("salesVendaBox").classList.remove("hidden");$("salesVendaBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function aplicarRegraVendedor(){if(editVendaId)return;const cfg=cfgVenda($("salesVendedor")?.value);$("salesPct").value=cfg?n(cfg.comissaoPct):"";calcularComissao()}
@@ -284,16 +249,13 @@ function calcularComissao(){const valor=n($("salesValorRec")?.value),pct=n($("sa
 async function salvarVenda(e){
   e.preventDefault();const nova=!editVendaId;if(nova&&!podeLancar())return;if(!nova&&!podeEditar())return;
   const emp=contextoUnico();if(!emp)return;const cfg=cfgVenda($("salesVendedor").value);if(!cfg)return msg($("salesVendaMsg"),"Selecione um vendedor configurado a partir do RH.");
-  const itens=itensVendaForm();if(!itens.length)return msg($("salesVendaMsg"),"Inclua pelo menos um item válido na venda.");
-  if(itens.some(x=>x.valorUnitario<=0))return msg($("salesVendaMsg"),"Informe o valor unitário de todos os itens.");
-  const valor=itens.reduce((s,x)=>s+n(x.valorTotal),0),valorRec=n($("salesValorRec").value),pct=n($("salesPct").value);
-  if(valor<=0)return msg($("salesVendaMsg"),"O valor total da venda deve ser maior que zero.");
+  const valor=n($("salesValor").value),valorRec=n($("salesValorRec").value),pct=n($("salesPct").value);
+  if(valor<=0)return msg($("salesVendaMsg"),"O valor da venda deve ser maior que zero.");
   if(valorRec>valor)return msg($("salesVendaMsg"),"O valor recebido não pode superar o valor da venda.");
   if(valorRec>0&&!$("salesDataRec").value)return msg($("salesVendaMsg"),"Informe a data do recebimento.");
   let st=$("salesComStatus").value;if(valorRec<=0)st="aguardando_recebimento";else if(st==="aguardando_recebimento")st="provisionada";
   if(!podeComissoes()&&editVendaId)st=comStatus(vendas.find(x=>x.id===editVendaId));
-  const resumoItens=itens.length===1?itens[0].nome:`${itens[0].nome} + ${itens.length-1} item(ns)`;
-  const d={data:$("salesData").value,dataRecebimento:$("salesDataRec").value||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:resumoItens,itens,valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
+  const d={data:$("salesData").value,dataRecebimento:$("salesDataRec").value||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:"",itens:[],valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
   try{msg($("salesVendaMsg"),"Salvando...");if(editVendaId){const at=vendas.find(x=>x.id===editVendaId);if(!at||at.empresaId!==emp)throw new Error("empresa-divergente");await atualizarDocumento("vendas",editVendaId,d)}else await criarDocumento("vendas",{...d,empresaId:emp});fecharVenda();await carregar();emitirAlteracao("vendas")}
   catch(err){console.error(err);msg($("salesVendaMsg"),"Não foi possível salvar a venda.")}
 }
@@ -342,7 +304,7 @@ function renderAbc(validas){
 function renderEquipe(){
   const tb=$("salesEquipeLista");if(!tb)return;
   const linhas=[...equipeVendedores().map(x=>({...x,tipo:"vendedor",funcao:"Vendedor / Comercial"})),...equipeSupervisores().map(x=>({...x,tipo:"supervisor",funcao:"Supervisão comercial"}))].sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
-  tb.innerHTML=linhas.length?linhas.map(({p,cfg,tipo,funcao})=>`<tr><td><strong>${esc(p.nome||"—")}</strong><small>${esc(p.cargoNome||"")}</small></td><td>${funcao}</td><td>${tipo==="vendedor"?moeda(n(cfg?.metaMensal)):"—"}</td><td>${tipo==="supervisor"?'<span class="sales-frozen">Congelada</span>':(cfg?n(cfg.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:3})+"%":'<span class="status-inativo">Não configurada</span>')}</td><td>${tipo==="supervisor"?"Regra suspensa":"Valor recebido"}</td><td>${tipo==="vendedor"&&podeConfig()?`<button class="btn-acao" data-sales-config="${p.id}" data-sales-tipo="vendedor" type="button">Configurar</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="6">Nenhum vendedor ou supervisor ativo no RH com função SIG vinculada.</td></tr>';
+  tb.innerHTML=linhas.length?linhas.map(({p,cfg,tipo,funcao})=>`<tr><td><strong>${esc(p.nome||"—")}</strong><small>${esc(p.cargoNome||"")}</small></td><td>${funcao}</td><td>${tipo==="vendedor"?moeda(n(cfg?.metaMensal)):"—"}</td><td>${tipo==="supervisor"?'<span class="sales-frozen">Congelada</span>':(cfg?n(cfg.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:3})+"%":'<span class="status-inativo">Não configurada</span>')}</td><td>${tipo==="supervisor"?"Regra suspensa":"Valor recebido"}</td><td>${tipo==="vendedor"?(podeConfig()?`<button class="btn-acao" data-sales-config="${p.id}" data-sales-tipo="vendedor" type="button">${cfg?"Configurar":"Configurar comissão"}</button>`:`<span class="status-inativo">Sem permissão para configurar</span>`):"—"}</td></tr>`).join(""):'<tr><td colspan="6">Nenhum vendedor ou supervisor ativo no RH com função SIG vinculada.</td></tr>';
   document.querySelectorAll("[data-sales-config]").forEach(b=>b.onclick=()=>{const p=vendedoresRh.find(x=>x.id===b.dataset.salesConfig);if(p)abrirConfig(p,"vendedor")});
 }
 
@@ -358,19 +320,19 @@ function render(){
   const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*idx.length;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0)}}).sort((a,b)=>b.tot-a.tot);
   const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span><strong>${esc(r.p.nome)}</strong><small>Vendido ${moeda(r.tot)} · recebido ${moeda(r.rec)}</small></span><span>${r.meta?r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—"}</span><strong>${moeda(r.com)}</strong></div>`).join(""):'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
 
-  renderClientes(valid);renderAbc(valid);renderEquipe();renderItensCadastro();
+  renderClientes(valid);renderEquipe();
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
-  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong><small>${dataRecebimento(v)?`Rec. ${formatData(dataRecebimento(v))}`:"Sem recebimento"}</small></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>${esc(Array.isArray(v.itens)&&v.itens.length?`${v.itens[0].nome}${v.itens.length>1?` + ${v.itens.length-1} item(ns)`:""}`:(v.descricao||v.documento||""))}</small></td><td>${moeda(v.valor)}</td><td>${recebido(v)>0?moeda(recebido(v)):"—"}</td><td>${v.status==="cancelada"?"—":moeda(v.comissaoValor)}<small>${n(v.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:2})}% sobre recebido</small></td><td><span class="sales-status ${esc(comStatus(v))}">${statusComLabel(comStatus(v))}</span><small>${v.status==="cancelada"?"Venda cancelada":"Venda confirmada"}</small></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&!["aprovada","paga","aguardando_recebimento","aguardando_faturamento"].includes(v.comissaoStatus)?`<button class="btn-acao destaque" data-sales-aprova="${v.id}" type="button">Aprovar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&v.comissaoStatus==="aprovada"?`<button class="btn-acao destaque" data-sales-paga="${v.id}" type="button">Pagar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="8">Nenhuma venda no período.</td></tr>';
+  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong><small>${dataRecebimento(v)?`Rec. ${formatData(dataRecebimento(v))}`:"Sem recebimento"}</small></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>${esc(v.documento||v.descricao||"")}</small></td><td>${moeda(v.valor)}</td><td>${recebido(v)>0?moeda(recebido(v)):"—"}</td><td>${v.status==="cancelada"?"—":moeda(v.comissaoValor)}<small>${n(v.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:2})}% sobre recebido</small></td><td><span class="sales-status ${esc(comStatus(v))}">${statusComLabel(comStatus(v))}</span><small>${v.status==="cancelada"?"Venda cancelada":"Venda confirmada"}</small></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&!["aprovada","paga","aguardando_recebimento","aguardando_faturamento"].includes(v.comissaoStatus)?`<button class="btn-acao destaque" data-sales-aprova="${v.id}" type="button">Aprovar</button>`:""}${podeComissoes()&&v.status!=="cancelada"&&v.comissaoStatus==="aprovada"?`<button class="btn-acao destaque" data-sales-paga="${v.id}" type="button">Pagar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="8">Nenhuma venda no período.</td></tr>';
   document.querySelectorAll("[data-sales-edit]").forEach(b=>b.onclick=()=>abrirVenda(vendas.find(v=>v.id===b.dataset.salesEdit)));document.querySelectorAll("[data-sales-aprova]").forEach(b=>b.onclick=()=>mudarComissao(b.dataset.salesAprova,"aprovada"));document.querySelectorAll("[data-sales-paga]").forEach(b=>b.onclick=()=>mudarComissao(b.dataset.salesPaga,"paga"));document.querySelectorAll("[data-sales-cancela]").forEach(b=>b.onclick=()=>cancelarVenda(b.dataset.salesCancela));
 }
 
 async function carregar(){
   if(busy||!podeVer())return;busy=true;
   try{
-    const [vr,sr,cfg,vs,itens]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),colaboradoresPorFuncao("SUPERVISOR_VENDAS"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("itensComerciais")]);
-    vendedoresRh=vr;supervisoresRh=sr;configs=cfg;vendas=vs;itensComerciais=itens;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
+    const [vr,sr,cfg,vs]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),colaboradoresPorFuncao("SUPERVISOR_VENDAS"),listarDocumentos("vendedores"),listarDocumentos("vendas")]);
+    vendedoresRh=vr;supervisoresRh=sr;configs=cfg;vendas=vs;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
   }catch(e){console.error("Vendas:",e);const a=$("salesAviso");if(a){a.textContent="Não foi possível carregar Vendas & Comissões. Verifique permissões, RH e Firestore Rules.";a.classList.remove("hidden")}}finally{busy=false}
 }
 
