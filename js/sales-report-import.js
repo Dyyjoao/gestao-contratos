@@ -291,27 +291,28 @@ async function carregarBases(){
 function renderHistorico(){
   const tb=$("salesReportHistorico");if(!tb)return;const emp=empresaUnicaSelecionadaId();
   const arr=importacoes.filter(x=>x.empresaId===emp).sort((a,b)=>String(b.iniciadoEm||b.criadoEm||"").localeCompare(String(a.iniciadoEm||a.criadoEm||"")));
-  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="excluida"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}<small>${n(x.quantidadeVendasNovas)} nova(s) · ${n(x.quantidadeVendasAtualizadas)} atualizada(s)</small></td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.excluidoEm?`<small>${new Date(x.excluidoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["concluida","parcial","exclusao_parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-excluir="${esc(x.id)}">Excluir lote</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
+  tb.innerHTML=arr.length?arr.map(x=>`<tr class="${x.status==="excluida"?"sales-import-dup":""}"><td><strong>${esc(x.loteId||x.id)}</strong><small>${esc(x.origem||"relatorio_vendas")}</small></td><td>${x.iniciadoEm?new Date(x.iniciadoEm).toLocaleString("pt-BR"):"—"}<small>${esc(x.arquivo||"—")}${Array.isArray(x.lojasOrigem)&&x.lojasOrigem.length?` · Loja(s) ${esc(x.lojasOrigem.join(", "))}`:""}</small></td><td>${n(x.quantidadeVendas||x.quantidadePrevista)}<small>${n(x.quantidadeVendasNovas)} nova(s) · ${n(x.quantidadeVendasAtualizadas)} atualizada(s)</small></td><td>${n(x.quantidadeClientesNovos)}</td><td>${moeda(n(x.valorTotal||x.valorPrevisto))}</td><td><span class="${x.status==="concluida"?"status-ativo":"status-inativo"}">${esc(statusImportacao(x.status))}</span>${x.excluidoEm?`<small>${new Date(x.excluidoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${admin()&&["processando","excluindo","concluida","parcial","exclusao_parcial"].includes(x.status)?`<button type="button" class="btn-acao perigo" data-sales-import-excluir="${esc(x.id)}">${["processando","excluindo"].includes(x.status)?"Cancelar / reverter":"Excluir lote"}</button>`:"—"}</td></tr>`).join(""):'<tr><td colspan="7">Nenhuma importação registrada para a empresa selecionada.</td></tr>';
   document.querySelectorAll("[data-sales-import-excluir]").forEach(b=>b.onclick=()=>excluirLote(b.dataset.salesImportExcluir))
 }
 async function excluirLote(id){
   if(!admin())return alert("A exclusão em lote é restrita ao Administrador.");
-  const imp=importacoes.find(x=>x.id===id);if(!imp||!["concluida","parcial","exclusao_parcial"].includes(imp.status))return;
+  const imp=importacoes.find(x=>x.id===id);if(!imp||!["processando","excluindo","concluida","parcial","exclusao_parcial"].includes(imp.status))return;
   const lote=imp.loteId||imp.id,novas=vendas.filter(v=>v.empresaId===imp.empresaId&&v.importacaoLoteId===lote),snaps=snapshots.filter(s=>s.empresaId===imp.empresaId&&s.loteId===lote);
   const novasComBaixa=novas.filter(v=>n(v.valorRecebido)>0||(Array.isArray(v.recebimentoChaves)&&v.recebimentoChaves.length));
   const atualizadasComBaixa=snaps.filter(s=>{const atual=vendas.find(v=>v.id===s.vendaId),antes=n(s.antes?.valorRecebido);return atual&&n(atual.valorRecebido)>antes+0.009});
   if(novasComBaixa.length||atualizadasComBaixa.length)return alert(`Este lote não pode ser excluído porque ${novasComBaixa.length+atualizadasComBaixa.length} pedido(s) já possuem recebimentos posteriores vinculados às parcelas.`);
-  const motivo=prompt(`Excluir fisicamente a importação ${lote}?\n\n${novas.length} venda(s) criada(s) serão apagadas e ${snaps.length} venda(s) atualizada(s) serão restauradas ao estado anterior. Informe o motivo:`);
+  const motivo=prompt(`${["processando","excluindo"].includes(imp.status)?"Cancelar/reverter":"Excluir fisicamente"} a importação ${lote}?\n\n${novas.length} venda(s) criada(s) serão apagadas e ${snaps.length} venda(s) atualizada(s) serão restauradas ao estado anterior. Informe o motivo:`);
   if(motivo===null)return;if(!motivo.trim())return alert("Informe o motivo da exclusão.");
-  if(!confirm(`ATENÇÃO: confirmar exclusão física do lote ${lote}?\n\nNovos registros serão apagados. Pedidos que já existiam antes do lote serão restaurados. O log mínimo do lote será preservado para rastreabilidade.`))return;
+  if(!confirm(`ATENÇÃO: confirmar reversão do lote ${lote}?\n\nNovos registros serão apagados. Pedidos que já existiam antes do lote serão restaurados. O log mínimo do lote será preservado para rastreabilidade.`))return;
   busy=true;let vendasExcluidas=0,vendasRestauradas=0,clientesExcluidos=0,configsExcluidas=0,snapshotsExcluidos=0;
   try{
     const agora=new Date().toISOString(),uid=state.usuario?.id||"";
+    await atualizarDocumento("importacoesVendas",id,{status:"excluindo"});imp.status="excluindo";renderHistorico();
     msg($("salesReportImportMsg"),`Revertendo lote ${lote}...`);
-    for(const s of snaps){
+    await executarEmLotes(snaps,async s=>{
       const atual=vendas.find(v=>v.id===s.vendaId);if(atual&&s.antes){await atualizarDocumento("vendas",s.vendaId,{...s.antes,ultimaImportacaoLoteId:s.antes.ultimaImportacaoLoteId||"",ultimaImportacaoEm:s.antes.ultimaImportacaoEm||""});vendasRestauradas++}
-    }
-    await executarEmLotes(novas,async v=>{await excluirDocumento("vendas",v.id);vendasExcluidas++},{tamanho:8});
+    },{tamanho:20,onProgress:(feito,total)=>msg($("salesReportImportMsg"),`Lote ${lote} · restaurando ${feito} de ${total} venda(s)...`)});
+    await executarEmLotes(novas,async v=>{await excluirDocumento("vendas",v.id);vendasExcluidas++},{tamanho:25,onProgress:(feito,total)=>msg($("salesReportImportMsg"),`Lote ${lote} · excluindo ${feito} de ${total} venda(s)...`)});
     const vendasDepois=await listarDocumentos("vendas");
     const clientesLote=clientes.filter(x=>x.empresaId===imp.empresaId&&x.importacaoLoteId===lote);
     for(const cliente of clientesLote){if(!vendasDepois.some(v=>v.clienteId===cliente.id)){await excluirDocumento("clientesComerciais",cliente.id);clientesExcluidos++}}
