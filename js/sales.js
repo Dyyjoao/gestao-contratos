@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=10";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=11";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -363,7 +363,7 @@ async function carregar(){
   }catch(e){console.error("Vendas:",e);const a=$("salesAviso");if(a){a.textContent="Não foi possível carregar Vendas. Verifique permissões, RH e Firestore Rules.";a.classList.remove("hidden")}}finally{busy=false}
 }
 
-export async function abrir(){if(!podeVer())return alert("Seu perfil não possui acesso a Vendas & Comissões.");montar();abrirPagina("vendas");$("menuVendas")?.classList.add("ativo");esconderBotoes();await carregar()}
+export async function abrir(){if(!podeVer())return alert("Seu perfil não possui acesso a Vendas.");montar();abrirPagina("vendas");$("menuVendas")?.classList.add("ativo");esconderBotoes();await carregar()}
 montar();
 window.addEventListener("sig:empresa-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
 window.addEventListener("sig:periodo-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden")){sincronizarFiltroDatas(true);render()}});
