@@ -32,6 +32,7 @@ jobs:
           node --check js/sales-report-import.js
           node --check js/hr-people.js
           test -s sales-import.css
+          test -s vendor/xlsx.full.min.js
 
           grep -q './js/sales-report-import.js' app.js
           grep -q 'parseMatrizRelatorioVendas' js/sales-report-import.js
