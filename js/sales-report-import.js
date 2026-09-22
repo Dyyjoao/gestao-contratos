@@ -56,6 +56,11 @@ const numero=v=>{
   s=s.replace(/[^0-9.-]/g,"");
   const x=Number(s);return Number.isFinite(x)?x:0
 };
+function msg(el,texto,sucesso=false){
+  if(!el)return;
+  el.textContent=String(texto??"");
+  el.classList.toggle("sucesso",!!sucesso&&!!texto);
+}
 function css(){if($("sales-import-css"))return;const l=document.createElement("link");l.id="sales-import-css";l.rel="stylesheet";l.href="sales-import.css?v=3";document.head.appendChild(l)}
 async function carregarXlsx(){
   if(globalThis.XLSX)return globalThis.XLSX;
