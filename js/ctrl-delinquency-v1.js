@@ -82,7 +82,7 @@ function parcelasVisiveis(){
   })
 }
 function css(){if($("inad-css"))return;const s=document.createElement("style");s.id="inad-css";s.textContent=`
-.inad-toolbar{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inad-toolbar .campo{min-width:150px}.inad-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}.inad-aging-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:16px 2px 6px}.inad-aging-title h3{margin:0;font-size:13px;color:#0b1f33}.inad-aging-title small{color:#667085}.inad-aging{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:6px 0 14px}.inad-aging-card{border:1px solid #e3e8ef;border-radius:12px;background:#fff;padding:12px}.inad-aging-card[data-inad-filter],.kpi-card[data-inad-filter]{cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.inad-aging-card[data-inad-filter]:hover,.kpi-card[data-inad-filter]:hover{transform:translateY(-1px);border-color:#aebbc7}.inad-aging-card.filtro-ativo,.kpi-card.filtro-ativo{border-color:#0c9488;box-shadow:0 0 0 2px rgba(12,148,136,.12)}.inad-aging-card span{display:block;color:#667085;font-size:11px}.inad-aging-card strong{display:block;font-size:18px;margin:5px 0}.inad-aging-card small{color:#667085}.inad-aging-card.atraso{border-left:4px solid #e16b21}.inad-aging-card.critico{border-left:4px solid #b42318}.inad-aging-card.pendente{border-left:4px solid #98a2b3}.inad-linha-vencida td{background:#fffaf7}.inad-linha-critica td{background:#fff7f6}.inad-linha-sem-venc td{background:#fafafa}.inad-acoes{display:flex;gap:5px;flex-wrap:wrap}.inad-info{display:block;font-size:10px;color:#667085;margin-top:2px}.inad-table td:nth-child(5),.inad-table td:nth-child(6),.inad-table td:nth-child(7){white-space:nowrap}.inad-scroll-10{max-height:510px;overflow:auto}.inad-scroll-10 table{margin:0}.inad-scroll-10 thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}.inad-origem{padding:9px 12px;border:1px solid #dfe5ea;border-radius:10px;background:#f8fafb;color:#667085;font-size:11px;margin-bottom:12px}.inad-origem strong{color:#0b1f33}@media(max-width:1200px){.inad-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:1100px){.inad-aging{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.inad-kpis{grid-template-columns:1fr 1fr!important}.inad-aging{grid-template-columns:1fr 1fr}.inad-toolbar .campo{min-width:120px}}
+.inad-toolbar{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inad-toolbar .campo{min-width:150px}.inad-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}.inad-aging-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:16px 2px 6px}.inad-aging-title h3{margin:0;font-size:13px;color:#0b1f33}.inad-aging-title small{color:#667085}.inad-aging{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:6px 0 14px}.inad-aging-card{border:1px solid #e3e8ef;border-radius:12px;background:#fff;padding:12px}.inad-aging-card[data-inad-filter],.kpi-card[data-inad-filter]{cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.inad-aging-card[data-inad-filter]:hover,.kpi-card[data-inad-filter]:hover{transform:translateY(-1px);border-color:#aebbc7}.inad-aging-card.filtro-ativo,.kpi-card.filtro-ativo{border-color:#0c9488;box-shadow:0 0 0 2px rgba(12,148,136,.12)}.inad-aging-card span{display:block;color:#667085;font-size:11px}.inad-aging-card strong{display:block;font-size:18px;margin:5px 0}.inad-aging-card small{color:#667085}.inad-aging-card.atraso{border-left:4px solid #e16b21}.inad-aging-card.critico{border-left:4px solid #b42318}.inad-aging-card.pendente{border-left:4px solid #98a2b3}.inad-linha-vencida td{background:#fffaf7}.inad-linha-critica td{background:#fff7f6}.inad-linha-sem-venc td{background:#fafafa}.inad-acoes{display:flex;gap:5px;flex-wrap:wrap}.inad-info{display:block;font-size:10px;color:#667085;margin-top:2px}.inad-table td:nth-child(5),.inad-table td:nth-child(6),.inad-table td:nth-child(7){white-space:nowrap}.inad-scroll-10{max-height:510px;overflow:auto}.inad-scroll-10 table{margin:0}.inad-scroll-10 thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}.inad-origem{padding:9px 12px;border:1px solid #dfe5ea;border-radius:10px;background:#f8fafb;color:#667085;font-size:11px;margin-bottom:12px}.inad-origem strong{color:#0b1f33}@media(max-width:1200px){.inad-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:1100px){.inad-aging{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.inad-kpis{grid-template-columns:1fr 1fr!important}.inad-aging{grid-template-columns:1fr 1fr}.inad-toolbar .campo{min-width:120px}}
 `;document.head.appendChild(s)}
 
 function criarPagina(){if(pagina())return;css();const main=document.querySelector("main.conteudo");if(!main)return;const s=document.createElement("section");s.id="pagina-ctrl-inadimplencia-v1";s.className="pagina hidden";s.innerHTML=`
@@ -92,16 +92,18 @@ function criarPagina(){if(pagina())return;css();const main=document.querySelecto
   <section class="lista-card"><div class="inad-toolbar"><div class="campo"><label for="inadCompetencia">Referência</label><input id="inadCompetencia" type="month"></div><div class="campo"><label for="inadFiltro">Filtro</label><select id="inadFiltro"><option value="todos">Todos</option><option value="aberto">Carteira em aberto</option><option value="vencidos">Todas vencidas</option><option value="sem_vencimento">Sem vencimento</option><option value="a_vencer">A vencer</option><option value="1_30">1–30 dias</option><option value="31_60">31–60 dias</option><option value="61_90">61–90 dias</option><option value="90_mais">Acima de 90 dias</option><option value="parcial">Recebimento parcial</option><option value="recebido">Recebidos</option></select></div><div class="campo" style="min-width:260px"><label for="inadBusca">Cliente / pedido / vendedor</label><input id="inadBusca" placeholder="Buscar..."></div><div class="fpa-contexto-chip" id="inadDataRef">—</div></div></section>
   <div class="inad-aging-title"><div><h3>Visão do ano</h3><small id="inadAnoTitulo">—</small></div></div>
   <div class="kpi-grid inad-kpis">
-    <div class="kpi-card" data-inad-filter="aberto" data-inad-scope="ano"><span>Carteira em aberto</span><strong id="inadAnoCarteira">—</strong><small>saldo das parcelas do ano</small></div>
-    <div class="kpi-card" data-inad-filter="vencidos" data-inad-scope="ano"><span>Valor vencido</span><strong id="inadAnoVencido">—</strong><small>saldo vencido do ano</small></div>
-    <div class="kpi-card"><span>Índice de inadimplência</span><strong id="inadAnoIndice">—</strong><small>vencido ÷ carteira do ano</small></div>
+    <div class="kpi-card" data-inad-filter="aberto" data-inad-scope="ano"><span>Carteira em aberto</span><strong id="inadAnoCarteira">—</strong><small>saldo em aberto das parcelas do ano</small></div>
+    <div class="kpi-card" data-inad-filter="vencidos" data-inad-scope="ano"><span>Valor vencido</span><strong id="inadAnoVencido">—</strong><small>valor original vencido no ano</small></div>
+    <div class="kpi-card" data-inad-filter="vencidos" data-inad-scope="ano"><span>Inadimplência</span><strong id="inadAnoInadValor">—</strong><small>saldo vencido ainda em aberto</small></div>
+    <div class="kpi-card"><span>Inadimplência</span><strong id="inadAnoInadPct">—</strong><small>inadimplência ÷ valor vencido</small></div>
   </div>
 
   <div class="inad-aging-title"><div><h3>Visão do período selecionado</h3><small id="inadPeriodoResumo">—</small></div></div>
   <div class="kpi-grid inad-kpis">
-    <div class="kpi-card" data-inad-filter="aberto" data-inad-scope="periodo"><span>Carteira em aberto</span><strong id="inadPeriodoCarteira">—</strong><small>saldo das parcelas do período</small></div>
-    <div class="kpi-card" data-inad-filter="vencidos" data-inad-scope="periodo"><span>Valor vencido</span><strong id="inadPeriodoVencido">—</strong><small>saldo vencido do período</small></div>
-    <div class="kpi-card"><span>Índice de inadimplência</span><strong id="inadPeriodoIndice">—</strong><small>vencido ÷ carteira do período</small></div>
+    <div class="kpi-card" data-inad-filter="aberto" data-inad-scope="periodo"><span>Carteira em aberto</span><strong id="inadPeriodoCarteira">—</strong><small>saldo em aberto das parcelas do período</small></div>
+    <div class="kpi-card" data-inad-filter="vencidos" data-inad-scope="periodo"><span>Valor vencido</span><strong id="inadPeriodoVencido">—</strong><small>valor original vencido no período</small></div>
+    <div class="kpi-card" data-inad-filter="vencidos" data-inad-scope="periodo"><span>Inadimplência</span><strong id="inadPeriodoInadValor">—</strong><small>saldo vencido ainda em aberto</small></div>
+    <div class="kpi-card"><span>Inadimplência</span><strong id="inadPeriodoInadPct">—</strong><small>inadimplência ÷ valor vencido</small></div>
   </div>
 
   <div class="inad-aging-title"><div><h3>Aging acumulado</h3><small>Posição completa na data de referência</small></div></div>
@@ -206,16 +208,26 @@ async function salvarTratamentoExcedente(e){
 function calcular(){
   const ref=dataReferencia(),arr=todasParcelas().filter(({v})=>v.status!=="cancelada");
 
-  const arrAno=arr.filter(({v,p})=>parcelaNoAno(v,p)),ativosAno=arrAno.filter(({v,p})=>saldoParcela(v,p,ref)>0),carteiraAno=ativosAno.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),vencidosAno=ativosAno.filter(({v,p})=>["1_30","31_60","61_90","90_mais"].includes(bucket(v,p,ref))),valorVencidoAno=vencidosAno.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
+  const arrAno=arr.filter(({v,p})=>parcelaNoAno(v,p));
+  const ativosAno=arrAno.filter(({v,p})=>saldoParcela(v,p,ref)>0);
+  const carteiraAno=ativosAno.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
+  const vencidasAno=arrAno.filter(({p})=>p.vencimento&&String(p.vencimento).slice(0,10)<=ref);
+  const valorVencidoAno=vencidasAno.reduce((s,{p})=>s+n(p.valor),0);
+  const inadAno=vencidasAno.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
 
-  const arrPeriodo=arr.filter(({v,p})=>parcelaNoPeriodo(v,p)),ativosPeriodo=arrPeriodo.filter(({v,p})=>saldoParcela(v,p,ref)>0),carteiraPeriodo=ativosPeriodo.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),vencidosPeriodo=ativosPeriodo.filter(({v,p})=>["1_30","31_60","61_90","90_mais"].includes(bucket(v,p,ref))),valorVencidoPeriodo=vencidosPeriodo.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
+  const arrPeriodo=arr.filter(({v,p})=>parcelaNoPeriodo(v,p));
+  const ativosPeriodo=arrPeriodo.filter(({v,p})=>saldoParcela(v,p,ref)>0);
+  const carteiraPeriodo=ativosPeriodo.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
+  const vencidasPeriodo=arrPeriodo.filter(({p})=>p.vencimento&&String(p.vencimento).slice(0,10)<=ref);
+  const valorVencidoPeriodo=vencidasPeriodo.reduce((s,{p})=>s+n(p.valor),0);
+  const inadPeriodo=vencidasPeriodo.reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
 
   const ativos=arr.filter(({v,p})=>saldoParcela(v,p,ref)>0),faixas={sem_vencimento:[],a_vencer:[],"1_30":[],"31_60":[],"61_90":[],"90_mais":[]},faixasPeriodo={sem_vencimento:[],a_vencer:[],"1_30":[],"31_60":[],"61_90":[],"90_mais":[]};
   ativos.forEach(x=>{const b=bucket(x.v,x.p,ref);if(faixas[b])faixas[b].push(x)});
   ativosPeriodo.forEach(x=>{const b=bucket(x.v,x.p,ref);if(faixasPeriodo[b])faixasPeriodo[b].push(x)});
   const soma=k=>faixas[k].reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0),somaPeriodo=k=>faixasPeriodo[k].reduce((s,{v,p})=>s+saldoParcela(v,p,ref),0);
 
-  return{carteiraAno,valorVencidoAno,carteiraPeriodo,valorVencidoPeriodo,faixas,soma,faixasPeriodo,somaPeriodo}
+  return{carteiraAno,valorVencidoAno,inadAno,carteiraPeriodo,valorVencidoPeriodo,inadPeriodo,faixas,soma,faixasPeriodo,somaPeriodo}
 }
 
 function renderRecebimentos(){
@@ -233,8 +245,8 @@ function renderRecebimentos(){
 }
 function render(){
   criarPagina();const ref=dataReferencia(),c=calcular(),periodoNome=nomePeriodoSelecionado(),ano=periodoAno();$("inadDataRef").textContent=`Posição em ${dataBr(ref)}`;
-  $("inadAnoCarteira").textContent=moeda(c.carteiraAno);$("inadAnoVencido").textContent=moeda(c.valorVencidoAno);$("inadAnoIndice").textContent=pct(c.valorVencidoAno,c.carteiraAno);$("inadAnoTitulo").textContent=`Ano ${ano} · posição em ${dataBr(ref)}`;
-  $("inadPeriodoCarteira").textContent=moeda(c.carteiraPeriodo);$("inadPeriodoVencido").textContent=moeda(c.valorVencidoPeriodo);$("inadPeriodoIndice").textContent=pct(c.valorVencidoPeriodo,c.carteiraPeriodo);$("inadPeriodoResumo").textContent=`${periodoNome} · posição em ${dataBr(ref)}`;$("inadPeriodoTitulo").textContent=`${periodoNome} · posição em ${dataBr(ref)}`;
+  $("inadAnoCarteira").textContent=moeda(c.carteiraAno);$("inadAnoVencido").textContent=moeda(c.valorVencidoAno);$("inadAnoInadValor").textContent=moeda(c.inadAno);$("inadAnoInadPct").textContent=pct(c.inadAno,c.valorVencidoAno);$("inadAnoTitulo").textContent=`Ano ${ano} · posição em ${dataBr(ref)}`;
+  $("inadPeriodoCarteira").textContent=moeda(c.carteiraPeriodo);$("inadPeriodoVencido").textContent=moeda(c.valorVencidoPeriodo);$("inadPeriodoInadValor").textContent=moeda(c.inadPeriodo);$("inadPeriodoInadPct").textContent=pct(c.inadPeriodo,c.valorVencidoPeriodo);$("inadPeriodoResumo").textContent=`${periodoNome} · posição em ${dataBr(ref)}`;$("inadPeriodoTitulo").textContent=`${periodoNome} · posição em ${dataBr(ref)}`;
   [["sem_vencimento","ageSemVenc","ageSemVencQtd"],["a_vencer","ageAVencer","ageAVencerQtd"],["1_30","age130","age130Qtd"],["31_60","age3160","age3160Qtd"],["61_90","age6190","age6190Qtd"],["90_mais","age90","age90Qtd"]].forEach(([k,v,q])=>{$(v).textContent=moeda(c.soma(k));$(q).textContent=`${c.faixas[k].length} parcela(s)`});
   [["sem_vencimento","pAgeSemVenc","pAgeSemVencQtd"],["a_vencer","pAgeAVencer","pAgeAVencerQtd"],["1_30","pAge130","pAge130Qtd"],["31_60","pAge3160","pAge3160Qtd"],["61_90","pAge6190","pAge6190Qtd"],["90_mais","pAge90","pAge90Qtd"]].forEach(([k,v,q])=>{$(v).textContent=moeda(c.somaPeriodo(k));$(q).textContent=`${c.faixasPeriodo[k].length} parcela(s)`});
   document.querySelectorAll("[data-inad-filter]").forEach(card=>card.classList.toggle("filtro-ativo",(card.dataset.inadScope||"acumulado")===filtroEscopo&&card.dataset.inadFilter===($("inadFiltro")?.value||"todos")));
