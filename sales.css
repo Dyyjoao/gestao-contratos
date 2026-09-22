@@ -19,3 +19,45 @@
 
 .sales-itens-venda{border-top:1px solid #edf1f4;padding-top:12px}.sales-itens-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:8px}.sales-itens-head label,.sales-itens-head small{display:block}.sales-itens-head small{margin-top:3px;color:#667085}.sales-itens-venda select{min-width:240px}.sales-itens-venda input[data-item-qtd]{min-width:90px}.sales-itens-venda input[data-item-vu]{min-width:120px}.sales-itens-cadastro{margin-top:14px}.sales-frozen{display:inline-block;padding:4px 7px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:9px;font-weight:800}
 @media(max-width:720px){.sales-itens-head{align-items:stretch;flex-direction:column}.sales-itens-head button{width:100%}}
+
+
+.sales-periodo-detalhado{
+  display:flex;
+  align-items:end;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:0 0 18px;
+  padding:12px 14px;
+  border:1px solid var(--borda);
+  border-radius:12px;
+  background:var(--fundo-card, #fff);
+}
+.sales-periodo-detalhado-info{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  margin-right:auto;
+  min-width:240px;
+}
+.sales-periodo-detalhado-info small{opacity:.72}
+.sales-periodo-detalhado label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  font-size:12px;
+  font-weight:700;
+}
+.sales-periodo-detalhado input[type="date"]{
+  min-height:38px;
+  padding:7px 10px;
+  border:1px solid var(--borda);
+  border-radius:9px;
+  background:#fff;
+  color:inherit;
+}
+@media (max-width:720px){
+  .sales-periodo-detalhado{align-items:stretch}
+  .sales-periodo-detalhado-info{width:100%;margin-right:0}
+  .sales-periodo-detalhado label{flex:1 1 140px}
+  .sales-periodo-detalhado input[type="date"]{width:100%}
+}
