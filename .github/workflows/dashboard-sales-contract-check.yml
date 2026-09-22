@@ -80,15 +80,15 @@ jobs:
             exit 1
           fi
 
-          # Cadastro do vendedor preserva base Venda x Faturamento.
-          grep -q 'salesVendBase' js/sales.js
-          grep -q 'value="venda">Venda confirmada' js/sales.js
-          grep -q 'value="faturamento">Faturamento' js/sales.js
-          grep -q 'valorFaturado' js/sales.js
-          grep -q 'dataFaturamento' js/sales.js
-          grep -q 'baseComissao' js/sales.js
+          # Venda simplificada: registro financeiro/comercial sem dependência de materiais.
+          grep -q 'id="salesValor" type="number" min="0.01" step="0.01" required' js/sales.js
+          ! grep -q 'id="btnSalesItem"' js/sales.js
+          ! grep -q 'listarDocumentos("itensComerciais")' js/sales.js
+          ! grep -q 'Inclua pelo menos um item válido na venda' js/sales.js
+          grep -q 'Configurar comissão' js/sales.js
+          grep -q 'baseComissao:"recebido"' js/sales.js
           grep -q 'comissaoBaseValor' js/sales.js
-          grep -q 'aguardando_faturamento' js/sales.js
+          grep -q 'aguardando_recebimento' js/sales.js
 
           # Operador de venda não controla taxa/status financeiro apenas por UI.
           grep -q 'permite("vendas","comissoes")' js/sales-guard.js
@@ -143,7 +143,7 @@ jobs:
           p=Path('sales-smoke.html')
           s=p.read_text()
           marker='</body>'
-          test='''<script type="module">(async()=>{try{const core=await import('./js/core.js');core.state.usuario={id:'smoke',grupoId:'g',empresaId:'e'};core.state.perfil={id:'administrador',acessoTotal:true,ativo:true};const sales=await import('./js/sales.js');const pg=document.getElementById('pagina-vendas');if(!pg)throw new Error('pagina-vendas ausente');pg.classList.remove('hidden');await import('./js/sales-performance.js');await new Promise(r=>setTimeout(r,250));if(!document.getElementById('salesVendBase'))throw new Error('flag base comissão ausente');if(!document.getElementById('salesPerfV2'))throw new Error('cockpit por vendedor ausente');document.documentElement.setAttribute('data-sales-dashboard-smoke','ok')}catch(e){document.documentElement.setAttribute('data-sales-dashboard-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="sales-dashboard-error">'+String(e.stack||e)+'</pre>')}})();</script>'''
+          test='''<script type="module">(async()=>{try{const core=await import('./js/core.js');core.state.usuario={id:'smoke',grupoId:'g',empresaId:'e'};core.state.perfil={id:'administrador',acessoTotal:true,ativo:true};const sales=await import('./js/sales.js');const pg=document.getElementById('pagina-vendas');if(!pg)throw new Error('pagina-vendas ausente');pg.classList.remove('hidden');await import('./js/sales-performance.js');await new Promise(r=>setTimeout(r,250));const valor=document.getElementById('salesValor');if(!valor)throw new Error('campo valor da venda ausente');if(valor.disabled)throw new Error('valor da venda não pode depender de itens');if(document.getElementById('btnSalesItem'))throw new Error('cadastro de material ainda acoplado à venda');if(!document.getElementById('salesPerfV2'))throw new Error('cockpit por vendedor ausente');document.documentElement.setAttribute('data-sales-dashboard-smoke','ok')}catch(e){document.documentElement.setAttribute('data-sales-dashboard-smoke','fail');document.body.insertAdjacentHTML('beforeend','<pre id="sales-dashboard-error">'+String(e.stack||e)+'</pre>')}})();</script>'''
           p.write_text(s.replace(marker,test+marker))
           PY
           "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8000/sales-smoke.html > /tmp/sig-sales-dom.html || true
