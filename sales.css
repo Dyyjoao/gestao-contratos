@@ -61,3 +61,5 @@
   .sales-periodo-detalhado label{flex:1 1 140px}
   .sales-periodo-detalhado input[type="date"]{width:100%}
 }
+
+.sales-recebimento-info{min-height:38px;display:flex;align-items:center;padding:8px 10px;border:1px dashed #cfd8df;border-radius:9px;background:#f8fafb;color:#667085;font-size:10px}.sales-recebimento-info strong{color:#0b1f33;margin:0 3px}
