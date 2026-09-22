@@ -1260,7 +1260,19 @@ service cloud.firestore {
           'statusTratamento','tipoBaixa','alocacoes','tratamentos',
           'tratadoEm','tratadoPor','atualizadoEm'
         ]);
-      allow delete: if false;
+      allow delete: if inadimplenciaEditar() && documentoAcessivel(resource.data) &&
+        ('loteId' in resource.data) && resource.data.loteId is string && resource.data.loteId.size() > 0 &&
+        ('origem' in resource.data) && resource.data.origem == 'relatorio_recebimentos';
+    }
+
+    match /importacoesRecebimentosAlteracoes/{id} {
+      allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.loteId is string && request.resource.data.loteId.size() > 0 &&
+        request.resource.data.vendaId is string && request.resource.data.vendaId.size() > 0 &&
+        request.resource.data.antes is map;
+      allow update: if false;
+      allow delete: if inadimplenciaEditar() && documentoAcessivel(resource.data);
     }
 
     match /importacoesRecebimentos/{id} {
