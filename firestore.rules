@@ -1132,7 +1132,7 @@ service cloud.firestore {
         request.resource.data.empresaId == resource.data.empresaId && (
           (vendasLancar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','quantidadeVendas','quantidadeVendasNovas','quantidadeVendasAtualizadas',
-            'quantidadeClientesNovos','valorTotal','concluidoEm',
+            'quantidadeClientesNovos','quantidadeParcelas','valorTotal','concluidoEm',
             'erro','finalizadoEm','atualizadoEm'
           ])) ||
           (administrador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
