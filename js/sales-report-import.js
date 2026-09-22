@@ -378,7 +378,7 @@ async function garantirConfigs(emp,linhas,lote){
   return mapa
 }
 function snapshotVenda(v){
-  const campos=["data","dataRecebimento","valorRecebido","vendedorId","vendedorRhId","vendedorNome","vendedorCodigo","vendedorNomeOrigem","clienteId","clienteCodigo","cliente","clienteNomeOrigem","documento","lojaOrigem","descricao","itens","valor","baseComissao","comissaoPct","comissaoBaseValor","comissaoValor","comissaoStatus","status","observacao","origemImportacao","arquivoImportacao","importacaoLoteId","importacaoChave","ultimaImportacaoLoteId","ultimaImportacaoEm"];
+  const campos=["data","dataRecebimento","valorRecebido","vendedorId","vendedorRhId","vendedorNome","vendedorCodigo","vendedorNomeOrigem","clienteId","clienteCodigo","cliente","clienteNomeOrigem","documento","lojaOrigem","descricao","itens","valor","parcelas","parcelasVersao","baseComissao","comissaoPct","comissaoBaseValor","comissaoValor","comissaoStatus","status","observacao","origemImportacao","arquivoImportacao","importacaoLoteId","importacaoChave","ultimaImportacaoLoteId","ultimaImportacaoEm"];
   const antes={};campos.forEach(k=>{if(Object.prototype.hasOwnProperty.call(v,k))antes[k]=v[k]});return antes
 }
 async function registrarSnapshot(lote,emp,v){
@@ -386,9 +386,26 @@ async function registrarSnapshot(lote,emp,v){
   const id=await criarDocumento("importacoesVendasAlteracoes",{empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v),registradoEm:new Date().toISOString()});
   snapshots.push({id,empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v)});return id
 }
+function parcelasParaVenda(r,existente=null){
+  const antigas=parcelasAntigas(existente),mapa=new Map(antigas.map(p=>[p.id,p]));
+  let legado=antigas.length?0:arredondarCentavos(n(existente?.valorRecebido));
+  return r.parcelas.map((p,i)=>{
+    const anterior=mapa.get(p.id);
+    let valorRec=anterior?arredondarCentavos(n(anterior.valorRecebido)):0;
+    let dataUltimo=anterior?.dataUltimoRecebimento||null;
+    if(!antigas.length&&legado>0){
+      valorRec=arredondarCentavos(Math.min(n(p.valor),legado));legado=arredondarCentavos(legado-valorRec);
+      if(valorRec>0)dataUltimo=existente?.dataRecebimento||null
+    }
+    if(valorRec>n(p.valor)+0.009)throw new Error(`parcela-${p.id}-recebida-acima-do-valor`);
+    return{id:p.id,ordem:i+1,vencimento:p.vencimento,valor:arredondarCentavos(n(p.valor)),valorRecebido:valorRec,dataUltimoRecebimento:dataUltimo}
+  })
+}
 function dadosVendaImportada(r,cl,v,lote,existente=null){
-  const pct=n(v.cfg.comissaoPct),valorRec=n(existente?.valorRecebido),dataRec=existente?.dataRecebimento||null,comStatus=valorRec>0?(existente?.comissaoStatus||"provisionada"):"aguardando_recebimento";
-  return{data:r.data,dataRecebimento:dataRec,valorRecebido:valorRec,vendedorId:v.cfg.id,vendedorRhId:v.rh.id,vendedorNome:v.rh.nome||r.vendedorNome,vendedorCodigo:r.vendedorCodigo,vendedorNomeOrigem:r.vendedorNome,clienteId:cl.id,clienteCodigo:cl.codigo,cliente:cl.nome||r.clienteNome,clienteNomeOrigem:r.clienteNome,documento:r.vendaCodigo,lojaOrigem:r.lojaCodigo||"",descricao:"Venda importada de relatório · sem detalhamento de itens",itens:Array.isArray(existente?.itens)?existente.itens:[],valor:r.valor,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:comStatus,status:existente?.status==="cancelada"?"cancelada":"confirmada",observacao:existente?.observacao||"",origemImportacao:"relatorio_vendas",arquivoImportacao:arquivoAtual,importacaoChave:chaveVenda(r,empresaUnicaSelecionadaId()),ultimaImportacaoLoteId:lote,ultimaImportacaoEm:new Date().toISOString()}
+  const pct=n(v.cfg.comissaoPct),parcelas=parcelasParaVenda(r,existente),valorRec=arredondarCentavos(parcelas.reduce((s,p)=>s+n(p.valorRecebido),0));
+  const datas=parcelas.map(p=>p.dataUltimoRecebimento).filter(Boolean).sort(),dataRec=datas.length?datas[datas.length-1]:(existente?.dataRecebimento||null);
+  const comStatus=valorRec>0?(existente?.comissaoStatus||"provisionada"):"aguardando_recebimento";
+  return{data:r.data,dataRecebimento:dataRec,valorRecebido:valorRec,vendedorId:v.cfg.id,vendedorRhId:v.rh.id,vendedorNome:v.rh.nome||r.vendedorNome,vendedorCodigo:r.vendedorCodigo,vendedorNomeOrigem:r.vendedorNome,clienteId:cl.id,clienteCodigo:cl.codigo,cliente:cl.nome||r.clienteNome,clienteNomeOrigem:r.clienteNome,documento:r.vendaCodigo,lojaOrigem:r.lojaCodigo||"",descricao:"Venda importada de relatório · parcelas por vencimento",itens:Array.isArray(existente?.itens)?existente.itens:[],valor:r.valor,parcelas,parcelasVersao:1,baseComissao:"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:comStatus,status:existente?.status==="cancelada"?"cancelada":"confirmada",observacao:existente?.observacao||"",origemImportacao:"relatorio_vendas",arquivoImportacao:arquivoAtual,importacaoChave:chaveVenda(r,empresaUnicaSelecionadaId()),ultimaImportacaoLoteId:lote,ultimaImportacaoEm:new Date().toISOString()}
 }
 
 async function confirmar(){
