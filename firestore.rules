@@ -1067,9 +1067,24 @@ service cloud.firestore {
 
     match /vendedores/{id} {
       allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
-      allow create: if (vendasVendedores() || vendasComissoes()) && documentoAcessivel(request.resource.data) &&
+      allow create: if documentoAcessivel(request.resource.data) &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
-        request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100;
+        request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100 && (
+          vendasVendedores() || vendasComissoes() || (
+            vendasLancar() &&
+            request.resource.data.tipoComissao == 'vendedor' &&
+            request.resource.data.baseComissao == 'recebido' &&
+            request.resource.data.comissaoPct == 0 &&
+            request.resource.data.metaMensal == 0 &&
+            request.resource.data.status == 'ativo' &&
+            request.resource.data.configuracaoPendente == true &&
+            request.resource.data.origem == 'importacao_relatorio_vendas' &&
+            request.resource.data.importacaoLoteId is string &&
+            request.resource.data.importacaoLoteId.size() > 0 &&
+            request.resource.data.rhColaboradorId is string &&
+            request.resource.data.rhColaboradorId.size() > 0
+          )
+        );
       allow update: if (vendasVendedores() || vendasComissoes()) && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId &&
