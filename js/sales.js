@@ -48,7 +48,7 @@ function montar(){
   const s=document.createElement("section");s.id="pagina-vendas";s.className="pagina hidden";s.innerHTML=`
   <div class="pagina-cabecalho">
     <div><span class="eyebrow">COMERCIAL</span><h2>Vendas & Comissões</h2><p>Vendas, recebimentos, metas, comissões e curva ABC por valor vendido.</p></div>
-    <div class="acoes-cabecalho"><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
+    <div class="acoes-cabecalho"><button id="btnSalesConfigVendedores" class="btn-secundario" type="button">Configurar vendedores</button><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
   </div>
   <div id="salesAviso" class="modulo-aviso hidden"></div>
 
@@ -131,12 +131,13 @@ function montar(){
     <div class="tabela-container"><table class="tabela sales-table"><thead><tr><th>Venda / recebimento</th><th>Vendedor</th><th>Cliente / referência</th><th>Vendido</th><th>Recebido</th><th>Comissão</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
   </section>
 
-  <section class="lista-card">
-    <div class="lista-cabecalho"><div><h3>Equipe comercial & comissões</h3><p>Colaboradores ativos vindos do RH. A configuração de comissão é feita aqui; importações podem inicializar vendedores pendentes em 0%.</p></div></div>
+  <section id="salesEquipeSection" class="lista-card">
+    <div class="lista-cabecalho"><div><h3>Equipe comercial & comissões</h3><p>Colaboradores ativos vindos do RH. Configure meta e comissão para habilitá-los nos lançamentos e importações.</p></div><span id="salesEquipePendentes" class="status-inativo"></span></div>
     <div class="tabela-container"><table class="tabela"><thead><tr><th>Colaborador</th><th>Função</th><th>Meta mensal</th><th>Comissão</th><th>Base</th><th>Ações</th></tr></thead><tbody id="salesEquipeLista"></tbody></table></div>
   </section>`;
   main.appendChild(s);
 
+  $("btnSalesConfigVendedores")?.addEventListener("click",()=>{$("salesEquipeSection")?.scrollIntoView({behavior:"smooth",block:"start"})});
   $("btnSalesAtualizar")?.addEventListener("click",carregar);
   $("btnSalesVenda")?.addEventListener("click",()=>abrirVenda());
   $("btnSalesVendaCancelar")?.addEventListener("click",fecharVenda);
@@ -303,7 +304,9 @@ function renderAbc(validas){
 
 function renderEquipe(){
   const tb=$("salesEquipeLista");if(!tb)return;
-  const linhas=[...equipeVendedores().map(x=>({...x,tipo:"vendedor",funcao:"Vendedor / Comercial"})),...equipeSupervisores().map(x=>({...x,tipo:"supervisor",funcao:"Supervisão comercial"}))].sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
+  const vendedores=equipeVendedores(),pendentes=vendedores.filter(x=>!x.cfg).length,pend=$("salesEquipePendentes");
+  if(pend){pend.textContent=pendentes?pendentes+" vendedor(es) pendente(s) de configuração":"Todos os vendedores configurados";pend.classList.toggle("status-ativo",!pendentes);pend.classList.toggle("status-inativo",!!pendentes)}
+  const linhas=[...vendedores.map(x=>({...x,tipo:"vendedor",funcao:"Vendedor / Comercial"})),...equipeSupervisores().map(x=>({...x,tipo:"supervisor",funcao:"Supervisão comercial"}))].sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
   tb.innerHTML=linhas.length?linhas.map(({p,cfg,tipo,funcao})=>`<tr><td><strong>${esc(p.nome||"—")}</strong><small>${esc(p.cargoNome||"")}</small></td><td>${funcao}</td><td>${tipo==="vendedor"?moeda(n(cfg?.metaMensal)):"—"}</td><td>${tipo==="supervisor"?'<span class="sales-frozen">Congelada</span>':(cfg?n(cfg.comissaoPct).toLocaleString("pt-BR",{maximumFractionDigits:3})+"%":'<span class="status-inativo">Não configurada</span>')}</td><td>${tipo==="supervisor"?"Regra suspensa":"Valor recebido"}</td><td>${tipo==="vendedor"?(podeConfig()?`<button class="btn-acao" data-sales-config="${p.id}" data-sales-tipo="vendedor" type="button">${cfg?"Configurar":"Configurar comissão"}</button>`:`<button class="btn-acao" type="button" disabled title="Seu perfil precisa da permissão Vendedores ou Comissões">Configurar comissão</button>`):"—"}</td></tr>`).join(""):'<tr><td colspan="6">Nenhum vendedor ou supervisor ativo no RH com função SIG vinculada.</td></tr>';
   document.querySelectorAll("[data-sales-config]").forEach(b=>b.onclick=()=>{const p=vendedoresRh.find(x=>x.id===b.dataset.salesConfig);if(p)abrirConfig(p,"vendedor")});
 }
