@@ -136,6 +136,7 @@ function montar(){
     <div class="lista-cabecalho sales-clientes-head">
       <div><h3>Principais clientes</h3><p>Ranking por valor vendido no período selecionado.</p></div>
       <div class="sales-clientes-filtros">
+        <select id="salesClientesVendedor"><option value="">Todos os vendedores</option></select>
         <select id="salesClientesOrdem">
           <option value="maior">Maior para menor</option>
           <option value="menor">Menor para maior</option>
@@ -166,6 +167,7 @@ function montar(){
   $("salesFiltroStatus")?.addEventListener("change",render);
   $("salesModoGrafico")?.addEventListener("change",render);
   $("salesModoRanking")?.addEventListener("change",render);
+  $("salesClientesVendedor")?.addEventListener("change",render);
   $("salesClientesOrdem")?.addEventListener("change",render);
 }
 
@@ -247,15 +249,20 @@ async function salvarConfig(e){
 
 
 function preencherVendedores(){
-  const sel=$("salesVendedor"),f=$("salesFiltroVendedor"),eq=equipeVendedores().sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
+  const sel=$("salesVendedor"),f=$("salesFiltroVendedor"),fc=$("salesClientesVendedor"),eq=equipeVendedores().sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
   if(sel)sel.innerHTML='<option value="">Selecione...</option>'+eq.map(({p,cfg})=>`<option value="${cfg?.id||""}" ${cfg?"":"disabled"}>${esc(p.nome)}${cfg?"":" · cadastro comercial pendente"}</option>`).join("");
-  if(f){
-    const atual=f.value,mapa=new Map();
-    vendas.forEach(v=>{if(v.vendedorId)mapa.set(v.vendedorId,v.vendedorNome||nomeVend(v.vendedorId))});
-    eq.filter(x=>x.cfg).forEach(({p,cfg})=>mapa.set(cfg.id,p.nome));
-    f.innerHTML='<option value="">Todos os vendedores</option>'+[...mapa.entries()].sort((a,b)=>String(a[1]||"").localeCompare(String(b[1]||""),"pt-BR")).map(([id,nome])=>`<option value="${esc(id)}">${esc(nome)}</option>`).join("");
-    if([...f.options].some(o=>o.value===atual))f.value=atual
-  }
+
+  const mapa=new Map();
+  vendas.forEach(v=>{if(v.vendedorId)mapa.set(v.vendedorId,v.vendedorNome||nomeVend(v.vendedorId))});
+  eq.filter(x=>x.cfg).forEach(({p,cfg})=>mapa.set(cfg.id,p.nome));
+  const opcoes=[...mapa.entries()].sort((a,b)=>String(a[1]||"").localeCompare(String(b[1]||""),"pt-BR"));
+
+  [f,fc].forEach(el=>{
+    if(!el)return;
+    const atual=el.value;
+    el.innerHTML='<option value="">Todos os vendedores</option>'+opcoes.map(([id,nome])=>`<option value="${esc(id)}">${esc(nome)}</option>`).join("");
+    if([...el.options].some(o=>o.value===atual))el.value=atual
+  });
 }
 
 
@@ -297,8 +304,8 @@ function chart(vendidos){
 
 
 function renderClientes(validas){
-  const ordem=$("salesClientesOrdem")?.value||"maior",mapa=new Map();
-  validas.forEach(v=>{
+  const ordem=$("salesClientesOrdem")?.value||"maior",vendedor=$("salesClientesVendedor")?.value||"",mapa=new Map(),base=vendedor?validas.filter(v=>v.vendedorId===vendedor):validas;
+  base.forEach(v=>{
     const nome=String(v.cliente||"Cliente não informado").trim()||"Cliente não informado",chave=String(v.clienteId||nome.toLocaleLowerCase("pt-BR"));
     const z=mapa.get(chave)||{nome,vendido:0,qtd:0};z.vendido+=n(v.valor);z.qtd++;mapa.set(chave,z)
   });
@@ -308,7 +315,8 @@ function renderClientes(validas){
   else if(ordem==="az")itens.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   else itens.sort((a,b)=>b.nome.localeCompare(a.nome,"pt-BR"));
   const total=itens.reduce((s,x)=>s+x.vendido,0),max=Math.max(1,...itens.map(x=>x.vendido)),top=itens.slice(0,12);
-  const resumo=$("salesClientesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span>`;
+  const nomeFiltro=vendedor?(base[0]?.vendedorNome||nomeVend(vendedor)||"Vendedor"):"Todos os vendedores";
+  const resumo=$("salesClientesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span><span>Vendedor: <strong>${esc(nomeFiltro)}</strong></span>`;
   const graf=$("salesClientesGrafico");if(graf)graf.innerHTML=top.length?top.map((x,i)=>`<div class="sales-cliente-bar"><span class="sales-cliente-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(2,x.vendido/max*100)}%"></b></i><em>${moeda(x.vendido)}</em><small>${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem clientes no período.</div>';
   const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr><td>${i+1}</td><td><strong>${esc(x.nome)}</strong></td><td>${x.qtd}</td><td>${moeda(x.vendido)}</td><td>${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="5">Nenhum cliente no período selecionado.</td></tr>'
 }
