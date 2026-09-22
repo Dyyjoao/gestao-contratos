@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=12";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=13";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -146,7 +146,7 @@ function montar(){
     </div>
     <div id="salesClientesResumo" class="sales-clientes-resumo"></div>
     <div id="salesClientesGrafico" class="sales-clientes-grafico"></div>
-    <div class="tabela-container"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendas</th><th>Valor vendido</th><th>% do total</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
+    <div class="tabela-container sales-clientes-scroll"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendas</th><th>Valor vendido</th><th>% do total</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
   </section>
 
   <section class="lista-card">
