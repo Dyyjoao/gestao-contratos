@@ -1,7 +1,7 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, listarDocumentos, atualizarDocumento, empresasSelecionadasIds, nomeEmpresa, moeda, dataBr, emitirAlteracao } from "./shared.js";
+import { $, esc, msg, permite, listarDocumentos, empresasSelecionadasIds, nomeEmpresa, moeda, dataBr, emitirAlteracao, db, doc, runTransaction, serverTimestamp, state } from "./shared.js";
 
-let vendas=[],recebimentos=[],carregando=false;
+let vendas=[],recebimentos=[],carregando=false,tratamentoId=null;
 const pagina=()=>$("pagina-ctrl-inadimplencia-v1");
 const hoje=()=>new Date().toISOString().slice(0,10);
 const competenciaAtual=()=>new Date().toISOString().slice(0,7);
@@ -59,9 +59,23 @@ function criarPagina(){if(pagina())return;css();const main=document.querySelecto
   <div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Carteira em aberto</span><strong id="inadCarteira">—</strong><small>saldo das parcelas</small></div><div class="kpi-card"><span>Valor vencido</span><strong id="inadVencido">—</strong><small>saldo vencido na referência</small></div><div class="kpi-card"><span>Índice de inadimplência</span><strong id="inadIndice">—</strong><small>vencido ÷ carteira</small></div><div class="kpi-card"><span>Recebido na referência</span><strong id="inadRecebidoRef">—</strong><small>baixas até a data de referência</small></div></div>
   <div class="inad-aging"><div class="inad-aging-card pendente"><span>Sem vencimento</span><strong id="ageSemVenc">—</strong><small id="ageSemVencQtd">0 parcelas</small></div><div class="inad-aging-card"><span>A vencer</span><strong id="ageAVencer">—</strong><small id="ageAVencerQtd">0 parcelas</small></div><div class="inad-aging-card atraso"><span>1–30 dias</span><strong id="age130">—</strong><small id="age130Qtd">0 parcelas</small></div><div class="inad-aging-card atraso"><span>31–60 dias</span><strong id="age3160">—</strong><small id="age3160Qtd">0 parcelas</small></div><div class="inad-aging-card atraso"><span>61–90 dias</span><strong id="age6190">—</strong><small id="age6190Qtd">0 parcelas</small></div><div class="inad-aging-card critico"><span>Acima de 90 dias</span><strong id="age90">—</strong><small id="age90Qtd">0 parcelas</small></div></div>
   <section class="lista-card"><div class="lista-cabecalho"><div><h3>Parcelas / recebíveis</h3><p id="inadResumoLista">—</p></div></div><div class="tabela-container inad-scroll-10"><table class="tabela inad-table"><thead><tr><th>Pedido / parcela</th><th>Cliente</th><th>Vencimento</th><th>Dias</th><th>Original</th><th>Recebido</th><th>Saldo</th><th>Situação</th></tr></thead><tbody id="inadLista"></tbody></table></div></section>
-  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Recebimentos importados</h3><p id="inadRecebimentosResumo">—</p></div></div><div class="tabela-container inad-scroll-10"><table class="tabela"><thead><tr><th>Data</th><th>Pedido</th><th>Cliente</th><th>Valor recebido</th><th>Alocação FIFO</th></tr></thead><tbody id="inadRecebimentosLista"></tbody></table></div></section>
+  <section id="inadExcedenteBox" class="form-card hidden">
+    <div class="form-card-titulo"><div><h3>Tratar excedente do recebimento</h3><p>Classifique o valor que sobrou depois da baixa da parcela mais antiga.</p></div></div>
+    <form id="formInadExcedente"><div class="form-grid form-grid-3">
+      <div class="campo"><label for="inadExcedentePedido">Pedido</label><input id="inadExcedentePedido" disabled></div>
+      <div class="campo"><label for="inadExcedenteTotal">Excedente pendente</label><input id="inadExcedenteTotal" disabled></div>
+      <div class="campo"><label for="inadExcedenteSaldo">Principal ainda aberto</label><input id="inadExcedenteSaldo" disabled></div>
+      <div class="campo"><label for="inadExcedenteJuros">Juros / acréscimos</label><input id="inadExcedenteJuros" type="number" min="0" step="0.01" value="0"></div>
+      <div class="campo"><label for="inadExcedenteParcelas">Baixar próxima(s) parcela(s)</label><input id="inadExcedenteParcelas" type="number" min="0" step="0.01" value="0"><small>Aplicação FIFO somente após sua confirmação.</small></div>
+      <div class="campo"><label for="inadExcedenteObs">Observação</label><input id="inadExcedenteObs" placeholder="Opcional"></div>
+    </div>
+    <div class="form-acoes"><button id="btnInadExcedenteTudoJuros" class="btn-secundario" type="button">Tudo juros</button><button id="btnInadExcedenteTudoParcelas" class="btn-secundario" type="button">Tudo parcelas</button><button id="btnInadExcedenteCancelar" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Confirmar tratamento</button></div>
+    <p id="inadExcedenteMsg" class="mensagem-form"></p>
+  </form></section>
+  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Recebimentos importados</h3><p id="inadRecebimentosResumo">—</p></div></div><div class="tabela-container inad-scroll-10"><table class="tabela"><thead><tr><th>Data</th><th>Pedido</th><th>Cliente</th><th>Valor recebido</th><th>Classificação</th><th>Alocação</th><th>Ações</th></tr></thead><tbody id="inadRecebimentosLista"></tbody></table></div></section>
 `;main.appendChild(s);
-  $("inadCompetencia").value=competenciaAtual();$("btnInadAtualizar")?.addEventListener("click",carregar);$("inadCompetencia")?.addEventListener("change",render);$("inadFiltro")?.addEventListener("change",render);$("inadBusca")?.addEventListener("input",render)
+  $("inadCompetencia").value=competenciaAtual();$("btnInadAtualizar")?.addEventListener("click",carregar);$("inadCompetencia")?.addEventListener("change",render);$("inadFiltro")?.addEventListener("change",render);$("inadBusca")?.addEventListener("input",render);
+  $("formInadExcedente")?.addEventListener("submit",salvarTratamentoExcedente);$("btnInadExcedenteCancelar")?.addEventListener("click",fecharTratamentoExcedente);$("btnInadExcedenteTudoJuros")?.addEventListener("click",()=>preencherTratamento("juros"));$("btnInadExcedenteTudoParcelas")?.addEventListener("click",()=>preencherTratamento("parcelas"))
 }
 
 function calcular(){
