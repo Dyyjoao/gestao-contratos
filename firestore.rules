@@ -1251,7 +1251,15 @@ service cloud.firestore {
     match /recebimentosVendas/{id} {
       allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);
       allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data);
-      allow update: if false;
+      allow update: if inadimplenciaEditar() &&
+        documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'valorPrincipal','valorAcrescimos','valorAntecipado','valorPendenteClassificacao',
+          'statusTratamento','tipoBaixa','alocacoes','tratamentos',
+          'tratadoEm','tratadoPor','atualizadoEm'
+        ]);
       allow delete: if false;
     }
 
