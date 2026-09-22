@@ -146,7 +146,7 @@ function montar(){
       <div class="lista-cabecalho sales-chart-head"><div><h3>Evolução mensal</h3><p id="salesContexto">—</p></div><select id="salesModoGrafico"><option value="valor">R$ · valores</option><option value="percentual">% · percentuais</option></select></div>
       <div id="salesChart" class="sales-chart"></div>
     </section>
-    <section class="lista-card"><div class="lista-cabecalho"><div><h3>Ranking comercial</h3><p>Venda, recebimento, meta e comissão por vendedor.</p></div></div><div id="salesRanking" class="sales-ranking"></div></section>
+    <section class="lista-card"><div class="lista-cabecalho"><div><h3>Ranking comercial</h3><p>Vendido, recebido e participação de cada vendedor no total do período.</p></div></div><div id="salesRanking" class="sales-ranking"></div></section>
   </div>
 
   <section class="lista-card sales-clientes">
@@ -369,8 +369,19 @@ function render(){
   const vals=Array(12).fill(0),recs=Array(12).fill(0);vendas.filter(v=>valida(v)&&filtroDataInclui(v.data)).forEach(v=>{const m=mesData(v.data);if(m>=0)vals[m]+=n(v.valor)});vendas.filter(v=>valida(v)&&dataRecebimento(v)&&filtroDataInclui(dataRecebimento(v))).forEach(v=>{const m=mesData(dataRecebimento(v));if(m>=0)recs[m]+=recebido(v)});
   const metaMes=Array(12).fill(0).map((_,m)=>metaMensalEquipe*fatorMetaMes(m));chart(vals,recs,metaMes);
 
-  const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*metaFator;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0)}}).sort((a,b)=>b.tot-a.tot);
-  const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span><strong>${esc(r.p.nome)}</strong><small>Vendido ${moeda(r.tot)} · recebido ${moeda(r.rec)}</small></span><span>${r.meta?r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—"}</span><strong>${moeda(r.com)}</strong></div>`).join(""):'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
+  const rank=ativos.map(({p,cfg})=>{const vv=valid.filter(x=>x.vendedorId===cfg.id),vr=recPer.filter(x=>x.vendedorId===cfg.id),tot=vv.reduce((s,x)=>s+n(x.valor),0),rr=vr.reduce((s,x)=>s+recebido(x),0),m=n(cfg.metaMensal)*metaFator;return{p,cfg,tot,rec:rr,meta:m,ating:m?tot/m*100:0,com:vr.reduce((s,x)=>s+n(x.comissaoValor),0),participacao:total?tot/total*100:0}}).sort((a,b)=>b.tot-a.tot);
+  const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?`
+    <div class="sales-rank-head">
+      <span>#</span><span>Vendedor</span><span>Valor vendido</span><span>Valor recebido</span><span>% do total vendido</span>
+    </div>
+    ${rank.map((r,i)=>`<div class="sales-rank-row">
+      <b>${i+1}</b>
+      <span class="sales-rank-vendedor"><strong>${esc(r.p.nome)}</strong><small>${r.meta?"Ating. da meta "+r.ating.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"Meta não configurada"}</small></span>
+      <strong class="sales-rank-valor">${moeda(r.tot)}</strong>
+      <strong class="sales-rank-valor">${moeda(r.rec)}</strong>
+      <span class="sales-rank-share"><strong>${r.participacao.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.participacao))}%"></b></i></span>
+    </div>`).join("")}
+  `:'<div class="empty-state">Configure vendedores do RH para iniciar o ranking.</div>';
 
   renderClientes(valid);renderEquipe();
 
