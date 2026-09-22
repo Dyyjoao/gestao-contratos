@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=16";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=17";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -285,11 +285,14 @@ async function cancelarVenda(id){if(!podeEditar())return;const v=vendas.find(x=>
 
 
 function chart(vendidos){
-  const el=$("salesChart");if(!el)return;const modo=$("salesModoGrafico")?.value||"valor",totalAno=vendidos.reduce((s,v)=>s+n(v),0);
+  const el=$("salesChart");if(!el)return;
+  const modo=$("salesModoGrafico")?.value||"valor",totalAno=vendidos.reduce((s,v)=>s+n(v),0);
   const a=modo==="percentual"?vendidos.map(v=>totalAno?v/totalAno*100:0):vendidos;
   const leg=modo==="percentual"?"Participação nas vendas do ano":"Valor vendido";
-  const max=Math.max(1,...a),w=900,h=265,p=34,x=i=>p+i*((w-p*2)/11),y=v=>h-p-n(v)/max*(h-p*2),path=arr=>arr.map((v,i)=>`${x(i)},${y(v)}`).join(" "),fmt=v=>modo==="percentual"?`${n(v).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:moeda(v).replace(",00","");
-  el.innerHTML=`<div class="sales-legend"><span><i></i>${leg}</span></div><svg viewBox="0 0 ${w} ${h}"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" class="sales-axis-line"/><polyline class="sales-line" points="${path(a)}"/>${MESES.map((m,i)=>`<text x="${x(i)}" y="${h-8}" text-anchor="middle">${m}</text>`).join("")}${a.map((v,i)=>v>0?`<text class="sales-value-label" x="${x(i)}" y="${Math.max(10,y(v)-8)}" text-anchor="middle">${fmt(v)}</text>`:"").join("")}</svg>`;
+  const max=Math.max(1,...a),w=900,h=265,top=30,bottom=34,left=24,right=24,plotH=h-top-bottom,slot=(w-left-right)/12,barW=Math.min(48,slot*.64);
+  const x=i=>left+slot*i+(slot-barW)/2,y=v=>top+(1-n(v)/max)*plotH,barH=v=>Math.max(0,(n(v)/max)*plotH);
+  const fmt=v=>modo==="percentual"?`${n(v).toLocaleString("pt-BR",{maximumFractionDigits:1})}%`:moeda(v).replace(",00","");
+  el.innerHTML=`<div class="sales-legend"><span><i class="sales-legend-bar"></i>${leg}</span></div><svg viewBox="0 0 ${w} ${h}"><line x1="${left}" y1="${h-bottom}" x2="${w-right}" y2="${h-bottom}" class="sales-axis-line"/>${a.map((v,i)=>v>0?`<rect class="sales-bar" x="${x(i)}" y="${y(v)}" width="${barW}" height="${barH(v)}" rx="5" ry="5"><title>${MESES[i]} · ${fmt(v)}</title></rect>`:"").join("")}${MESES.map((m,i)=>`<text x="${left+slot*i+slot/2}" y="${h-8}" text-anchor="middle">${m}</text>`).join("")}${a.map((v,i)=>v>0?`<text class="sales-value-label" x="${left+slot*i+slot/2}" y="${Math.max(12,y(v)-7)}" text-anchor="middle">${fmt(v)}</text>`:"").join("")}</svg>`;
 }
 
 
