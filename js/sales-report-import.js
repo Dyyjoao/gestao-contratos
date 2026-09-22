@@ -298,6 +298,9 @@ async function excluirLote(id){
   if(!admin())return alert("A exclusão em lote é restrita ao Administrador.");
   const imp=importacoes.find(x=>x.id===id);if(!imp||!["concluida","parcial","exclusao_parcial"].includes(imp.status))return;
   const lote=imp.loteId||imp.id,novas=vendas.filter(v=>v.empresaId===imp.empresaId&&v.importacaoLoteId===lote),snaps=snapshots.filter(s=>s.empresaId===imp.empresaId&&s.loteId===lote);
+  const novasComBaixa=novas.filter(v=>n(v.valorRecebido)>0||(Array.isArray(v.recebimentoChaves)&&v.recebimentoChaves.length));
+  const atualizadasComBaixa=snaps.filter(s=>{const atual=vendas.find(v=>v.id===s.vendaId),antes=n(s.antes?.valorRecebido);return atual&&n(atual.valorRecebido)>antes+0.009});
+  if(novasComBaixa.length||atualizadasComBaixa.length)return alert(`Este lote não pode ser excluído porque ${novasComBaixa.length+atualizadasComBaixa.length} pedido(s) já possuem recebimentos posteriores vinculados às parcelas.`);
   const motivo=prompt(`Excluir fisicamente a importação ${lote}?\n\n${novas.length} venda(s) criada(s) serão apagadas e ${snaps.length} venda(s) atualizada(s) serão restauradas ao estado anterior. Informe o motivo:`);
   if(motivo===null)return;if(!motivo.trim())return alert("Informe o motivo da exclusão.");
   if(!confirm(`ATENÇÃO: confirmar exclusão física do lote ${lote}?\n\nNovos registros serão apagados. Pedidos que já existiam antes do lote serão restaurados. O log mínimo do lote será preservado para rastreabilidade.`))return;
