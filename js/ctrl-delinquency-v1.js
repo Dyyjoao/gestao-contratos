@@ -1,7 +1,7 @@
 import { abrirPagina, admin } from "./core.js";
 import { $, esc, msg, permite, listarDocumentos, atualizarDocumento, empresasSelecionadasIds, nomeEmpresa, moeda, dataBr, emitirAlteracao } from "./shared.js";
 
-let vendas=[],carregando=false,editId=null;
+let vendas=[],recebimentos=[],carregando=false;
 const pagina=()=>$("pagina-ctrl-inadimplencia-v1");
 const hoje=()=>new Date().toISOString().slice(0,10);
 const competenciaAtual=()=>new Date().toISOString().slice(0,7);
@@ -12,46 +12,41 @@ const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 function fimMes(comp){const[a,m]=String(comp||"").split("-").map(Number);if(!a||!m)return hoje();return new Date(a,m,0,12).toISOString().slice(0,10)}
 function dataReferencia(){const comp=$("inadCompetencia")?.value||competenciaAtual(),fim=fimMes(comp);return fim>hoje()?hoje():fim}
 function diffDias(venc,ref=dataReferencia()){if(!venc)return 0;const a=new Date(`${venc}T12:00:00`),b=new Date(`${ref}T12:00:00`);return Math.max(0,Math.floor((b-a)/86400000))}
-function valorOriginal(v){return n(v.valor)}
-function valorRecebido(v){return n(v.valorRecebido??v.valorFaturado)}
-function dataRecebimento(v){return v.dataRecebimento||v.dataFaturamento||""}
-function saldo(v){return Math.max(0,valorOriginal(v)-valorRecebido(v))}
-function statusFinanceiro(v){
-  if(v.status==="cancelada")return"cancelado";
-  if(valorRecebido(v)>=valorOriginal(v)&&valorOriginal(v)>0)return"recebido";
-  if(valorRecebido(v)>0)return"parcial";
-  if(v.statusFinanceiro==="negociado")return"negociado";
-  return"aberto"
+function parcelasVenda(v){
+  if(Array.isArray(v?.parcelas)&&v.parcelas.length)return v.parcelas.map((p,i)=>({
+    id:p.id||`P${String(i+1).padStart(3,"0")}`,ordem:n(p.ordem)||i+1,vencimento:String(p.vencimento||""),valor:n(p.valor),valorRecebido:n(p.valorRecebido),dataUltimoRecebimento:p.dataUltimoRecebimento||null
+  }));
+  return[{id:"P001",ordem:1,vencimento:v?.vencimento||"",valor:n(v?.valor),valorRecebido:n(v?.valorRecebido),dataUltimoRecebimento:v?.dataRecebimento||null}]
 }
-function abertoNaReferencia(v){
-  if(v.status==="cancelada")return false;
-  const dr=dataRecebimento(v);
-  if(statusFinanceiro(v)==="recebido"&&dr&&dr<=dataReferencia())return false;
-  return saldo(v)>0
+function recebimentosDaParcela(vendaId,parcelaId,ref=dataReferencia()){
+  const hist=recebimentos.filter(r=>r.vendaId===vendaId&&String(r.dataRecebimento||"")<=ref);let total=0,ultima="";
+  hist.forEach(r=>(Array.isArray(r.alocacoes)?r.alocacoes:[]).forEach(a=>{if(a.parcelaId===parcelaId){total+=n(a.valor);if(String(r.dataRecebimento||"")>ultima)ultima=String(r.dataRecebimento||"")}}));
+  return{total,ultima}
 }
-function bucket(v){
-  if(!v.vencimento)return"sem_vencimento";
-  if(!abertoNaReferencia(v))return"fora";
-  const ref=dataReferencia();if(v.vencimento>ref)return"a_vencer";
-  const d=diffDias(v.vencimento,ref);if(d<=30)return"1_30";if(d<=60)return"31_60";if(d<=90)return"61_90";return"90_mais"
+function recebidoParcela(v,p,ref=dataReferencia()){
+  const hist=recebimentosDaParcela(v.id,p.id,ref);if(hist.total>0)return Math.min(n(p.valor),hist.total);
+  const data=p.dataUltimoRecebimento||v.dataRecebimento||"";
+  if(n(p.valorRecebido)>0&&(!data||data<=ref))return Math.min(n(p.valor),n(p.valorRecebido));
+  return 0
+}
+function saldoParcela(v,p,ref=dataReferencia()){return Math.max(0,n(p.valor)-recebidoParcela(v,p,ref))}
+function statusParcela(v,p,ref=dataReferencia()){
+  const rec=recebidoParcela(v,p,ref),val=n(p.valor);if(v.status==="cancelada")return"cancelado";if(val>0&&rec>=val-0.009)return"recebido";if(rec>0)return"parcial";return"aberto"
+}
+function bucket(v,p,ref=dataReferencia()){
+  const saldo=saldoParcela(v,p,ref);if(v.status==="cancelada"||saldo<=0)return"fora";if(!p.vencimento)return"sem_vencimento";if(p.vencimento>ref)return"a_vencer";
+  const d=diffDias(p.vencimento,ref);if(d<=30)return"1_30";if(d<=60)return"31_60";if(d<=90)return"61_90";return"90_mais"
 }
 function pct(a,b){return b>0?`${(a/b*100).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%`:"0,0%"}
-function statusNome(s){return({aberto:"Em aberto",parcial:"Parcial",negociado:"Negociado",recebido:"Recebido",cancelado:"Cancelado"})[s]||s||"—"}
-function statusClasse(s){return s==="recebido"?"status-ativo":s==="cancelado"?"status-inativo":s==="negociado"?"status-pendente":s==="parcial"?"status-pendente":"status-atrasado"}
+function statusNome(s){return({aberto:"Em aberto",parcial:"Parcial",recebido:"Recebido",cancelado:"Cancelado"})[s]||s||"—"}
+function statusClasse(s){return s==="recebido"?"status-ativo":s==="cancelado"?"status-inativo":s==="parcial"?"status-pendente":"status-atrasado"}
 function selecionadas(){return new Set(empresasSelecionadasIds())}
 function competenciaVenda(v){return String(v.data||"").slice(0,7)}
-function vendasVisiveis(){
-  const comp=$("inadCompetencia")?.value||competenciaAtual(),filtro=$("inadFiltro")?.value||"todos",busca=String($("inadBusca")?.value||"").trim().toLowerCase();
-  return vendas.filter(v=>{
-    if(v.status==="cancelada"&&filtro!=="cancelado"&&filtro!=="todos")return false;
-    if(competenciaVenda(v)&&competenciaVenda(v)>comp)return false;
-    const b=bucket(v),st=statusFinanceiro(v);
-    if(filtro!=="todos"&&b!==filtro&&st!==filtro)return false;
-    if(busca&&!`${v.cliente||""} ${v.documento||""} ${v.vendedorNome||""}`.toLowerCase().includes(busca))return false;
-    return true
-  })
+function todasParcelas(){const comp=$("inadCompetencia")?.value||competenciaAtual();return vendas.filter(v=>!competenciaVenda(v)||competenciaVenda(v)<=comp).flatMap(v=>parcelasVenda(v).map(p=>({v,p})))}
+function parcelasVisiveis(){
+  const filtro=$("inadFiltro")?.value||"todos",busca=String($("inadBusca")?.value||"").trim().toLowerCase(),ref=dataReferencia();
+  return todasParcelas().filter(({v,p})=>{const b=bucket(v,p,ref),st=statusParcela(v,p,ref);if(filtro!=="todos"&&b!==filtro&&st!==filtro)return false;if(busca&&!`${v.cliente||""} ${v.documento||""} ${v.vendedorNome||""}`.toLowerCase().includes(busca))return false;return true})
 }
-
 function css(){if($("inad-css"))return;const s=document.createElement("style");s.id="inad-css";s.textContent=`
 .inad-toolbar{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inad-toolbar .campo{min-width:150px}.inad-aging{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}.inad-aging-card{border:1px solid #e3e8ef;border-radius:12px;background:#fff;padding:12px}.inad-aging-card span{display:block;color:#667085;font-size:11px}.inad-aging-card strong{display:block;font-size:18px;margin:5px 0}.inad-aging-card small{color:#667085}.inad-aging-card.atraso{border-left:4px solid #e16b21}.inad-aging-card.critico{border-left:4px solid #b42318}.inad-aging-card.pendente{border-left:4px solid #98a2b3}.inad-linha-vencida td{background:#fffaf7}.inad-linha-critica td{background:#fff7f6}.inad-linha-sem-venc td{background:#fafafa}.inad-acoes{display:flex;gap:5px;flex-wrap:wrap}.inad-info{display:block;font-size:10px;color:#667085;margin-top:2px}.inad-table td:nth-child(5),.inad-table td:nth-child(6),.inad-table td:nth-child(7){white-space:nowrap}.inad-origem{padding:9px 12px;border:1px solid #dfe5ea;border-radius:10px;background:#f8fafb;color:#667085;font-size:11px;margin-bottom:12px}.inad-origem strong{color:#0b1f33}@media(max-width:1100px){.inad-aging{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.inad-aging{grid-template-columns:1fr 1fr}.inad-toolbar .campo{min-width:120px}}
 `;document.head.appendChild(s)}
