@@ -149,6 +149,20 @@ service cloud.firestore {
         )
       );
     }
+    function inadimplenciaVendaAtualizacaoValida(novo, antigo) {
+      return inadimplenciaEditar() &&
+        calculoComissaoValido(novo) &&
+        novo.valor == antigo.valor &&
+        novo.vendedorId == antigo.vendedorId &&
+        novo.vendedorNome == antigo.vendedorNome &&
+        novo.baseComissao == antigo.baseComissao &&
+        novo.comissaoPct == antigo.comissaoPct &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'vencimento','valorRecebido','dataRecebimento','statusFinanceiro','observacaoFinanceira',
+          'comissaoBaseValor','comissaoValor','comissaoStatus','atualizadoEm'
+        ]);
+    }
+
     function vendaImportadaSincronizavel(novo, antigo) {
       return vendasLancar() &&
         (
@@ -1158,7 +1172,7 @@ service cloud.firestore {
     }
 
     match /vendas/{id} {
-      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow read: if (vendasVisualizar() || inadimplenciaVisualizar()) && documentoAcessivel(resource.data);
       allow create: if vendasLancar() && documentoAcessivel(request.resource.data) &&
         vendedorValidoParaVenda(request.resource.data) &&
         calculoComissaoValido(request.resource.data) &&
@@ -1171,6 +1185,7 @@ service cloud.firestore {
         request.resource.data.empresaId == resource.data.empresaId && (
           (vendasEditar() && vendaOperacionalValida(request.resource.data, resource.data)) ||
           vendaImportadaSincronizavel(request.resource.data, resource.data) ||
+          inadimplenciaVendaAtualizacaoValida(request.resource.data, resource.data) ||
           (vendasComissoes() &&
             calculoComissaoValido(request.resource.data) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
