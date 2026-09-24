@@ -229,23 +229,18 @@ function preencherVendedorOrcamentoVisita(visita){
   const vend=vendedoresVisitas.find(x=>x.id===visita?.vendedorId)||vendedoresVisitas.find(x=>norm(x.nome)===norm(visita?.vendedor));
   if(vend)sel.value=vend.id
 }
-async function abrirOrcamentoDaVisita(id){
+function abrirOrcamentoDaVisita(id){
   if(!registrar("orcamentos"))return alert("Seu perfil não possui permissão para registrar orçamento.");
   const x=dados.visitas.find(v=>v.id===id);if(!x)return;
-  try{
-    if((x.status||"visita")!=="orcamento"){
-      await updateDoc(doc(db,"visitasComerciais",x.id),{status:"orcamento",orcamentoIniciadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
-      x.status="orcamento"
-    }
-    visitaOrcamentoAtual=x.id;
-    const form=$("visitasOrcamentoForm");form?.reset();
-    $("orcVisCliente").value=x.cliente||"";
-    $("orcVisData").value=localIso();
-    preencherVendedorOrcamentoVisita(x);
-    $("visitasOrcamentoOrigem").textContent=`Visita de ${dataBr(x.data)} · cliente vinculado: ${x.cliente||"—"}`;
-    atualizarMotivoPerda();$("visitasOrcamentoBox").classList.remove("hidden");renderVisitas();
-    $("visitasOrcamentoBox").scrollIntoView({behavior:"smooth",block:"start"})
-  }catch(err){console.error(err);alert("Não foi possível iniciar o orçamento. Confira as permissões publicadas.")}
+  if(x.orcamentoId)return alert("Esta visita já possui orçamento vinculado.");
+  visitaOrcamentoAtual=x.id;
+  const form=$("visitasOrcamentoForm");form?.reset();
+  $("orcVisCliente").value=x.cliente||"";
+  $("orcVisData").value=localIso();
+  preencherVendedorOrcamentoVisita(x);
+  $("visitasOrcamentoOrigem").textContent=`Visita de ${dataBr(x.data)} · cliente vinculado: ${x.cliente||"—"}`;
+  atualizarMotivoPerda();$("visitasOrcamentoBox").classList.remove("hidden");
+  $("visitasOrcamentoBox").scrollIntoView({behavior:"smooth",block:"start"})
 }
 async function excluirVisita(id){
   const x=dados.visitas.find(v=>v.id===id);if(!x)return;
@@ -272,7 +267,7 @@ async function salvarOrcamentoDaVisita(e){
     await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId:ref.id,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
     visita.status="orcamento";visita.orcamentoId=ref.id;fecharOrcamentoVisita();emitirAlteracao("orcamentos");emitirAlteracao("visitas");renderVisitas();
     alert("Orçamento criado e vinculado à visita.")
-  }catch(err){console.error(err);msg($("visitasOrcamentoMensagem"),err.message||"Não foi possível salvar o orçamento.")}
+  }catch(err){console.error("Erro ao salvar orçamento da visita",err);const detalhe=err?.code==="permission-denied"?"Permissão negada pelo Firestore. Confira se as Rules publicadas são as mais recentes.":(err?.message||"Não foi possível salvar o orçamento.");msg($("visitasOrcamentoMensagem"),detalhe)}
 }
 
 function limpar(k){
@@ -399,7 +394,7 @@ async function salvar(k,e){
 async function followUp(id){const x=dados.orcamentos.find(v=>v.id===id);if(!x||!ABERTOS.has(x.status)||!editar("orcamentos")||(!gestor("orcamentos")&&x.responsavelId!==uid()))return;const nota=prompt(`Contato com ${x.cliente}: registre um breve resultado`);if(nota===null)return;if(!nota.trim())return alert("Informe o resultado do contato.");try{const instante=agoraIso();await atualizarDocumento("orcamentosComerciais",id,{ultimoContatoEm:instante,proximoContatoEm:proximo24(),notaUltimoContato:nota.trim(),contatos:arrayUnion({em:instante,por:uid(),resultado:nota.trim()})});emitirAlteracao("orcamentos");await carregar("orcamentos")}catch(e){console.error(e);alert("Não foi possível registrar o contato.")}}
 function montarMesa(){const mesa=$("pagina-minhamesa"),dash=$("pagina-dashboard");if(mesa&&!$("mesaOrcamentos")){const s=document.createElement("section");s.id="mesaOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Orçamentos para acompanhar</h3><p>Próximo contato a cada 24 horas enquanto o orçamento estiver aberto.</p></div><button id="mesaAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div id="mesaOrcamentosLista" class="commercial-mesa-list"></div>';mesa.appendChild(s);$("mesaAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}if(dash&&!$("dashOrcamentos")){const s=document.createElement("section");s.id="dashOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Comercial · Orçamentos</h3><p>Carteira aberta e contatos pendentes da equipe.</p></div><button id="dashAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Em aberto</span><strong id="dashOrcAbertos">—</strong></div><div class="kpi-card"><span>Contato vencido</span><strong id="dashOrcVencidos">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="dashOrcValor">—</strong></div></div>';dash.appendChild(s);$("dashAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}}
 function renderMesa(){montarMesa();const acesso=ver("orcamentos"),todos=dados.orcamentos.filter(x=>ABERTOS.has(x.status)),meus=todos.filter(x=>x.responsavelId===uid()),vencidos=todos.filter(x=>Date.parse(x.proximoContatoEm)<=Date.now());if($("dashOrcamentos"))$("dashOrcamentos").classList.toggle("hidden",!acesso);if($("mesaOrcamentos"))$("mesaOrcamentos").classList.toggle("hidden",!acesso);if(!acesso)return;$("dashOrcAbertos").textContent=String(todos.length);$("dashOrcVencidos").textContent=String(vencidos.length);$("dashOrcValor").textContent=dinheiro(todos.reduce((s,x)=>s+Number(x.valor||0),0));$("mesaOrcamentosLista").innerHTML=meus.sort((a,b)=>String(a.proximoContatoEm).localeCompare(String(b.proximoContatoEm))).slice(0,12).map(x=>`<div class="commercial-mesa-row"><strong>${esc(x.cliente)} · ${esc(x.produto)}</strong><span>${Date.parse(x.proximoContatoEm)<=Date.now()?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</span></div>`).join("")||'<p>Não há orçamentos abertos sob sua responsabilidade.</p>'}
-function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=5";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
+function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=6";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();for(const k of Object.keys(MODELOS))if(ver(k))carregar(k)});
 window.addEventListener("sig:empresa-contexto",()=>{if(!$("pagina-orcamentos")?.classList.contains("hidden"))carregar("orcamentos")});
