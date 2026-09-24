@@ -1265,11 +1265,28 @@ service cloud.firestore {
 
     match /itensComerciais/{id} {
       allow read: if (
-        vendasVisualizar() || permissao('visitas','visualizar') || permissao('visitas','registrar') ||
-        permissao('visitas','editar') || permissao('visitas','supervisionar')
-      ) && documentoAcessivel(resource.data);
-      allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data);
-      allow update: if (vendasLancar() || vendasEditar()) && documentoAcessivel(resource.data) &&
+        (vendasVisualizar() && documentoAcessivel(resource.data)) ||
+        (
+          mesmoGrupo(resource.data.grupoId) && (
+            permissao('visitas','visualizar') || permissao('visitas','registrar') ||
+            permissao('visitas','editar') || permissao('visitas','supervisionar')
+          )
+        )
+      );
+      allow create: if (
+        ((vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data)) ||
+        (
+          administrador() &&
+          mesmoGrupo(request.resource.data.grupoId) &&
+          request.resource.data.get('compartilhadoGrupo', false) == true &&
+          request.resource.data.empresaIds is list &&
+          request.resource.data.empresaIds.size() > 0
+        )
+      ) &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.unidade is string && request.resource.data.unidade.size() > 0;
+      allow update: if (vendasLancar() || vendasEditar() || administrador()) &&
+        mesmoGrupo(resource.data.grupoId) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId;
       allow delete: if false;
