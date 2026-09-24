@@ -27,7 +27,7 @@ import "./js/management-shell.js";
 import "./js/controllership-router.js?v=32";
 import "./js/production.js?v=12";
 import "./js/disposal.js?v=9";
-import "./js/commercial-workflow.js";
+import "./js/commercial-workflow.js?v=2";
 import "./js/pallets.js";
 import "./js/pallet-dashboard.js";
 import "./js/service-orders.js?v=7";
