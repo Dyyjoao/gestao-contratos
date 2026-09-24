@@ -645,7 +645,7 @@ service cloud.firestore {
               (resource.data.responsavelId == request.auth.uid && permissao('orcamentos','registrar'))
             ) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status','orcamentoIniciadoEm','orcamentoId','orcamentoCriadoEm','atualizadoEm'
+              'status','orcamentoIniciadoEm','orcamentoId','orcamentoEmpresaId','orcamentoCriadoEm','atualizadoEm'
             ])
           )
         );
