@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, arrayUnion, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, query, where, getDocs, arrayUnion, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { abrirPagina, admin } from "./core.js";
 import { $, db, esc, msg, permite, state, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, idsEmpresasPermitidas, grupoAtualId, periodoAno, periodoChave, dataBr, emitirAlteracao } from "./shared.js";
 
@@ -13,7 +13,7 @@ const PERIODOS={total:[0,1,2,3,4,5,6,7,8,9,10,11],t1:[0,1,2],t2:[3,4,5],t3:[6,7,
 for(let i=0;i<12;i++)PERIODOS[`m${String(i+1).padStart(2,"0")}`]=[i];
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const dados={visitas:[],orcamentos:[]},edicao={visitas:null,orcamentos:null},ocupado={visitas:false,orcamentos:false};
-let vendedoresVisitas=[],clientesVisitas=[],clientesRelacionamento=[];
+let vendedoresVisitas=[],clientesVisitas=[],clientesRelacionamento=[],visitaOrcamentoAtual="";
 const uid=()=>state.usuario?.id||"";
 const gestor=k=>admin()||permite(MODELOS[k].permissao,"supervisionar");
 const ver=k=>gestor(k)||["visualizar","registrar","editar"].some(a=>permite(MODELOS[k].permissao,a));
@@ -35,6 +35,25 @@ const sigla=k=>k==="visitas"?"vis":"orc";
 const el=(k,n)=>$(sigla(k)+n);
 const campo=(k,id,label,type="text",required=false,extra="")=>`<div class="campo"><label for="${sigla(k)}${id}">${label}</label><input id="${sigla(k)}${id}" type="${type}" ${required?"required":""} ${extra}></div>`;
 const selecao=(k,id,label,opcoes,required=false)=>`<div class="campo"><label for="${sigla(k)}${id}">${label}</label><select id="${sigla(k)}${id}" ${required?"required":""}><option value="">Selecione...</option>${opcoes.map(([value,txt])=>`<option value="${esc(value)}">${esc(txt)}</option>`).join("")}</select></div>`;
+function formularioOrcamentoVisita(){
+  return `<section id="visitasOrcamentoBox" class="form-card commercial-budget-from-visit hidden">
+    <div class="form-card-titulo"><div><span class="eyebrow">ORÇAMENTO</span><h3>Novo orçamento a partir da visita</h3><p id="visitasOrcamentoOrigem">Cliente e visita de origem vinculados automaticamente.</p></div></div>
+    <form id="visitasOrcamentoForm"><div class="form-grid form-grid-3">
+      <div class="campo campo-span-2"><label for="orcVisCliente">Cliente</label><input id="orcVisCliente" type="text" readonly required><small>Vinculado à visita e não pode ser alterado neste lançamento.</small></div>
+      <div class="campo"><label for="orcVisData">Data</label><input id="orcVisData" type="date" required></div>
+      <div class="campo"><label for="orcVisProduto">Produto</label><input id="orcVisProduto" type="text" required></div>
+      <div class="campo"><label for="orcVisValor">Valor</label><input id="orcVisValor" type="number" min="0" step="0.01" required></div>
+      <div class="campo"><label for="orcVisNumeroVb">VB</label><input id="orcVisNumeroVb" type="text"></div>
+      <div class="campo"><label for="orcVisComprador">Comprador</label><input id="orcVisComprador" type="text"></div>
+      <div class="campo"><label for="orcVisVendedor">Vendedor</label><select id="orcVisVendedor" required><option value="">Selecione...</option></select></div>
+      <div class="campo"><label for="orcVisStatus">Status</label><select id="orcVisStatus" required><option value="">Selecione...</option><option value="aguardando_aprovacao">Aguardando aprovação</option><option value="venda_concluida">Venda concluída</option><option value="perdido_concorrente">Perdido para concorrência</option><option value="licitacao">Licitação</option></select></div>
+      <div id="orcVisMotivoBox" class="campo campo-span-3 hidden"><label for="orcVisMotivo">Motivo da perda</label><textarea id="orcVisMotivo" placeholder="Informe obrigatoriamente o motivo da perda para a concorrência"></textarea></div>
+    </div>
+    <div class="form-acoes"><button id="visitasOrcamentoCancelar" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar orçamento</button></div>
+    <p id="visitasOrcamentoMensagem" class="mensagem-form"></p></form>
+  </section>`
+}
+
 function formulario(k){
   if(k==="visitas"){
     const tipos=TIPOS_VISITA.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("");
@@ -68,13 +87,14 @@ function montar(k){
       <div class="commercial-group-note"><strong>Escopo:</strong> esta tela consolida todas as empresas do grupo. O período continua seguindo o filtro geral do SIG.</div>
       <div class="production-kpis commercial-visits-kpis"><div class="kpi-card"><span>Total de visitas / contatos</span><strong id="visitasKpiTotal">—</strong><small id="visitasKpiPeriodo">período selecionado</small></div><div class="kpi-card"><span>Clientes distintos</span><strong id="visitasKpiSegundo">—</strong><small>clientes contatados no período</small></div></div>
       ${formulario(k)}
+      ${formularioOrcamentoVisita()}
       <div class="commercial-charts-grid">
         <section class="lista-card"><div class="lista-cabecalho"><div><h3>Evolução em 12 meses</h3><p id="visitasGraficoAnoLabel">Ano selecionado</p></div></div><div id="visitasGrafico12" class="commercial-bars commercial-bars-monthly"></div></section>
         <section class="lista-card"><div class="lista-cabecalho"><div><h3>Por tipo de contato</h3><p>Distribuição no período selecionado.</p></div></div><div id="visitasGraficoTipo" class="commercial-bars"></div></section>
         <section class="lista-card"><div class="lista-cabecalho"><div><h3>Visitas por cliente</h3><p>Clientes com maior número de contatos no período.</p></div></div><div id="visitasGraficoCliente" class="commercial-bars commercial-bars-scroll"></div></section>
         <section class="lista-card"><div class="lista-cabecalho"><div><h3>Visitas por cidade</h3><p>Total de contatos por cidade no período.</p></div></div><div id="visitasGraficoCidade" class="commercial-bars commercial-bars-scroll"></div></section>
       </div>
-      <section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Histórico de contatos</h3><p>${gestor(k)?"Visão consolidada da equipe e de todas as empresas do grupo.":"Registros sob sua responsabilidade, consolidados no grupo."}</p></div><div class="production-filtros"><input type="search" id="visitasBusca" placeholder="Buscar cliente ou vendedor"><select id="visitasFiltroTipo"><option value="">Todos os tipos</option>${TIPOS_VISITA.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select></div></div><div class="tabela-container commercial-history-scroll"><table class="tabela"><thead><tr><th>Data</th><th>Cliente / Cidade</th><th>Vendedor</th><th>Tipo</th><th>Assunto</th><th>Ações</th></tr></thead><tbody id="visitasLista"></tbody></table></div></section>`;
+      <section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Histórico de contatos</h3><p>${gestor(k)?"Visão consolidada da equipe e de todas as empresas do grupo.":"Registros sob sua responsabilidade, consolidados no grupo."}</p></div><div class="production-filtros"><input type="search" id="visitasBusca" placeholder="Buscar cliente ou vendedor"><select id="visitasFiltroTipo"><option value="">Todos os tipos</option>${TIPOS_VISITA.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select></div></div><div class="tabela-container commercial-history-scroll"><table class="tabela"><thead><tr><th>Data</th><th>Cliente / Cidade</th><th>Vendedor</th><th>Tipo</th><th>Status</th><th>Assunto</th><th>Ações</th></tr></thead><tbody id="visitasLista"></tbody></table></div></section>`;
   }else{
     s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>${MODELOS[k].titulo}</h2><p>Acompanhe cada orçamento e as próximas ações da equipe.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="${k}Novo" type="button">+ Novo registro</button><button class="btn-secundario" id="${k}Atualizar" type="button">Atualizar</button></div></div><div id="${k}Aviso" class="modulo-aviso hidden"></div><div class="production-kpis"><div class="kpi-card"><span>Orçamentos em aberto</span><strong id="${k}KpiTotal">—</strong></div><div class="kpi-card"><span>Próximo contato vencido</span><strong id="${k}KpiSegundo">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="orcamentosKpiValor">—</strong></div></div>${formulario(k)}<section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Minha Mesa · Orçamentos</h3><p>${gestor(k)?"Visão consolidada da equipe, com acesso por empresa.":"Registros sob sua responsabilidade."}</p></div><div class="production-filtros"><input type="search" id="${k}Busca" placeholder="Buscar cliente ou vendedor"><select id="${k}FiltroStatus"><option value="">Todos os status</option>${Object.entries(STATUS).map(([v,t])=>`<option value="${v}">${t}</option>`).join("")}</select></div></div><div class="tabela-container"><table class="tabela"><thead><tr>${["Data","Cliente / Produto","Vendedor","Valor","Status / próximo contato","Ações"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody id="${k}Lista"></tbody></table></div></section>`;
   }
@@ -93,7 +113,10 @@ function montar(k){
     $("visVendedor")?.addEventListener("change",sincronizarVendedorVisita);
     $("visClienteNovo")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.remove("hidden");$("visNovoClienteNome")?.focus()});
     $("visNovoClienteCancelar")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")});
-    $("visitasClienteForm")?.addEventListener("submit",salvarClienteRelacionamento)
+    $("visitasClienteForm")?.addEventListener("submit",salvarClienteRelacionamento);
+    $("visitasOrcamentoCancelar")?.addEventListener("click",fecharOrcamentoVisita);
+    $("visitasOrcamentoForm")?.addEventListener("submit",salvarOrcamentoDaVisita);
+    $("orcVisStatus")?.addEventListener("change",atualizarMotivoPerda)
   }
 }
 
