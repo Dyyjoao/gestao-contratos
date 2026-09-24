@@ -79,3 +79,5 @@
 @media(max-width:720px){.sales-empresas-head{display:grid}.sales-empresas-head>strong{text-align:left}.sales-cidade-bar{grid-template-columns:28px 1fr 85px 48px}.sales-cidade-bar>i{grid-column:2/5}.sales-cidade-bar>em{grid-column:3}.sales-cidade-bar>small{grid-column:4}.sales-cidade-bar>strong{grid-column:2/5}}
 
 .sales-clientes-detalhe{margin:14px 0}.sales-clientes-filtros input{min-width:190px;min-height:34px;padding:6px 9px;border:1px solid #d0d7de;border-radius:8px;background:#fff;color:#344054}.sales-clientes-detalhe .sales-clientes-scroll{max-height:510px}
+
+.sales-cliente-linha{cursor:pointer;transition:background .12s ease,box-shadow .12s ease}.sales-cliente-linha:hover td{background:#f8fbfd}.sales-cliente-linha.selecionado td{background:#eef8f7!important}.sales-cliente-linha.selecionado td:first-child{box-shadow:inset 3px 0 0 #0c9488}
