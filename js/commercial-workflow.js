@@ -98,18 +98,178 @@ function montar(k){
 }
 
 function menu(k){const nav=document.querySelector(".sidebar-menu");if(!nav)return;let b=$("menu"+k);if(!b){b=document.createElement("button");b.id="menu"+k;b.className="menu-item hidden";b.dataset.pagina=k;b.type="button";b.textContent=MODELOS[k].titulo;nav.appendChild(b);b.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();if(!ver(k))return;abrirPagina(k);carregar(k)},true)}b.classList.toggle("hidden",!ver(k))}
-function limpar(k){edicao[k]=null;$(k+"Form").reset();el(k,"Data").value=localIso();if(k==="orcamentos")el(k,"Status").value="aguardando_aprovacao";$(k+"FormTitulo").textContent="Novo registro";msg($(k+"Mensagem"),"")}
-function novo(k){if(!registrar(k))return;if(!empresaUnicaSelecionadaId())return alert("Selecione apenas uma empresa no cabeçalho.");limpar(k);$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})}
-function abrirEdicao(k,id){const x=dados[k].find(v=>v.id===id);if(!x||!editar(k)||(!gestor(k)&&x.responsavelId!==uid()))return;if(x.empresaId!==empresaUnicaSelecionadaId())return alert("Selecione a empresa deste registro para editar.");edicao[k]=id;const nomes=k==="visitas"?["Data","Vendedor","Cliente","Obra","Cidade","Material","Assunto","Tipo","Email","Observacao"]:["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"];nomes.forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});$(k+"FormTitulo").textContent="Editar registro";$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})}
-function formularioDados(k){const nomes=k==="visitas"?["Data","Vendedor","Cliente","Obra","Cidade","Material","Assunto","Tipo","Email","Observacao"]:["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"];const d={};nomes.forEach(n=>{d[n.charAt(0).toLowerCase()+n.slice(1)]=String(el(k,n).value||"").trim()});if(k==="orcamentos")d.valor=Number(d.valor);return d}
-async function consultar(k){const grupo=grupoAtualId(),empresas=empresasSelecionadasIds(),id=uid();if(!grupo||!empresas.length)return[];const blocos=await Promise.all(empresas.map(async empresaId=>{const cond=[where("grupoId","==",grupo),where("empresaId","==",empresaId)];if(!gestor(k))cond.push(where("responsavelId","==",id));const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond));return s.docs.map(x=>({id:x.id,...x.data()}))}));return blocos.flat()}
-async function carregar(k){if(ocupado[k]||!ver(k))return;ocupado[k]=true;try{dados[k]=await consultar(k);$(k+"Aviso").classList.add("hidden");render(k)}catch(e){console.error(e);dados[k]=[];render(k);$(k+"Aviso").textContent="Não foi possível consultar os registros. Confira o perfil e as Rules publicadas no Firebase.";$(k+"Aviso").classList.remove("hidden")}finally{ocupado[k]=false}}
-function render(k){const termo=String($(k+"Busca")?.value||"").toLocaleLowerCase("pt-BR"),status=$(k+"FiltroStatus")?.value||"",filtrados=dados[k].filter(x=>[x.cliente,x.vendedor,x.produto].some(s=>String(s||"").toLocaleLowerCase("pt-BR").includes(termo))&&(!status||x.status===status));const abertos=filtrados.filter(x=>ABERTOS.has(x.status)),vencidos=abertos.filter(x=>x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now());$(k+"KpiTotal").textContent=String(k==="orcamentos"?abertos.length:filtrados.length);$(k+"KpiSegundo").textContent=String(k==="orcamentos"?vencidos.length:new Set(filtrados.map(x=>String(x.cliente).toUpperCase())).size);if(k==="orcamentos")$("orcamentosKpiValor").textContent=dinheiro(abertos.reduce((a,x)=>a+Number(x.valor||0),0));
-  if(k==="orcamentos")renderMesa();
-  $(k+"Lista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const acao=editar(k)?`<button type="button" class="btn-acao destaque" data-${k}-edit="${esc(x.id)}">Editar</button>`:"";if(k==="visitas")return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(x.tipo||"—")}</td><td>${esc(x.assunto||"—")}</td><td>${acao}</td></tr>`;const vencido=ABERTOS.has(x.status)&&x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now();return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.produto)}</small></td><td>${esc(x.vendedor)}</td><td>${dinheiro(x.valor)}</td><td><strong>${esc(STATUS[x.status]||x.status)}</strong>${ABERTOS.has(x.status)?`<small>${vencido?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${acao}${ABERTOS.has(x.status)&&editar(k)?`<button type="button" class="btn-acao" data-orc-follow="${esc(x.id)}">Registrar contato</button>`:""}${Array.isArray(x.contatos)&&x.contatos.length?`<button type="button" class="btn-acao" data-orc-history="${esc(x.id)}">Histórico (${x.contatos.length})</button>`:""}</td></tr>`}).join("")||'<tr><td colspan="6">Nenhum registro encontrado.</td></tr>';
-  document.querySelectorAll(`[data-${k}-edit]`).forEach(b=>b.addEventListener("click",()=>abrirEdicao(k,b.dataset[`${k}Edit`])));if(k==="orcamentos")document.querySelectorAll("[data-orc-follow]").forEach(b=>b.addEventListener("click",()=>followUp(b.dataset.orcFollow)));if(k==="orcamentos")document.querySelectorAll("[data-orc-history]").forEach(b=>b.addEventListener("click",()=>{const x=dados.orcamentos.find(v=>v.id===b.dataset.orcHistory);if(!x)return;alert((x.contatos||[]).map(c=>`${new Date(c.em).toLocaleString("pt-BR")} · ${c.resultado}`).join("\n\n"))}));
+async function consultarColecaoGrupoPorEmpresa(nomeColecao){
+  const grupo=grupoAtualId(),empresas=idsEmpresasPermitidas();if(!grupo||!empresas.length)return[];
+  const blocos=await Promise.all(empresas.map(async empresaId=>{
+    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo),where("empresaId","==",empresaId)));
+    return s.docs.map(x=>({id:x.id,...x.data()}))
+  }));
+  return blocos.flat()
 }
-async function salvar(k,e){e.preventDefault();const emp=empresaUnicaSelecionadaId();if(!emp)return alert("Selecione apenas uma empresa no cabeçalho.");const d=formularioDados(k);if(!d.data||!d.vendedor||!d.cliente||(k==="orcamentos"&&(!d.produto||!Number.isFinite(d.valor)||d.valor<0||!STATUS[d.status])))return msg($(k+"Mensagem"),"Revise os campos obrigatórios.");if(k==="orcamentos"&&d.telefone&&d.telefone.replace(/\D/g,"").length!==11)return msg($(k+"Mensagem"),"Telefone deve conter DDD e nove dígitos.");try{msg($(k+"Mensagem"),"Salvando...");if(edicao[k]){const x=dados[k].find(v=>v.id===edicao[k]);if(!x||!editar(k)||(!gestor(k)&&x.responsavelId!==uid())||x.empresaId!==emp)throw new Error("Edição não autorizada.");if(k==="orcamentos"&&ABERTOS.has(d.status)&&!ABERTOS.has(x.status))d.proximoContatoEm=proximo24();await atualizarDocumento(MODELOS[k].colecao,x.id,d)}else{if(!registrar(k))throw new Error("Sem permissão.");const extra=k==="orcamentos"?{proximoContatoEm:ABERTOS.has(d.status)?proximo24():"",ultimoContatoEm:""}:{};await criarDocumento(MODELOS[k].colecao,{...d,...extra,empresaId:emp,responsavelId:uid(),origem:"sig"})}$(k+"FormBox").classList.add("hidden");limpar(k);emitirAlteracao(k);await carregar(k)}catch(err){console.error(err);msg($(k+"Mensagem"),err.message||"Não foi possível salvar.")}}
+async function carregarBasesVisitas(){
+  const grupo=grupoAtualId();if(!grupo){vendedoresVisitas=[];clientesVisitas=[];clientesRelacionamento=[];return}
+  const resultados=await Promise.allSettled([
+    consultarColecaoGrupoPorEmpresa("vendedores"),
+    consultarColecaoGrupoPorEmpresa("rhColaboradores"),
+    consultarColecaoGrupoPorEmpresa("clientesComerciais"),
+    getDocs(query(collection(db,"clientesRelacionamento"),where("grupoId","==",grupo)))
+  ]);
+  const configs=resultados[0].status==="fulfilled"?resultados[0].value:[];
+  const rhs=resultados[1].status==="fulfilled"?resultados[1].value:[];
+  const clientesSales=resultados[2].status==="fulfilled"?resultados[2].value:[];
+  clientesRelacionamento=resultados[3].status==="fulfilled"?resultados[3].value.docs.map(x=>({id:x.id,...x.data()})):[];
+
+  const hoje=localIso(),rhAtivos=new Map(rhs.filter(x=>x.status!=="estornado"&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje)).map(x=>[x.id,x])),vendMap=new Map();
+  configs.filter(x=>x.status!=="inativo"&&(!x.tipoComissao||x.tipoComissao==="vendedor")).forEach(v=>{
+    const rh=rhAtivos.get(v.rhColaboradorId),nome=String(rh?.nome||v.nome||"").trim();if(!nome)return;
+    const chave=String(v.rhColaboradorId||norm(nome)),atual=vendMap.get(chave);
+    vendMap.set(chave,{id:chave,nome,email:rh?.email||v.email||"",cargoNome:rh?.cargoNome||v.cargoNome||"",origem:"rh",configIds:[...(atual?.configIds||[]),v.id]})
+  });
+  if(rhAtivos.size){
+    [...rhAtivos.values()].filter(x=>x.codigoVendedor||/vendedor|comercial/i.test(String(x.cargoNome||""))).forEach(rh=>{
+      const chave=String(rh.id),atual=vendMap.get(chave);if(!atual)vendMap.set(chave,{id:chave,nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",origem:"rh",configIds:[]})
+    })
+  }
+  vendedoresVisitas=[...vendMap.values()].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+
+  const cliMap=new Map();
+  clientesSales.filter(x=>x.status!=="inativo").forEach(x=>{
+    const nome=String(x.nome||"").trim();if(!nome)return;const cidade=String(x.cidade||"").trim(),uf=String(x.uf||"").trim().toUpperCase(),ch=chaveCliente(nome,cidade);
+    const atual=cliMap.get(ch);if(!atual)cliMap.set(ch,{id:"sales:"+x.id,nome,cidade,uf,origem:"vendas",ids:[x.id]});else atual.ids.push(x.id)
+  });
+  clientesRelacionamento.filter(x=>x.status!=="inativo").forEach(x=>{
+    const nome=String(x.nome||"").trim();if(!nome)return;const cidade=String(x.cidade||"").trim(),uf=String(x.uf||"").trim().toUpperCase(),ch=chaveCliente(nome,cidade);
+    if(!cliMap.has(ch))cliMap.set(ch,{id:"rel:"+x.id,nome,cidade,uf,origem:"relacionamento",ids:[x.id]})
+  });
+  clientesVisitas=[...cliMap.values()].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")||a.cidade.localeCompare(b.cidade,"pt-BR"));
+  preencherBasesVisitas()
+}
+function preencherBasesVisitas(){
+  const sv=$("visVendedor"),sc=$("visCliente");
+  if(sv){const atual=sv.value;sv.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cargoNome?" · "+esc(x.cargoNome):""}</option>`).join("");if([...sv.options].some(o=>o.value===atual))sv.value=atual}
+  if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
+}
+function sincronizarClienteVisita(){const x=clientesVisitas.find(v=>v.id===$("visCliente")?.value);if(x&&$("visCidade"))$("visCidade").value=x.cidade||""}
+function sincronizarVendedorVisita(){const x=vendedoresVisitas.find(v=>v.id===$("visVendedor")?.value);if(x&&$("visEmail")&&!$("visEmail").value)$("visEmail").value=x.email||""}
+async function salvarClienteRelacionamento(e){
+  e.preventDefault();if(!registrar("visitas"))return;
+  const nome=String($("visNovoClienteNome")?.value||"").trim(),cidade=String($("visNovoClienteCidade")?.value||"").trim(),uf=String($("visNovoClienteUf")?.value||"").trim().toUpperCase();
+  if(!nome||!cidade)return msg($("visNovoClienteMsg"),"Informe cliente e cidade.");
+  const repetido=clientesVisitas.find(x=>chaveCliente(x.nome,x.cidade)===chaveCliente(nome,cidade));if(repetido)return msg($("visNovoClienteMsg"),"Este cliente já está disponível na lista.");
+  try{
+    msg($("visNovoClienteMsg"),"Incluindo...");
+    const ref=await addDoc(collection(db,"clientesRelacionamento"),{grupoId:grupoAtualId(),nome,cidade,uf,status:"ativo",origem:"visitas_contatos",criadoPor:uid(),criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+    clientesRelacionamento.push({id:ref.id,grupoId:grupoAtualId(),nome,cidade,uf,status:"ativo",origem:"visitas_contatos"});
+    await carregarBasesVisitas();const novo=clientesVisitas.find(x=>chaveCliente(x.nome,x.cidade)===chaveCliente(nome,cidade));if(novo&&$("visCliente"))$("visCliente").value=novo.id;sincronizarClienteVisita();
+    $("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")
+  }catch(err){console.error(err);msg($("visNovoClienteMsg"),"Não foi possível incluir o cliente. Confira as permissões publicadas.")}
+}
+function limpar(k){
+  edicao[k]=null;$(k+"Form")?.reset();if(el(k,"Data"))el(k,"Data").value=localIso();
+  if(k==="orcamentos")el(k,"Status").value="aguardando_aprovacao";
+  if(k==="visitas"){preencherBasesVisitas();if($("visCidade"))$("visCidade").value=""}
+  $(k+"FormTitulo").textContent="Novo registro";msg($(k+"Mensagem"),"")
+}
+function novo(k){
+  if(!registrar(k))return;
+  if(k!=="visitas"&&!empresaUnicaSelecionadaId())return alert("Selecione apenas uma empresa no cabeçalho.");
+  limpar(k);$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
+}
+function abrirEdicao(k,id){
+  const x=dados[k].find(v=>v.id===id);if(!x||!editar(k)||(!gestor(k)&&x.responsavelId!==uid()))return;
+  if(k==="visitas"){
+    edicao[k]=id;limpar(k);edicao[k]=id;
+    el(k,"Data").value=x.data||"";
+    const vend=vendedoresVisitas.find(v=>v.id===x.vendedorId)||vendedoresVisitas.find(v=>norm(v.nome)===norm(x.vendedor));if(vend)el(k,"Vendedor").value=vend.id;
+    const cli=clientesVisitas.find(v=>v.id===x.clienteId)||clientesVisitas.find(v=>chaveCliente(v.nome,v.cidade)===chaveCliente(x.cliente,x.cidade))||clientesVisitas.find(v=>norm(v.nome)===norm(x.cliente));if(cli)el(k,"Cliente").value=cli.id;
+    ["Obra","Cidade","Material","Assunto","Email","Observacao"].forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});
+    el(k,"Tipo").value=tipoVisitaCanon(x.tipo);$("visitasFormTitulo").textContent="Editar visita / contato";$("visitasFormBox").classList.remove("hidden");$("visitasFormBox").scrollIntoView({behavior:"smooth",block:"start"});return
+  }
+  if(x.empresaId!==empresaUnicaSelecionadaId())return alert("Selecione a empresa deste registro para editar.");
+  edicao[k]=id;const nomes=["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"];nomes.forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});$(k+"FormTitulo").textContent="Editar registro";$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
+}
+function formularioDados(k){
+  if(k==="visitas"){
+    const vend=vendedoresVisitas.find(x=>x.id===$("visVendedor")?.value),cli=clientesVisitas.find(x=>x.id===$("visCliente")?.value),tipo=$("visTipo")?.value||"";
+    return{data:$("visData")?.value||"",vendedorId:vend?.id||"",vendedor:vend?.nome||"",clienteId:cli?.id||"",clienteOrigem:cli?.origem||"",cliente:cli?.nome||"",obra:String($("visObra")?.value||"").trim(),cidade:String($("visCidade")?.value||cli?.cidade||"").trim(),material:String($("visMaterial")?.value||"").trim(),assunto:String($("visAssunto")?.value||"").trim(),tipo,email:String($("visEmail")?.value||"").trim(),observacao:String($("visObservacao")?.value||"").trim()}
+  }
+  const nomes=["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"],d={};nomes.forEach(n=>{d[n.charAt(0).toLowerCase()+n.slice(1)]=String(el(k,n).value||"").trim()});d.valor=Number(d.valor);return d
+}
+async function consultar(k){
+  const grupo=grupoAtualId(),id=uid();if(!grupo)return[];
+  if(k==="visitas"){
+    const cond=[where("grupoId","==",grupo)];if(!gestor(k))cond.push(where("responsavelId","==",id));
+    const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond));return s.docs.map(x=>({id:x.id,...x.data()}))
+  }
+  const empresas=empresasSelecionadasIds();if(!empresas.length)return[];
+  const blocos=await Promise.all(empresas.map(async empresaId=>{const cond=[where("grupoId","==",grupo),where("empresaId","==",empresaId)];if(!gestor(k))cond.push(where("responsavelId","==",id));const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond));return s.docs.map(x=>({id:x.id,...x.data()}))}));return blocos.flat()
+}
+async function carregar(k){
+  if(ocupado[k]||!ver(k))return;ocupado[k]=true;
+  try{
+    if(k==="visitas")await carregarBasesVisitas();
+    dados[k]=await consultar(k);$(k+"Aviso").classList.add("hidden");render(k)
+  }catch(e){console.error(e);dados[k]=[];render(k);$(k+"Aviso").textContent="Não foi possível consultar os registros. Confira o perfil e as Rules publicadas no Firebase.";$(k+"Aviso").classList.remove("hidden")}finally{ocupado[k]=false}
+}
+function visitasDoPeriodo(){
+  const ano=periodoAno(),meses=indicesPeriodo();
+  return dados.visitas.filter(x=>anoData(x.data)===ano&&meses.includes(mesData(x.data)))
+}
+function barRows(items,total=0){
+  const max=Math.max(1,...items.map(x=>x.valor));
+  return items.map((x,i)=>`<div class="commercial-bar-row"><span class="commercial-bar-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(x.valor?3:0,x.valor/max*100)}%"></b></i><em>${x.valor.toLocaleString("pt-BR")}</em>${total?`<small>${(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%</small>`:""}</div>`).join("")
+}
+function renderVisitasGraficos(periodo){
+  const ano=periodoAno(),anoDados=dados.visitas.filter(x=>anoData(x.data)===ano),meses=MESES.map((nome,i)=>({nome,valor:anoDados.filter(x=>mesData(x.data)===i).length})),maxMes=Math.max(1,...meses.map(x=>x.valor));
+  $("visitasGraficoAnoLabel").textContent="Ano "+ano;
+  $("visitasGrafico12").innerHTML=meses.map(x=>`<div class="commercial-month-col"><strong>${x.valor}</strong><i><b style="height:${x.valor?Math.max(4,x.valor/maxMes*100):0}%"></b></i><span>${x.nome}</span></div>`).join("");
+
+  const porCliente=new Map(),porCidade=new Map(),porTipo=new Map(TIPOS_VISITA.map(([v,t])=>[v,{nome:t,valor:0}]));
+  periodo.forEach(x=>{
+    const ck=norm(x.cliente)||"não informado",cv=porCliente.get(ck)||{nome:x.cliente||"Cliente não informado",valor:0};cv.valor++;porCliente.set(ck,cv);
+    const cidade=String(x.cidade||"Cidade não informada").trim()||"Cidade não informada",city=porCidade.get(norm(cidade))||{nome:cidade,valor:0};city.valor++;porCidade.set(norm(cidade),city);
+    const tipo=tipoVisitaCanon(x.tipo),tv=porTipo.get(tipo)||{nome:tipoVisitaNome(tipo),valor:0};tv.valor++;porTipo.set(tipo,tv)
+  });
+  const clientes=[...porCliente.values()].sort((a,b)=>b.valor-a.valor||a.nome.localeCompare(b.nome,"pt-BR")).slice(0,15),cidades=[...porCidade.values()].sort((a,b)=>b.valor-a.valor||a.nome.localeCompare(b.nome,"pt-BR")).slice(0,15),tipos=[...porTipo.values()].sort((a,b)=>b.valor-a.valor);
+  $("visitasGraficoCliente").innerHTML=clientes.length?barRows(clientes,periodo.length):'<div class="empty-state">Sem contatos no período.</div>';
+  $("visitasGraficoCidade").innerHTML=cidades.length?barRows(cidades,periodo.length):'<div class="empty-state">Sem contatos no período.</div>';
+  $("visitasGraficoTipo").innerHTML=barRows(tipos,periodo.length)
+}
+function renderVisitas(){
+  const periodo=visitasDoPeriodo(),termo=norm($("visitasBusca")?.value),tipoFiltro=$("visitasFiltroTipo")?.value||"",filtrados=periodo.filter(x=>(!termo||[x.cliente,x.vendedor,x.cidade,x.assunto].some(v=>norm(v).includes(termo)))&&(!tipoFiltro||tipoVisitaCanon(x.tipo)===tipoFiltro));
+  $("visitasKpiTotal").textContent=String(periodo.length);$("visitasKpiSegundo").textContent=String(new Set(periodo.map(x=>norm(x.cliente)).filter(Boolean)).size);$("visitasKpiPeriodo").textContent=`Ano ${periodoAno()} · ${periodoChave()==="total"?"ano completo":"período selecionado"}`;
+  renderVisitasGraficos(periodo);
+  $("visitasLista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const acao=editar("visitas")?`<button type="button" class="btn-acao destaque" data-visitas-edit="${esc(x.id)}">Editar</button>`:"";return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td>${esc(x.assunto||"—")}</td><td>${acao}</td></tr>`}).join("")||'<tr><td colspan="6">Nenhum registro encontrado no período.</td></tr>';
+  document.querySelectorAll("[data-visitas-edit]").forEach(b=>b.addEventListener("click",()=>abrirEdicao("visitas",b.dataset.visitasEdit)))
+}
+function render(k){
+  if(k==="visitas"){renderVisitas();return}
+  const termo=String($(k+"Busca")?.value||"").toLocaleLowerCase("pt-BR"),status=$(k+"FiltroStatus")?.value||"",filtrados=dados[k].filter(x=>[x.cliente,x.vendedor,x.produto].some(s=>String(s||"").toLocaleLowerCase("pt-BR").includes(termo))&&(!status||x.status===status));const abertos=filtrados.filter(x=>ABERTOS.has(x.status)),vencidos=abertos.filter(x=>x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now());$(k+"KpiTotal").textContent=String(abertos.length);$(k+"KpiSegundo").textContent=String(vencidos.length);$("orcamentosKpiValor").textContent=dinheiro(abertos.reduce((a,x)=>a+Number(x.valor||0),0));renderMesa();
+  $(k+"Lista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const acao=editar(k)?`<button type="button" class="btn-acao destaque" data-${k}-edit="${esc(x.id)}">Editar</button>`:"",vencido=ABERTOS.has(x.status)&&x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now();return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.produto)}</small></td><td>${esc(x.vendedor)}</td><td>${dinheiro(x.valor)}</td><td><strong>${esc(STATUS[x.status]||x.status)}</strong>${ABERTOS.has(x.status)?`<small>${vencido?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${acao}${ABERTOS.has(x.status)&&editar(k)?`<button type="button" class="btn-acao" data-orc-follow="${esc(x.id)}">Registrar contato</button>`:""}${Array.isArray(x.contatos)&&x.contatos.length?`<button type="button" class="btn-acao" data-orc-history="${esc(x.id)}">Histórico (${x.contatos.length})</button>`:""}</td></tr>`}).join("")||'<tr><td colspan="6">Nenhum registro encontrado.</td></tr>';
+  document.querySelectorAll(`[data-${k}-edit]`).forEach(b=>b.addEventListener("click",()=>abrirEdicao(k,b.dataset[`${k}Edit`])));
+  document.querySelectorAll("[data-orc-follow]").forEach(b=>b.addEventListener("click",()=>followUp(b.dataset.orcFollow)));
+  document.querySelectorAll("[data-orc-history]").forEach(b=>b.addEventListener("click",()=>{const x=dados.orcamentos.find(v=>v.id===b.dataset.orcHistory);if(!x)return;alert((x.contatos||[]).map(c=>`${new Date(c.em).toLocaleString("pt-BR")} · ${c.resultado}`).join("\n\n"))}))
+}
+async function salvar(k,e){
+  e.preventDefault();
+  if(k==="visitas"){
+    const d=formularioDados(k);if(!d.data||!d.vendedorId||!d.vendedor||!d.clienteId||!d.cliente||!TIPOS_VISITA.some(([v])=>v===d.tipo))return msg($("visitasMensagem"),"Informe data, vendedor, cliente e tipo de contato.");
+    try{
+      msg($("visitasMensagem"),"Salvando...");
+      if(edicao.visitas){
+        const x=dados.visitas.find(v=>v.id===edicao.visitas);if(!x||!editar("visitas")||(!gestor("visitas")&&x.responsavelId!==uid()))throw new Error("Edição não autorizada.");
+        await updateDoc(doc(db,"visitasComerciais",x.id),{...d,atualizadoEm:serverTimestamp()})
+      }else{
+        if(!registrar("visitas"))throw new Error("Sem permissão.");
+        await addDoc(collection(db,"visitasComerciais"),{...d,grupoId:grupoAtualId(),responsavelId:uid(),origem:"sig",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()})
+      }
+      $("visitasFormBox").classList.add("hidden");limpar("visitas");emitirAlteracao("visitas");await carregar("visitas")
+    }catch(err){console.error(err);msg($("visitasMensagem"),err.message||"Não foi possível salvar.")}
+    return
+  }
+  const emp=empresaUnicaSelecionadaId();if(!emp)return alert("Selecione apenas uma empresa no cabeçalho.");const d=formularioDados(k);if(!d.data||!d.vendedor||!d.cliente||!d.produto||!Number.isFinite(d.valor)||d.valor<0||!STATUS[d.status])return msg($(k+"Mensagem"),"Revise os campos obrigatórios.");if(d.telefone&&d.telefone.replace(/\D/g,"").length!==11)return msg($(k+"Mensagem"),"Telefone deve conter DDD e nove dígitos.");
+  try{msg($(k+"Mensagem"),"Salvando...");if(edicao[k]){const x=dados[k].find(v=>v.id===edicao[k]);if(!x||!editar(k)||(!gestor(k)&&x.responsavelId!==uid())||x.empresaId!==emp)throw new Error("Edição não autorizada.");if(ABERTOS.has(d.status)&&!ABERTOS.has(x.status))d.proximoContatoEm=proximo24();await atualizarDocumento(MODELOS[k].colecao,x.id,d)}else{if(!registrar(k))throw new Error("Sem permissão.");await criarDocumento(MODELOS[k].colecao,{...d,proximoContatoEm:ABERTOS.has(d.status)?proximo24():"",ultimoContatoEm:"",empresaId:emp,responsavelId:uid(),origem:"sig"})}$(k+"FormBox").classList.add("hidden");limpar(k);emitirAlteracao(k);await carregar(k)}catch(err){console.error(err);msg($(k+"Mensagem"),err.message||"Não foi possível salvar.")}
+}
 async function followUp(id){const x=dados.orcamentos.find(v=>v.id===id);if(!x||!ABERTOS.has(x.status)||!editar("orcamentos")||(!gestor("orcamentos")&&x.responsavelId!==uid()))return;const nota=prompt(`Contato com ${x.cliente}: registre um breve resultado`);if(nota===null)return;if(!nota.trim())return alert("Informe o resultado do contato.");try{const instante=agoraIso();await atualizarDocumento("orcamentosComerciais",id,{ultimoContatoEm:instante,proximoContatoEm:proximo24(),notaUltimoContato:nota.trim(),contatos:arrayUnion({em:instante,por:uid(),resultado:nota.trim()})});emitirAlteracao("orcamentos");await carregar("orcamentos")}catch(e){console.error(e);alert("Não foi possível registrar o contato.")}}
 function montarMesa(){const mesa=$("pagina-minhamesa"),dash=$("pagina-dashboard");if(mesa&&!$("mesaOrcamentos")){const s=document.createElement("section");s.id="mesaOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Orçamentos para acompanhar</h3><p>Próximo contato a cada 24 horas enquanto o orçamento estiver aberto.</p></div><button id="mesaAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div id="mesaOrcamentosLista" class="commercial-mesa-list"></div>';mesa.appendChild(s);$("mesaAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}if(dash&&!$("dashOrcamentos")){const s=document.createElement("section");s.id="dashOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Comercial · Orçamentos</h3><p>Carteira aberta e contatos pendentes da equipe.</p></div><button id="dashAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Em aberto</span><strong id="dashOrcAbertos">—</strong></div><div class="kpi-card"><span>Contato vencido</span><strong id="dashOrcVencidos">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="dashOrcValor">—</strong></div></div>';dash.appendChild(s);$("dashAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}}
 function renderMesa(){montarMesa();const acesso=ver("orcamentos"),todos=dados.orcamentos.filter(x=>ABERTOS.has(x.status)),meus=todos.filter(x=>x.responsavelId===uid()),vencidos=todos.filter(x=>Date.parse(x.proximoContatoEm)<=Date.now());if($("dashOrcamentos"))$("dashOrcamentos").classList.toggle("hidden",!acesso);if($("mesaOrcamentos"))$("mesaOrcamentos").classList.toggle("hidden",!acesso);if(!acesso)return;$("dashOrcAbertos").textContent=String(todos.length);$("dashOrcVencidos").textContent=String(vencidos.length);$("dashOrcValor").textContent=dinheiro(todos.reduce((s,x)=>s+Number(x.valor||0),0));$("mesaOrcamentosLista").innerHTML=meus.sort((a,b)=>String(a.proximoContatoEm).localeCompare(String(b.proximoContatoEm))).slice(0,12).map(x=>`<div class="commercial-mesa-row"><strong>${esc(x.cliente)} · ${esc(x.produto)}</strong><span>${Date.parse(x.proximoContatoEm)<=Date.now()?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</span></div>`).join("")||'<p>Não há orçamentos abertos sob sua responsabilidade.</p>'}
