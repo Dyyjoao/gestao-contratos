@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=19";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=20";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -151,13 +151,30 @@ function montar(){
     </div>
     <div id="salesClientesResumo" class="sales-clientes-resumo"></div>
     <div id="salesClientesGrafico" class="sales-clientes-grafico"></div>
-    <div class="tabela-container sales-clientes-scroll"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendas</th><th>Valor vendido</th><th>% do total</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
-  </section>
 
-  <section class="lista-card sales-cidades">
-    <div class="lista-cabecalho"><div><h3>Vendas por cidade</h3><p>Total vendido por cidade dos clientes no período selecionado.</p></div></div>
+    <div class="sales-subranking-head">
+      <div><h4>Vendas por cidade</h4><p>Top 15 cidades por valor vendido no período e vendedor selecionados.</p></div>
+    </div>
     <div id="salesCidadesResumo" class="sales-clientes-resumo"></div>
     <div id="salesCidadesGrafico" class="sales-cidades-grafico"></div>
+  </section>
+
+  <section class="lista-card sales-clientes-detalhe">
+    <div class="lista-cabecalho sales-clientes-head">
+      <div><h3>Clientes do período</h3><p>Consulta detalhada dos clientes com vendas no período selecionado.</p></div>
+      <div class="sales-clientes-filtros">
+        <input id="salesClientesBusca" type="search" placeholder="Buscar cliente">
+        <select id="salesClientesListaVendedor"><option value="">Todos os vendedores</option></select>
+        <select id="salesClientesListaOrdem">
+          <option value="maior">Maior para menor</option>
+          <option value="menor">Menor para maior</option>
+          <option value="az">Nome A → Z</option>
+          <option value="za">Nome Z → A</option>
+        </select>
+      </div>
+    </div>
+    <div id="salesClientesListaResumo" class="sales-clientes-resumo"></div>
+    <div class="tabela-container sales-clientes-scroll"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendas</th><th>Valor vendido</th><th>% do total</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
   </section>
 
   <section class="lista-card">
@@ -179,6 +196,9 @@ function montar(){
   $("salesModoRanking")?.addEventListener("change",render);
   $("salesClientesVendedor")?.addEventListener("change",render);
   $("salesClientesOrdem")?.addEventListener("change",render);
+  $("salesClientesBusca")?.addEventListener("input",render);
+  $("salesClientesListaVendedor")?.addEventListener("change",render);
+  $("salesClientesListaOrdem")?.addEventListener("change",render);
 }
 
 function contextoUnico(){const emp=empresaUnicaSelecionadaId();if(!emp){alert("Para cadastrar ou editar, selecione uma única empresa no cabeçalho.");return""}return emp}
@@ -267,7 +287,7 @@ function preencherVendedores(){
   eq.filter(x=>x.cfg).forEach(({p,cfg})=>mapa.set(cfg.id,p.nome));
   const opcoes=[...mapa.entries()].sort((a,b)=>String(a[1]||"").localeCompare(String(b[1]||""),"pt-BR"));
 
-  [f,fc].forEach(el=>{
+  [f,fc,$("salesClientesListaVendedor")].forEach(el=>{
     if(!el)return;
     const atual=el.value;
     el.innerHTML='<option value="">Todos os vendedores</option>'+opcoes.map(([id,nome])=>`<option value="${esc(id)}">${esc(nome)}</option>`).join("");
@@ -331,13 +351,13 @@ function renderEmpresas(validas){
   lista.innerHTML=itens.length?itens.map(x=>`<div class="sales-empresa-item"><span>${esc(x.nome||"Empresa")}</span><strong>${moeda(x.valor)}</strong><small>${x.qtd} venda(s) · ${total?(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem vendas no período.</div>'
 }
 function renderCidades(validas){
-  const mapa=new Map();
-  validas.forEach(v=>{
+  const vendedor=$("salesClientesVendedor")?.value||"",base=vendedor?validas.filter(v=>v.vendedorId===vendedor):validas,mapa=new Map();
+  base.forEach(v=>{
     const cl=clienteComercialVenda(v),cidade=String(cl?.cidade||"").trim()||"Cidade não informada",uf=String(cl?.uf||"").trim().toUpperCase(),nome=uf&&cidade!=="Cidade não informada"?`${cidade} / ${uf}`:cidade,chave=nome.toLocaleLowerCase("pt-BR");
     const z=mapa.get(chave)||{nome,valor:0,qtd:0};z.valor+=n(v.valor);z.qtd++;mapa.set(chave,z)
   });
-  const itens=[...mapa.values()].sort((a,b)=>b.valor-a.valor||a.nome.localeCompare(b.nome,"pt-BR")),total=itens.reduce((s,x)=>s+x.valor,0),max=Math.max(1,...itens.map(x=>x.valor));
-  const resumo=$("salesCidadesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cidade(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span>`;
+  const todos=[...mapa.values()].sort((a,b)=>b.valor-a.valor||a.nome.localeCompare(b.nome,"pt-BR")),total=todos.reduce((s,x)=>s+x.valor,0),itens=todos.slice(0,15),max=Math.max(1,...itens.map(x=>x.valor));
+  const resumo=$("salesCidadesResumo");if(resumo)resumo.innerHTML=`<span><strong>Top ${Math.min(15,todos.length)}</strong> de ${todos.length} cidade(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span>`;
   const graf=$("salesCidadesGrafico");if(graf)graf.innerHTML=itens.length?itens.map((x,i)=>`<div class="sales-cidade-bar"><span class="sales-cliente-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(2,x.valor/max*100)}%"></b></i><em>${moeda(x.valor)}</em><small>${total?(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem cidades no período.</div>'
 }
 
@@ -356,7 +376,21 @@ function renderClientes(validas){
   const nomeFiltro=vendedor?(base[0]?.vendedorNome||nomeVend(vendedor)||"Vendedor"):"Todos os vendedores";
   const resumo=$("salesClientesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span><span>Vendedor: <strong>${esc(nomeFiltro)}</strong></span>`;
   const graf=$("salesClientesGrafico");if(graf)graf.innerHTML=top.length?top.map((x,i)=>`<div class="sales-cliente-bar"><span class="sales-cliente-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(2,x.vendido/max*100)}%"></b></i><em>${moeda(x.vendido)}</em><small>${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem clientes no período.</div>';
-  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr><td>${i+1}</td><td><strong>${esc(x.nome)}</strong></td><td>${x.qtd}</td><td>${moeda(x.vendido)}</td><td>${total?(x.vendido/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="5">Nenhum cliente no período selecionado.</td></tr>'
+}
+
+function renderClientesDetalhe(validas){
+  const ordem=$("salesClientesListaOrdem")?.value||"maior",vendedor=$("salesClientesListaVendedor")?.value||"",busca=String($("salesClientesBusca")?.value||"").trim().toLocaleLowerCase("pt-BR"),base=vendedor?validas.filter(v=>v.vendedorId===vendedor):validas,mapa=new Map();
+  base.forEach(v=>{
+    const nome=String(v.cliente||"Cliente não informado").trim()||"Cliente não informado",chave=String(v.clienteId||nome.toLocaleLowerCase("pt-BR")),z=mapa.get(chave)||{nome,vendido:0,qtd:0};z.vendido+=n(v.valor);z.qtd++;mapa.set(chave,z)
+  });
+  let itens=[...mapa.values()].filter(x=>!busca||x.nome.toLocaleLowerCase("pt-BR").includes(busca));
+  if(ordem==="maior")itens.sort((a,b)=>b.vendido-a.vendido||a.nome.localeCompare(b.nome,"pt-BR"));
+  else if(ordem==="menor")itens.sort((a,b)=>a.vendido-b.vendido||a.nome.localeCompare(b.nome,"pt-BR"));
+  else if(ordem==="az")itens.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  else itens.sort((a,b)=>b.nome.localeCompare(a.nome,"pt-BR"));
+  const totalBase=[...mapa.values()].reduce((s,x)=>s+x.vendido,0),visivel=itens.reduce((s,x)=>s+x.vendido,0),resumo=$("salesClientesListaResumo");
+  if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s) visível(is)</span><span>Valor visível: <strong>${moeda(visivel)}</strong></span>${busca?'<span>Filtro: <strong>'+esc($("salesClientesBusca")?.value||"")+'</strong></span>':""}`;
+  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr><td>${i+1}</td><td><strong>${esc(x.nome)}</strong></td><td>${x.qtd}</td><td>${moeda(x.vendido)}</td><td>${totalBase?(x.vendido/totalBase*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="5">Nenhum cliente encontrado para os filtros selecionados.</td></tr>'
 }
 
 function renderAbc(validas){
@@ -404,6 +438,7 @@ function render(){
   renderEmpresas(valid);
   renderClientes(valid);
   renderCidades(valid);
+  renderClientesDetalhe(valid);
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
