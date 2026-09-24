@@ -75,7 +75,7 @@ function formulario(k){
       <div class="campo campo-span-3"><label for="visObservacao">Observação</label><textarea id="visObservacao"></textarea></div>
     </div><div class="form-acoes"><button class="btn-secundario" type="button" id="visitasCancelar">Cancelar</button><button class="btn-primario" type="submit">Salvar</button></div><p id="visitasMensagem" class="mensagem-form"></p></form></section>
     <section id="visitasClienteBox" class="form-card hidden commercial-client-new"><div class="form-card-titulo"><div><h3>Incluir cliente para relacionamento</h3><p>Esse cadastro complementa a lista de clientes originada das vendas e vale para todo o grupo empresarial.</p></div></div><form id="visitasClienteForm"><div class="form-grid form-grid-3"><div class="campo campo-span-2"><label for="visNovoClienteNome">Cliente</label><input id="visNovoClienteNome" required></div><div class="campo"><label for="visNovoClienteCidade">Cidade</label><input id="visNovoClienteCidade" required></div><div class="campo"><label for="visNovoClienteUf">UF</label><input id="visNovoClienteUf" maxlength="2"></div></div><div class="form-acoes"><button id="visNovoClienteCancelar" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Incluir cliente</button></div><p id="visNovoClienteMsg" class="mensagem-form"></p></form></section>
-    <section id="visitasMateriaisBox" class="form-card hidden commercial-material-config"><div class="form-card-titulo"><div><h3>Materiais comerciais</h3><p>Mesma base utilizada no Consolidado de vendas.</p></div></div><form id="visitasMaterialForm"><div class="form-grid form-grid-3"><div class="campo"><label for="visMaterialEmpresa">Empresa</label><select id="visMaterialEmpresa" required><option value="">Selecione...</option></select></div><div class="campo"><label for="visNovoMaterialCodigo">Código</label><input id="visNovoMaterialCodigo" type="text"></div><div class="campo"><label for="visNovoMaterial">Material</label><input id="visNovoMaterial" type="text" required></div><div class="campo"><label for="visNovoMaterialCategoria">Categoria</label><input id="visNovoMaterialCategoria" type="text"></div><div class="campo"><label for="visNovoMaterialUnidade">Unidade</label><input id="visNovoMaterialUnidade" type="text" maxlength="12"></div></div><div class="form-acoes"><button id="visMaterialConfigFechar" class="btn-secundario" type="button">Fechar</button><button class="btn-primario" type="submit">Adicionar material</button></div><div id="visitasMateriaisLista" class="commercial-material-list"></div><p id="visMaterialConfigMsg" class="mensagem-form"></p></form></section>`;
+    <section id="visitasMateriaisBox" class="form-card hidden commercial-material-config"><div class="form-card-titulo"><div><h3>Materiais comerciais</h3><p>Cadastro mestre do grupo: o material fica disponível para todas as empresas em Visitas e Orçamentos.</p></div></div><form id="visitasMaterialForm"><div class="form-grid form-grid-3"><div class="campo"><label for="visNovoMaterialCodigo">Código</label><input id="visNovoMaterialCodigo" type="text"></div><div class="campo"><label for="visNovoMaterial">Material</label><input id="visNovoMaterial" type="text" required></div><div class="campo"><label for="visNovoMaterialCategoria">Categoria</label><input id="visNovoMaterialCategoria" type="text"></div><div class="campo"><label for="visNovoMaterialUnidade">Unidade de medida</label><select id="visNovoMaterialUnidade" required><option value="">Selecione...</option><option value="UN">UN · Unidade</option><option value="KG">KG · Quilograma</option><option value="G">G · Grama</option><option value="TON">TON · Tonelada</option><option value="M">M · Metro</option><option value="M2">M² · Metro quadrado</option><option value="M3">M³ · Metro cúbico</option><option value="L">L · Litro</option><option value="ML">ML · Mililitro</option><option value="CX">CX · Caixa</option><option value="PCT">PCT · Pacote</option></select><small>Usada no cálculo e na exibição do custo unitário.</small></div><div class="campo campo-span-2"><label>Empresas vinculadas</label><div id="visMaterialEmpresasResumo" class="commercial-material-company-summary">Todas as empresas do grupo</div></div></div><div class="form-acoes"><button id="visMaterialConfigFechar" class="btn-secundario" type="button">Fechar</button><button class="btn-primario" type="submit">Adicionar material</button></div><div id="visitasMateriaisLista" class="commercial-material-list"></div><p id="visMaterialConfigMsg" class="mensagem-form"></p></form></section>`;
   }
   const comum=[campo(k,"Data","Data","date",true),campo(k,"Vendedor","Vendedor","text",true),campo(k,"Cliente","Cliente","text",true)];
   const campos=[...comum,campo(k,"Produto","Produto","text",true),campo(k,"Cidade","Cidade"),campo(k,"Comprador","Comprador"),campo(k,"NumeroVb","Nº da VB"),campo(k,"Valor","Valor","number",true,'min="0" step="0.01"'),selecao(k,"Status","Status",Object.entries(STATUS),true),campo(k,"Telefone","Telefone","tel"),campo(k,"Email","E-mail do vendedor","email"),`<div class="campo"><label for="orcObservacao">Observação</label><textarea id="orcObservacao"></textarea></div>`,`<div class="campo"><label for="orcJustificativa">Justificativa</label><textarea id="orcJustificativa"></textarea></div>`];
@@ -123,7 +123,7 @@ function montar(k){
     $("visClienteNovo")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.remove("hidden");$("visNovoClienteNome")?.focus()});
     $("visNovoClienteCancelar")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")});
     $("visitasClienteForm")?.addEventListener("submit",salvarClienteRelacionamento);
-    $("visitasConfigurar")?.addEventListener("click",()=>{if(!admin())return;preencherEmpresasMaterialVisita();$("visitasMateriaisBox")?.classList.remove("hidden");renderMateriaisVisitas()});
+    $("visitasConfigurar")?.addEventListener("click",()=>{if(!admin())return;atualizarResumoEmpresasMaterial();$("visitasMateriaisBox")?.classList.remove("hidden");renderMateriaisVisitas()});
     $("visMaterialConfigFechar")?.addEventListener("click",()=>{$("visitasMateriaisBox")?.classList.add("hidden");$("visitasMaterialForm")?.reset();msg($("visMaterialConfigMsg"),"")});
     $("visitasMaterialForm")?.addEventListener("submit",salvarMaterialVisita);
     $("visitasOrcamentoCancelar")?.addEventListener("click",fecharOrcamentoVisita);
@@ -150,13 +150,13 @@ async function carregarBasesVisitas(){
     consultarColecaoGrupoPorEmpresa("rhColaboradores"),
     getDocs(query(collection(db,"clientesComerciais"),where("grupoId","==",grupo))),
     getDocs(query(collection(db,"clientesRelacionamento"),where("grupoId","==",grupo))),
-    consultarColecaoGrupoPorEmpresa("itensComerciais")
+    getDocs(query(collection(db,"itensComerciais"),where("grupoId","==",grupo)))
   ]);
   const configs=resultados[0].status==="fulfilled"?resultados[0].value.docs.map(x=>({id:x.id,...x.data()})):[];
   const rhs=resultados[1].status==="fulfilled"?resultados[1].value:[];
   const clientesSales=resultados[2].status==="fulfilled"?resultados[2].value.docs.map(x=>({id:x.id,...x.data()})):[];
   clientesRelacionamento=resultados[3].status==="fulfilled"?resultados[3].value.docs.map(x=>({id:x.id,...x.data()})):[];
-  materiaisVisitas=resultados[4].status==="fulfilled"?resultados[4].value.filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR")):[];
+  materiaisVisitas=resultados[4].status==="fulfilled"?resultados[4].value.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR")):[];
 
   const hoje=localIso(),rhAtivos=new Map(rhs.filter(x=>x.status!=="estornado"&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje)).map(x=>[x.id,x])),vendMap=new Map();
   configs.filter(x=>x.status!=="inativo"&&(!x.tipoComissao||x.tipoComissao==="vendedor")).forEach(v=>{
@@ -183,8 +183,12 @@ async function carregarBasesVisitas(){
   clientesVisitas=[...cliMap.values()].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")||a.cidade.localeCompare(b.cidade,"pt-BR"));
   preencherBasesVisitas()
 }
+function materialDisponivelEmpresa(x,empresaId=""){
+  if(!empresaId)return true;
+  return (Array.isArray(x?.empresaIds)&&x.empresaIds.includes(empresaId))||x?.empresaId===empresaId
+}
 function materiaisAtivosVisitas(empresaId=""){
-  return materiaisVisitas.filter(x=>x.status!=="inativo"&&(!empresaId||x.empresaId===empresaId)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"))
+  return materiaisVisitas.filter(x=>x.status!=="inativo"&&materialDisponivelEmpresa(x,empresaId)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"))
 }
 function materiaisConsolidadosVisitas(){
   const mapa=new Map();
@@ -211,8 +215,8 @@ function opcoesProdutosVisita(valor=""){
 function atualizarResumoProdutosVisita(){
   let total=0;
   document.querySelectorAll("#visProdutosLista .commercial-visit-product-row").forEach(row=>{
-    const q=Number(row.querySelector("[data-vis-prod-qtd]")?.value||0),v=Number(row.querySelector("[data-vis-prod-valor]")?.value||0),unit=row.querySelector("[data-vis-prod-unit]");
-    const custo=q>0&&Number.isFinite(v)?v/q:0;if(unit)unit.value=custo>0?custo.toFixed(2):"";
+    const q=Number(row.querySelector("[data-vis-prod-qtd]")?.value||0),v=Number(row.querySelector("[data-vis-prod-valor]")?.value||0),unit=row.querySelector("[data-vis-prod-unit]"),sel=row.querySelector("[data-vis-produto]"),item=materiaisVisitas.find(x=>x.id===sel?.value),medida=row.querySelector("[data-vis-prod-unidade]");
+    const custo=q>0&&Number.isFinite(v)?v/q:0;if(unit)unit.value=custo>0?custo.toFixed(2):"";if(medida)medida.textContent="R$/"+(item?.unidade||"unid.");
     if(Number.isFinite(v))total+=v
   });
   if($("visProdutosTotalResumo"))$("visProdutosTotalResumo").textContent="Total: "+dinheiro(total)
@@ -223,12 +227,12 @@ function adicionarProdutoVisita(dado={}){
   let itemId=dado.itemId||"";
   if(!itemId&&dado.nome){const achado=materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
   const qtd=Number(dado.quantidade||0)>0?Number(dado.quantidade):1,valor=dado.valorTotal??dado.valor??"";
-  row.innerHTML=`<select data-vis-produto required>${opcoesProdutosVisita(itemId)}</select><input data-vis-prod-qtd type="number" min="0.0001" step="0.0001" value="${qtd}" required><input data-vis-prod-valor type="number" min="0" step="0.01" value="${valor!==""?esc(String(valor)):""}" required><input data-vis-prod-unit type="number" step="0.01" readonly><button type="button" class="btn-acao perigo" data-vis-prod-remover>Remover</button>`;
+  row.innerHTML=`<select data-vis-produto required>${opcoesProdutosVisita(itemId)}</select><input data-vis-prod-qtd type="number" min="0.0001" step="0.0001" value="${qtd}" required><input data-vis-prod-valor type="number" min="0" step="0.01" value="${valor!==""?esc(String(valor)):""}" required><div class="commercial-unit-cost"><input data-vis-prod-unit type="number" step="0.01" readonly><small data-vis-prod-unidade>R$/unid.</small></div><button type="button" class="btn-acao perigo" data-vis-prod-remover>Remover</button>`;
   if(dado.nome&&!itemId){const sel=row.querySelector("[data-vis-produto]");sel.insertAdjacentHTML("beforeend",`<option value="__historico__" selected>${esc(dado.nome)} · histórico</option>`);row.dataset.historicoNome=dado.nome}
   box.appendChild(row);
   row.querySelector("[data-vis-prod-qtd]").addEventListener("input",atualizarResumoProdutosVisita);
   row.querySelector("[data-vis-prod-valor]").addEventListener("input",atualizarResumoProdutosVisita);
-  row.querySelector("[data-vis-produto]").addEventListener("change",()=>{if(row.querySelector("[data-vis-produto]").value!=="__historico__")row.dataset.historicoNome=""});
+  row.querySelector("[data-vis-produto]").addEventListener("change",()=>{if(row.querySelector("[data-vis-produto]").value!=="__historico__")row.dataset.historicoNome="";atualizarResumoProdutosVisita()});
   row.querySelector("[data-vis-prod-remover]").onclick=()=>{row.remove();if(!box.children.length)adicionarProdutoVisita();atualizarResumoProdutosVisita()};
   atualizarResumoProdutosVisita()
 }
@@ -248,30 +252,30 @@ function sincronizarClienteVisita(){const x=clientesVisitas.find(v=>v.id===$("vi
 function renderMateriaisVisitas(){
   const box=$("visitasMateriaisLista");if(!box)return;
   const arr=materiaisAtivosVisitas();
-  box.innerHTML=arr.length?arr.map(x=>`<div class="commercial-material-item"><span><strong>${esc(x.codigo||"—")}</strong> · ${esc(x.nome)} <small>${esc(state.empresas?.get?.(x.empresaId)?.nomeFantasia||state.empresas?.get?.(x.empresaId)?.razaoSocial||"Empresa")}</small></span>${admin()?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Inativar</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material comercial ativo.</div>';
+  box.innerHTML=arr.length?arr.map(x=>`<div class="commercial-material-item"><span><strong>${esc(x.codigo||"—")}</strong> · ${esc(x.nome)} <small>${esc(x.unidade||"—")} · ${(Array.isArray(x.empresaIds)&&x.empresaIds.length>1)?"Todas as empresas":esc(state.empresas?.get?.(x.empresaId)?.nomeFantasia||state.empresas?.get?.(x.empresaId)?.razaoSocial||"Empresa")}</small></span>${admin()?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Inativar</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material comercial ativo.</div>';
   document.querySelectorAll("[data-vis-material-del]").forEach(b=>b.onclick=()=>removerMaterialVisita(b.dataset.visMaterialDel))
 }
 async function salvarMaterialVisita(e){
   e.preventDefault();if(!admin())return;
-  const nome=String($("visNovoMaterial")?.value||"").trim(),empresaId=$("visMaterialEmpresa")?.value||"";
-  if(!empresaId||!idsEmpresasPermitidas().includes(empresaId))return msg($("visMaterialConfigMsg"),"Selecione a empresa do material.");
+  const nome=String($("visNovoMaterial")?.value||"").trim(),unidade=String($("visNovoMaterialUnidade")?.value||"").trim().toUpperCase(),empresaIds=idsEmpresasPermitidas();
   if(!nome)return msg($("visMaterialConfigMsg"),"Informe o material.");
-  if(materiaisVisitas.some(x=>x.empresaId===empresaId&&norm(x.nome)===norm(nome)))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado nesta empresa.");
+  if(!unidade)return msg($("visMaterialConfigMsg"),"Informe a unidade de medida.");
+  if(!empresaIds.length)return msg($("visMaterialConfigMsg"),"Nenhuma empresa disponível no grupo.");
+  if(materiaisVisitas.some(x=>norm(x.nome)===norm(nome)&&x.status!=="inativo"))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado no grupo.");
   try{
     msg($("visMaterialConfigMsg"),"Salvando...");
-    await criarDocumento("itensComerciais",{empresaId,codigo:String($("visNovoMaterialCodigo")?.value||"").trim(),nome,categoria:String($("visNovoMaterialCategoria")?.value||"").trim(),unidade:String($("visNovoMaterialUnidade")?.value||"").trim().toUpperCase(),status:"ativo"});
-    $("visitasMaterialForm")?.reset();preencherEmpresasMaterialVisita();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas();emitirAlteracao("vendas")
-  }catch(err){console.error("Erro ao salvar item comercial",err);msg($("visMaterialConfigMsg"),err?.message||"Não foi possível salvar o material.")}
+    await criarDocumento("itensComerciais",{empresaId:empresaIds[0],empresaIds,compartilhadoGrupo:true,codigo:String($("visNovoMaterialCodigo")?.value||"").trim(),nome,categoria:String($("visNovoMaterialCategoria")?.value||"").trim(),unidade,status:"ativo"});
+    $("visitasMaterialForm")?.reset();atualizarResumoEmpresasMaterial();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas();emitirAlteracao("vendas")
+  }catch(err){console.error("Erro ao salvar item comercial compartilhado",err);msg($("visMaterialConfigMsg"),err?.message||"Não foi possível salvar o material.")}
 }
 async function removerMaterialVisita(id){
   if(!admin())return;
   const x=materiaisVisitas.find(v=>v.id===id);if(!x||!confirm(`Inativar o material "${x.nome}"?`))return;
   try{await atualizarDocumento("itensComerciais",id,{status:"inativo"});await carregarBasesVisitas();emitirAlteracao("vendas")}catch(err){console.error(err);alert("Não foi possível inativar o material.")}
 }
-function preencherEmpresasMaterialVisita(){
-  const sel=$("visMaterialEmpresa");if(!sel)return;const ids=idsEmpresasPermitidas(),atual=sel.value;
-  sel.innerHTML='<option value="">Selecione a empresa...</option>'+ids.map(id=>{const e=state.empresas?.get?.(id);return `<option value="${esc(id)}">${esc(e?.nomeFantasia||e?.razaoSocial||id)}</option>`}).join("");
-  if([...sel.options].some(o=>o.value===atual))sel.value=atual;else if(ids.length===1)sel.value=ids[0]
+function atualizarResumoEmpresasMaterial(){
+  const box=$("visMaterialEmpresasResumo");if(!box)return;const ids=idsEmpresasPermitidas(),nomes=ids.map(id=>{const e=state.empresas?.get?.(id);return e?.nomeFantasia||e?.razaoSocial||id});
+  box.textContent=nomes.length?nomes.join(" · "):"Nenhuma empresa disponível"
 }
 async function salvarClienteRelacionamento(e){
   e.preventDefault();if(!registrar("visitas"))return;
@@ -529,7 +533,7 @@ async function salvar(k,e){
 async function followUp(id){const x=dados.orcamentos.find(v=>v.id===id);if(!x||!ABERTOS.has(x.status)||!editar("orcamentos")||(!gestor("orcamentos")&&x.responsavelId!==uid()))return;const nota=prompt(`Contato com ${x.cliente}: registre um breve resultado`);if(nota===null)return;if(!nota.trim())return alert("Informe o resultado do contato.");try{const instante=agoraIso();await atualizarDocumento("orcamentosComerciais",id,{ultimoContatoEm:instante,proximoContatoEm:proximo24(),notaUltimoContato:nota.trim(),contatos:arrayUnion({em:instante,por:uid(),resultado:nota.trim()})});emitirAlteracao("orcamentos");await carregar("orcamentos")}catch(e){console.error(e);alert("Não foi possível registrar o contato.")}}
 function montarMesa(){const mesa=$("pagina-minhamesa"),dash=$("pagina-dashboard");if(mesa&&!$("mesaOrcamentos")){const s=document.createElement("section");s.id="mesaOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Orçamentos para acompanhar</h3><p>Próximo contato a cada 24 horas enquanto o orçamento estiver aberto.</p></div><button id="mesaAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div id="mesaOrcamentosLista" class="commercial-mesa-list"></div>';mesa.appendChild(s);$("mesaAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}if(dash&&!$("dashOrcamentos")){const s=document.createElement("section");s.id="dashOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Comercial · Orçamentos</h3><p>Carteira aberta e contatos pendentes da equipe.</p></div><button id="dashAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Em aberto</span><strong id="dashOrcAbertos">—</strong></div><div class="kpi-card"><span>Contato vencido</span><strong id="dashOrcVencidos">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="dashOrcValor">—</strong></div></div>';dash.appendChild(s);$("dashAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}}
 function renderMesa(){montarMesa();const acesso=ver("orcamentos"),todos=dados.orcamentos.filter(x=>ABERTOS.has(x.status)),meus=todos.filter(x=>x.responsavelId===uid()),vencidos=todos.filter(x=>Date.parse(x.proximoContatoEm)<=Date.now());if($("dashOrcamentos"))$("dashOrcamentos").classList.toggle("hidden",!acesso);if($("mesaOrcamentos"))$("mesaOrcamentos").classList.toggle("hidden",!acesso);if(!acesso)return;$("dashOrcAbertos").textContent=String(todos.length);$("dashOrcVencidos").textContent=String(vencidos.length);$("dashOrcValor").textContent=dinheiro(todos.reduce((s,x)=>s+Number(x.valor||0),0));$("mesaOrcamentosLista").innerHTML=meus.sort((a,b)=>String(a.proximoContatoEm).localeCompare(String(b.proximoContatoEm))).slice(0,12).map(x=>`<div class="commercial-mesa-row"><strong>${esc(x.cliente)} · ${esc(x.produto)}</strong><span>${Date.parse(x.proximoContatoEm)<=Date.now()?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</span></div>`).join("")||'<p>Não há orçamentos abertos sob sua responsabilidade.</p>'}
-function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=10";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
+function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=11";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();for(const k of Object.keys(MODELOS))if(ver(k))carregar(k)});
 window.addEventListener("sig:empresa-contexto",()=>{if(!$("pagina-orcamentos")?.classList.contains("hidden"))carregar("orcamentos")});
