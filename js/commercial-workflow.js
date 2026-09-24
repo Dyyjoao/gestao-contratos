@@ -266,17 +266,43 @@ async function salvarOrcamentoDaVisita(e){
   if(!empresaId||!idsEmpresasPermitidas().includes(empresaId))return msg($("visitasOrcamentoMensagem"),"Selecione a empresa responsável pelo orçamento.");
   if(!data||!produto||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Empresa, Data, Produto, Valor, Vendedor e Status.");
   if(status==="perdido_concorrente"&&!motivoPerda)return msg($("visitasOrcamentoMensagem"),"Informe o motivo da perda para a concorrência.");
+
+  let orcamentoId="";
   try{
-    msg($("visitasOrcamentoMensagem"),"Salvando orçamento...");
-    const ref=await addDoc(collection(db,"orcamentosComerciais"),{
-      grupoId:grupoAtualId(),empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,valor,numeroVb,comprador,
-      vendedorId:vend.id,vendedor:vend.nome,status,motivoPerda:status==="perdido_concorrente"?motivoPerda:"",justificativa:status==="perdido_concorrente"?motivoPerda:"",
-      responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:"",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()
-    });
-    await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId:ref.id,orcamentoEmpresaId:empresaId,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
-    visita.status="orcamento";visita.orcamentoId=ref.id;fecharOrcamentoVisita();emitirAlteracao("orcamentos");emitirAlteracao("visitas");renderVisitas();
+    msg($("visitasOrcamentoMensagem"),"Verificando vínculo da visita...");
+    const existentes=await getDocs(query(collection(db,"orcamentosComerciais"),where("grupoId","==",grupoAtualId()),where("visitaId","==",visita.id)));
+    const existente=existentes.docs.find(d=>d.data()?.empresaId===empresaId)||existentes.docs[0];
+    if(existente)orcamentoId=existente.id;
+  }catch(err){
+    console.warn("Não foi possível consultar orçamento existente da visita",err);
+  }
+
+  if(!orcamentoId){
+    try{
+      msg($("visitasOrcamentoMensagem"),"Criando orçamento...");
+      const ref=await addDoc(collection(db,"orcamentosComerciais"),{
+        grupoId:grupoAtualId(),empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,valor,numeroVb,comprador,
+        vendedorId:vend.id,vendedor:vend.nome,status,motivoPerda:status==="perdido_concorrente"?motivoPerda:"",justificativa:status==="perdido_concorrente"?motivoPerda:"",
+        responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:"",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()
+      });
+      orcamentoId=ref.id
+    }catch(err){
+      console.error("Erro ao criar orçamento da visita",err);
+      const detalhe=err?.code==="permission-denied"?"O Firestore bloqueou a criação do orçamento. Atualize as Rules mais recentes e confirme a permissão de registrar orçamento.":(err?.message||"Não foi possível criar o orçamento.");
+      msg($("visitasOrcamentoMensagem"),detalhe);return
+    }
+  }
+
+  try{
+    msg($("visitasOrcamentoMensagem"),"Vinculando orçamento à visita...");
+    await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId,orcamentoEmpresaId:empresaId,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+    visita.status="orcamento";visita.orcamentoId=orcamentoId;visita.orcamentoEmpresaId=empresaId;fecharOrcamentoVisita();emitirAlteracao("orcamentos");emitirAlteracao("visitas");renderVisitas();
     alert("Orçamento criado e vinculado à visita.")
-  }catch(err){console.error("Erro ao salvar orçamento da visita",err);const detalhe=err?.code==="permission-denied"?"Permissão negada pelo Firestore. Confira se as Rules publicadas são as mais recentes.":(err?.message||"Não foi possível salvar o orçamento.");msg($("visitasOrcamentoMensagem"),detalhe)}
+  }catch(err){
+    console.error("Erro ao vincular orçamento à visita",err);
+    const detalhe=err?.code==="permission-denied"?"O orçamento foi localizado/criado, mas o Firestore bloqueou o vínculo com a visita. Atualize as Rules mais recentes.":(err?.message||"Não foi possível vincular o orçamento à visita.");
+    msg($("visitasOrcamentoMensagem"),detalhe)
+  }
 }
 
 function limpar(k){
@@ -403,7 +429,7 @@ async function salvar(k,e){
 async function followUp(id){const x=dados.orcamentos.find(v=>v.id===id);if(!x||!ABERTOS.has(x.status)||!editar("orcamentos")||(!gestor("orcamentos")&&x.responsavelId!==uid()))return;const nota=prompt(`Contato com ${x.cliente}: registre um breve resultado`);if(nota===null)return;if(!nota.trim())return alert("Informe o resultado do contato.");try{const instante=agoraIso();await atualizarDocumento("orcamentosComerciais",id,{ultimoContatoEm:instante,proximoContatoEm:proximo24(),notaUltimoContato:nota.trim(),contatos:arrayUnion({em:instante,por:uid(),resultado:nota.trim()})});emitirAlteracao("orcamentos");await carregar("orcamentos")}catch(e){console.error(e);alert("Não foi possível registrar o contato.")}}
 function montarMesa(){const mesa=$("pagina-minhamesa"),dash=$("pagina-dashboard");if(mesa&&!$("mesaOrcamentos")){const s=document.createElement("section");s.id="mesaOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Orçamentos para acompanhar</h3><p>Próximo contato a cada 24 horas enquanto o orçamento estiver aberto.</p></div><button id="mesaAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div id="mesaOrcamentosLista" class="commercial-mesa-list"></div>';mesa.appendChild(s);$("mesaAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}if(dash&&!$("dashOrcamentos")){const s=document.createElement("section");s.id="dashOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Comercial · Orçamentos</h3><p>Carteira aberta e contatos pendentes da equipe.</p></div><button id="dashAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Em aberto</span><strong id="dashOrcAbertos">—</strong></div><div class="kpi-card"><span>Contato vencido</span><strong id="dashOrcVencidos">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="dashOrcValor">—</strong></div></div>';dash.appendChild(s);$("dashAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}}
 function renderMesa(){montarMesa();const acesso=ver("orcamentos"),todos=dados.orcamentos.filter(x=>ABERTOS.has(x.status)),meus=todos.filter(x=>x.responsavelId===uid()),vencidos=todos.filter(x=>Date.parse(x.proximoContatoEm)<=Date.now());if($("dashOrcamentos"))$("dashOrcamentos").classList.toggle("hidden",!acesso);if($("mesaOrcamentos"))$("mesaOrcamentos").classList.toggle("hidden",!acesso);if(!acesso)return;$("dashOrcAbertos").textContent=String(todos.length);$("dashOrcVencidos").textContent=String(vencidos.length);$("dashOrcValor").textContent=dinheiro(todos.reduce((s,x)=>s+Number(x.valor||0),0));$("mesaOrcamentosLista").innerHTML=meus.sort((a,b)=>String(a.proximoContatoEm).localeCompare(String(b.proximoContatoEm))).slice(0,12).map(x=>`<div class="commercial-mesa-row"><strong>${esc(x.cliente)} · ${esc(x.produto)}</strong><span>${Date.parse(x.proximoContatoEm)<=Date.now()?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</span></div>`).join("")||'<p>Não há orçamentos abertos sob sua responsabilidade.</p>'}
-function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=7";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
+function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=8";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();for(const k of Object.keys(MODELOS))if(ver(k))carregar(k)});
 window.addEventListener("sig:empresa-contexto",()=>{if(!$("pagina-orcamentos")?.classList.contains("hidden"))carregar("orcamentos")});
