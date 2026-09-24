@@ -7,7 +7,7 @@ const ITENS={
   contasPagar:{label:"Contas a Pagar",root:"menuContasPagar",area:"controladoria",modulo:"contasPagar",acoes:["visualizar","cadastrar","editar","baixar"]},
   permutas:{label:"Permutas",root:"menuPermutas",area:"controladoria",modulo:"permutas",acoes:["visualizar","cadastrar","editar","movimentar","estornar","fechar","inativar"]},
   consorcios:{label:"Consórcios",root:"menuConsorcios",area:"controladoria",modulo:"consorcios",acoes:["visualizar","editar"]},
-  vendas:{label:"Vendas & Comissões",root:"menuVendas",area:"comercial",modulo:"vendas",acoes:["visualizar","lancar","editar","vendedores","comissoes"]},
+  vendas:{label:"Consolidado de vendas",root:"menuVendas",area:"comercial",modulo:"vendas",acoes:["visualizar","lancar","editar","vendedores","comissoes"]},
   visitas:{label:"Visitas e contatos",root:"menuvisitas",area:"comercial",modulo:"visitas",acoes:["visualizar","registrar","editar","supervisionar"]},
   orcamentos:{label:"Orçamentos",root:"menuorcamentos",area:"comercial",modulo:"orcamentos",acoes:["visualizar","registrar","editar","supervisionar"]},
   reclamacoes:{label:"Reclamações",root:"menuReclamacoes",area:"comercial",modulo:"reclamacoes",acoes:["visualizar","registrar","tratar","supervisionar"]},
