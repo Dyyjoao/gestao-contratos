@@ -64,7 +64,12 @@ function formulario(k){
       <div class="campo"><label for="visCliente">Cliente</label><div class="commercial-select-action"><select id="visCliente" required><option value="">Selecione...</option></select><button id="visClienteNovo" class="btn-secundario" type="button">+ Incluir</button></div><small>Base de clientes do Comercial + clientes incluídos para relacionamento.</small></div>
       <div class="campo"><label for="visCidade">Cidade</label><input id="visCidade" type="text" placeholder="Preenchida pelo cadastro do cliente"></div>
       <div class="campo"><label for="visObra">Obra</label><input id="visObra" type="text"></div>
-      <div class="campo"><label for="visMaterial">Material</label><select id="visMaterial"><option value="">Selecione...</option></select><small>Lista configurada pela Administração.</small></div>
+      <div class="campo campo-span-3"><label>Produtos / materiais</label>
+        <div class="commercial-visit-products-head"><span>Produto</span><span>Quantidade</span><span>Valor total</span><span>Custo unitário</span><span></span></div>
+        <div id="visProdutosLista" class="commercial-visit-products"></div>
+        <div class="commercial-visit-products-footer"><button id="visAdicionarProduto" class="btn-secundario" type="button">+ Adicionar produto</button><strong id="visProdutosTotalResumo">Total: R$ 0,00</strong></div>
+        <small>Produtos da mesma lista configurada no Consolidado de vendas. O custo unitário é calculado automaticamente.</small>
+      </div>
       <div class="campo"><label for="visAssunto">Assunto</label><input id="visAssunto" type="text"></div>
       <div class="campo"><label for="visTipo">Tipo de contato</label><select id="visTipo" required><option value="">Selecione...</option>${tipos}</select></div>
       <div class="campo campo-span-3"><label for="visObservacao">Observação</label><textarea id="visObservacao"></textarea></div>
@@ -114,6 +119,7 @@ function montar(k){
     $("visitasFiltroTipo")?.addEventListener("change",()=>render(k));
     $("visitasFiltroVendedor")?.addEventListener("change",()=>render(k));
     $("visCliente")?.addEventListener("change",sincronizarClienteVisita);
+    $("visAdicionarProduto")?.addEventListener("click",()=>adicionarProdutoVisita());
     $("visClienteNovo")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.remove("hidden");$("visNovoClienteNome")?.focus()});
     $("visNovoClienteCancelar")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")});
     $("visitasClienteForm")?.addEventListener("submit",salvarClienteRelacionamento);
@@ -191,13 +197,52 @@ function opcoesMateriaisVisitas(empresaId="",valor=""){
 }
 
 function preencherBasesVisitas(){
-  const sv=$("visVendedor"),sc=$("visCliente"),sf=$("visitasFiltroVendedor"),sm=$("visMaterial");
+  const sv=$("visVendedor"),sc=$("visCliente"),sf=$("visitasFiltroVendedor");
   if(sv){const atual=sv.value;sv.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cargoNome?" · "+esc(x.cargoNome):""}</option>`).join("");if([...sv.options].some(o=>o.value===atual))sv.value=atual}
   if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
   if(sf){const atual=sf.value;sf.innerHTML='<option value="">Todos os vendedores</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");if([...sf.options].some(o=>o.value===atual))sf.value=atual}
-  if(sm){const atual=sm.value;const mats=materiaisConsolidadosVisitas();sm.innerHTML='<option value="">Selecione...</option>'+mats.map(x=>`<option value="${esc(x.nome)}">${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome)}</option>`).join("");if([...sm.options].some(o=>o.value===atual))sm.value=atual}
   $("visitasConfigurar")?.classList.toggle("hidden",!admin());
   renderMateriaisVisitas()
+}
+function opcoesProdutosVisita(valor=""){
+  const arr=materiaisConsolidadosVisitas();
+  return '<option value="">Selecione...</option>'+arr.map(x=>`<option value="${esc(x.id)}" ${x.id===valor?"selected":""}>${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome||"")}${x.unidade?" · "+esc(x.unidade):""}</option>`).join("")
+}
+function atualizarResumoProdutosVisita(){
+  let total=0;
+  document.querySelectorAll("#visProdutosLista .commercial-visit-product-row").forEach(row=>{
+    const q=Number(row.querySelector("[data-vis-prod-qtd]")?.value||0),v=Number(row.querySelector("[data-vis-prod-valor]")?.value||0),unit=row.querySelector("[data-vis-prod-unit]");
+    const custo=q>0&&Number.isFinite(v)?v/q:0;if(unit)unit.value=custo>0?custo.toFixed(2):"";
+    if(Number.isFinite(v))total+=v
+  });
+  if($("visProdutosTotalResumo"))$("visProdutosTotalResumo").textContent="Total: "+dinheiro(total)
+}
+function adicionarProdutoVisita(dado={}){
+  const box=$("visProdutosLista");if(!box)return;
+  const row=document.createElement("div");row.className="commercial-visit-product-row";
+  let itemId=dado.itemId||"";
+  if(!itemId&&dado.nome){const achado=materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
+  const qtd=Number(dado.quantidade||0)>0?Number(dado.quantidade):1,valor=dado.valorTotal??dado.valor??"";
+  row.innerHTML=`<select data-vis-produto required>${opcoesProdutosVisita(itemId)}</select><input data-vis-prod-qtd type="number" min="0.0001" step="0.0001" value="${qtd}" required><input data-vis-prod-valor type="number" min="0" step="0.01" value="${valor!==""?esc(String(valor)):""}" required><input data-vis-prod-unit type="number" step="0.01" readonly><button type="button" class="btn-acao perigo" data-vis-prod-remover>Remover</button>`;
+  if(dado.nome&&!itemId){const sel=row.querySelector("[data-vis-produto]");sel.insertAdjacentHTML("beforeend",`<option value="__historico__" selected>${esc(dado.nome)} · histórico</option>`);row.dataset.historicoNome=dado.nome}
+  box.appendChild(row);
+  row.querySelector("[data-vis-prod-qtd]").addEventListener("input",atualizarResumoProdutosVisita);
+  row.querySelector("[data-vis-prod-valor]").addEventListener("input",atualizarResumoProdutosVisita);
+  row.querySelector("[data-vis-produto]").addEventListener("change",()=>{if(row.querySelector("[data-vis-produto]").value!=="__historico__")row.dataset.historicoNome=""});
+  row.querySelector("[data-vis-prod-remover]").onclick=()=>{row.remove();if(!box.children.length)adicionarProdutoVisita();atualizarResumoProdutosVisita()};
+  atualizarResumoProdutosVisita()
+}
+function produtosVisitaForm(){
+  return [...document.querySelectorAll("#visProdutosLista .commercial-visit-product-row")].map(row=>{
+    const sel=row.querySelector("[data-vis-produto]"),id=sel?.value||"",item=materiaisVisitas.find(x=>x.id===id),quantidade=Number(row.querySelector("[data-vis-prod-qtd]")?.value||0),valorTotal=Number(row.querySelector("[data-vis-prod-valor]")?.value||0),nome=item?.nome||row.dataset.historicoNome||"";
+    return{itemId:id==="__historico__"?"":id,codigo:item?.codigo||"",nome,categoria:item?.categoria||"",unidade:item?.unidade||"",empresaId:item?.empresaId||"",quantidade,valorTotal,custoUnitario:quantidade>0?valorTotal/quantidade:0}
+  })
+}
+function carregarProdutosVisita(registro=null){
+  const box=$("visProdutosLista");if(!box)return;box.innerHTML="";
+  const itens=Array.isArray(registro?.produtos)&&registro.produtos.length?registro.produtos:(registro?.material?[{nome:registro.material,quantidade:1,valorTotal:Number(registro.valorProdutos||0)}]:[]);
+  if(itens.length)itens.forEach(adicionarProdutoVisita);else adicionarProdutoVisita();
+  atualizarResumoProdutosVisita()
 }
 function sincronizarClienteVisita(){const x=clientesVisitas.find(v=>v.id===$("visCliente")?.value);if(x&&$("visCidade"))$("visCidade").value=x.cidade||""}
 function renderMateriaisVisitas(){
@@ -351,7 +396,7 @@ async function salvarOrcamentoDaVisita(e){
 function limpar(k){
   edicao[k]=null;$(k+"Form")?.reset();if(el(k,"Data"))el(k,"Data").value=localIso();
   if(k==="orcamentos")el(k,"Status").value="aguardando_aprovacao";
-  if(k==="visitas"){preencherBasesVisitas();if($("visCidade"))$("visCidade").value=""}
+  if(k==="visitas"){preencherBasesVisitas();if($("visCidade"))$("visCidade").value="";carregarProdutosVisita()}
   $(k+"FormTitulo").textContent="Novo registro";msg($(k+"Mensagem"),"")
 }
 function novo(k){
@@ -367,16 +412,15 @@ function abrirEdicao(k,id){
     const vend=vendedoresVisitas.find(v=>v.id===x.vendedorId)||vendedoresVisitas.find(v=>norm(v.nome)===norm(x.vendedor));if(vend)el(k,"Vendedor").value=vend.id;
     const cli=clientesVisitas.find(v=>v.id===x.clienteId)||clientesVisitas.find(v=>chaveCliente(v.nome,v.cidade)===chaveCliente(x.cliente,x.cidade))||clientesVisitas.find(v=>norm(v.nome)===norm(x.cliente));if(cli)el(k,"Cliente").value=cli.id;
     ["Obra","Cidade","Assunto","Observacao"].forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});
-    if(x.material&&!materiaisVisitas.some(m=>m.nome===x.material))el(k,"Material").insertAdjacentHTML("beforeend",`<option value="${esc(x.material)}">${esc(x.material)} · histórico</option>`);
-    el(k,"Material").value=x.material||"";el(k,"Tipo").value=tipoVisitaCanon(x.tipo);$("visitasFormTitulo").textContent="Editar visita / contato";$("visitasFormBox").classList.remove("hidden");$("visitasFormBox").scrollIntoView({behavior:"smooth",block:"start"});return
+    carregarProdutosVisita(x);el(k,"Tipo").value=tipoVisitaCanon(x.tipo);$("visitasFormTitulo").textContent="Editar visita / contato";$("visitasFormBox").classList.remove("hidden");$("visitasFormBox").scrollIntoView({behavior:"smooth",block:"start"});return
   }
   if(x.empresaId!==empresaUnicaSelecionadaId())return alert("Selecione a empresa deste registro para editar.");
   edicao[k]=id;const nomes=["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"];nomes.forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});$(k+"FormTitulo").textContent="Editar registro";$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
 }
 function formularioDados(k){
   if(k==="visitas"){
-    const vend=vendedoresVisitas.find(x=>x.id===$("visVendedor")?.value),cli=clientesVisitas.find(x=>x.id===$("visCliente")?.value),tipo=$("visTipo")?.value||"";
-    return{data:$("visData")?.value||"",vendedorId:vend?.id||"",vendedor:vend?.nome||"",clienteId:cli?.id||"",clienteOrigem:cli?.origem||"",cliente:cli?.nome||"",obra:String($("visObra")?.value||"").trim(),cidade:String($("visCidade")?.value||cli?.cidade||"").trim(),material:String($("visMaterial")?.value||"").trim(),assunto:String($("visAssunto")?.value||"").trim(),tipo,observacao:String($("visObservacao")?.value||"").trim()}
+    const vend=vendedoresVisitas.find(x=>x.id===$("visVendedor")?.value),cli=clientesVisitas.find(x=>x.id===$("visCliente")?.value),tipo=$("visTipo")?.value||"",produtos=produtosVisitaForm(),valorProdutos=produtos.reduce((s,p)=>s+(Number.isFinite(p.valorTotal)?p.valorTotal:0),0);
+    return{data:$("visData")?.value||"",vendedorId:vend?.id||"",vendedor:vend?.nome||"",clienteId:cli?.id||"",clienteOrigem:cli?.origem||"",cliente:cli?.nome||"",obra:String($("visObra")?.value||"").trim(),cidade:String($("visCidade")?.value||cli?.cidade||"").trim(),produtos,valorProdutos,material:produtos.map(p=>p.nome).filter(Boolean).join(" + "),assunto:String($("visAssunto")?.value||"").trim(),tipo,observacao:String($("visObservacao")?.value||"").trim()}
   }
   const nomes=["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"],d={};nomes.forEach(n=>{d[n.charAt(0).toLowerCase()+n.slice(1)]=String(el(k,n).value||"").trim()});d.valor=Number(d.valor);return d
 }
@@ -465,6 +509,7 @@ async function salvar(k,e){
   e.preventDefault();
   if(k==="visitas"){
     const d=formularioDados(k);if(!d.data||!d.vendedorId||!d.vendedor||!d.clienteId||!d.cliente||!TIPOS_VISITA.some(([v])=>v===d.tipo))return msg($("visitasMensagem"),"Informe data, vendedor, cliente e tipo de contato.");
+    if(!d.produtos.length||d.produtos.some(p=>!p.nome||!(p.quantidade>0)||!Number.isFinite(p.valorTotal)||p.valorTotal<0))return msg($("visitasMensagem"),"Revise os produtos: informe produto, quantidade e valor em todas as linhas.");
     try{
       msg($("visitasMensagem"),"Salvando...");
       if(edicao.visitas){
