@@ -1,12 +1,12 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, moeda, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, nomeEmpresa, periodoAno, periodoChave, emitirAlteracao } from "./shared.js";
+import { $, esc, msg, permite, moeda, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, nomeEmpresa, periodoAno, periodoChave, emitirAlteracao, state } from "./shared.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const PERIODOS={total:[0,1,2,3,4,5,6,7,8,9,10,11],t1:[0,1,2],t2:[3,4,5],t3:[6,7,8],t4:[9,10,11]};
 for(let i=0;i<12;i++)PERIODOS[`m${String(i+1).padStart(2,"0")}`]=[i];
 
-let vendedoresRh=[],supervisoresRh=[],configs=[],vendas=[],itensComerciais=[],busy=false,editVendaId="",editItemId="",configAtual=null;
+let vendedoresRh=[],supervisoresRh=[],configs=[],vendas=[],clientesComerciais=[],itensComerciais=[],busy=false,editVendaId="",editItemId="",configAtual=null;
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const pagina=()=>$("pagina-vendas");
 const podeVer=()=>admin()||["visualizar","lancar","editar","vendedores","comissoes"].some(a=>permite("vendas",a));
@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=18";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=19";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -88,7 +88,7 @@ function montar(){
   const main=document.querySelector("main.conteudo");if(!main)return;
   const s=document.createElement("section");s.id="pagina-vendas";s.className="pagina hidden";s.innerHTML=`
   <div class="pagina-cabecalho">
-    <div><span class="eyebrow">COMERCIAL</span><h2>Vendas</h2><p>Visão comercial de vendas, evolução, vendedores e clientes.</p></div>
+    <div><span class="eyebrow">COMERCIAL</span><h2>Consolidado de vendas</h2><p>Visão consolidada de vendas, empresas, cidades, vendedores e clientes.</p></div>
     <div class="acoes-cabecalho"><button id="btnSalesAtualizar" class="btn-secundario" type="button">Atualizar</button><button id="btnSalesVenda" class="btn-primario" type="button">+ Venda</button></div>
   </div>
   <div id="salesAviso" class="modulo-aviso hidden"></div>
@@ -109,6 +109,10 @@ function montar(){
     <div class="kpi-card"><span>Ticket médio</span><strong id="salesKpiTicket">—</strong><small>por venda válida</small></div>
     <div class="kpi-card"><span>Clientes no período</span><strong id="salesKpiClientes">—</strong><small>clientes com vendas</small></div>
   </div>
+  <section id="salesEmpresasBreakdown" class="sales-empresas-card hidden">
+    <div class="sales-empresas-head"><div><span>Vendido por empresa</span><small>Detalhamento do consolidado quando “Todos” está selecionado no cabeçalho.</small></div><strong id="salesEmpresasTotal">—</strong></div>
+    <div id="salesEmpresasLista" class="sales-empresas-lista"></div>
+  </section>
 
   <section id="salesVendaBox" class="form-card hidden">
     <div class="form-card-titulo"><div><h3 id="salesVendaTitulo">Nova venda</h3><p>Registre aqui somente os dados da venda. Recebimentos e inadimplência são tratados no módulo financeiro.</p></div></div>
@@ -148,6 +152,12 @@ function montar(){
     <div id="salesClientesResumo" class="sales-clientes-resumo"></div>
     <div id="salesClientesGrafico" class="sales-clientes-grafico"></div>
     <div class="tabela-container sales-clientes-scroll"><table class="tabela"><thead><tr><th>#</th><th>Cliente</th><th>Vendas</th><th>Valor vendido</th><th>% do total</th></tr></thead><tbody id="salesClientesLista"></tbody></table></div>
+  </section>
+
+  <section class="lista-card sales-cidades">
+    <div class="lista-cabecalho"><div><h3>Vendas por cidade</h3><p>Total vendido por cidade dos clientes no período selecionado.</p></div></div>
+    <div id="salesCidadesResumo" class="sales-clientes-resumo"></div>
+    <div id="salesCidadesGrafico" class="sales-cidades-grafico"></div>
   </section>
 
   <section class="lista-card">
@@ -303,6 +313,34 @@ function chart(vendidos){
 }
 
 
+function clienteComercialVenda(v){
+  if(v?.clienteId){const porId=clientesComerciais.find(c=>c.id===v.clienteId);if(porId)return porId}
+  const cod=String(v?.clienteCodigo||"").trim().toLocaleUpperCase("pt-BR");
+  if(cod){const porCodigo=clientesComerciais.find(c=>c.empresaId===v.empresaId&&String(c.codigo||"").trim().toLocaleUpperCase("pt-BR")===cod);if(porCodigo)return porCodigo}
+  return null
+}
+function renderEmpresas(validas){
+  const box=$("salesEmpresasBreakdown"),lista=$("salesEmpresasLista"),totEl=$("salesEmpresasTotal");if(!box||!lista)return;
+  const mostrar=state.todasEmpresasSelecionadas===true;
+  box.classList.toggle("hidden",!mostrar);
+  if(!mostrar)return;
+  const mapa=new Map();
+  validas.forEach(v=>{const id=v.empresaId||"sem-empresa",z=mapa.get(id)||{id,nome:nomeEmpresa(id),valor:0,qtd:0};z.valor+=n(v.valor);z.qtd++;mapa.set(id,z)});
+  const itens=[...mapa.values()].sort((a,b)=>b.valor-a.valor),total=itens.reduce((s,x)=>s+x.valor,0);
+  if(totEl)totEl.textContent=moeda(total);
+  lista.innerHTML=itens.length?itens.map(x=>`<div class="sales-empresa-item"><span>${esc(x.nome||"Empresa")}</span><strong>${moeda(x.valor)}</strong><small>${x.qtd} venda(s) · ${total?(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem vendas no período.</div>'
+}
+function renderCidades(validas){
+  const mapa=new Map();
+  validas.forEach(v=>{
+    const cl=clienteComercialVenda(v),cidade=String(cl?.cidade||"").trim()||"Cidade não informada",uf=String(cl?.uf||"").trim().toUpperCase(),nome=uf&&cidade!=="Cidade não informada"?`${cidade} / ${uf}`:cidade,chave=nome.toLocaleLowerCase("pt-BR");
+    const z=mapa.get(chave)||{nome,valor:0,qtd:0};z.valor+=n(v.valor);z.qtd++;mapa.set(chave,z)
+  });
+  const itens=[...mapa.values()].sort((a,b)=>b.valor-a.valor||a.nome.localeCompare(b.nome,"pt-BR")),total=itens.reduce((s,x)=>s+x.valor,0),max=Math.max(1,...itens.map(x=>x.valor));
+  const resumo=$("salesCidadesResumo");if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cidade(s)</span><span>Total vendido: <strong>${moeda(total)}</strong></span>`;
+  const graf=$("salesCidadesGrafico");if(graf)graf.innerHTML=itens.length?itens.map((x,i)=>`<div class="sales-cidade-bar"><span class="sales-cliente-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(2,x.valor/max*100)}%"></b></i><em>${moeda(x.valor)}</em><small>${total?(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</small></div>`).join(""):'<div class="empty-state">Sem cidades no período.</div>'
+}
+
 function renderClientes(validas){
   const ordem=$("salesClientesOrdem")?.value||"maior",vendedor=$("salesClientesVendedor")?.value||"",mapa=new Map(),base=vendedor?validas.filter(v=>v.vendedorId===vendedor):validas;
   base.forEach(v=>{
@@ -363,7 +401,9 @@ function render(){
     ${rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span class="sales-rank-vendedor"><strong>${esc(r.nome)}</strong><small>${r.qtd} venda(s)</small></span>${modoRanking==="percentual"?`<span class="sales-rank-share"><strong>${r.pct.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.pct))}%"></b></i></span>`:`<strong class="sales-rank-valor">${moeda(r.tot)}</strong>`}<strong class="sales-rank-ticket">${moeda(r.qtd?r.tot/r.qtd:0)}</strong></div>`).join("")}
   `:'<div class="empty-state">Sem vendas no período selecionado.</div>';
 
+  renderEmpresas(valid);
   renderClientes(valid);
+  renderCidades(valid);
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
@@ -375,12 +415,12 @@ function render(){
 async function carregar(){
   if(busy||!podeVer())return;busy=true;
   try{
-    const [vr,cfg,vs]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),listarDocumentos("vendedores"),listarDocumentos("vendas")]);
-    vendedoresRh=vr;configs=cfg;vendas=vs;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
+    const [vr,cfg,vs,cls]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("clientesComerciais")]);
+    vendedoresRh=vr;configs=cfg;vendas=vs;clientesComerciais=cls;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
   }catch(e){console.error("Vendas:",e);const a=$("salesAviso");if(a){a.textContent="Não foi possível carregar Vendas. Verifique permissões, RH e Firestore Rules.";a.classList.remove("hidden")}}finally{busy=false}
 }
 
-export async function abrir(){if(!podeVer())return alert("Seu perfil não possui acesso a Vendas.");montar();abrirPagina("vendas");$("menuVendas")?.classList.add("ativo");esconderBotoes();await carregar()}
+export async function abrir(){if(!podeVer())return alert("Seu perfil não possui acesso ao Consolidado de vendas.");montar();abrirPagina("vendas");$("menuVendas")?.classList.add("ativo");esconderBotoes();await carregar()}
 montar();
 window.addEventListener("sig:empresa-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
 window.addEventListener("sig:periodo-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden")){sincronizarFiltroDatas(true);render()}});
