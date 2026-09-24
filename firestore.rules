@@ -616,6 +616,8 @@ service cloud.firestore {
       allow create: if permissao('visitas','registrar') &&
         mesmoGrupo(request.resource.data.grupoId) &&
         request.resource.data.responsavelId == request.auth.uid &&
+        request.resource.data.criadoPor == request.auth.uid &&
+        request.resource.data.status == 'visita' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
         request.resource.data.clienteId is string && request.resource.data.clienteId.size() > 0 &&
@@ -623,19 +625,34 @@ service cloud.firestore {
         request.resource.data.vendedorId is string && request.resource.data.vendedorId.size() > 0 &&
         request.resource.data.tipo in ['telefone','whatsapp','presencial','email'];
       allow update: if visitasPodeVerGrupo(resource.data) &&
-        (administrador() || permissao('visitas','supervisionar') ||
-          (permissao('visitas','editar') && resource.data.responsavelId == request.auth.uid)) &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.responsavelId == resource.data.responsavelId &&
-        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
-        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
-        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
-        request.resource.data.tipo in ['telefone','whatsapp','presencial','email'] &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'data','vendedorId','vendedor','clienteId','clienteOrigem','cliente','obra','cidade',
-          'material','assunto','tipo','email','observacao','atualizadoEm'
-        ]);
-      allow delete: if false;
+        request.resource.data.responsavelId == resource.data.responsavelId && (
+          (
+            (administrador() || permissao('visitas','supervisionar') ||
+              (permissao('visitas','editar') && resource.data.responsavelId == request.auth.uid)) &&
+            request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+            request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+            request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
+            request.resource.data.tipo in ['telefone','whatsapp','presencial','email'] &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'data','vendedorId','vendedor','clienteId','clienteOrigem','cliente','obra','cidade',
+              'material','assunto','tipo','email','observacao','atualizadoEm'
+            ])
+          ) || (
+            request.resource.data.status == 'orcamento' &&
+            (
+              administrador() || permissao('visitas','supervisionar') ||
+              (resource.data.responsavelId == request.auth.uid && permissao('orcamentos','registrar'))
+            ) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','orcamentoIniciadoEm','orcamentoId','orcamentoCriadoEm','atualizadoEm'
+            ])
+          )
+        );
+      allow delete: if visitasPodeVerGrupo(resource.data) && (
+        administrador() ||
+        resource.data.get('criadoPor', resource.data.responsavelId) == request.auth.uid
+      );
     }
 
     match /clientesRelacionamento/{id} {
@@ -661,15 +678,36 @@ service cloud.firestore {
     }
 
     match /orcamentosComerciais/{id} {
-      allow read: if comercialPodeVer('orcamentos',resource.data);
-      allow create: if permissao('orcamentos','registrar') && documentoAcessivel(request.resource.data) &&
+      allow read: if comercialPodeVer('orcamentos',resource.data) || (
+        mesmoGrupo(resource.data.grupoId) &&
+        resource.data.get('origem','') == 'visita' && (
+          administrador() || permissao('orcamentos','supervisionar') ||
+          (resource.data.responsavelId == request.auth.uid && (
+            permissao('orcamentos','visualizar') || permissao('orcamentos','registrar') || permissao('orcamentos','editar')
+          ))
+        )
+      );
+      allow create: if permissao('orcamentos','registrar') &&
         request.resource.data.responsavelId == request.auth.uid &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
         request.resource.data.produto is string && request.resource.data.produto.size() > 0 &&
         request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
         request.resource.data.valor is number && request.resource.data.valor >= 0 &&
-        request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'];
+        request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'] &&
+        (
+          documentoAcessivel(request.resource.data) || (
+            mesmoGrupo(request.resource.data.grupoId) &&
+            request.resource.data.get('origem','') == 'visita' &&
+            request.resource.data.visitaId is string && request.resource.data.visitaId.size() > 0 &&
+            request.resource.data.clienteId is string && request.resource.data.clienteId.size() > 0 &&
+            request.resource.data.vendedorId is string && request.resource.data.vendedorId.size() > 0 &&
+            (
+              request.resource.data.status != 'perdido_concorrente' ||
+              (request.resource.data.motivoPerda is string && request.resource.data.motivoPerda.size() > 0)
+            )
+          )
+        );
       allow update: if comercialPodeVer('orcamentos',resource.data) &&
         (administrador() || permissao('orcamentos','supervisionar') ||
           (permissao('orcamentos','editar') && resource.data.responsavelId == request.auth.uid)) &&
