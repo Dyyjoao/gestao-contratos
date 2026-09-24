@@ -21,3 +21,10 @@
 .commercial-visit-master-filter{display:flex;align-items:end;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid #dfe5ea;border-radius:10px;background:#fff}.commercial-visit-master-filter>div{display:grid;gap:5px;min-width:240px}.commercial-visit-master-filter label{font-size:9px;font-weight:800;text-transform:uppercase;color:#667085}.commercial-visit-master-filter select{min-height:36px;border:1px solid #d0d7de;border-radius:8px;padding:6px 9px;background:#fff;color:#344054}.commercial-visit-master-filter>small{color:#667085;font-size:9px}
 .commercial-material-config{border-left:3px solid #0c9488}.commercial-material-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:12px}.commercial-material-add input{min-height:36px;border:1px solid #d0d7de;border-radius:8px;padding:7px 9px}.commercial-material-list{display:grid;gap:7px;max-height:300px;overflow-y:auto}.commercial-material-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid #e6eaef;border-radius:8px;background:#f8fafb}.commercial-material-item span{font-size:10px;font-weight:700;color:#344054}
 @media(max-width:700px){.commercial-visit-master-filter{display:grid}.commercial-visit-master-filter>div{min-width:0;width:100%}.commercial-material-add{grid-template-columns:1fr}.commercial-material-add button{width:100%}}
+
+.commercial-budget-materials{display:grid;gap:8px;margin:4px 0 8px}
+.commercial-budget-material-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.commercial-budget-material-row select{width:100%;min-height:36px;border:1px solid #d0d7de;border-radius:8px;padding:6px 9px;background:#fff;color:#344054}
+.commercial-add-material{justify-self:start}
+.commercial-material-item span small{display:block;margin-top:2px;color:#667085;font-size:8px;font-weight:400}
+@media(max-width:620px){.commercial-budget-material-row{grid-template-columns:1fr}.commercial-budget-material-row .btn-acao{width:100%}.commercial-add-material{width:100%}}
