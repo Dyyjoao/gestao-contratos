@@ -10,3 +10,10 @@
 .commercial-history-scroll{max-height:510px;overflow:auto}.commercial-history-scroll table{margin:0}.commercial-history-scroll thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}
 @media(max-width:900px){.commercial-charts-grid{grid-template-columns:1fr}.commercial-bar-row{grid-template-columns:24px minmax(100px,180px) minmax(100px,1fr) 38px 44px}}
 @media(max-width:620px){.commercial-visits-kpis{grid-template-columns:1fr!important}.commercial-select-action{grid-template-columns:1fr}.commercial-select-action button{width:100%}.commercial-bars-monthly{gap:4px;overflow-x:auto}.commercial-month-col{min-width:34px}.commercial-bar-row{grid-template-columns:22px 1fr 42px 42px}.commercial-bar-row>i{grid-column:2/5}.commercial-bar-row>strong{grid-column:2/5}.commercial-bar-row>em{grid-column:3}.commercial-bar-row>small{grid-column:4}}
+
+.commercial-row-actions{display:flex;align-items:center;justify-content:flex-start;gap:5px;flex-wrap:wrap;white-space:normal!important}
+.commercial-row-actions .btn-acao{margin:0!important}.commercial-row-actions .btn-acao.perigo{border-color:#f0b8b3;color:#b42318;background:#fff}
+.commercial-row-actions .btn-acao.perigo:hover{background:#fff3f2}.commercial-action-done{display:inline-flex;align-items:center;min-height:27px;padding:4px 7px;border-radius:7px;background:#eef8f7;color:#087d73;font-size:9px;font-weight:800;white-space:nowrap}
+.commercial-budget-from-visit{border-top:3px solid #0c9488}.commercial-budget-from-visit input[readonly]{background:#f2f4f7;color:#475467;cursor:not-allowed}
+.commercial-budget-from-visit .eyebrow{display:block;margin-bottom:3px}.commercial-budget-from-visit #orcVisMotivoBox.hidden{display:none}
+@media(max-width:700px){.commercial-row-actions{display:grid;grid-template-columns:1fr 1fr}.commercial-row-actions .btn-acao{width:100%}.commercial-action-done{grid-column:1/-1;justify-content:center}}
