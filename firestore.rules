@@ -737,7 +737,7 @@ service cloud.firestore {
           request.resource.data.contatos[request.resource.data.contatos.size() - 1].por == request.auth.uid
         )) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'data','vendedor','cliente','produto','cidade','comprador','numeroVb','valor',
+          'data','vendedor','cliente','produto','materiais','cidade','comprador','numeroVb','valor',
           'status','telefone','email','observacao','justificativa','ultimoContatoEm',
           'proximoContatoEm','notaUltimoContato','contatos','atualizadoEm'
         ]);
@@ -1269,7 +1269,9 @@ service cloud.firestore {
         (
           mesmoGrupo(resource.data.grupoId) && (
             permissao('visitas','visualizar') || permissao('visitas','registrar') ||
-            permissao('visitas','editar') || permissao('visitas','supervisionar')
+            permissao('visitas','editar') || permissao('visitas','supervisionar') ||
+            permissao('orcamentos','visualizar') || permissao('orcamentos','registrar') ||
+            permissao('orcamentos','editar') || permissao('orcamentos','supervisionar')
           )
         )
       );
