@@ -82,7 +82,7 @@ function parcelasVisiveis(){
   })
 }
 function css(){if($("inad-css"))return;const s=document.createElement("style");s.id="inad-css";s.textContent=`
-.inad-toolbar{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inad-toolbar .campo{min-width:150px}.inad-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}.inad-aging-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:16px 2px 6px}.inad-aging-title h3{margin:0;font-size:13px;color:#0b1f33}.inad-aging-title small{color:#667085}.inad-aging{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:6px 0 14px}.inad-aging-card{border:1px solid #e3e8ef;border-radius:12px;background:#fff;padding:12px}.inad-aging-card[data-inad-filter],.kpi-card[data-inad-filter]{cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.inad-aging-card[data-inad-filter]:hover,.kpi-card[data-inad-filter]:hover{transform:translateY(-1px);border-color:#aebbc7}.inad-aging-card.filtro-ativo,.kpi-card.filtro-ativo{border-color:#0c9488;box-shadow:0 0 0 2px rgba(12,148,136,.12)}.inad-aging-card span{display:block;color:#667085;font-size:11px}.inad-aging-card strong{display:block;font-size:18px;margin:5px 0}.inad-aging-card small{color:#667085}.inad-aging-card.atraso{border-left:4px solid #e16b21}.inad-aging-card.critico{border-left:4px solid #b42318}.inad-aging-card.pendente{border-left:4px solid #98a2b3}.inad-linha-vencida td{background:#fffaf7}.inad-linha-critica td{background:#fff7f6}.inad-linha-sem-venc td{background:#fafafa}.inad-acoes{display:flex;gap:5px;flex-wrap:wrap}.inad-info{display:block;font-size:10px;color:#667085;margin-top:2px}.inad-table td:nth-child(5),.inad-table td:nth-child(6),.inad-table td:nth-child(7){white-space:nowrap}.inad-scroll-10{max-height:510px;overflow:auto}.inad-scroll-10 table{margin:0}.inad-scroll-10 thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}.inad-origem{padding:9px 12px;border:1px solid #dfe5ea;border-radius:10px;background:#f8fafb;color:#667085;font-size:11px;margin-bottom:12px}.inad-origem strong{color:#0b1f33}@media(max-width:1200px){.inad-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:1100px){.inad-aging{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.inad-kpis{grid-template-columns:1fr 1fr!important}.inad-aging{grid-template-columns:1fr 1fr}.inad-toolbar .campo{min-width:120px}}
+.inad-toolbar{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inad-toolbar .campo{min-width:150px}.inad-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}.inad-aging-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:16px 2px 6px}.inad-aging-title h3{margin:0;font-size:13px;color:#0b1f33}.inad-aging-title small{color:#667085}.inad-aging{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:6px 0 14px}.inad-aging-card{border:1px solid #e3e8ef;border-radius:12px;background:#fff;padding:12px}.inad-aging-card[data-inad-filter],.kpi-card[data-inad-filter]{cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.inad-aging-card[data-inad-filter]:hover,.kpi-card[data-inad-filter]:hover{transform:translateY(-1px);border-color:#aebbc7}.inad-aging-card.filtro-ativo,.kpi-card.filtro-ativo{border-color:#0c9488;box-shadow:0 0 0 2px rgba(12,148,136,.12)}.inad-aging-card span{display:block;color:#667085;font-size:11px}.inad-aging-card strong{display:block;font-size:18px;margin:5px 0}.inad-aging-card small{color:#667085}.inad-aging-card.atraso{border-left:4px solid #e16b21}.inad-aging-card.critico{border-left:4px solid #b42318}.inad-aging-card.pendente{border-left:4px solid #98a2b3}.inad-linha-vencida td{background:#fffaf7}.inad-linha-critica td{background:#fff7f6}.inad-linha-sem-venc td{background:#fafafa}.inad-acoes{display:flex;gap:5px;flex-wrap:wrap}.inad-info{display:block;font-size:10px;color:#667085;margin-top:2px}.inad-table td:nth-child(5),.inad-table td:nth-child(6),.inad-table td:nth-child(7){white-space:nowrap}.inad-recebimentos-table .inad-filter-row th{padding:6px 5px;background:#f8fafc}.inad-recebimentos-table .inad-filter-row input,.inad-recebimentos-table .inad-filter-row select{width:100%;min-width:86px;font-size:10px;padding:6px 7px;border:1px solid #d0d7de;border-radius:7px;background:#fff;color:#344054}.inad-recebimentos-table .inad-filter-pair{display:grid;grid-template-columns:1fr 1fr;gap:4px}.inad-recebimentos-table thead tr:first-child th{top:0}.inad-recebimentos-table thead .inad-filter-row th{top:33px;z-index:3}.inad-recebimentos-table .inad-filter-clear{width:100%;white-space:nowrap}.inad-scroll-10{max-height:510px;overflow:auto}.inad-scroll-10 table{margin:0}.inad-scroll-10 thead th{position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #edf0f3}.inad-origem{padding:9px 12px;border:1px solid #dfe5ea;border-radius:10px;background:#f8fafb;color:#667085;font-size:11px;margin-bottom:12px}.inad-origem strong{color:#0b1f33}@media(max-width:1200px){.inad-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:1100px){.inad-aging{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.inad-kpis{grid-template-columns:1fr 1fr!important}.inad-aging{grid-template-columns:1fr 1fr}.inad-toolbar .campo{min-width:120px}}
 `;document.head.appendChild(s)}
 
 function criarPagina(){if(pagina())return;css();const main=document.querySelector("main.conteudo");if(!main)return;const s=document.createElement("section");s.id="pagina-ctrl-inadimplencia-v1";s.className="pagina hidden";s.innerHTML=`
@@ -139,11 +139,22 @@ function criarPagina(){if(pagina())return;css();const main=document.querySelecto
     <div class="form-acoes"><button id="btnInadExcedenteTudoJuros" class="btn-secundario" type="button">Tudo juros</button><button id="btnInadExcedenteTudoParcelas" class="btn-secundario" type="button">Tudo parcelas</button><button id="btnInadExcedenteCancelar" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Confirmar tratamento</button></div>
     <p id="inadExcedenteMsg" class="mensagem-form"></p>
   </form></section>
-  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Recebimentos importados</h3><p id="inadRecebimentosResumo">—</p></div></div><div class="tabela-container inad-scroll-10"><table class="tabela"><thead><tr><th>Data</th><th>Pedido</th><th>Cliente</th><th>Valor recebido</th><th>Classificação</th><th>Alocação</th><th>Ações</th></tr></thead><tbody id="inadRecebimentosLista"></tbody></table></div></section>
+  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Recebimentos importados</h3><p id="inadRecebimentosResumo">—</p></div></div><div class="tabela-container inad-scroll-10"><table class="tabela inad-recebimentos-table"><thead><tr><th>Data</th><th>Pedido</th><th>Cliente</th><th>Valor recebido</th><th>Classificação</th><th>Alocação</th><th>Ações</th></tr><tr class="inad-filter-row">
+    <th><div class="inad-filter-pair"><input id="inadRecDataDe" type="date" title="Data inicial"><input id="inadRecDataAte" type="date" title="Data final"></div></th>
+    <th><input id="inadRecPedido" placeholder="Pedido"></th>
+    <th><input id="inadRecCliente" placeholder="Cliente"></th>
+    <th><div class="inad-filter-pair"><input id="inadRecValorMin" type="number" min="0" step="0.01" placeholder="Mín."><input id="inadRecValorMax" type="number" min="0" step="0.01" placeholder="Máx."></div></th>
+    <th><select id="inadRecClassificacao"><option value="">Todas</option><option value="pendente">Pendente</option><option value="tratado">Tratado</option><option value="sem_excedente">Sem excedente</option></select></th>
+    <th><select id="inadRecAlocacao"><option value="">Todas</option><option value="fifo">FIFO aplicado</option><option value="parcial">Parcial</option><option value="sem">Sem alocação</option></select></th>
+    <th><button id="btnInadRecLimparFiltros" class="btn-secundario inad-filter-clear" type="button">Limpar filtros</button></th>
+  </tr></thead><tbody id="inadRecebimentosLista"></tbody></table></div></section>
 `;main.appendChild(s);
   $("inadCompetencia").value=competenciaAtual();$("btnInadAtualizar")?.addEventListener("click",carregar);$("inadCompetencia")?.addEventListener("change",render);$("inadFiltro")?.addEventListener("change",()=>{filtroEscopo="acumulado";render()});$("inadBusca")?.addEventListener("input",render);
   document.querySelectorAll("[data-inad-filter]").forEach(card=>card.addEventListener("click",()=>{filtroEscopo=card.dataset.inadScope||"acumulado";if($("inadFiltro"))$("inadFiltro").value=card.dataset.inadFilter||"todos";render();$("inadLista")?.closest(".lista-card")?.scrollIntoView({behavior:"smooth",block:"start"})}));
-  $("formInadExcedente")?.addEventListener("submit",salvarTratamentoExcedente);$("btnInadExcedenteCancelar")?.addEventListener("click",fecharTratamentoExcedente);$("btnInadExcedenteTudoJuros")?.addEventListener("click",()=>preencherTratamento("juros"));$("btnInadExcedenteTudoParcelas")?.addEventListener("click",()=>preencherTratamento("parcelas"))
+  $("formInadExcedente")?.addEventListener("submit",salvarTratamentoExcedente);$("btnInadExcedenteCancelar")?.addEventListener("click",fecharTratamentoExcedente);$("btnInadExcedenteTudoJuros")?.addEventListener("click",()=>preencherTratamento("juros"));$("btnInadExcedenteTudoParcelas")?.addEventListener("click",()=>preencherTratamento("parcelas"));
+  ["inadRecDataDe","inadRecDataAte","inadRecClassificacao","inadRecAlocacao"].forEach(id=>$(id)?.addEventListener("change",renderRecebimentos));
+  ["inadRecPedido","inadRecCliente","inadRecValorMin","inadRecValorMax"].forEach(id=>$(id)?.addEventListener("input",renderRecebimentos));
+  $("btnInadRecLimparFiltros")?.addEventListener("click",()=>{["inadRecDataDe","inadRecDataAte","inadRecPedido","inadRecCliente","inadRecValorMin","inadRecValorMax","inadRecClassificacao","inadRecAlocacao"].forEach(id=>{const el=$(id);if(el)el.value=""});renderRecebimentos()})
 }
 
 
@@ -231,10 +242,40 @@ function calcular(){
 }
 
 function renderRecebimentos(){
-  const comp=$("inadCompetencia")?.value||competenciaAtual(),arr=recebimentos.filter(r=>String(r.dataRecebimento||"").slice(0,7)<=comp).sort((a,b)=>String(b.dataRecebimento||"").localeCompare(String(a.dataRecebimento||""))||String(b.importadoEm||"").localeCompare(String(a.importadoEm||"")));
-  const pendentes=arr.filter(r=>n(r.valorPendenteClassificacao)>0.009).length;
-  $("inadRecebimentosResumo").textContent=arr.length+" recebimento(s) importado(s) até "+comp.split("-").reverse().join("/")+(pendentes?" · "+pendentes+" excedente(s) pendente(s)":"");
-  const tb=$("inadRecebimentosLista");if(!tb)return;if(!arr.length){tb.innerHTML='<tr><td colspan="7">Nenhum recebimento importado para a referência.</td></tr>';return}
+  const comp=$("inadCompetencia")?.value||competenciaAtual(),base=recebimentos.filter(r=>String(r.dataRecebimento||"").slice(0,7)<=comp).sort((a,b)=>String(b.dataRecebimento||"").localeCompare(String(a.dataRecebimento||""))||String(b.importadoEm||"").localeCompare(String(a.importadoEm||"")));
+  const dataDe=$("inadRecDataDe")?.value||"",dataAte=$("inadRecDataAte")?.value||"",pedido=String($("inadRecPedido")?.value||"").trim().toLowerCase(),cliente=String($("inadRecCliente")?.value||"").trim().toLowerCase(),valorMinRaw=$("inadRecValorMin")?.value,valorMaxRaw=$("inadRecValorMax")?.value,classif=$("inadRecClassificacao")?.value||"",aloc=$("inadRecAlocacao")?.value||"";
+  const valorMin=valorMinRaw===""?null:n(valorMinRaw),valorMax=valorMaxRaw===""?null:n(valorMaxRaw);
+
+  const tipoClassificacao=r=>{
+    const pend=n(r.valorPendenteClassificacao),acresc=n(r.valorAcrescimos),antecip=n(r.valorAntecipado);
+    if(pend>0.009)return"pendente";
+    if(acresc>0.009||antecip>0.009)return"tratado";
+    return"sem_excedente"
+  };
+  const tipoAlocacao=r=>{
+    const als=Array.isArray(r.alocacoes)?r.alocacoes:[],alocado=als.reduce((s,a)=>s+n(a.valor),0),valor=n(r.valor);
+    if(!als.length||alocado<=0.009)return"sem";
+    if(alocado<valor-0.009)return"parcial";
+    return"fifo"
+  };
+
+  const arr=base.filter(r=>{
+    const d=String(r.dataRecebimento||"").slice(0,10),ped=String(r.pedido||"").toLowerCase(),cli=String(r.clienteNome||r.cliente||"").toLowerCase(),val=n(r.valor);
+    if(dataDe&&(!d||d<dataDe))return false;
+    if(dataAte&&(!d||d>dataAte))return false;
+    if(pedido&&!ped.includes(pedido))return false;
+    if(cliente&&!cli.includes(cliente))return false;
+    if(valorMin!==null&&val<valorMin)return false;
+    if(valorMax!==null&&val>valorMax)return false;
+    if(classif&&tipoClassificacao(r)!==classif)return false;
+    if(aloc&&tipoAlocacao(r)!==aloc)return false;
+    return true
+  });
+
+  const pendentes=base.filter(r=>n(r.valorPendenteClassificacao)>0.009).length,temFiltro=!!(dataDe||dataAte||pedido||cliente||valorMinRaw!==""||valorMaxRaw!==""||classif||aloc);
+  $("inadRecebimentosResumo").textContent=base.length+" recebimento(s) importado(s) até "+comp.split("-").reverse().join("/")+(temFiltro?" · "+arr.length+" visível(is)":"")+(pendentes?" · "+pendentes+" excedente(s) pendente(s)":"");
+
+  const tb=$("inadRecebimentosLista");if(!tb)return;if(!arr.length){tb.innerHTML='<tr><td colspan="7">Nenhum recebimento encontrado para os filtros selecionados.</td></tr>';return}
   tb.innerHTML=arr.map(r=>{
     const al=(Array.isArray(r.alocacoes)?r.alocacoes:[]).map(a=>a.parcelaId+" · "+moeda(n(a.valor))).join(" + "),principal=n(r.valorPrincipal||r.alocacoes?.reduce((s,a)=>s+n(a.valor),0)),acresc=n(r.valorAcrescimos),antecip=n(r.valorAntecipado),pend=n(r.valorPendenteClassificacao);
     const classificacao=pend>0?'<span class="status-pendente">Pendente '+moeda(pend)+'</span>':(acresc>0||antecip>0?'<span class="status-ativo">Tratado</span>':'<span class="status-ativo">Sem excedente</span>');
@@ -243,6 +284,7 @@ function renderRecebimentos(){
   }).join("");
   document.querySelectorAll("[data-inad-excedente]").forEach(b=>b.onclick=()=>abrirTratamentoExcedente(b.dataset.inadExcedente))
 }
+
 function render(){
   criarPagina();const ref=dataReferencia(),c=calcular(),periodoNome=nomePeriodoSelecionado(),ano=periodoAno();$("inadDataRef").textContent=`Posição em ${dataBr(ref)}`;
   $("inadAnoCarteira").textContent=moeda(c.carteiraAno);$("inadAnoVencido").textContent=moeda(c.valorVencidoAno);$("inadAnoInadValor").textContent=moeda(c.inadAno);$("inadAnoInadPct").textContent=pct(c.inadAno,c.valorVencidoAno);$("inadAnoTitulo").textContent=`Ano ${ano} · posição em ${dataBr(ref)}`;
