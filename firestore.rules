@@ -602,22 +602,60 @@ service cloud.firestore {
       );
     }
 
+    function visitasPodeVerGrupo(dados) {
+      return mesmoGrupo(dados.grupoId) && (
+        administrador() || permissao('visitas','supervisionar') ||
+        (dados.responsavelId == request.auth.uid && (
+          permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar')
+        ))
+      );
+    }
+
     match /visitasComerciais/{id} {
-      allow read: if comercialPodeVer('visitas',resource.data);
-      allow create: if permissao('visitas','registrar') && documentoAcessivel(request.resource.data) &&
+      allow read: if visitasPodeVerGrupo(resource.data);
+      allow create: if permissao('visitas','registrar') &&
+        mesmoGrupo(request.resource.data.grupoId) &&
         request.resource.data.responsavelId == request.auth.uid &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
-        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0;
-      allow update: if comercialPodeVer('visitas',resource.data) &&
+        request.resource.data.clienteId is string && request.resource.data.clienteId.size() > 0 &&
+        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
+        request.resource.data.vendedorId is string && request.resource.data.vendedorId.size() > 0 &&
+        request.resource.data.tipo in ['telefone','whatsapp','presencial','email'];
+      allow update: if visitasPodeVerGrupo(resource.data) &&
         (administrador() || permissao('visitas','supervisionar') ||
           (permissao('visitas','editar') && resource.data.responsavelId == request.auth.uid)) &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.responsavelId == resource.data.responsavelId &&
+        request.resource.data.data is string && request.resource.data.data.size() == 10 &&
+        request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
+        request.resource.data.vendedor is string && request.resource.data.vendedor.size() > 0 &&
+        request.resource.data.tipo in ['telefone','whatsapp','presencial','email'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'data','vendedor','cliente','obra','cidade','material','assunto','tipo',
-          'email','observacao','atualizadoEm'
+          'data','vendedorId','vendedor','clienteId','clienteOrigem','cliente','obra','cidade',
+          'material','assunto','tipo','email','observacao','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
+    match /clientesRelacionamento/{id} {
+      allow read: if mesmoGrupo(resource.data.grupoId) && (
+        administrador() || permissao('visitas','visualizar') || permissao('visitas','registrar') ||
+        permissao('visitas','editar') || permissao('visitas','supervisionar')
+      );
+      allow create: if permissao('visitas','registrar') &&
+        mesmoGrupo(request.resource.data.grupoId) &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.nome.size() <= 180 &&
+        request.resource.data.cidade is string && request.resource.data.cidade.size() > 0 &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.criadoPor == request.auth.uid;
+      allow update: if mesmoGrupo(resource.data.grupoId) &&
+        (administrador() || permissao('visitas','supervisionar') || permissao('visitas','editar')) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.criadoPor == resource.data.criadoPor &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nome','cidade','uf','status','atualizadoEm'
         ]);
       allow delete: if false;
     }
@@ -1081,7 +1119,7 @@ service cloud.firestore {
     }
 
     match /vendedores/{id} {
-      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow read: if (vendasVisualizar() || permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar') || permissao('visitas','supervisionar')) && documentoAcessivel(resource.data);
       allow create: if documentoAcessivel(request.resource.data) &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100 && (
@@ -1146,7 +1184,7 @@ service cloud.firestore {
     }
 
     match /clientesComerciais/{id} {
-      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow read: if (vendasVisualizar() || permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar') || permissao('visitas','supervisionar')) && documentoAcessivel(resource.data);
       allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data) &&
         request.resource.data.codigo is string && request.resource.data.codigo.size() > 0 &&
         request.resource.data.codigo.size() <= 60 &&
