@@ -655,6 +655,22 @@ service cloud.firestore {
       );
     }
 
+    match /visitasMateriais/{id} {
+      allow read: if mesmoGrupo(resource.data.grupoId) && (
+        administrador() || permissao('visitas','visualizar') || permissao('visitas','registrar') ||
+        permissao('visitas','editar') || permissao('visitas','supervisionar')
+      );
+      allow create: if (administrador() || permissao('visitas','supervisionar')) &&
+        mesmoGrupo(request.resource.data.grupoId) &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.nome.size() <= 120 &&
+        request.resource.data.status == 'ativo' &&
+        request.resource.data.criadoPor == request.auth.uid;
+      allow update: if false;
+      allow delete: if mesmoGrupo(resource.data.grupoId) &&
+        (administrador() || permissao('visitas','supervisionar'));
+    }
+
     match /clientesRelacionamento/{id} {
       allow read: if mesmoGrupo(resource.data.grupoId) && (
         administrador() || permissao('visitas','visualizar') || permissao('visitas','registrar') ||
