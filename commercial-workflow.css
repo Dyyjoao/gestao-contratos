@@ -38,3 +38,9 @@
 
 .commercial-unit-cost{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;min-width:0}.commercial-unit-cost small{font-size:8px;font-weight:800;color:#667085;white-space:nowrap}
 .commercial-material-company-summary{min-height:36px;display:flex;align-items:center;padding:7px 10px;border:1px solid #d0d7de;border-radius:8px;background:#f8fafb;color:#344054;font-size:9px;line-height:1.35}
+
+.commercial-budget-material-head,.commercial-budget-material-row{display:grid;grid-template-columns:minmax(220px,2fr) minmax(90px,.7fr) minmax(110px,.8fr) minmax(120px,.9fr) auto;gap:8px;align-items:center}
+.commercial-budget-material-head{padding:0 2px 4px;color:#667085;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.commercial-budget-material-row select,.commercial-budget-material-row input{width:100%;min-width:0;min-height:36px}
+.commercial-budget-material-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px}.commercial-budget-material-footer strong{font-size:10px;color:#0b1f33}
+@media(max-width:760px){.commercial-budget-material-head{display:none}.commercial-budget-material-row{grid-template-columns:1fr 1fr}.commercial-budget-material-row select{grid-column:1/-1}.commercial-budget-material-row .btn-acao{grid-column:1/-1;width:100%}.commercial-budget-material-footer{align-items:stretch;flex-direction:column}.commercial-budget-material-footer .btn-secundario{width:100%}}
