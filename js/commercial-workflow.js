@@ -187,6 +187,65 @@ async function salvarClienteRelacionamento(e){
     $("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")
   }catch(err){console.error(err);msg($("visNovoClienteMsg"),"Não foi possível incluir o cliente. Confira as permissões publicadas.")}
 }
+function atualizarMotivoPerda(){
+  const perdido=$("orcVisStatus")?.value==="perdido_concorrente",box=$("orcVisMotivoBox"),campo=$("orcVisMotivo");
+  box?.classList.toggle("hidden",!perdido);if(campo){campo.required=perdido;if(!perdido)campo.value=""}
+}
+function fecharOrcamentoVisita(){
+  visitaOrcamentoAtual="";$("visitasOrcamentoForm")?.reset();$("visitasOrcamentoBox")?.classList.add("hidden");atualizarMotivoPerda();msg($("visitasOrcamentoMensagem"),"")
+}
+function preencherVendedorOrcamentoVisita(visita){
+  const sel=$("orcVisVendedor");if(!sel)return;
+  sel.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");
+  const vend=vendedoresVisitas.find(x=>x.id===visita?.vendedorId)||vendedoresVisitas.find(x=>norm(x.nome)===norm(visita?.vendedor));
+  if(vend)sel.value=vend.id
+}
+async function abrirOrcamentoDaVisita(id){
+  if(!registrar("orcamentos"))return alert("Seu perfil não possui permissão para registrar orçamento.");
+  const x=dados.visitas.find(v=>v.id===id);if(!x)return;
+  try{
+    if((x.status||"visita")!=="orcamento"){
+      await updateDoc(doc(db,"visitasComerciais",x.id),{status:"orcamento",orcamentoIniciadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+      x.status="orcamento"
+    }
+    visitaOrcamentoAtual=x.id;
+    const form=$("visitasOrcamentoForm");form?.reset();
+    $("orcVisCliente").value=x.cliente||"";
+    $("orcVisData").value=localIso();
+    preencherVendedorOrcamentoVisita(x);
+    $("visitasOrcamentoOrigem").textContent=`Visita de ${dataBr(x.data)} · cliente vinculado: ${x.cliente||"—"}`;
+    atualizarMotivoPerda();$("visitasOrcamentoBox").classList.remove("hidden");renderVisitas();
+    $("visitasOrcamentoBox").scrollIntoView({behavior:"smooth",block:"start"})
+  }catch(err){console.error(err);alert("Não foi possível iniciar o orçamento. Confira as permissões publicadas.")}
+}
+async function excluirVisita(id){
+  const x=dados.visitas.find(v=>v.id===id);if(!x)return;
+  const dono=String(x.criadoPor||x.responsavelId||"")===uid();if(!admin()&&!dono)return alert("Somente quem inseriu a visita ou o Administrador pode excluí-la.");
+  if(!confirm(`Excluir a visita/contato de ${x.cliente||"este cliente"} em ${dataBr(x.data)}?\n\nEsta ação não poderá ser desfeita.`))return;
+  try{
+    await deleteDoc(doc(db,"visitasComerciais",x.id));dados.visitas=dados.visitas.filter(v=>v.id!==x.id);
+    if(visitaOrcamentoAtual===x.id)fecharOrcamentoVisita();emitirAlteracao("visitas");renderVisitas()
+  }catch(err){console.error(err);alert("Não foi possível excluir a visita. Confira as permissões publicadas.")}
+}
+async function salvarOrcamentoDaVisita(e){
+  e.preventDefault();const visita=dados.visitas.find(v=>v.id===visitaOrcamentoAtual);if(!visita)return msg($("visitasOrcamentoMensagem"),"Visita de origem não encontrada.");
+  if(!registrar("orcamentos"))return msg($("visitasOrcamentoMensagem"),"Sem permissão para registrar orçamento.");
+  const data=$("orcVisData")?.value||"",produto=String($("orcVisProduto")?.value||"").trim(),valor=Number($("orcVisValor")?.value),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
+  if(!data||!produto||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Data, Produto, Valor, Vendedor e Status.");
+  if(status==="perdido_concorrente"&&!motivoPerda)return msg($("visitasOrcamentoMensagem"),"Informe o motivo da perda para a concorrência.");
+  try{
+    msg($("visitasOrcamentoMensagem"),"Salvando orçamento...");
+    const ref=await addDoc(collection(db,"orcamentosComerciais"),{
+      grupoId:grupoAtualId(),visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,valor,numeroVb,comprador,
+      vendedorId:vend.id,vendedor:vend.nome,status,motivoPerda:status==="perdido_concorrente"?motivoPerda:"",justificativa:status==="perdido_concorrente"?motivoPerda:"",
+      responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:"",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()
+    });
+    await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId:ref.id,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+    visita.status="orcamento";visita.orcamentoId=ref.id;fecharOrcamentoVisita();emitirAlteracao("orcamentos");emitirAlteracao("visitas");renderVisitas();
+    alert("Orçamento criado e vinculado à visita.")
+  }catch(err){console.error(err);msg($("visitasOrcamentoMensagem"),err.message||"Não foi possível salvar o orçamento.")}
+}
+
 function limpar(k){
   edicao[k]=null;$(k+"Form")?.reset();if(el(k,"Data"))el(k,"Data").value=localIso();
   if(k==="orcamentos")el(k,"Status").value="aguardando_aprovacao";
@@ -262,8 +321,16 @@ function renderVisitas(){
   const periodo=visitasDoPeriodo(),termo=norm($("visitasBusca")?.value),tipoFiltro=$("visitasFiltroTipo")?.value||"",filtrados=periodo.filter(x=>(!termo||[x.cliente,x.vendedor,x.cidade,x.assunto].some(v=>norm(v).includes(termo)))&&(!tipoFiltro||tipoVisitaCanon(x.tipo)===tipoFiltro));
   $("visitasKpiTotal").textContent=String(periodo.length);$("visitasKpiSegundo").textContent=String(new Set(periodo.map(x=>norm(x.cliente)).filter(Boolean)).size);$("visitasKpiPeriodo").textContent=`Ano ${periodoAno()} · ${periodoChave()==="total"?"ano completo":"período selecionado"}`;
   renderVisitasGraficos(periodo);
-  $("visitasLista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const acao=editar("visitas")?`<button type="button" class="btn-acao destaque" data-visitas-edit="${esc(x.id)}">Editar</button>`:"";return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td>${esc(x.assunto||"—")}</td><td>${acao}</td></tr>`}).join("")||'<tr><td colspan="6">Nenhum registro encontrado no período.</td></tr>';
-  document.querySelectorAll("[data-visitas-edit]").forEach(b=>b.addEventListener("click",()=>abrirEdicao("visitas",b.dataset.visitasEdit)))
+  $("visitasLista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{
+    const podeExcluir=admin()||String(x.criadoPor||x.responsavelId||"")===uid(),statusVisita=(x.status||"visita")==="orcamento"?"Orçamento":"Visita";
+    const editarBtn=editar("visitas")?`<button type="button" class="btn-acao destaque" data-visitas-edit="${esc(x.id)}">Editar</button>`:"";
+    const orcBtn=registrar("orcamentos")?(x.orcamentoId?`<span class="commercial-action-done">Orçamento criado</span>`:`<button type="button" class="btn-acao" data-visitas-orcamento="${esc(x.id)}">Orçamento</button>`):"";
+    const excluirBtn=podeExcluir?`<button type="button" class="btn-acao perigo" data-visitas-excluir="${esc(x.id)}">Excluir</button>`:"";
+    return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td><span class="${statusVisita==="Orçamento"?"status-ativo":"status-inativo"}">${statusVisita}</span></td><td>${esc(x.assunto||"—")}</td><td><div class="commercial-row-actions">${editarBtn}${orcBtn}${excluirBtn}</div></td></tr>`
+  }).join("")||'<tr><td colspan="7">Nenhum registro encontrado no período.</td></tr>';
+  document.querySelectorAll("[data-visitas-edit]").forEach(b=>b.addEventListener("click",()=>abrirEdicao("visitas",b.dataset.visitasEdit)));
+  document.querySelectorAll("[data-visitas-orcamento]").forEach(b=>b.addEventListener("click",()=>abrirOrcamentoDaVisita(b.dataset.visitasOrcamento)));
+  document.querySelectorAll("[data-visitas-excluir]").forEach(b=>b.addEventListener("click",()=>excluirVisita(b.dataset.visitasExcluir)))
 }
 function render(k){
   if(k==="visitas"){renderVisitas();return}
@@ -284,7 +351,7 @@ async function salvar(k,e){
         await updateDoc(doc(db,"visitasComerciais",x.id),{...d,atualizadoEm:serverTimestamp()})
       }else{
         if(!registrar("visitas"))throw new Error("Sem permissão.");
-        await addDoc(collection(db,"visitasComerciais"),{...d,grupoId:grupoAtualId(),responsavelId:uid(),origem:"sig",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()})
+        await addDoc(collection(db,"visitasComerciais"),{...d,grupoId:grupoAtualId(),responsavelId:uid(),criadoPor:uid(),status:"visita",origem:"sig",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()})
       }
       $("visitasFormBox").classList.add("hidden");limpar("visitas");emitirAlteracao("visitas");await carregar("visitas")
     }catch(err){console.error(err);msg($("visitasMensagem"),err.message||"Não foi possível salvar.")}
