@@ -110,11 +110,14 @@ function montar(k){
 
   if(k==="visitas"){
     $("visitasFiltroTipo")?.addEventListener("change",()=>render(k));
+    $("visitasFiltroVendedor")?.addEventListener("change",()=>render(k));
     $("visCliente")?.addEventListener("change",sincronizarClienteVisita);
-    $("visVendedor")?.addEventListener("change",sincronizarVendedorVisita);
     $("visClienteNovo")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.remove("hidden");$("visNovoClienteNome")?.focus()});
     $("visNovoClienteCancelar")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")});
     $("visitasClienteForm")?.addEventListener("submit",salvarClienteRelacionamento);
+    $("visMaterialConfig")?.addEventListener("click",()=>{if(!gestor("visitas"))return;$("visitasMateriaisBox")?.classList.remove("hidden");renderMateriaisVisitas()});
+    $("visMaterialConfigFechar")?.addEventListener("click",()=>{$("visitasMateriaisBox")?.classList.add("hidden");$("visitasMaterialForm")?.reset();msg($("visMaterialConfigMsg"),"")});
+    $("visitasMaterialForm")?.addEventListener("submit",salvarMaterialVisita);
     $("visitasOrcamentoCancelar")?.addEventListener("click",fecharOrcamentoVisita);
     $("visitasOrcamentoForm")?.addEventListener("submit",salvarOrcamentoDaVisita);
     $("orcVisStatus")?.addEventListener("change",atualizarMotivoPerda)
@@ -131,17 +134,19 @@ async function consultarColecaoGrupoPorEmpresa(nomeColecao){
   return blocos.flat()
 }
 async function carregarBasesVisitas(){
-  const grupo=grupoAtualId();if(!grupo){vendedoresVisitas=[];clientesVisitas=[];clientesRelacionamento=[];return}
+  const grupo=grupoAtualId();if(!grupo){vendedoresVisitas=[];clientesVisitas=[];clientesRelacionamento=[];materiaisVisitas=[];return}
   const resultados=await Promise.allSettled([
     getDocs(query(collection(db,"vendedores"),where("grupoId","==",grupo))),
     consultarColecaoGrupoPorEmpresa("rhColaboradores"),
     getDocs(query(collection(db,"clientesComerciais"),where("grupoId","==",grupo))),
-    getDocs(query(collection(db,"clientesRelacionamento"),where("grupoId","==",grupo)))
+    getDocs(query(collection(db,"clientesRelacionamento"),where("grupoId","==",grupo))),
+    getDocs(query(collection(db,"visitasMateriais"),where("grupoId","==",grupo)))
   ]);
   const configs=resultados[0].status==="fulfilled"?resultados[0].value.docs.map(x=>({id:x.id,...x.data()})):[];
   const rhs=resultados[1].status==="fulfilled"?resultados[1].value:[];
   const clientesSales=resultados[2].status==="fulfilled"?resultados[2].value.docs.map(x=>({id:x.id,...x.data()})):[];
   clientesRelacionamento=resultados[3].status==="fulfilled"?resultados[3].value.docs.map(x=>({id:x.id,...x.data()})):[];
+  materiaisVisitas=resultados[4].status==="fulfilled"?resultados[4].value.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR")):[];
 
   const hoje=localIso(),rhAtivos=new Map(rhs.filter(x=>x.status!=="estornado"&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje)).map(x=>[x.id,x])),vendMap=new Map();
   configs.filter(x=>x.status!=="inativo"&&(!x.tipoComissao||x.tipoComissao==="vendedor")).forEach(v=>{
@@ -169,12 +174,35 @@ async function carregarBasesVisitas(){
   preencherBasesVisitas()
 }
 function preencherBasesVisitas(){
-  const sv=$("visVendedor"),sc=$("visCliente");
+  const sv=$("visVendedor"),sc=$("visCliente"),sf=$("visitasFiltroVendedor"),sm=$("visMaterial");
   if(sv){const atual=sv.value;sv.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cargoNome?" · "+esc(x.cargoNome):""}</option>`).join("");if([...sv.options].some(o=>o.value===atual))sv.value=atual}
   if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
+  if(sf){const atual=sf.value;sf.innerHTML='<option value="">Todos os vendedores</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");if([...sf.options].some(o=>o.value===atual))sf.value=atual}
+  if(sm){const atual=sm.value;sm.innerHTML='<option value="">Selecione...</option>'+materiaisVisitas.map(x=>`<option value="${esc(x.nome)}">${esc(x.nome)}</option>`).join("");if([...sm.options].some(o=>o.value===atual))sm.value=atual}
+  $("visMaterialConfig")?.classList.toggle("hidden",!gestor("visitas"));
+  renderMateriaisVisitas()
 }
 function sincronizarClienteVisita(){const x=clientesVisitas.find(v=>v.id===$("visCliente")?.value);if(x&&$("visCidade"))$("visCidade").value=x.cidade||""}
-function sincronizarVendedorVisita(){const x=vendedoresVisitas.find(v=>v.id===$("visVendedor")?.value);if(x&&$("visEmail")&&!$("visEmail").value)$("visEmail").value=x.email||""}
+function renderMateriaisVisitas(){
+  const box=$("visitasMateriaisLista");if(!box)return;
+  box.innerHTML=materiaisVisitas.length?materiaisVisitas.map(x=>`<div class="commercial-material-item"><span>${esc(x.nome)}</span>${gestor("visitas")?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Remover</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material configurado.</div>';
+  document.querySelectorAll("[data-vis-material-del]").forEach(b=>b.onclick=()=>removerMaterialVisita(b.dataset.visMaterialDel))
+}
+async function salvarMaterialVisita(e){
+  e.preventDefault();if(!gestor("visitas"))return;
+  const nome=String($("visNovoMaterial")?.value||"").trim();if(!nome)return;
+  if(materiaisVisitas.some(x=>norm(x.nome)===norm(nome)))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado.");
+  try{
+    msg($("visMaterialConfigMsg"),"Salvando...");
+    await addDoc(collection(db,"visitasMateriais"),{grupoId:grupoAtualId(),nome,status:"ativo",criadoPor:uid(),criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+    $("visitasMaterialForm")?.reset();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas()
+  }catch(err){console.error(err);msg($("visMaterialConfigMsg"),"Não foi possível salvar o material.")}
+}
+async function removerMaterialVisita(id){
+  if(!gestor("visitas"))return;
+  const x=materiaisVisitas.find(v=>v.id===id);if(!x||!confirm(`Remover o material "${x.nome}" da lista?`))return;
+  try{await deleteDoc(doc(db,"visitasMateriais",id));await carregarBasesVisitas()}catch(err){console.error(err);alert("Não foi possível remover o material.")}
+}
 async function salvarClienteRelacionamento(e){
   e.preventDefault();if(!registrar("visitas"))return;
   const nome=String($("visNovoClienteNome")?.value||"").trim(),cidade=String($("visNovoClienteCidade")?.value||"").trim(),uf=String($("visNovoClienteUf")?.value||"").trim().toUpperCase();
@@ -265,8 +293,9 @@ function abrirEdicao(k,id){
     el(k,"Data").value=x.data||"";
     const vend=vendedoresVisitas.find(v=>v.id===x.vendedorId)||vendedoresVisitas.find(v=>norm(v.nome)===norm(x.vendedor));if(vend)el(k,"Vendedor").value=vend.id;
     const cli=clientesVisitas.find(v=>v.id===x.clienteId)||clientesVisitas.find(v=>chaveCliente(v.nome,v.cidade)===chaveCliente(x.cliente,x.cidade))||clientesVisitas.find(v=>norm(v.nome)===norm(x.cliente));if(cli)el(k,"Cliente").value=cli.id;
-    ["Obra","Cidade","Material","Assunto","Email","Observacao"].forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});
-    el(k,"Tipo").value=tipoVisitaCanon(x.tipo);$("visitasFormTitulo").textContent="Editar visita / contato";$("visitasFormBox").classList.remove("hidden");$("visitasFormBox").scrollIntoView({behavior:"smooth",block:"start"});return
+    ["Obra","Cidade","Assunto","Observacao"].forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});
+    if(x.material&&!materiaisVisitas.some(m=>m.nome===x.material))el(k,"Material").insertAdjacentHTML("beforeend",`<option value="${esc(x.material)}">${esc(x.material)} · histórico</option>`);
+    el(k,"Material").value=x.material||"";el(k,"Tipo").value=tipoVisitaCanon(x.tipo);$("visitasFormTitulo").textContent="Editar visita / contato";$("visitasFormBox").classList.remove("hidden");$("visitasFormBox").scrollIntoView({behavior:"smooth",block:"start"});return
   }
   if(x.empresaId!==empresaUnicaSelecionadaId())return alert("Selecione a empresa deste registro para editar.");
   edicao[k]=id;const nomes=["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"];nomes.forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});$(k+"FormTitulo").textContent="Editar registro";$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
@@ -274,7 +303,7 @@ function abrirEdicao(k,id){
 function formularioDados(k){
   if(k==="visitas"){
     const vend=vendedoresVisitas.find(x=>x.id===$("visVendedor")?.value),cli=clientesVisitas.find(x=>x.id===$("visCliente")?.value),tipo=$("visTipo")?.value||"";
-    return{data:$("visData")?.value||"",vendedorId:vend?.id||"",vendedor:vend?.nome||"",clienteId:cli?.id||"",clienteOrigem:cli?.origem||"",cliente:cli?.nome||"",obra:String($("visObra")?.value||"").trim(),cidade:String($("visCidade")?.value||cli?.cidade||"").trim(),material:String($("visMaterial")?.value||"").trim(),assunto:String($("visAssunto")?.value||"").trim(),tipo,email:String($("visEmail")?.value||"").trim(),observacao:String($("visObservacao")?.value||"").trim()}
+    return{data:$("visData")?.value||"",vendedorId:vend?.id||"",vendedor:vend?.nome||"",clienteId:cli?.id||"",clienteOrigem:cli?.origem||"",cliente:cli?.nome||"",obra:String($("visObra")?.value||"").trim(),cidade:String($("visCidade")?.value||cli?.cidade||"").trim(),material:String($("visMaterial")?.value||"").trim(),assunto:String($("visAssunto")?.value||"").trim(),tipo,observacao:String($("visObservacao")?.value||"").trim()}
   }
   const nomes=["Data","Vendedor","Cliente","Produto","Cidade","Comprador","NumeroVb","Valor","Status","Telefone","Email","Observacao","Justificativa"],d={};nomes.forEach(n=>{d[n.charAt(0).toLowerCase()+n.slice(1)]=String(el(k,n).value||"").trim()});d.valor=Number(d.valor);return d
 }
@@ -294,16 +323,21 @@ async function carregar(k){
     dados[k]=await consultar(k);$(k+"Aviso").classList.add("hidden");render(k)
   }catch(e){console.error(e);dados[k]=[];render(k);$(k+"Aviso").textContent="Não foi possível consultar os registros. Confira o perfil e as Rules publicadas no Firebase.";$(k+"Aviso").classList.remove("hidden")}finally{ocupado[k]=false}
 }
+function visitaDoVendedor(x,vendedorId){
+  if(!vendedorId)return true;
+  const v=vendedoresVisitas.find(y=>y.id===vendedorId);
+  return x.vendedorId===vendedorId||!!v&&norm(x.vendedor)===norm(v.nome)
+}
 function visitasDoPeriodo(){
-  const ano=periodoAno(),meses=indicesPeriodo();
-  return dados.visitas.filter(x=>anoData(x.data)===ano&&meses.includes(mesData(x.data)))
+  const ano=periodoAno(),meses=indicesPeriodo(),vendedorId=$("visitasFiltroVendedor")?.value||"";
+  return dados.visitas.filter(x=>anoData(x.data)===ano&&meses.includes(mesData(x.data))&&visitaDoVendedor(x,vendedorId))
 }
 function barRows(items,total=0){
   const max=Math.max(1,...items.map(x=>x.valor));
   return items.map((x,i)=>`<div class="commercial-bar-row"><span class="commercial-bar-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(x.valor?3:0,x.valor/max*100)}%"></b></i><em>${x.valor.toLocaleString("pt-BR")}</em>${total?`<small>${(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%</small>`:""}</div>`).join("")
 }
 function renderVisitasGraficos(periodo){
-  const ano=periodoAno(),anoDados=dados.visitas.filter(x=>anoData(x.data)===ano),meses=MESES.map((nome,i)=>({nome,valor:anoDados.filter(x=>mesData(x.data)===i).length})),maxMes=Math.max(1,...meses.map(x=>x.valor));
+  const ano=periodoAno(),vendedorId=$("visitasFiltroVendedor")?.value||"",anoDados=dados.visitas.filter(x=>anoData(x.data)===ano&&visitaDoVendedor(x,vendedorId)),meses=MESES.map((nome,i)=>({nome,valor:anoDados.filter(x=>mesData(x.data)===i).length})),maxMes=Math.max(1,...meses.map(x=>x.valor));
   $("visitasGraficoAnoLabel").textContent="Ano "+ano;
   $("visitasGrafico12").innerHTML=meses.map(x=>`<div class="commercial-month-col"><strong>${x.valor}</strong><i><b style="height:${x.valor?Math.max(4,x.valor/maxMes*100):0}%"></b></i><span>${x.nome}</span></div>`).join("");
 
@@ -319,8 +353,9 @@ function renderVisitasGraficos(periodo){
   $("visitasGraficoTipo").innerHTML=barRows(tipos,periodo.length)
 }
 function renderVisitas(){
-  const periodo=visitasDoPeriodo(),termo=norm($("visitasBusca")?.value),tipoFiltro=$("visitasFiltroTipo")?.value||"",filtrados=periodo.filter(x=>(!termo||[x.cliente,x.vendedor,x.cidade,x.assunto].some(v=>norm(v).includes(termo)))&&(!tipoFiltro||tipoVisitaCanon(x.tipo)===tipoFiltro));
+  const periodo=visitasDoPeriodo(),termo=norm($("visitasBusca")?.value),tipoFiltro=$("visitasFiltroTipo")?.value||"",filtrados=periodo.filter(x=>(!termo||[x.cliente,x.vendedor,x.cidade,x.assunto].some(v=>norm(v).includes(termo)))&&(!tipoFiltro||tipoVisitaCanon(x.tipo)===tipoFiltro)),convertidas=periodo.filter(x=>(x.status||"visita")==="orcamento"||x.orcamentoId).length;
   $("visitasKpiTotal").textContent=String(periodo.length);$("visitasKpiSegundo").textContent=String(new Set(periodo.map(x=>norm(x.cliente)).filter(Boolean)).size);$("visitasKpiPeriodo").textContent=`Ano ${periodoAno()} · ${periodoChave()==="total"?"ano completo":"período selecionado"}`;
+  $("visitasKpiConversao").textContent=String(convertidas);$("visitasKpiConversaoTaxa").textContent=`${periodo.length?(convertidas/periodo.length*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):"0"}% de conversão no período`;
   renderVisitasGraficos(periodo);
   $("visitasLista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{
     const podeExcluir=admin()||String(x.criadoPor||x.responsavelId||"")===uid(),statusVisita=(x.status||"visita")==="orcamento"?"Orçamento":"Visita";
