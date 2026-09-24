@@ -43,7 +43,7 @@ import "./js/customer-complaints.js";
 import "./js/fleet-fuel.js?v=17";
 import "./js/admin-fuel-settings.js?v=2";
 import "./js/area-navigation.js?v=3";
-import("./js/commercial-workflow.js?v=12").catch(error => console.error("Módulo Comercial · Visitas/Orçamentos indisponível", error));
+import("./js/commercial-workflow.js?v=13").catch(error => console.error("Módulo Comercial · Visitas/Orçamentos indisponível", error));
 import "./js/governance.js";
 import "./js/governance-security.js";
 import "./js/dashboard-v2.js";
