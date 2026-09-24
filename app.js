@@ -27,7 +27,7 @@ import "./js/management-shell.js";
 import "./js/controllership-router.js?v=32";
 import "./js/production.js?v=12";
 import "./js/disposal.js?v=9";
-import "./js/commercial-workflow.js?v=3";
+
 import "./js/pallets.js";
 import "./js/pallet-dashboard.js";
 import "./js/service-orders.js?v=7";
@@ -42,7 +42,8 @@ import "./js/workforce-dashboard.js";
 import "./js/customer-complaints.js";
 import "./js/fleet-fuel.js?v=17";
 import "./js/admin-fuel-settings.js?v=2";
-import "./js/area-navigation.js?v=2";
+import "./js/area-navigation.js?v=3";
+import("./js/commercial-workflow.js?v=4").catch(error => console.error("Módulo Comercial · Visitas/Orçamentos indisponível", error));
 import "./js/governance.js";
 import "./js/governance-security.js";
 import "./js/dashboard-v2.js";
