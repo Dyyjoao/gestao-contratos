@@ -636,7 +636,7 @@ service cloud.firestore {
             request.resource.data.tipo in ['telefone','whatsapp','presencial','email'] &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'data','vendedorId','vendedor','clienteId','clienteOrigem','cliente','obra','cidade',
-              'material','assunto','tipo','email','observacao','atualizadoEm'
+              'material','produtos','valorProdutos','assunto','tipo','email','observacao','atualizadoEm'
             ])
           ) || (
             request.resource.data.status == 'orcamento' &&
