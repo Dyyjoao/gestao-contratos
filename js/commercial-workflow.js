@@ -109,14 +109,14 @@ async function consultarColecaoGrupoPorEmpresa(nomeColecao){
 async function carregarBasesVisitas(){
   const grupo=grupoAtualId();if(!grupo){vendedoresVisitas=[];clientesVisitas=[];clientesRelacionamento=[];return}
   const resultados=await Promise.allSettled([
-    consultarColecaoGrupoPorEmpresa("vendedores"),
+    getDocs(query(collection(db,"vendedores"),where("grupoId","==",grupo))),
     consultarColecaoGrupoPorEmpresa("rhColaboradores"),
-    consultarColecaoGrupoPorEmpresa("clientesComerciais"),
+    getDocs(query(collection(db,"clientesComerciais"),where("grupoId","==",grupo))),
     getDocs(query(collection(db,"clientesRelacionamento"),where("grupoId","==",grupo)))
   ]);
-  const configs=resultados[0].status==="fulfilled"?resultados[0].value:[];
+  const configs=resultados[0].status==="fulfilled"?resultados[0].value.docs.map(x=>({id:x.id,...x.data()})):[];
   const rhs=resultados[1].status==="fulfilled"?resultados[1].value:[];
-  const clientesSales=resultados[2].status==="fulfilled"?resultados[2].value:[];
+  const clientesSales=resultados[2].status==="fulfilled"?resultados[2].value.docs.map(x=>({id:x.id,...x.data()})):[];
   clientesRelacionamento=resultados[3].status==="fulfilled"?resultados[3].value.docs.map(x=>({id:x.id,...x.data()})):[];
 
   const hoje=localIso(),rhAtivos=new Map(rhs.filter(x=>x.status!=="estornado"&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje)).map(x=>[x.id,x])),vendMap=new Map();
