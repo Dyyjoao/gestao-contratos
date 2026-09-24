@@ -6,7 +6,7 @@ const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","
 const PERIODOS={total:[0,1,2,3,4,5,6,7,8,9,10,11],t1:[0,1,2],t2:[3,4,5],t3:[6,7,8],t4:[9,10,11]};
 for(let i=0;i<12;i++)PERIODOS[`m${String(i+1).padStart(2,"0")}`]=[i];
 
-let vendedoresRh=[],supervisoresRh=[],configs=[],vendas=[],clientesComerciais=[],itensComerciais=[],busy=false,editVendaId="",editItemId="",configAtual=null;
+let vendedoresRh=[],supervisoresRh=[],configs=[],vendas=[],clientesComerciais=[],itensComerciais=[],busy=false,editVendaId="",editItemId="",configAtual=null,filtroClienteVendas="",filtroClienteVendasNome="";
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const pagina=()=>$("pagina-vendas");
 const podeVer=()=>admin()||["visualizar","lancar","editar","vendedores","comissoes"].some(a=>permite("vendas",a));
@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=20";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=21";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -333,6 +333,10 @@ function chart(vendidos){
 }
 
 
+function chaveClienteVenda(v){
+  const nome=String(v?.cliente||"Cliente não informado").trim()||"Cliente não informado";
+  return String(v?.clienteId||nome.toLocaleLowerCase("pt-BR"))
+}
 function clienteComercialVenda(v){
   if(v?.clienteId){const porId=clientesComerciais.find(c=>c.id===v.clienteId);if(porId)return porId}
   const cod=String(v?.clienteCodigo||"").trim().toLocaleUpperCase("pt-BR");
@@ -381,7 +385,7 @@ function renderClientes(validas){
 function renderClientesDetalhe(validas){
   const ordem=$("salesClientesListaOrdem")?.value||"maior",vendedor=$("salesClientesListaVendedor")?.value||"",busca=String($("salesClientesBusca")?.value||"").trim().toLocaleLowerCase("pt-BR"),base=vendedor?validas.filter(v=>v.vendedorId===vendedor):validas,mapa=new Map();
   base.forEach(v=>{
-    const nome=String(v.cliente||"Cliente não informado").trim()||"Cliente não informado",chave=String(v.clienteId||nome.toLocaleLowerCase("pt-BR")),z=mapa.get(chave)||{nome,vendido:0,qtd:0};z.vendido+=n(v.valor);z.qtd++;mapa.set(chave,z)
+    const nome=String(v.cliente||"Cliente não informado").trim()||"Cliente não informado",chave=chaveClienteVenda(v),z=mapa.get(chave)||{chave,nome,vendido:0,qtd:0};z.vendido+=n(v.valor);z.qtd++;mapa.set(chave,z)
   });
   let itens=[...mapa.values()].filter(x=>!busca||x.nome.toLocaleLowerCase("pt-BR").includes(busca));
   if(ordem==="maior")itens.sort((a,b)=>b.vendido-a.vendido||a.nome.localeCompare(b.nome,"pt-BR"));
@@ -390,7 +394,13 @@ function renderClientesDetalhe(validas){
   else itens.sort((a,b)=>b.nome.localeCompare(a.nome,"pt-BR"));
   const totalBase=[...mapa.values()].reduce((s,x)=>s+x.vendido,0),visivel=itens.reduce((s,x)=>s+x.vendido,0),resumo=$("salesClientesListaResumo");
   if(resumo)resumo.innerHTML=`<span><strong>${itens.length}</strong> cliente(s) visível(is)</span><span>Valor visível: <strong>${moeda(visivel)}</strong></span>${busca?'<span>Filtro: <strong>'+esc($("salesClientesBusca")?.value||"")+'</strong></span>':""}`;
-  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr><td>${i+1}</td><td><strong>${esc(x.nome)}</strong></td><td>${x.qtd}</td><td>${moeda(x.vendido)}</td><td>${totalBase?(x.vendido/totalBase*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="5">Nenhum cliente encontrado para os filtros selecionados.</td></tr>'
+  const tb=$("salesClientesLista");if(tb)tb.innerHTML=itens.length?itens.map((x,i)=>`<tr class="sales-cliente-linha ${filtroClienteVendas===x.chave?"selecionado":""}" data-sales-cliente-linha="${esc(x.chave)}" data-sales-cliente-nome="${esc(x.nome)}" title="Filtrar Vendas registradas por este cliente"><td>${i+1}</td><td><strong>${esc(x.nome)}</strong></td><td>${x.qtd}</td><td>${moeda(x.vendido)}</td><td>${totalBase?(x.vendido/totalBase*100).toLocaleString("pt-BR",{maximumFractionDigits:1}):0}%</td></tr>`).join(""):'<tr><td colspan="5">Nenhum cliente encontrado para os filtros selecionados.</td></tr>';
+  document.querySelectorAll("[data-sales-cliente-linha]").forEach(tr=>tr.onclick=()=>{
+    const chave=tr.dataset.salesClienteLinha||"",nome=tr.dataset.salesClienteNome||"";
+    if(filtroClienteVendas===chave){filtroClienteVendas="";filtroClienteVendasNome=""}else{filtroClienteVendas=chave;filtroClienteVendasNome=nome}
+    render();
+    requestAnimationFrame(()=>$("salesLista")?.closest(".lista-card")?.scrollIntoView({behavior:"smooth",block:"start"}))
+  })
 }
 
 function renderAbc(validas){
@@ -440,8 +450,8 @@ function render(){
   renderCidades(valid);
   renderClientesDetalhe(valid);
 
-  const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
-  setText("salesResumo",`${lista.length} venda(s) no período selecionado`);
+  const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)&&(!filtroClienteVendas||chaveClienteVenda(v)===filtroClienteVendas)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
+  setText("salesResumo",`${lista.length} venda(s) no período selecionado${filtroClienteVendasNome?" · Cliente: "+filtroClienteVendasNome:""}`);
   if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>Pedido ${esc(v.documento||"—")}</small>${resumoParcelas(v)?`<small>${esc(resumoParcelas(v))}</small>`:""}</td><td><strong>${moeda(v.valor)}</strong></td><td><span class="${v.status==="cancelada"?"status-inativo":"status-ativo"}">${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="6">Nenhuma venda no período.</td></tr>';
   document.querySelectorAll("[data-sales-edit]").forEach(b=>b.onclick=()=>abrirVenda(vendas.find(v=>v.id===b.dataset.salesEdit)));document.querySelectorAll("[data-sales-cancela]").forEach(b=>b.onclick=()=>cancelarVenda(b.dataset.salesCancela));
 }
@@ -457,6 +467,6 @@ async function carregar(){
 
 export async function abrir(){if(!podeVer())return alert("Seu perfil não possui acesso ao Consolidado de vendas.");montar();abrirPagina("vendas");$("menuVendas")?.classList.add("ativo");esconderBotoes();await carregar()}
 montar();
-window.addEventListener("sig:empresa-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
-window.addEventListener("sig:periodo-changed",()=>{if(pagina()&&!pagina().classList.contains("hidden")){sincronizarFiltroDatas(true);render()}});
+window.addEventListener("sig:empresa-changed",()=>{filtroClienteVendas="";filtroClienteVendasNome="";if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
+window.addEventListener("sig:periodo-changed",()=>{filtroClienteVendas="";filtroClienteVendasNome="";if(pagina()&&!pagina().classList.contains("hidden")){sincronizarFiltroDatas(true);render()}});
 window.addEventListener("sig:data-changed",e=>{if(["vendas","rh"].includes(e.detail?.modulo)&&pagina()&&!pagina().classList.contains("hidden"))carregar()});
