@@ -409,10 +409,22 @@ function barRows(items,total=0){
   const max=Math.max(1,...items.map(x=>x.valor));
   return items.map((x,i)=>`<div class="commercial-bar-row"><span class="commercial-bar-pos">${i+1}</span><strong title="${esc(x.nome)}">${esc(x.nome)}</strong><i><b style="width:${Math.max(x.valor?3:0,x.valor/max*100)}%"></b></i><em>${x.valor.toLocaleString("pt-BR")}</em>${total?`<small>${(x.valor/total*100).toLocaleString("pt-BR",{maximumFractionDigits:1})}%</small>`:""}</div>`).join("")
 }
+function dataConversaoVisita(x){
+  const t=x?.orcamentoCriadoEm;
+  if(t?.toDate)return t.toDate();
+  if(t?.seconds)return new Date(t.seconds*1000);
+  if(t instanceof Date)return t;
+  if(typeof t==="string"&&t)return new Date(t);
+  return x?.data?new Date(String(x.data).slice(0,10)+"T12:00:00"):null
+}
+
 function renderVisitasGraficos(periodo){
   const ano=periodoAno(),vendedorId=$("visitasFiltroVendedor")?.value||"",anoDados=dados.visitas.filter(x=>anoData(x.data)===ano&&visitaDoVendedor(x,vendedorId)),meses=MESES.map((nome,i)=>({nome,valor:anoDados.filter(x=>mesData(x.data)===i).length})),maxMes=Math.max(1,...meses.map(x=>x.valor));
   $("visitasGraficoAnoLabel").textContent="Ano "+ano;
   $("visitasGrafico12").innerHTML=meses.map(x=>`<div class="commercial-month-col"><strong>${x.valor}</strong><i><b style="height:${x.valor?Math.max(4,x.valor/maxMes*100):0}%"></b></i><span>${x.nome}</span></div>`).join("");
+
+  const convertidasAno=dados.visitas.filter(x=>((x.status||"visita")==="orcamento"||x.orcamentoId)&&visitaDoVendedor(x,vendedorId)).map(x=>({x,data:dataConversaoVisita(x)})).filter(z=>z.data&&!Number.isNaN(z.data.getTime())&&z.data.getFullYear()===ano),mesesConv=MESES.map((nome,i)=>({nome,valor:convertidasAno.filter(z=>z.data.getMonth()===i).length})),maxConv=Math.max(1,...mesesConv.map(x=>x.valor));
+  const grafConv=$("visitasGraficoConversoes12");if(grafConv)grafConv.innerHTML=mesesConv.map(x=>`<div class="commercial-month-col"><strong>${x.valor}</strong><i><b style="height:${x.valor?Math.max(4,x.valor/maxConv*100):0}%"></b></i><span>${x.nome}</span></div>`).join("");
 
   const porCliente=new Map(),porCidade=new Map(),porTipo=new Map(TIPOS_VISITA.map(([v,t])=>[v,{nome:t,valor:0}]));
   periodo.forEach(x=>{
