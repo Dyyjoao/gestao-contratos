@@ -40,6 +40,7 @@ function formularioOrcamentoVisita(){
     <div class="form-card-titulo"><div><span class="eyebrow">ORÇAMENTO</span><h3>Novo orçamento a partir da visita</h3><p id="visitasOrcamentoOrigem">Cliente e visita de origem vinculados automaticamente.</p></div></div>
     <form id="visitasOrcamentoForm"><div class="form-grid form-grid-3">
       <div class="campo campo-span-2"><label for="orcVisCliente">Cliente</label><input id="orcVisCliente" type="text" readonly required><small>Vinculado à visita e não pode ser alterado neste lançamento.</small></div>
+      <div class="campo"><label for="orcVisEmpresa">Empresa do orçamento</label><select id="orcVisEmpresa" required><option value="">Selecione...</option></select><small>Define a empresa responsável pelo orçamento e pela futura venda.</small></div>
       <div class="campo"><label for="orcVisData">Data</label><input id="orcVisData" type="date" required></div>
       <div class="campo"><label for="orcVisProduto">Produto</label><input id="orcVisProduto" type="text" required></div>
       <div class="campo"><label for="orcVisValor">Valor</label><input id="orcVisValor" type="number" min="0" step="0.01" required></div>
@@ -223,6 +224,12 @@ function atualizarMotivoPerda(){
 function fecharOrcamentoVisita(){
   visitaOrcamentoAtual="";$("visitasOrcamentoForm")?.reset();$("visitasOrcamentoBox")?.classList.add("hidden");atualizarMotivoPerda();msg($("visitasOrcamentoMensagem"),"")
 }
+function preencherEmpresasOrcamentoVisita(){
+  const sel=$("orcVisEmpresa");if(!sel)return;
+  const ids=idsEmpresasPermitidas(),itens=ids.map(id=>{const e=state.empresas?.get?.(id);return{id,nome:e?.nomeFantasia||e?.razaoSocial||id}}).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  sel.innerHTML='<option value="">Selecione...</option>'+itens.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");
+  if(itens.length===1)sel.value=itens[0].id
+}
 function preencherVendedorOrcamentoVisita(visita){
   const sel=$("orcVisVendedor");if(!sel)return;
   sel.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");
@@ -237,6 +244,7 @@ function abrirOrcamentoDaVisita(id){
   const form=$("visitasOrcamentoForm");form?.reset();
   $("orcVisCliente").value=x.cliente||"";
   $("orcVisData").value=localIso();
+  preencherEmpresasOrcamentoVisita();
   preencherVendedorOrcamentoVisita(x);
   $("visitasOrcamentoOrigem").textContent=`Visita de ${dataBr(x.data)} · cliente vinculado: ${x.cliente||"—"}`;
   atualizarMotivoPerda();$("visitasOrcamentoBox").classList.remove("hidden");
@@ -254,17 +262,18 @@ async function excluirVisita(id){
 async function salvarOrcamentoDaVisita(e){
   e.preventDefault();const visita=dados.visitas.find(v=>v.id===visitaOrcamentoAtual);if(!visita)return msg($("visitasOrcamentoMensagem"),"Visita de origem não encontrada.");
   if(!registrar("orcamentos"))return msg($("visitasOrcamentoMensagem"),"Sem permissão para registrar orçamento.");
-  const data=$("orcVisData")?.value||"",produto=String($("orcVisProduto")?.value||"").trim(),valor=Number($("orcVisValor")?.value),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
-  if(!data||!produto||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Data, Produto, Valor, Vendedor e Status.");
+  const empresaId=$("orcVisEmpresa")?.value||"",data=$("orcVisData")?.value||"",produto=String($("orcVisProduto")?.value||"").trim(),valor=Number($("orcVisValor")?.value),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
+  if(!empresaId||!idsEmpresasPermitidas().includes(empresaId))return msg($("visitasOrcamentoMensagem"),"Selecione a empresa responsável pelo orçamento.");
+  if(!data||!produto||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Empresa, Data, Produto, Valor, Vendedor e Status.");
   if(status==="perdido_concorrente"&&!motivoPerda)return msg($("visitasOrcamentoMensagem"),"Informe o motivo da perda para a concorrência.");
   try{
     msg($("visitasOrcamentoMensagem"),"Salvando orçamento...");
     const ref=await addDoc(collection(db,"orcamentosComerciais"),{
-      grupoId:grupoAtualId(),visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,valor,numeroVb,comprador,
+      grupoId:grupoAtualId(),empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,valor,numeroVb,comprador,
       vendedorId:vend.id,vendedor:vend.nome,status,motivoPerda:status==="perdido_concorrente"?motivoPerda:"",justificativa:status==="perdido_concorrente"?motivoPerda:"",
       responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:"",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()
     });
-    await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId:ref.id,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+    await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId:ref.id,orcamentoEmpresaId:empresaId,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
     visita.status="orcamento";visita.orcamentoId=ref.id;fecharOrcamentoVisita();emitirAlteracao("orcamentos");emitirAlteracao("visitas");renderVisitas();
     alert("Orçamento criado e vinculado à visita.")
   }catch(err){console.error("Erro ao salvar orçamento da visita",err);const detalhe=err?.code==="permission-denied"?"Permissão negada pelo Firestore. Confira se as Rules publicadas são as mais recentes.":(err?.message||"Não foi possível salvar o orçamento.");msg($("visitasOrcamentoMensagem"),detalhe)}
