@@ -660,15 +660,14 @@ service cloud.firestore {
         administrador() || permissao('visitas','visualizar') || permissao('visitas','registrar') ||
         permissao('visitas','editar') || permissao('visitas','supervisionar')
       );
-      allow create: if (administrador() || permissao('visitas','supervisionar')) &&
+      allow create: if administrador() &&
         mesmoGrupo(request.resource.data.grupoId) &&
         request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
         request.resource.data.nome.size() <= 120 &&
         request.resource.data.status == 'ativo' &&
         request.resource.data.criadoPor == request.auth.uid;
       allow update: if false;
-      allow delete: if mesmoGrupo(resource.data.grupoId) &&
-        (administrador() || permissao('visitas','supervisionar'));
+      allow delete: if administrador() && mesmoGrupo(resource.data.grupoId);
     }
 
     match /clientesRelacionamento/{id} {
@@ -704,6 +703,8 @@ service cloud.firestore {
         )
       );
       allow create: if permissao('orcamentos','registrar') &&
+        documentoAcessivel(request.resource.data) &&
+        request.resource.data.empresaId is string && request.resource.data.empresaId.size() > 0 &&
         request.resource.data.responsavelId == request.auth.uid &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.cliente is string && request.resource.data.cliente.size() > 0 &&
@@ -712,9 +713,7 @@ service cloud.firestore {
         request.resource.data.valor is number && request.resource.data.valor >= 0 &&
         request.resource.data.status in ['aguardando_aprovacao','licitacao','venda_concluida','perdido_concorrente'] &&
         (
-          documentoAcessivel(request.resource.data) || (
-            mesmoGrupo(request.resource.data.grupoId) &&
-            request.resource.data.get('origem','') == 'visita' &&
+          request.resource.data.get('origem','') != 'visita' || (
             request.resource.data.visitaId is string && request.resource.data.visitaId.size() > 0 &&
             request.resource.data.clienteId is string && request.resource.data.clienteId.size() > 0 &&
             request.resource.data.vendedorId is string && request.resource.data.vendedorId.size() > 0 &&
