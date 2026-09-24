@@ -1,6 +1,6 @@
-import { collection, query, where, getDocs, arrayUnion } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, query, where, getDocs, arrayUnion, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { abrirPagina, admin } from "./core.js";
-import { $, db, esc, msg, permite, state, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, grupoAtualId, dataBr, emitirAlteracao } from "./shared.js";
+import { $, db, esc, msg, permite, state, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, idsEmpresasPermitidas, grupoAtualId, periodoAno, periodoChave, dataBr, emitirAlteracao } from "./shared.js";
 
 const MODELOS={
   visitas:{titulo:"Visitas e contatos",colecao:"visitasComerciais",permissao:"visitas"},
@@ -8,8 +8,12 @@ const MODELOS={
 };
 const STATUS={aguardando_aprovacao:"Aguardando aprovação",licitacao:"Licitação",venda_concluida:"Venda concluída",perdido_concorrente:"Perdido para concorrente"};
 const ABERTOS=new Set(["aguardando_aprovacao","licitacao"]);
-const TIPOS=["E-mail","Ligação","Presencial","Whatsapp"];
+const TIPOS_VISITA=[["telefone","Telefone"],["whatsapp","WhatsApp"],["presencial","Presencial"],["email","E-mail"]];
+const PERIODOS={total:[0,1,2,3,4,5,6,7,8,9,10,11],t1:[0,1,2],t2:[3,4,5],t3:[6,7,8],t4:[9,10,11]};
+for(let i=0;i<12;i++)PERIODOS[`m${String(i+1).padStart(2,"0")}`]=[i];
+const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const dados={visitas:[],orcamentos:[]},edicao={visitas:null,orcamentos:null},ocupado={visitas:false,orcamentos:false};
+let vendedoresVisitas=[],clientesVisitas=[],clientesRelacionamento=[];
 const uid=()=>state.usuario?.id||"";
 const gestor=k=>admin()||permite(MODELOS[k].permissao,"supervisionar");
 const ver=k=>gestor(k)||["visualizar","registrar","editar"].some(a=>permite(MODELOS[k].permissao,a));
@@ -19,6 +23,14 @@ const agoraIso=()=>new Date().toISOString();
 const proximo24=()=>new Date(Date.now()+86400000).toISOString();
 const localIso=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
 const dinheiro=n=>Number(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const norm=s=>String(s||"").trim().toLocaleLowerCase("pt-BR");
+const mesData=v=>Number(String(v||"").slice(5,7))-1;
+const anoData=v=>Number(String(v||"").slice(0,4));
+const indicesPeriodo=()=>PERIODOS[periodoChave()]||PERIODOS.total;
+const tipoVisitaCanon=v=>{const x=norm(v);if(x==="ligação"||x==="ligacao"||x==="telefone")return"telefone";if(x==="whatsapp")return"whatsapp";if(x==="presencial")return"presencial";if(x==="e-mail"||x==="email")return"email";return x};
+const tipoVisitaNome=v=>Object.fromEntries(TIPOS_VISITA)[tipoVisitaCanon(v)]||String(v||"—");
+const chaveCliente=(nome,cidade="")=>norm(nome)+"|"+norm(cidade);
+
 const sigla=k=>k==="visitas"?"vis":"orc";
 const el=(k,n)=>$(sigla(k)+n);
 const campo=(k,id,label,type="text",required=false,extra="")=>`<div class="campo"><label for="${sigla(k)}${id}">${label}</label><input id="${sigla(k)}${id}" type="${type}" ${required?"required":""} ${extra}></div>`;
