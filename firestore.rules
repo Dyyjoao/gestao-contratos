@@ -1119,7 +1119,12 @@ service cloud.firestore {
     }
 
     match /vendedores/{id} {
-      allow read: if (vendasVisualizar() || permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar') || permissao('visitas','supervisionar')) && documentoAcessivel(resource.data);
+      allow read: if (vendasVisualizar() && documentoAcessivel(resource.data)) || (
+        mesmoGrupo(resource.data.grupoId) && (
+          permissao('visitas','visualizar') || permissao('visitas','registrar') ||
+          permissao('visitas','editar') || permissao('visitas','supervisionar')
+        )
+      );
       allow create: if documentoAcessivel(request.resource.data) &&
         request.resource.data.baseComissao in ['venda','faturamento','recebido'] &&
         request.resource.data.comissaoPct >= 0 && request.resource.data.comissaoPct <= 100 && (
@@ -1184,7 +1189,12 @@ service cloud.firestore {
     }
 
     match /clientesComerciais/{id} {
-      allow read: if (vendasVisualizar() || permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar') || permissao('visitas','supervisionar')) && documentoAcessivel(resource.data);
+      allow read: if (vendasVisualizar() && documentoAcessivel(resource.data)) || (
+        mesmoGrupo(resource.data.grupoId) && (
+          permissao('visitas','visualizar') || permissao('visitas','registrar') ||
+          permissao('visitas','editar') || permissao('visitas','supervisionar')
+        )
+      );
       allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data) &&
         request.resource.data.codigo is string && request.resource.data.codigo.size() > 0 &&
         request.resource.data.codigo.size() <= 60 &&
