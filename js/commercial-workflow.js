@@ -63,7 +63,7 @@ function formulario(k){
       <div class="campo"><label for="visCliente">Cliente</label><div class="commercial-select-action"><select id="visCliente" required><option value="">Selecione...</option></select><button id="visClienteNovo" class="btn-secundario" type="button">+ Incluir</button></div><small>Base de clientes do Comercial + clientes incluídos para relacionamento.</small></div>
       <div class="campo"><label for="visCidade">Cidade</label><input id="visCidade" type="text" placeholder="Preenchida pelo cadastro do cliente"></div>
       <div class="campo"><label for="visObra">Obra</label><input id="visObra" type="text"></div>
-      <div class="campo"><label for="visMaterial">Material</label><div class="commercial-select-action"><select id="visMaterial"><option value="">Selecione...</option></select><button id="visMaterialConfig" class="btn-secundario" type="button">Configurar</button></div><small>Lista configurável para todo o grupo empresarial.</small></div>
+      <div class="campo"><label for="visMaterial">Material</label><select id="visMaterial"><option value="">Selecione...</option></select><small>Lista configurada pela Administração.</small></div>
       <div class="campo"><label for="visAssunto">Assunto</label><input id="visAssunto" type="text"></div>
       <div class="campo"><label for="visTipo">Tipo de contato</label><select id="visTipo" required><option value="">Selecione...</option>${tipos}</select></div>
       <div class="campo campo-span-3"><label for="visObservacao">Observação</label><textarea id="visObservacao"></textarea></div>
@@ -82,7 +82,7 @@ function montar(k){
   const s=document.createElement("section");s.id="pagina-"+k;s.className="pagina hidden commercial-flow-page";
 
   if(k==="visitas"){
-    s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>Visitas e contatos</h2><p>Visão consolidada do grupo empresarial, independente do filtro de empresa do cabeçalho.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="visitasNovo" type="button">+ Incluir visita / contato</button><button class="btn-secundario" id="visitasAtualizar" type="button">Atualizar</button></div></div>
+    s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>Visitas e contatos</h2><p>Visão consolidada do grupo empresarial, independente do filtro de empresa do cabeçalho.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="visitasNovo" type="button">+ Incluir visita / contato</button><button class="btn-secundario hidden" id="visitasConfigurar" type="button" title="Configurações de Visitas e contatos">⚙ Configurações</button><button class="btn-secundario" id="visitasAtualizar" type="button">Atualizar</button></div></div>
       <div id="visitasAviso" class="modulo-aviso hidden"></div>
       <div class="commercial-group-note"><strong>Escopo:</strong> esta tela consolida todas as empresas do grupo. O período continua seguindo o filtro geral do SIG.</div>
       <div class="commercial-visit-master-filter"><div><label for="visitasFiltroVendedor">Vendedor</label><select id="visitasFiltroVendedor"><option value="">Todos os vendedores</option></select></div><small>Este filtro se aplica a todos os cards, gráficos e ao histórico abaixo.</small></div>
@@ -115,7 +115,7 @@ function montar(k){
     $("visClienteNovo")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.remove("hidden");$("visNovoClienteNome")?.focus()});
     $("visNovoClienteCancelar")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.add("hidden");$("visitasClienteForm")?.reset();msg($("visNovoClienteMsg"),"")});
     $("visitasClienteForm")?.addEventListener("submit",salvarClienteRelacionamento);
-    $("visMaterialConfig")?.addEventListener("click",()=>{if(!gestor("visitas"))return;$("visitasMateriaisBox")?.classList.remove("hidden");renderMateriaisVisitas()});
+    $("visitasConfigurar")?.addEventListener("click",()=>{if(!admin())return;$("visitasMateriaisBox")?.classList.remove("hidden");renderMateriaisVisitas()});
     $("visMaterialConfigFechar")?.addEventListener("click",()=>{$("visitasMateriaisBox")?.classList.add("hidden");$("visitasMaterialForm")?.reset();msg($("visMaterialConfigMsg"),"")});
     $("visitasMaterialForm")?.addEventListener("submit",salvarMaterialVisita);
     $("visitasOrcamentoCancelar")?.addEventListener("click",fecharOrcamentoVisita);
@@ -179,27 +179,27 @@ function preencherBasesVisitas(){
   if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
   if(sf){const atual=sf.value;sf.innerHTML='<option value="">Todos os vendedores</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");if([...sf.options].some(o=>o.value===atual))sf.value=atual}
   if(sm){const atual=sm.value;sm.innerHTML='<option value="">Selecione...</option>'+materiaisVisitas.map(x=>`<option value="${esc(x.nome)}">${esc(x.nome)}</option>`).join("");if([...sm.options].some(o=>o.value===atual))sm.value=atual}
-  $("visMaterialConfig")?.classList.toggle("hidden",!gestor("visitas"));
+  $("visitasConfigurar")?.classList.toggle("hidden",!admin());
   renderMateriaisVisitas()
 }
 function sincronizarClienteVisita(){const x=clientesVisitas.find(v=>v.id===$("visCliente")?.value);if(x&&$("visCidade"))$("visCidade").value=x.cidade||""}
 function renderMateriaisVisitas(){
   const box=$("visitasMateriaisLista");if(!box)return;
-  box.innerHTML=materiaisVisitas.length?materiaisVisitas.map(x=>`<div class="commercial-material-item"><span>${esc(x.nome)}</span>${gestor("visitas")?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Remover</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material configurado.</div>';
+  box.innerHTML=materiaisVisitas.length?materiaisVisitas.map(x=>`<div class="commercial-material-item"><span>${esc(x.nome)}</span>${admin()?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Remover</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material configurado.</div>';
   document.querySelectorAll("[data-vis-material-del]").forEach(b=>b.onclick=()=>removerMaterialVisita(b.dataset.visMaterialDel))
 }
 async function salvarMaterialVisita(e){
-  e.preventDefault();if(!gestor("visitas"))return;
+  e.preventDefault();if(!admin())return;
   const nome=String($("visNovoMaterial")?.value||"").trim();if(!nome)return;
   if(materiaisVisitas.some(x=>norm(x.nome)===norm(nome)))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado.");
   try{
     msg($("visMaterialConfigMsg"),"Salvando...");
     await addDoc(collection(db,"visitasMateriais"),{grupoId:grupoAtualId(),nome,status:"ativo",criadoPor:uid(),criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
     $("visitasMaterialForm")?.reset();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas()
-  }catch(err){console.error(err);msg($("visMaterialConfigMsg"),"Não foi possível salvar o material.")}
+  }catch(err){console.error("Erro ao salvar material de visitas",err);const detalhe=err?.code==="permission-denied"?"Permissão negada pelo Firestore. Atualize as Rules e confirme que o usuário é Administrador.":(err?.message||"Não foi possível salvar o material.");msg($("visMaterialConfigMsg"),detalhe)}
 }
 async function removerMaterialVisita(id){
-  if(!gestor("visitas"))return;
+  if(!admin())return;
   const x=materiaisVisitas.find(v=>v.id===id);if(!x||!confirm(`Remover o material "${x.nome}" da lista?`))return;
   try{await deleteDoc(doc(db,"visitasMateriais",id));await carregarBasesVisitas()}catch(err){console.error(err);alert("Não foi possível remover o material.")}
 }
@@ -394,7 +394,7 @@ async function salvar(k,e){
 async function followUp(id){const x=dados.orcamentos.find(v=>v.id===id);if(!x||!ABERTOS.has(x.status)||!editar("orcamentos")||(!gestor("orcamentos")&&x.responsavelId!==uid()))return;const nota=prompt(`Contato com ${x.cliente}: registre um breve resultado`);if(nota===null)return;if(!nota.trim())return alert("Informe o resultado do contato.");try{const instante=agoraIso();await atualizarDocumento("orcamentosComerciais",id,{ultimoContatoEm:instante,proximoContatoEm:proximo24(),notaUltimoContato:nota.trim(),contatos:arrayUnion({em:instante,por:uid(),resultado:nota.trim()})});emitirAlteracao("orcamentos");await carregar("orcamentos")}catch(e){console.error(e);alert("Não foi possível registrar o contato.")}}
 function montarMesa(){const mesa=$("pagina-minhamesa"),dash=$("pagina-dashboard");if(mesa&&!$("mesaOrcamentos")){const s=document.createElement("section");s.id="mesaOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Orçamentos para acompanhar</h3><p>Próximo contato a cada 24 horas enquanto o orçamento estiver aberto.</p></div><button id="mesaAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div id="mesaOrcamentosLista" class="commercial-mesa-list"></div>';mesa.appendChild(s);$("mesaAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}if(dash&&!$("dashOrcamentos")){const s=document.createElement("section");s.id="dashOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Comercial · Orçamentos</h3><p>Carteira aberta e contatos pendentes da equipe.</p></div><button id="dashAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Em aberto</span><strong id="dashOrcAbertos">—</strong></div><div class="kpi-card"><span>Contato vencido</span><strong id="dashOrcVencidos">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="dashOrcValor">—</strong></div></div>';dash.appendChild(s);$("dashAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}}
 function renderMesa(){montarMesa();const acesso=ver("orcamentos"),todos=dados.orcamentos.filter(x=>ABERTOS.has(x.status)),meus=todos.filter(x=>x.responsavelId===uid()),vencidos=todos.filter(x=>Date.parse(x.proximoContatoEm)<=Date.now());if($("dashOrcamentos"))$("dashOrcamentos").classList.toggle("hidden",!acesso);if($("mesaOrcamentos"))$("mesaOrcamentos").classList.toggle("hidden",!acesso);if(!acesso)return;$("dashOrcAbertos").textContent=String(todos.length);$("dashOrcVencidos").textContent=String(vencidos.length);$("dashOrcValor").textContent=dinheiro(todos.reduce((s,x)=>s+Number(x.valor||0),0));$("mesaOrcamentosLista").innerHTML=meus.sort((a,b)=>String(a.proximoContatoEm).localeCompare(String(b.proximoContatoEm))).slice(0,12).map(x=>`<div class="commercial-mesa-row"><strong>${esc(x.cliente)} · ${esc(x.produto)}</strong><span>${Date.parse(x.proximoContatoEm)<=Date.now()?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</span></div>`).join("")||'<p>Não há orçamentos abertos sob sua responsabilidade.</p>'}
-function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=6";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
+function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=7";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();for(const k of Object.keys(MODELOS))if(ver(k))carregar(k)});
 window.addEventListener("sig:empresa-contexto",()=>{if(!$("pagina-orcamentos")?.classList.contains("hidden"))carregar("orcamentos")});
