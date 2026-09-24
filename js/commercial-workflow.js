@@ -141,13 +141,13 @@ async function carregarBasesVisitas(){
     consultarColecaoGrupoPorEmpresa("rhColaboradores"),
     getDocs(query(collection(db,"clientesComerciais"),where("grupoId","==",grupo))),
     getDocs(query(collection(db,"clientesRelacionamento"),where("grupoId","==",grupo))),
-    getDocs(query(collection(db,"visitasMateriais"),where("grupoId","==",grupo)))
+    consultarColecaoGrupoPorEmpresa("itensComerciais")
   ]);
   const configs=resultados[0].status==="fulfilled"?resultados[0].value.docs.map(x=>({id:x.id,...x.data()})):[];
   const rhs=resultados[1].status==="fulfilled"?resultados[1].value:[];
   const clientesSales=resultados[2].status==="fulfilled"?resultados[2].value.docs.map(x=>({id:x.id,...x.data()})):[];
   clientesRelacionamento=resultados[3].status==="fulfilled"?resultados[3].value.docs.map(x=>({id:x.id,...x.data()})):[];
-  materiaisVisitas=resultados[4].status==="fulfilled"?resultados[4].value.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR")):[];
+  materiaisVisitas=resultados[4].status==="fulfilled"?resultados[4].value.filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR")):[];
 
   const hoje=localIso(),rhAtivos=new Map(rhs.filter(x=>x.status!=="estornado"&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje)).map(x=>[x.id,x])),vendMap=new Map();
   configs.filter(x=>x.status!=="inativo"&&(!x.tipoComissao||x.tipoComissao==="vendedor")).forEach(v=>{
@@ -174,35 +174,56 @@ async function carregarBasesVisitas(){
   clientesVisitas=[...cliMap.values()].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")||a.cidade.localeCompare(b.cidade,"pt-BR"));
   preencherBasesVisitas()
 }
+function materiaisAtivosVisitas(empresaId=""){
+  return materiaisVisitas.filter(x=>x.status!=="inativo"&&(!empresaId||x.empresaId===empresaId)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"))
+}
+function materiaisConsolidadosVisitas(){
+  const mapa=new Map();
+  materiaisAtivosVisitas().forEach(x=>{const chave=norm(x.codigo)+"|"+norm(x.nome);if(!mapa.has(chave))mapa.set(chave,x)});
+  return [...mapa.values()].sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"))
+}
+function opcoesMateriaisVisitas(empresaId="",valor=""){
+  const arr=empresaId?materiaisAtivosVisitas(empresaId):materiaisConsolidadosVisitas();
+  return '<option value="">Selecione...</option>'+arr.map(x=>`<option value="${esc(x.id)}" ${x.id===valor?"selected":""}>${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome||"")}</option>`).join("")
+}
+
 function preencherBasesVisitas(){
   const sv=$("visVendedor"),sc=$("visCliente"),sf=$("visitasFiltroVendedor"),sm=$("visMaterial");
   if(sv){const atual=sv.value;sv.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cargoNome?" · "+esc(x.cargoNome):""}</option>`).join("");if([...sv.options].some(o=>o.value===atual))sv.value=atual}
   if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
   if(sf){const atual=sf.value;sf.innerHTML='<option value="">Todos os vendedores</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");if([...sf.options].some(o=>o.value===atual))sf.value=atual}
-  if(sm){const atual=sm.value;sm.innerHTML='<option value="">Selecione...</option>'+materiaisVisitas.map(x=>`<option value="${esc(x.nome)}">${esc(x.nome)}</option>`).join("");if([...sm.options].some(o=>o.value===atual))sm.value=atual}
+  if(sm){const atual=sm.value;const mats=materiaisConsolidadosVisitas();sm.innerHTML='<option value="">Selecione...</option>'+mats.map(x=>`<option value="${esc(x.nome)}">${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome)}</option>`).join("");if([...sm.options].some(o=>o.value===atual))sm.value=atual}
   $("visitasConfigurar")?.classList.toggle("hidden",!admin());
   renderMateriaisVisitas()
 }
 function sincronizarClienteVisita(){const x=clientesVisitas.find(v=>v.id===$("visCliente")?.value);if(x&&$("visCidade"))$("visCidade").value=x.cidade||""}
 function renderMateriaisVisitas(){
   const box=$("visitasMateriaisLista");if(!box)return;
-  box.innerHTML=materiaisVisitas.length?materiaisVisitas.map(x=>`<div class="commercial-material-item"><span>${esc(x.nome)}</span>${admin()?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Remover</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material configurado.</div>';
+  const arr=materiaisAtivosVisitas();
+  box.innerHTML=arr.length?arr.map(x=>`<div class="commercial-material-item"><span><strong>${esc(x.codigo||"—")}</strong> · ${esc(x.nome)} <small>${esc(state.empresas?.get?.(x.empresaId)?.nomeFantasia||state.empresas?.get?.(x.empresaId)?.razaoSocial||"Empresa")}</small></span>${admin()?`<button type="button" class="btn-acao perigo" data-vis-material-del="${esc(x.id)}">Inativar</button>`:""}</div>`).join(""):'<div class="empty-state">Nenhum material comercial ativo.</div>';
   document.querySelectorAll("[data-vis-material-del]").forEach(b=>b.onclick=()=>removerMaterialVisita(b.dataset.visMaterialDel))
 }
 async function salvarMaterialVisita(e){
   e.preventDefault();if(!admin())return;
-  const nome=String($("visNovoMaterial")?.value||"").trim();if(!nome)return;
-  if(materiaisVisitas.some(x=>norm(x.nome)===norm(nome)))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado.");
+  const nome=String($("visNovoMaterial")?.value||"").trim(),empresaId=$("visMaterialEmpresa")?.value||"";
+  if(!empresaId||!idsEmpresasPermitidas().includes(empresaId))return msg($("visMaterialConfigMsg"),"Selecione a empresa do material.");
+  if(!nome)return msg($("visMaterialConfigMsg"),"Informe o material.");
+  if(materiaisVisitas.some(x=>x.empresaId===empresaId&&norm(x.nome)===norm(nome)))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado nesta empresa.");
   try{
     msg($("visMaterialConfigMsg"),"Salvando...");
-    await addDoc(collection(db,"visitasMateriais"),{grupoId:grupoAtualId(),nome,status:"ativo",criadoPor:uid(),criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
-    $("visitasMaterialForm")?.reset();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas()
-  }catch(err){console.error("Erro ao salvar material de visitas",err);const detalhe=err?.code==="permission-denied"?"Permissão negada pelo Firestore. Atualize as Rules e confirme que o usuário é Administrador.":(err?.message||"Não foi possível salvar o material.");msg($("visMaterialConfigMsg"),detalhe)}
+    await criarDocumento("itensComerciais",{empresaId,codigo:String($("visNovoMaterialCodigo")?.value||"").trim(),nome,categoria:String($("visNovoMaterialCategoria")?.value||"").trim(),unidade:String($("visNovoMaterialUnidade")?.value||"").trim().toUpperCase(),status:"ativo"});
+    $("visitasMaterialForm")?.reset();preencherEmpresasMaterialVisita();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas();emitirAlteracao("vendas")
+  }catch(err){console.error("Erro ao salvar item comercial",err);msg($("visMaterialConfigMsg"),err?.message||"Não foi possível salvar o material.")}
 }
 async function removerMaterialVisita(id){
   if(!admin())return;
-  const x=materiaisVisitas.find(v=>v.id===id);if(!x||!confirm(`Remover o material "${x.nome}" da lista?`))return;
-  try{await deleteDoc(doc(db,"visitasMateriais",id));await carregarBasesVisitas()}catch(err){console.error(err);alert("Não foi possível remover o material.")}
+  const x=materiaisVisitas.find(v=>v.id===id);if(!x||!confirm(`Inativar o material "${x.nome}"?`))return;
+  try{await atualizarDocumento("itensComerciais",id,{status:"inativo"});await carregarBasesVisitas();emitirAlteracao("vendas")}catch(err){console.error(err);alert("Não foi possível inativar o material.")}
+}
+function preencherEmpresasMaterialVisita(){
+  const sel=$("visMaterialEmpresa");if(!sel)return;const ids=idsEmpresasPermitidas(),atual=sel.value;
+  sel.innerHTML='<option value="">Selecione a empresa...</option>'+ids.map(id=>{const e=state.empresas?.get?.(id);return `<option value="${esc(id)}">${esc(e?.nomeFantasia||e?.razaoSocial||id)}</option>`}).join("");
+  if([...sel.options].some(o=>o.value===atual))sel.value=atual;else if(ids.length===1)sel.value=ids[0]
 }
 async function salvarClienteRelacionamento(e){
   e.preventDefault();if(!registrar("visitas"))return;
