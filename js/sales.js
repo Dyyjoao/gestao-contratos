@@ -23,7 +23,7 @@ const recebido=v=>n(v?.valorRecebido??v?.valorFaturado);
 const dataRecebimento=v=>v?.dataRecebimento||v?.dataFaturamento||"";
 const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_recebimento":(v?.comissaoStatus||"provisionada");
 
-function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=17";document.head.appendChild(l)}
+function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=18";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
   return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
@@ -359,8 +359,8 @@ function render(){
   valid.forEach(v=>{const chave=String(v.vendedorId||v.vendedorNome||"sem-vendedor"),r=mapa.get(chave)||{id:v.vendedorId||"",nome:v.vendedorNome||nomeVend(v.vendedorId),tot:0,qtd:0};r.tot+=n(v.valor);r.qtd++;mapa.set(chave,r)});
   const rank=[...mapa.values()].map(r=>({...r,pct:total?r.tot/total*100:0})).sort((a,b)=>b.tot-a.tot);
   const rb=$("salesRanking");if(rb)rb.innerHTML=rank.length?`
-    <div class="sales-rank-head"><span>#</span><span>Vendedor</span><span>${modoRanking==="percentual"?"% do total vendido":"Valor vendido"}</span></div>
-    ${rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span class="sales-rank-vendedor"><strong>${esc(r.nome)}</strong><small>${r.qtd} venda(s)</small></span>${modoRanking==="percentual"?`<span class="sales-rank-share"><strong>${r.pct.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.pct))}%"></b></i></span>`:`<strong class="sales-rank-valor">${moeda(r.tot)}</strong>`}</div>`).join("")}
+    <div class="sales-rank-head"><span>#</span><span>Vendedor</span><span>${modoRanking==="percentual"?"% do total":"Valor vendido"}</span><span>Ticket médio</span></div>
+    ${rank.map((r,i)=>`<div class="sales-rank-row"><b>${i+1}</b><span class="sales-rank-vendedor"><strong>${esc(r.nome)}</strong><small>${r.qtd} venda(s)</small></span>${modoRanking==="percentual"?`<span class="sales-rank-share"><strong>${r.pct.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong><i><b style="width:${Math.max(0,Math.min(100,r.pct))}%"></b></i></span>`:`<strong class="sales-rank-valor">${moeda(r.tot)}</strong>`}<strong class="sales-rank-ticket">${moeda(r.qtd?r.tot/r.qtd:0)}</strong></div>`).join("")}
   `:'<div class="empty-state">Sem vendas no período selecionado.</div>';
 
   renderClientes(valid);
