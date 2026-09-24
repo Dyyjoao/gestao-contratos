@@ -42,8 +42,13 @@ function formularioOrcamentoVisita(){
       <div class="campo campo-span-2"><label for="orcVisCliente">Cliente</label><input id="orcVisCliente" type="text" readonly required><small>Vinculado à visita e não pode ser alterado neste lançamento.</small></div>
       <div class="campo"><label for="orcVisEmpresa">Empresa do orçamento</label><select id="orcVisEmpresa" required><option value="">Selecione...</option></select><small>Define a empresa responsável pelo orçamento e pela futura venda.</small></div>
       <div class="campo"><label for="orcVisData">Data</label><input id="orcVisData" type="date" required></div>
-      <div class="campo campo-span-3"><label>Materiais do orçamento</label><div id="orcVisMateriaisLista" class="commercial-budget-materials"></div><button id="orcVisAdicionarMaterial" class="btn-secundario commercial-add-material" type="button">+ Adicionar material</button><small>Materiais carregados da lista configurada no Consolidado de vendas para a empresa selecionada.</small></div>
-      <div class="campo"><label for="orcVisValor">Valor</label><input id="orcVisValor" type="number" min="0" step="0.01" required></div>
+      <div class="campo campo-span-3"><label>Materiais do orçamento</label>
+        <div class="commercial-budget-material-head"><span>Produto</span><span>Quantidade</span><span>Valor total</span><span>Custo unitário</span><span></span></div>
+        <div id="orcVisMateriaisLista" class="commercial-budget-materials"></div>
+        <div class="commercial-budget-material-footer"><button id="orcVisAdicionarMaterial" class="btn-secundario commercial-add-material" type="button">+ Adicionar material</button><strong id="orcVisMateriaisTotal">Total: R$ 0,00</strong></div>
+        <small>Os itens são carregados da visita e podem ser alterados antes de salvar o orçamento.</small>
+      </div>
+      <div class="campo"><label for="orcVisValor">Valor total do orçamento</label><input id="orcVisValor" type="number" min="0" step="0.01" readonly required><small>Calculado pela soma dos materiais.</small></div>
       <div class="campo"><label for="orcVisNumeroVb">VB</label><input id="orcVisNumeroVb" type="text"></div>
       <div class="campo"><label for="orcVisComprador">Comprador</label><input id="orcVisComprador" type="text"></div>
       <div class="campo"><label for="orcVisVendedor">Vendedor</label><select id="orcVisVendedor" required><option value="">Selecione...</option></select></div>
@@ -129,7 +134,11 @@ function montar(k){
     $("visitasOrcamentoCancelar")?.addEventListener("click",fecharOrcamentoVisita);
     $("visitasOrcamentoForm")?.addEventListener("submit",salvarOrcamentoDaVisita);
     $("orcVisStatus")?.addEventListener("change",atualizarMotivoPerda);
-    $("orcVisEmpresa")?.addEventListener("change",resetMateriaisOrcamento);
+    $("orcVisEmpresa")?.addEventListener("change",()=>{
+      const atuais=materiaisOrcamentoForm(),box=$("orcVisMateriaisLista");if(box)box.innerHTML="";
+      if(atuais.length)atuais.forEach(adicionarMaterialOrcamento);else resetMateriaisOrcamento();
+      atualizarResumoMateriaisOrcamento()
+    });
     $("orcVisAdicionarMaterial")?.addEventListener("click",()=>adicionarMaterialOrcamento())
   }
 }
@@ -309,21 +318,48 @@ function preencherVendedorOrcamentoVisita(visita){
   const vend=vendedoresVisitas.find(x=>x.id===visita?.vendedorId)||vendedoresVisitas.find(x=>norm(x.nome)===norm(visita?.vendedor));
   if(vend)sel.value=vend.id
 }
+function atualizarResumoMateriaisOrcamento(){
+  let total=0;
+  document.querySelectorAll("#orcVisMateriaisLista .commercial-budget-material-row").forEach(row=>{
+    const qtd=Number(row.querySelector("[data-orc-material-qtd]")?.value||0),valor=Number(row.querySelector("[data-orc-material-valor]")?.value||0),sel=row.querySelector("[data-orc-material]"),item=materiaisVisitas.find(x=>x.id===sel?.value),unit=row.querySelector("[data-orc-material-unit]"),medida=row.querySelector("[data-orc-material-unidade]");
+    const custo=qtd>0&&Number.isFinite(valor)?valor/qtd:0;
+    if(unit)unit.value=custo>0?custo.toFixed(2):"";
+    if(medida)medida.textContent="R$/"+(item?.unidade||row.dataset.historicoUnidade||"unid.");
+    if(Number.isFinite(valor))total+=valor
+  });
+  if($("orcVisMateriaisTotal"))$("orcVisMateriaisTotal").textContent="Total: "+dinheiro(total);
+  if($("orcVisValor"))$("orcVisValor").value=total?total.toFixed(2):""
+}
 function adicionarMaterialOrcamento(dado={}){
   const box=$("orcVisMateriaisLista");if(!box)return;
   const empresaId=$("orcVisEmpresa")?.value||"",row=document.createElement("div");row.className="commercial-budget-material-row";
-  const opts=empresaId?opcoesMateriaisVisitas(empresaId,dado.itemId||""):'<option value="">Selecione a empresa primeiro</option>';
-  row.innerHTML=`<select data-orc-material ${empresaId?"":"disabled"}>${opts}</select><button type="button" class="btn-acao perigo" data-orc-material-remover>Remover</button>`;
-  box.appendChild(row);row.querySelector("[data-orc-material-remover]").onclick=()=>{row.remove();if(!box.children.length)adicionarMaterialOrcamento()}
+  let itemId=dado.itemId||"";
+  if(!itemId&&dado.nome){const achado=materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
+  const opts=opcoesMateriaisVisitas(empresaId,itemId),qtd=Number(dado.quantidade||0)>0?Number(dado.quantidade):1,valor=dado.valorTotal??dado.valor??"";
+  row.innerHTML=`<select data-orc-material required>${opts}</select><input data-orc-material-qtd type="number" min="0.0001" step="0.0001" value="${qtd}" required><input data-orc-material-valor type="number" min="0" step="0.01" value="${valor!==""?esc(String(valor)):""}" required><div class="commercial-unit-cost"><input data-orc-material-unit type="number" step="0.01" readonly><small data-orc-material-unidade>R$/unid.</small></div><button type="button" class="btn-acao perigo" data-orc-material-remover>Remover</button>`;
+  if(dado.nome&&!itemId){const sel=row.querySelector("[data-orc-material]");sel.insertAdjacentHTML("beforeend",`<option value="__historico__" selected>${esc(dado.nome)} · histórico</option>`);row.dataset.historicoNome=dado.nome;row.dataset.historicoUnidade=dado.unidade||""}
+  box.appendChild(row);
+  row.querySelector("[data-orc-material-qtd]").addEventListener("input",atualizarResumoMateriaisOrcamento);
+  row.querySelector("[data-orc-material-valor]").addEventListener("input",atualizarResumoMateriaisOrcamento);
+  row.querySelector("[data-orc-material]").addEventListener("change",()=>{if(row.querySelector("[data-orc-material]").value!=="__historico__"){row.dataset.historicoNome="";row.dataset.historicoUnidade=""}atualizarResumoMateriaisOrcamento()});
+  row.querySelector("[data-orc-material-remover]").onclick=()=>{row.remove();if(!box.children.length)adicionarMaterialOrcamento();atualizarResumoMateriaisOrcamento()};
+  atualizarResumoMateriaisOrcamento()
+}
+function carregarMateriaisOrcamentoDaVisita(visita){
+  const box=$("orcVisMateriaisLista");if(!box)return;box.innerHTML="";
+  const itens=Array.isArray(visita?.produtos)&&visita.produtos.length?visita.produtos:(visita?.material?[{nome:visita.material,quantidade:1,valorTotal:Number(visita.valorProdutos||0)}]:[]);
+  if(itens.length)itens.forEach(adicionarMaterialOrcamento);else adicionarMaterialOrcamento();
+  atualizarResumoMateriaisOrcamento()
 }
 function resetMateriaisOrcamento(){
-  const box=$("orcVisMateriaisLista");if(!box)return;box.innerHTML="";adicionarMaterialOrcamento()
+  const visita=dados.visitas.find(v=>v.id===visitaOrcamentoAtual);
+  carregarMateriaisOrcamentoDaVisita(visita)
 }
 function materiaisOrcamentoForm(){
-  const empresaId=$("orcVisEmpresa")?.value||"";
-  return [...document.querySelectorAll("#orcVisMateriaisLista [data-orc-material]")].map(sel=>{
-    const item=materiaisAtivosVisitas(empresaId).find(x=>x.id===sel.value);return item?{itemId:item.id,codigo:item.codigo||"",nome:item.nome||"",categoria:item.categoria||"",unidade:item.unidade||"",empresaId:item.empresaId||empresaId}:null
-  }).filter(Boolean)
+  return [...document.querySelectorAll("#orcVisMateriaisLista .commercial-budget-material-row")].map(row=>{
+    const sel=row.querySelector("[data-orc-material]"),id=sel?.value||"",item=materiaisVisitas.find(x=>x.id===id),quantidade=Number(row.querySelector("[data-orc-material-qtd]")?.value||0),valorTotal=Number(row.querySelector("[data-orc-material-valor]")?.value||0),nome=item?.nome||row.dataset.historicoNome||"",unidade=item?.unidade||row.dataset.historicoUnidade||"";
+    return{itemId:id==="__historico__"?"":id,codigo:item?.codigo||"",nome,categoria:item?.categoria||"",unidade,empresaId:item?.empresaId||"",empresaIds:Array.isArray(item?.empresaIds)?item.empresaIds:[],quantidade,valorTotal,custoUnitario:quantidade>0?valorTotal/quantidade:0}
+  }).filter(x=>x.nome&&x.quantidade>0&&Number.isFinite(x.valorTotal)&&x.valorTotal>=0)
 }
 
 function abrirOrcamentoDaVisita(id){
@@ -336,7 +372,7 @@ function abrirOrcamentoDaVisita(id){
   $("orcVisData").value=localIso();
   preencherEmpresasOrcamentoVisita();
   preencherVendedorOrcamentoVisita(x);
-  resetMateriaisOrcamento();
+  carregarMateriaisOrcamentoDaVisita(x);
   $("visitasOrcamentoOrigem").textContent=`Visita de ${dataBr(x.data)} · cliente vinculado: ${x.cliente||"—"}`;
   atualizarMotivoPerda();$("visitasOrcamentoBox").classList.remove("hidden");
   $("visitasOrcamentoBox").scrollIntoView({behavior:"smooth",block:"start"})
@@ -353,10 +389,11 @@ async function excluirVisita(id){
 async function salvarOrcamentoDaVisita(e){
   e.preventDefault();const visita=dados.visitas.find(v=>v.id===visitaOrcamentoAtual);if(!visita)return msg($("visitasOrcamentoMensagem"),"Visita de origem não encontrada.");
   if(!registrar("orcamentos"))return msg($("visitasOrcamentoMensagem"),"Sem permissão para registrar orçamento.");
-  const empresaId=$("orcVisEmpresa")?.value||"",data=$("orcVisData")?.value||"",materiais=materiaisOrcamentoForm(),produto=materiais.map(x=>x.nome).join(" + "),valor=Number($("orcVisValor")?.value),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
+  const empresaId=$("orcVisEmpresa")?.value||"",data=$("orcVisData")?.value||"",materiais=materiaisOrcamentoForm(),produto=materiais.map(x=>x.nome).join(" + "),valor=materiais.reduce((s,x)=>s+x.valorTotal,0),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
   if(!empresaId||!idsEmpresasPermitidas().includes(empresaId))return msg($("visitasOrcamentoMensagem"),"Selecione a empresa responsável pelo orçamento.");
-  if(!materiais.length)return msg($("visitasOrcamentoMensagem"),"Inclua pelo menos um material no orçamento.");
-  if(!data||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Empresa, Data, Material, Valor, Vendedor e Status.");
+  if(!materiais.length)return msg($("visitasOrcamentoMensagem"),"Inclua pelo menos um material com quantidade e valor no orçamento.");
+  if(materiais.some(x=>!x.nome||!(x.quantidade>0)||!Number.isFinite(x.valorTotal)||x.valorTotal<0))return msg($("visitasOrcamentoMensagem"),"Revise os materiais do orçamento.");
+  if(!data||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Empresa, Data, Materiais, Vendedor e Status.");
   if(status==="perdido_concorrente"&&!motivoPerda)return msg($("visitasOrcamentoMensagem"),"Informe o motivo da perda para a concorrência.");
 
   let orcamentoId="";
@@ -533,7 +570,7 @@ async function salvar(k,e){
 async function followUp(id){const x=dados.orcamentos.find(v=>v.id===id);if(!x||!ABERTOS.has(x.status)||!editar("orcamentos")||(!gestor("orcamentos")&&x.responsavelId!==uid()))return;const nota=prompt(`Contato com ${x.cliente}: registre um breve resultado`);if(nota===null)return;if(!nota.trim())return alert("Informe o resultado do contato.");try{const instante=agoraIso();await atualizarDocumento("orcamentosComerciais",id,{ultimoContatoEm:instante,proximoContatoEm:proximo24(),notaUltimoContato:nota.trim(),contatos:arrayUnion({em:instante,por:uid(),resultado:nota.trim()})});emitirAlteracao("orcamentos");await carregar("orcamentos")}catch(e){console.error(e);alert("Não foi possível registrar o contato.")}}
 function montarMesa(){const mesa=$("pagina-minhamesa"),dash=$("pagina-dashboard");if(mesa&&!$("mesaOrcamentos")){const s=document.createElement("section");s.id="mesaOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Orçamentos para acompanhar</h3><p>Próximo contato a cada 24 horas enquanto o orçamento estiver aberto.</p></div><button id="mesaAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div id="mesaOrcamentosLista" class="commercial-mesa-list"></div>';mesa.appendChild(s);$("mesaAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}if(dash&&!$("dashOrcamentos")){const s=document.createElement("section");s.id="dashOrcamentos";s.className="lista-card hidden";s.innerHTML='<div class="lista-cabecalho"><div><h3>Comercial · Orçamentos</h3><p>Carteira aberta e contatos pendentes da equipe.</p></div><button id="dashAbrirOrcamentos" class="btn-secundario" type="button">Abrir Orçamentos</button></div><div class="kpi-grid kpi-grid-4"><div class="kpi-card"><span>Em aberto</span><strong id="dashOrcAbertos">—</strong></div><div class="kpi-card"><span>Contato vencido</span><strong id="dashOrcVencidos">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="dashOrcValor">—</strong></div></div>';dash.appendChild(s);$("dashAbrirOrcamentos").addEventListener("click",()=>{abrirPagina("orcamentos");carregar("orcamentos")})}}
 function renderMesa(){montarMesa();const acesso=ver("orcamentos"),todos=dados.orcamentos.filter(x=>ABERTOS.has(x.status)),meus=todos.filter(x=>x.responsavelId===uid()),vencidos=todos.filter(x=>Date.parse(x.proximoContatoEm)<=Date.now());if($("dashOrcamentos"))$("dashOrcamentos").classList.toggle("hidden",!acesso);if($("mesaOrcamentos"))$("mesaOrcamentos").classList.toggle("hidden",!acesso);if(!acesso)return;$("dashOrcAbertos").textContent=String(todos.length);$("dashOrcVencidos").textContent=String(vencidos.length);$("dashOrcValor").textContent=dinheiro(todos.reduce((s,x)=>s+Number(x.valor||0),0));$("mesaOrcamentosLista").innerHTML=meus.sort((a,b)=>String(a.proximoContatoEm).localeCompare(String(b.proximoContatoEm))).slice(0,12).map(x=>`<div class="commercial-mesa-row"><strong>${esc(x.cliente)} · ${esc(x.produto)}</strong><span>${Date.parse(x.proximoContatoEm)<=Date.now()?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</span></div>`).join("")||'<p>Não há orçamentos abertos sob sua responsabilidade.</p>'}
-function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=11";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
+function instalar(){if(!document.querySelector('link[href^="commercial-workflow.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="commercial-workflow.css?v=12";document.head.appendChild(l)}for(const k of Object.keys(MODELOS)){montar(k);menu(k);$(k+"Novo")?.classList.toggle("hidden",!registrar(k))}montarMesa()}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();for(const k of Object.keys(MODELOS))if(ver(k))carregar(k)});
 window.addEventListener("sig:empresa-contexto",()=>{if(!$("pagina-orcamentos")?.classList.contains("hidden"))carregar("orcamentos")});
