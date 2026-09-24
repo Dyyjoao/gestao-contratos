@@ -1,7 +1,7 @@
 import { $, abrirPagina, permite, admin, state } from "./core.js";
 import { empresasSelecionadasIds } from "./shared.js";
 
-const modulos=new Map();const MODULO_VERSAO="20260924-sales-city-top15-client-detail-v22";
+const modulos=new Map();const MODULO_VERSAO="20260924-sales-client-click-filter-v23";
 function paginaControladoria(){return $("pagina-controladoria")}
 function esconderTabsInternas(){const t=paginaControladoria()?.querySelector(".fpa-tabs");if(t)t.style.display="none"}
 function prepararShellCompartilhado(){const p=paginaControladoria();if(!p)return false;if(!p.querySelector(".fpa-tabs"))p.innerHTML='<nav class="fpa-tabs" aria-label="Áreas internas da Controladoria"></nav>';esconderTabsInternas();return true}
