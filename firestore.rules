@@ -1264,7 +1264,10 @@ service cloud.firestore {
     }
 
     match /itensComerciais/{id} {
-      allow read: if vendasVisualizar() && documentoAcessivel(resource.data);
+      allow read: if (
+        vendasVisualizar() || permissao('visitas','visualizar') || permissao('visitas','registrar') ||
+        permissao('visitas','editar') || permissao('visitas','supervisionar')
+      ) && documentoAcessivel(resource.data);
       allow create: if (vendasLancar() || vendasEditar()) && documentoAcessivel(request.resource.data);
       allow update: if (vendasLancar() || vendasEditar()) && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
