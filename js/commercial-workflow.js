@@ -260,6 +260,23 @@ function preencherVendedorOrcamentoVisita(visita){
   const vend=vendedoresVisitas.find(x=>x.id===visita?.vendedorId)||vendedoresVisitas.find(x=>norm(x.nome)===norm(visita?.vendedor));
   if(vend)sel.value=vend.id
 }
+function adicionarMaterialOrcamento(dado={}){
+  const box=$("orcVisMateriaisLista");if(!box)return;
+  const empresaId=$("orcVisEmpresa")?.value||"",row=document.createElement("div");row.className="commercial-budget-material-row";
+  const opts=empresaId?opcoesMateriaisVisitas(empresaId,dado.itemId||""):'<option value="">Selecione a empresa primeiro</option>';
+  row.innerHTML=`<select data-orc-material ${empresaId?"":"disabled"}>${opts}</select><button type="button" class="btn-acao perigo" data-orc-material-remover>Remover</button>`;
+  box.appendChild(row);row.querySelector("[data-orc-material-remover]").onclick=()=>{row.remove();if(!box.children.length)adicionarMaterialOrcamento()}
+}
+function resetMateriaisOrcamento(){
+  const box=$("orcVisMateriaisLista");if(!box)return;box.innerHTML="";adicionarMaterialOrcamento()
+}
+function materiaisOrcamentoForm(){
+  const empresaId=$("orcVisEmpresa")?.value||"";
+  return [...document.querySelectorAll("#orcVisMateriaisLista [data-orc-material]")].map(sel=>{
+    const item=materiaisAtivosVisitas(empresaId).find(x=>x.id===sel.value);return item?{itemId:item.id,codigo:item.codigo||"",nome:item.nome||"",categoria:item.categoria||"",unidade:item.unidade||"",empresaId:item.empresaId||empresaId}:null
+  }).filter(Boolean)
+}
+
 function abrirOrcamentoDaVisita(id){
   if(!registrar("orcamentos"))return alert("Seu perfil não possui permissão para registrar orçamento.");
   const x=dados.visitas.find(v=>v.id===id);if(!x)return;
@@ -270,6 +287,7 @@ function abrirOrcamentoDaVisita(id){
   $("orcVisData").value=localIso();
   preencherEmpresasOrcamentoVisita();
   preencherVendedorOrcamentoVisita(x);
+  resetMateriaisOrcamento();
   $("visitasOrcamentoOrigem").textContent=`Visita de ${dataBr(x.data)} · cliente vinculado: ${x.cliente||"—"}`;
   atualizarMotivoPerda();$("visitasOrcamentoBox").classList.remove("hidden");
   $("visitasOrcamentoBox").scrollIntoView({behavior:"smooth",block:"start"})
@@ -286,9 +304,10 @@ async function excluirVisita(id){
 async function salvarOrcamentoDaVisita(e){
   e.preventDefault();const visita=dados.visitas.find(v=>v.id===visitaOrcamentoAtual);if(!visita)return msg($("visitasOrcamentoMensagem"),"Visita de origem não encontrada.");
   if(!registrar("orcamentos"))return msg($("visitasOrcamentoMensagem"),"Sem permissão para registrar orçamento.");
-  const empresaId=$("orcVisEmpresa")?.value||"",data=$("orcVisData")?.value||"",produto=String($("orcVisProduto")?.value||"").trim(),valor=Number($("orcVisValor")?.value),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
+  const empresaId=$("orcVisEmpresa")?.value||"",data=$("orcVisData")?.value||"",materiais=materiaisOrcamentoForm(),produto=materiais.map(x=>x.nome).join(" + "),valor=Number($("orcVisValor")?.value),numeroVb=String($("orcVisNumeroVb")?.value||"").trim(),comprador=String($("orcVisComprador")?.value||"").trim(),status=$("orcVisStatus")?.value||"",motivoPerda=String($("orcVisMotivo")?.value||"").trim(),vend=vendedoresVisitas.find(x=>x.id===$("orcVisVendedor")?.value);
   if(!empresaId||!idsEmpresasPermitidas().includes(empresaId))return msg($("visitasOrcamentoMensagem"),"Selecione a empresa responsável pelo orçamento.");
-  if(!data||!produto||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Empresa, Data, Produto, Valor, Vendedor e Status.");
+  if(!materiais.length)return msg($("visitasOrcamentoMensagem"),"Inclua pelo menos um material no orçamento.");
+  if(!data||!Number.isFinite(valor)||valor<0||!vend||!STATUS[status])return msg($("visitasOrcamentoMensagem"),"Preencha Empresa, Data, Material, Valor, Vendedor e Status.");
   if(status==="perdido_concorrente"&&!motivoPerda)return msg($("visitasOrcamentoMensagem"),"Informe o motivo da perda para a concorrência.");
 
   let orcamentoId="";
@@ -305,7 +324,7 @@ async function salvarOrcamentoDaVisita(e){
     try{
       msg($("visitasOrcamentoMensagem"),"Criando orçamento...");
       const ref=await addDoc(collection(db,"orcamentosComerciais"),{
-        grupoId:grupoAtualId(),empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,valor,numeroVb,comprador,
+        grupoId:grupoAtualId(),empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,materiais,valor,numeroVb,comprador,
         vendedorId:vend.id,vendedor:vend.nome,status,motivoPerda:status==="perdido_concorrente"?motivoPerda:"",justificativa:status==="perdido_concorrente"?motivoPerda:"",
         responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:"",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()
       });
