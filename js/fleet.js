@@ -242,6 +242,8 @@ function instalarDelegacaoFrota(){
 function bootstrap(){garantirCss();garantirMenu();criarPagina();const b=$("btnNovoVeiculo");if(b)b.classList.toggle("hidden",!podeCadastrar());const bo=$("btnNovaObrig");if(bo){bo.classList.toggle("hidden",!podeObrig());bo.onclick=()=>novaObrigacao()}$("btnNovaManut")?.classList.toggle("hidden",!podeManut())}
 bootstrap();
 instalarDelegacaoFrota();
+window.SIG_ABRIR_FROTA=()=>{if(!podeVer())return;criarPagina();abrirPagina("frota");carregar()};
+window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="frota"&&podeVer())carregar()});
 window.addEventListener("sig:ready",()=>{bootstrap();if(podeVer())carregar()});
 window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="frota"&&podeVer())carregar()});
 window.addEventListener("sig:empresa-contexto",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
