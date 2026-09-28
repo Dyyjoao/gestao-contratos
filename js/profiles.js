@@ -5,49 +5,55 @@ const DEF=[
  ["dashboard","Dashboard",[["visualizar","Visualizar"]]],
  ["producao","Indústria · Produção",[["visualizar","Visualizar"],["lancar","Registrar produção"],["editar","Editar lançamentos"],["cadastros","Gerir produções, itens e vínculos"]]],
  ["descarte","Indústria · Perdas",[["visualizar","Visualizar"],["lancar","Registrar perdas"],["editar","Editar lançamentos"]]],
+ ["ordensServico","Indústria · Ordens de Serviço",[["visualizar","Visualizar"],["solicitar","Solicitar OS"],["executar","Executar e concluir OS"]]],
+ ["vendas","Comercial · Vendas e Comissões",[["visualizar","Visualizar"],["lancar","Registrar vendas"],["editar","Editar/Cancelar vendas"],["vendedores","Gerir vendedores, metas e regras"],["comissoes","Aprovar e marcar comissões como pagas"]]],
  ["visitas","Comercial · Visitas e contatos",[["visualizar","Visualizar próprios"],["registrar","Registrar contato"],["editar","Editar próprios"],["supervisionar","Acompanhar equipe"]]],
  ["orcamentos","Comercial · Orçamentos",[["visualizar","Visualizar próprios"],["registrar","Registrar orçamento"],["editar","Editar próprios e registrar follow-up"],["supervisionar","Acompanhar equipe"]]],
+ ["reclamacoes","Comercial · Reclamações",[["visualizar","Visualizar próprias"],["registrar","Registrar"],["tratar","Tratar próprias"],["supervisionar","Acompanhar equipe"]]],
  ["palletMovimentos","Logística · Entrega e recolhimento",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["palletInventario","Logística · Inventário de pallets",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["ordensServico","Indústria · Ordens de Serviço",[["visualizar","Visualizar"],["solicitar","Solicitar OS"],["executar","Executar e concluir OS"]]],
- ["rhAvaliacoes360","RH · Avaliação de desempenho 360°",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["rhAcoes","RH · Endomarketing, melhorias e treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["frota","Logística · Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"]]],
+ ["combustivel","Combustível e Diesel",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["contratos","Controladoria · Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
+ ["contasPagar","Controladoria · Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
+ ["permutas","Controladoria · Permutas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar cadastro"],["movimentar","Registrar movimentações"],["estornar","Estornar lançamentos"],["fechar","Realizar fechamentos"],["inativar","Inativar/Reativar"]]],
+ ["consorcios","Controladoria · Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
+ ["controladoria","Controladoria · Indicadores e Fechamento",[["visualizar","Visualizar"],["inadimplencia","Visualizar Inadimplência & Aging"],["inadimplenciaEditar","Gerir carteira de inadimplência"],["realizado","Editar Input Mensal"],["importar","Importar Input Mensal"],["fechamento","Gerir régua de fechamento"],["fecharCompetencia","Fechar/reabrir competência"]]],
  ["rhColaboradores","RH · Colaboradores e quadro",[["visualizar","Visualizar"],["lancar","Cadastrar"],["editar","Editar vínculos"]]],
  ["rhAusencias","RH · Absenteísmo",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["rhHorasColaboradores","RH · Horas extras por pessoa",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["rhAvaliacoes360","RH · Avaliação de desempenho",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["rhAcoes","RH · Endomarketing, melhorias e treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["modhoras","RH · Horas extras",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["modquadro","RH · Quadro",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["modsetores","RH · Ativos por setor",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
  ["modativos","RH · Ativos no mês",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["modincidentes","Segurança · Ocorrências",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["modtreinamentos","Segurança · Treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["reclamacoes","Comercial · Reclamações",[["visualizar","Visualizar próprias"],["registrar","Registrar"],["tratar","Tratar próprias"],["supervisionar","Acompanhar equipe"]]],
- ["contratos","Contratos",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["anexar","Anexar documentos"],["aprovar","Aprovar"],["excluir","Excluir"]]],
- ["contasPagar","Contas a Pagar",[["visualizar","Visualizar cockpit"],["cadastrar","Cadastrar contas"],["editar","Editar contas em aberto"],["baixar","Baixar pagamentos"]]],
- ["consorcios","Consórcios",[["visualizar","Visualizar"],["editar","Gerir consórcios"]]],
- ["permutas","Permutas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar cadastro"],["movimentar","Registrar movimentações"],["estornar","Estornar lançamentos"],["fechar","Realizar fechamentos"],["inativar","Inativar/Reativar"]]],
- ["vendas","Vendas & Comissões",[["visualizar","Visualizar"],["lancar","Registrar vendas"],["editar","Editar/Cancelar vendas"],["vendedores","Gerir vendedores, metas e regras"],["comissoes","Aprovar e marcar comissões como pagas"]]],
- ["prestadores","Prestadores & Oficinas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["avaliar","Avaliar"],["excluir","Excluir"]]],
- ["combustivel","Frota · Combustível e Diesel",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
- ["frota","Gestão de Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"]]],
- ["almoxarifado","Almoxarifado",[["visualizar","Visualizar"],["cadastrar","Cadastrar item"],["solicitar","Solicitar"],["movimentar","Entregar/receber"],["prorrogar","Autorizar prorrogação"],["editar","Editar"],["ajustar","Ajustar saldo"],["excluir","Excluir"]]],
- ["cotacoes","Solicitações & Cotações",[["visualizar","Visualizar"],["solicitar","Solicitar"],["cotacao","Registrar cotação"],["anexar","Anexar proposta"],["aprovar","Aprovar"],["editar","Editar"]]],
- ["controladoria","Controladoria & FP&A",[["visualizar","Visualizar"],["dre","Visualizar DRE Gerencial"],["balanco","Visualizar Balanço Patrimonial"],["inadimplencia","Visualizar Inadimplência & Aging"],["inadimplenciaEditar","Gerir carteira de inadimplência"],["realizado","Editar realizado"],["importar","Importar realizado"],["budget","Editar Budget"],["forecast","Editar Forecast"],["premissas","Gerir premissas"],["imobilizado","Gerir Imobilizado & CAPEX"],["planoContas","Gerir plano de contas"],["centrosCusto","Gerir centros de custo"],["caixaVisualizar","Visualizar fluxo de caixa"],["caixaLancar","Lançar/editar caixa"],["caixaContas","Gerir contas bancárias"],["caixaFixos","Gerir compromissos fixos"],["fechamento","Gerir régua de fechamento"],["fecharCompetencia","Fechar/reabrir competência"],["prestacao","Gerar prestação de contas"],["prestacaoComentar","Editar comentários da prestação"],["editar","Administração FP&A"]]],
- ["governanca","Governança & Compliance",[["visualizar","Visualizar"],["antifraude","Visualizar Cockpit Antifraude & TI"],["auditar","Executar auditoria"],["evidencias","Anexar evidências"],["planoAcao","Gerir planos de ação"],["validar","Validar/encerrar auditoria"],["configurar","Configurar programas e indicadores"]]],
- ["planosAcao","Planos de Ação",[["visualizar","Visualizar todos da empresa"],["cadastrar","Criar para outros usuários"],["editar","Editar planos"],["concluir","Concluir planos de terceiros"],["reatribuir","Reatribuir responsável"]]],
+ ["modincidentes","RH · Segurança do Trabalho · Ocorrências",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["modtreinamentos","RH · Segurança do Trabalho · Treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
+ ["governanca","Gov e Compliance",[["visualizar","Visualizar"],["antifraude","Visualizar Cockpit Antifraude & TI"],["auditar","Executar auditoria"],["evidencias","Anexar evidências"],["planoAcao","Gerir planos de ação"],["validar","Validar/encerrar auditoria"],["configurar","Configurar programas e indicadores"]]],
+ ["planosAcao","Gov e Compliance · Planos de Ação",[["visualizar","Visualizar todos da empresa"],["cadastrar","Criar para outros usuários"],["editar","Editar planos"],["concluir","Concluir planos de terceiros"],["reatribuir","Reatribuir responsável"]]],
  ["administracao","Administração",[["visualizar","Visualizar"]]],
- ["empresas","Empresas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["inativar","Inativar"],["excluir","Excluir"]]],
- ["usuarios","Usuários",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["inativar","Inativar"],["resetarSenha","Redefinir senha"]]],
- ["perfisAcesso","Perfis de Acesso",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["inativar","Inativar"]]],
- ["grupoEmpresarial","Grupo Empresarial",[["visualizar","Visualizar"],["editar","Editar"]]]
+ ["empresas","Administração · Empresas",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["inativar","Inativar"],["excluir","Excluir"]]],
+ ["usuarios","Administração · Usuários",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["inativar","Inativar"],["resetarSenha","Redefinir senha"]]],
+ ["perfisAcesso","Administração · Perfis de Acesso",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar"],["inativar","Inativar"]]],
+ ["grupoEmpresarial","Administração · Grupo Empresarial",[["visualizar","Visualizar"],["editar","Editar"]]]
 ].map(([modulo,nome,acoes])=>({modulo,nome,acoes:acoes.map(([id,n])=>({id,nome:n}))}));
 
 let editId=null;
 const grade=$("gradePermissoesPerfil"),form=$("formPerfil"),box=$("formPerfilContainer"),titulo=$("tituloFormPerfil"),nome=$("perfilNome"),desc=$("perfilDescricao"),mensagem=$("mensagemPerfil"),lista=$("listaPerfis"),qtd=$("quantidadePerfis"),busca=$("buscaPerfil");
 function gerar(){if(!grade)return;grade.innerHTML=DEF.map(d=>`<div class="permissao-modulo"><div class="permissao-modulo-titulo">${esc(d.nome)}</div><div class="permissao-acoes">${d.acoes.map(a=>`<label class="permissao-opcao"><input type="checkbox" class="checkbox-permissao" data-modulo="${d.modulo}" data-acao="${a.id}"><span>${esc(a.nome)}</span></label>`).join("")}${["permutas","frota"].includes(d.modulo)?'<small class="acao-propria">Exclusão física: somente Administrador, com reautenticação pela senha atual.</small>':d.modulo==="contasPagar"?'<small class="acao-propria">Estorno e reabertura: somente Administrador, com senha atual, justificativa e auditoria.</small>':d.modulo==="producao"?'<small class="acao-propria">Estorno de produção: somente Administrador, com senha atual, justificativa e auditoria.</small>':""}</div></div>`).join("");document.querySelectorAll('.checkbox-permissao:not([data-acao="visualizar"])').forEach(c=>on(c,"change",()=>{if(c.checked){const v=document.querySelector(`.checkbox-permissao[data-modulo="${c.dataset.modulo}"][data-acao="visualizar"]`);if(v)v.checked=true}}));document.querySelectorAll('.checkbox-permissao[data-acao="visualizar"]').forEach(c=>on(c,"change",()=>{if(!c.checked)document.querySelectorAll(`.checkbox-permissao[data-modulo="${c.dataset.modulo}"]`).forEach(x=>x.checked=false)}))}
 function limpar(){editId=null;form?.reset();if(titulo)titulo.textContent="Novo perfil";msg(mensagem,"");document.querySelectorAll(".checkbox-permissao").forEach(c=>c.checked=false);const d=document.querySelector('.checkbox-permissao[data-modulo="dashboard"][data-acao="visualizar"]');if(d)d.checked=true}
-function coletar(){const p={};DEF.forEach(d=>{p[d.modulo]={};d.acoes.forEach(a=>{const c=document.querySelector(`.checkbox-permissao[data-modulo="${d.modulo}"][data-acao="${a.id}"]`);p[d.modulo][a.id]=c?.checked===true})});const cons=p.consorcios||{};p.controladoria={...(p.controladoria||{}),consorciosVisualizar:cons.visualizar===true||cons.editar===true,consorciosEditar:cons.editar===true};return p}
-function preencher(p={}){document.querySelectorAll(".checkbox-permissao").forEach(c=>{let valor=p?.[c.dataset.modulo]?.[c.dataset.acao];if(valor===undefined&&c.dataset.modulo==="controladoria"&&["dre","balanco"].includes(c.dataset.acao)&&p?.controladoria?.visualizar===true)valor=true;if(valor===undefined&&c.dataset.modulo==="consorcios"){if(c.dataset.acao==="visualizar")valor=p?.controladoria?.consorciosVisualizar===true||p?.controladoria?.consorciosEditar===true;if(c.dataset.acao==="editar")valor=p?.controladoria?.consorciosEditar===true}c.checked=valor===true})}
+const CTRL_CONGELADAS=["dre","balanco","budget","forecast","premissas","imobilizado","planoContas","centrosCusto","caixaVisualizar","caixaLancar","caixaContas","caixaFixos","prestacao","prestacaoComentar","editar"];
+function coletar(){
+  const atual=editId?state.perfis.get(editId)?.permissoes||{}:{};
+  const p={...atual};
+  DEF.forEach(d=>{p[d.modulo]={};d.acoes.forEach(a=>{const c=document.querySelector(`.checkbox-permissao[data-modulo="${d.modulo}"][data-acao="${a.id}"]`);p[d.modulo][a.id]=c?.checked===true})});
+  ["prestadores","almoxarifado","cotacoes"].forEach(m=>delete p[m]);
+  const ctrl=p.controladoria||{};CTRL_CONGELADAS.forEach(a=>delete ctrl[a]);p.controladoria=ctrl;
+  const cons=p.consorcios||{};p.controladoria={...p.controladoria,consorciosVisualizar:cons.visualizar===true||cons.editar===true,consorciosEditar:cons.editar===true};
+  return p
+}
+function preencher(p={}){document.querySelectorAll(".checkbox-permissao").forEach(c=>{let valor=p?.[c.dataset.modulo]?.[c.dataset.acao];if(valor===undefined&&c.dataset.modulo==="consorcios"){if(c.dataset.acao==="visualizar")valor=p?.controladoria?.consorciosVisualizar===true||p?.controladoria?.consorciosEditar===true;if(c.dataset.acao==="editar")valor=p?.controladoria?.consorciosEditar===true}c.checked=valor===true})}
 function contar(p={}){return DEF.reduce((t,d)=>t+d.acoes.filter(a=>{let valor=p?.[d.modulo]?.[a.id];if(valor===undefined&&d.modulo==="consorcios"){if(a.id==="visualizar")valor=p?.controladoria?.consorciosVisualizar===true||p?.controladoria?.consorciosEditar===true;if(a.id==="editar")valor=p?.controladoria?.consorciosEditar===true}return valor===true}).length,0)}
 function users(id){return[...state.usuarios.values()].filter(u=>u.perfilId===id)}
 function abrir(p=null){limpar();if(p){editId=p.id;if(titulo)titulo.textContent="Editar perfil";nome.value=p.nome||"";desc.value=p.descricao||"";preencher(p.permissoes||{})}box?.classList.remove("hidden");nome?.focus()}
