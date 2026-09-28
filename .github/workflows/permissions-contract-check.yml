@@ -20,7 +20,7 @@ jobs:
           node --check js/profiles.js
           node --check js/controllership-router.js
           node --check js/area-navigation.js
-          for area in "Minha Mesa" "Dashboard" "Indústria" "Comercial" "Logística" "Combustível e Diesel" "Controladoria" "RH" "Gov. & Compliance"; do
+          for area in "Minha Mesa" "Dashboard" "Indústria" "Comercial" "Logística" "Combustível e Diesel" "Controladoria" "RH" "Gov e Compliance"; do
             grep -Fq "[\"$area\",[" js/profiles.js
           done
           grep -Fq '["frota","Gestão de Frota"' js/profiles.js
