@@ -23,3 +23,11 @@ jobs:
           grep -q 'match /palletMovimentos/{id}' firestore.rules
           grep -q 'match /palletInventarios/{id}' firestore.rules
           grep -q 'palletInventario' js/profiles.js
+          grep -q 'listarDocumentosGrupo' js/pallets.js
+          grep -q 'criarDocumentoGrupo' js/pallets.js
+          grep -q 'production-tab' js/pallets.js
+          grep -q 'Entregas' js/pallets.js
+          if grep -q 'id="palletAno"' js/pallets.js || grep -q 'id="palletMes"' js/pallets.js; then
+            echo 'Pallets não deve manter filtros locais de ano/mês.' >&2
+            exit 1
+          fi
