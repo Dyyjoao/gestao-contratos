@@ -24,7 +24,7 @@ function programaPorId(id){return programas().find(x=>x.id===id)||null}
 
 function montarMenu(){
   if($("menuGovernanca"))return;const sep=document.querySelector(".sidebar-menu .menu-separador");if(!sep)return;
-  const b=document.createElement("button");b.id="menuGovernanca";b.className="menu-item hidden";b.dataset.pagina="governanca";b.type="button";b.textContent="Governança & Compliance";sep.before(b);
+  const b=document.createElement("button");b.id="menuGovernanca";b.className="menu-item hidden";b.dataset.pagina="governanca";b.type="button";b.textContent="Gov. & Compliance";sep.before(b);
   b.addEventListener("click",()=>{if(!permite("governanca"))return;abrirPagina("governanca");if($("tituloPagina"))$("tituloPagina").textContent="Governança & Compliance";carregar()})
 }
 function css(){if($("gov-auditoria-css"))return;const s=document.createElement("style");s.id="gov-auditoria-css";s.textContent=`
