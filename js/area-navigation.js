@@ -1,4 +1,4 @@
-import { $, permite, admin } from "./core.js";
+import { $, permite, admin, abrirPagina } from "./core.js";
 
 const ITENS={
   producao:{label:"Produção",root:"menuProducao",area:"operacao",modulo:"producao",acoes:["visualizar","lancar","editar","cadastros"]},
@@ -38,7 +38,7 @@ function css(){
   `;document.head.appendChild(s)
 }
 function ocultarRaizes(){Object.values(ITENS).forEach(item=>{const el=$(item.root);if(!el)return;el.classList.add("hidden");el.setAttribute("aria-hidden","true");el.tabIndex=-1})}
-function acionar(chave){const item=ITENS[chave];if(!item||!permitido(item))return;chaveAtiva=chave;marcarAtivo(chave);const raiz=$(item.root);if(raiz)raiz.click();else if(window.SIG_ABRIR_CTRL&&["vendas","permutas","consorcios"].includes(chave))window.SIG_ABRIR_CTRL(chave);setTimeout(()=>{ocultarRaizes();marcarAtivo(chave)},0)}
+function acionar(chave){const item=ITENS[chave];if(!item||!permitido(item))return;chaveAtiva=chave;marcarAtivo(chave);if(["visitas","orcamentos"].includes(chave)&&window.SIG_ABRIR_COMERCIAL)window.SIG_ABRIR_COMERCIAL(chave);else if(chave==="contratos")abrirPagina("contratos");else if(chave==="frota"&&window.SIG_ABRIR_FROTA)window.SIG_ABRIR_FROTA();else if(chave==="avaliacoesrh"&&window.SIG_ABRIR_RH_AVALIACOES)window.SIG_ABRIR_RH_AVALIACOES();else if(chave==="acoesrh"&&window.SIG_ABRIR_RH_ACOES)window.SIG_ABRIR_RH_ACOES();else{const raiz=$(item.root);if(raiz)raiz.click();else if(window.SIG_ABRIR_CTRL&&["vendas","permutas","consorcios"].includes(chave))window.SIG_ABRIR_CTRL(chave)}setTimeout(()=>{ocultarRaizes();marcarAtivo(chave)},0)}
 function criarSubitem(chave,container,antesDe=null){const id=`areaNav-${chave}`;let b=$(id);if(!b){b=document.createElement("button");b.id=id;b.type="button";b.className="area-subitem";b.dataset.areaChave=chave;b.textContent=ITENS[chave].label;b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();acionar(chave)});if(antesDe)container.insertBefore(b,antesDe);else container.appendChild(b)}const ok=permitido(ITENS[chave]);b.classList.toggle("hidden",!ok);if(!ok)b.classList.remove("ativo");return b}
 function criarArea({menuId,boxId,label,antesDe,chaves}){
   const sidebar=document.querySelector(".sidebar-menu");if(!sidebar)return;
