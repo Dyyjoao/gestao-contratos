@@ -1,6 +1,6 @@
-import './hr-performance.js?v=4';
+import './hr-performance.js?v=5';
 import './hr-cycle-config.js?v=1';
-import './hr-actions.js';
+import './hr-actions.js?v=2';
 
 function garantirCss(arquivo,versao){
   let link=document.querySelector(`link[href^="${arquivo}"]`);
@@ -8,8 +8,8 @@ function garantirCss(arquivo,versao){
   if(!link){link=document.createElement('link');link.rel='stylesheet';document.head.appendChild(link)}
   if(link.getAttribute('href')!==href)link.href=href;
 }
-garantirCss('production.css','2');
-garantirCss('rh.css','4');
+garantirCss('production.css','6');
+garantirCss('rh.css','5');
 
 let refreshRhTimer=0;
 function atualizarTelaRhAposGravacao(){
