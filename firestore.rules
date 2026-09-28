@@ -250,7 +250,10 @@ service cloud.firestore {
     }
 
     match /configuracoesModulos/{id} {
-      allow read: if usuarioAtivo() && documentoAcessivel(resource.data);
+      // GET precisa funcionar também quando o documento ainda não existe.
+      // O ID é prefixado pelo grupo; listagem da coleção continua bloqueada.
+      allow get: if usuarioAtivo() && id.matches('^' + usuario().data.grupoId + '_.*');
+      allow list: if false;
       allow create: if administrador() && documentoAcessivel(request.resource.data) &&
         request.resource.data.modulo is string && request.resource.data.modulo.size() > 0;
       allow update: if administrador() && documentoAcessivel(resource.data) &&
@@ -261,7 +264,9 @@ service cloud.firestore {
     }
 
     match /dashboardPreferencias/{usuarioId} {
-      allow read: if usuarioAtivo() && request.auth.uid == usuarioId && resource.data.grupoId == usuario().data.grupoId;
+      // A leitura por UID deve retornar inexistente, e não permission-denied, no primeiro acesso.
+      allow get: if usuarioAtivo() && request.auth.uid == usuarioId;
+      allow list: if false;
       allow create: if usuarioAtivo() && request.auth.uid == usuarioId &&
         request.resource.data.usuarioId == request.auth.uid &&
         request.resource.data.grupoId == usuario().data.grupoId;
