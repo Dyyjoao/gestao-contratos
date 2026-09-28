@@ -184,8 +184,8 @@ service cloud.firestore {
         ]);
     }
 
-    function fechamentoGerir() { return permissao('controladoria','fechamento'); }
-    function fechamentoFechar() { return permissao('controladoria','fecharCompetencia'); }
+    function fechamentoGerir() { return permissao('controladoria','fechamento') || permissao('controladoria','editar'); }
+    function fechamentoFechar() { return permissao('controladoria','fecharCompetencia') || permissao('controladoria','editar'); }
 
     function contasPagarVisualizar() {
       return permissao('contasPagar','visualizar') ||
@@ -718,16 +718,15 @@ service cloud.firestore {
 
     match /palletMovimentos/{id} {
       allow read: if (permissao('palletMovimentos','visualizar') || permissao('palletMovimentos','lancar') ||
-        permissao('palletMovimentos','editar')) && documentoAcessivel(resource.data);
-      allow create: if permissao('palletMovimentos','lancar') && documentoAcessivel(request.resource.data) &&
+        permissao('palletMovimentos','editar')) && mesmoGrupo(resource.data.grupoId);
+      allow create: if permissao('palletMovimentos','lancar') && mesmoGrupo(request.resource.data.grupoId) &&
         request.resource.data.status == 'ativo' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.motorista is string && request.resource.data.motorista.size() > 0 &&
         request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
         request.resource.data.recolhido is int && request.resource.data.recolhido >= 0;
-      allow update: if documentoAcessivel(resource.data) &&
+      allow update: if mesmoGrupo(resource.data.grupoId) &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.empresaId == resource.data.empresaId &&
         resource.data.status == 'ativo' &&
         request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
         request.resource.data.recolhido is int && request.resource.data.recolhido >= 0 && (
@@ -746,15 +745,14 @@ service cloud.firestore {
 
     match /palletInventarios/{id} {
       allow read: if (permissao('palletInventario','visualizar') || permissao('palletInventario','lancar') ||
-        permissao('palletInventario','editar')) && documentoAcessivel(resource.data);
-      allow create: if permissao('palletInventario','lancar') && documentoAcessivel(request.resource.data) &&
+        permissao('palletInventario','editar')) && mesmoGrupo(resource.data.grupoId);
+      allow create: if permissao('palletInventario','lancar') && mesmoGrupo(request.resource.data.grupoId) &&
         request.resource.data.status == 'ativo' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
         request.resource.data.quantidade is int && request.resource.data.quantidade >= 0;
-      allow update: if documentoAcessivel(resource.data) &&
+      allow update: if mesmoGrupo(resource.data.grupoId) &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.empresaId == resource.data.empresaId &&
         resource.data.status == 'ativo' &&
         request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
         request.resource.data.quantidade is int && request.resource.data.quantidade >= 0 && (
@@ -770,8 +768,8 @@ service cloud.firestore {
 
     match /ordensServico/{id} {
       allow read: if (permissao('ordensServico','visualizar') || permissao('ordensServico','solicitar') ||
-        permissao('ordensServico','executar')) && documentoAcessivel(resource.data);
-      allow create: if permissao('ordensServico','solicitar') && documentoAcessivel(request.resource.data) &&
+        permissao('ordensServico','executar')) && mesmoGrupo(resource.data.grupoId);
+      allow create: if permissao('ordensServico','solicitar') && mesmoGrupo(request.resource.data.grupoId) &&
         request.resource.data.status == 'aberta' &&
         request.resource.data.numero is string && request.resource.data.numero.size() > 0 &&
         request.resource.data.tipo in ['CORRETIVA','MELHORIA','PREVENTIVA'] &&
@@ -786,9 +784,8 @@ service cloud.firestore {
         request.resource.data.dataConclusaoPrevista >= request.resource.data.dataInicioPrevista &&
         request.resource.data.solicitadoPor == request.auth.uid &&
         request.resource.data.dataInicio == '' && request.resource.data.dataFim == '';
-      allow update: if permissao('ordensServico','executar') && documentoAcessivel(resource.data) &&
+      allow update: if permissao('ordensServico','executar') && mesmoGrupo(resource.data.grupoId) &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.numero == resource.data.numero &&
         request.resource.data.dataSolicitacao == resource.data.dataSolicitacao &&
         (!('solicitadoPor' in resource.data) || request.resource.data.solicitadoPor == resource.data.solicitadoPor) &&
@@ -1438,7 +1435,7 @@ service cloud.firestore {
     }
 
     match /fechamentoTarefas/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow read: if (permissao('controladoria','visualizar') || fechamentoGerir() || fechamentoFechar()) && documentoAcessivel(resource.data);
       allow create: if fechamentoGerir() && documentoAcessivel(request.resource.data) && responsavelValido(request.resource.data.responsavelId);
       allow update: if documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
@@ -1454,19 +1451,25 @@ service cloud.firestore {
     }
 
     match /fechamentosMensais/{id} {
-      allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
+      allow read: if (permissao('controladoria','visualizar') || fechamentoGerir() || fechamentoFechar()) && documentoAcessivel(resource.data);
       allow create: if (fechamentoGerir() || fechamentoFechar()) && documentoAcessivel(request.resource.data);
       allow update: if fechamentoFechar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId && request.resource.data.competencia == resource.data.competencia;
       allow delete: if false;
     }
 
     match /configuracoesControladoria/{id} {
-      allow read: if governancaVisualizar() && documentoAcessivel(resource.data);
-      allow create: if documentoAcessivel(request.resource.data) &&
-        governancaConfigurar() && request.resource.data.keys().hasOnly([
+      allow read: if documentoAcessivel(resource.data) &&
+        (governancaVisualizar() || fechamentoGerir() || fechamentoFechar());
+      allow create: if documentoAcessivel(request.resource.data) && (
+        (governancaConfigurar() && request.resource.data.keys().hasOnly([
           'grupoId','empresaId','criadoPor','criadoEm','atualizadoEm',
           'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria'
-        ]);
+        ])) ||
+        (fechamentoGerir() && request.resource.data.keys().hasOnly([
+          'grupoId','empresaId','criadoPor','criadoEm','atualizadoEm',
+          'fechamentoModeloMensal','fechamentoModeloAnual'
+        ]))
+      );
       allow update: if documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
         request.resource.data.empresaId == resource.data.empresaId && (
@@ -1475,6 +1478,9 @@ service cloud.firestore {
           ])) ||
           (governancaPlanoAcao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'complianceCiclosAuditoria','atualizadoEm'
+          ])) ||
+          (fechamentoGerir() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'fechamentoModeloMensal','fechamentoModeloAnual','atualizadoEm'
           ]))
         );
       allow delete: if false;
