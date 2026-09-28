@@ -1,0 +1,43 @@
+name: Fix fleet syntax
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-fleet-syntax.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Corrigir fragmento corrompido
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('js/fleet.js')
+          s = p.read_text(encoding='utf-8')
+          bad = '} · ${c.nome||""}`:"—"}\nfunction renderVeiculos()'
+          good = '}\nfunction renderVeiculos()'
+          if bad not in s:
+              raise SystemExit('Fragmento corrompido não encontrado; nenhuma alteração feita.')
+          s = s.replace(bad, good, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          node --check js/fleet.js
+      - name: Commit da correção
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/fleet.js
+          git commit -m "fix: remover fragmento inválido de fleet.js"
+          git push origin HEAD:main
