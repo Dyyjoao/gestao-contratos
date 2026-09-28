@@ -108,6 +108,20 @@ export async function listarDocumentosEmpresa(nomeColecao,empresaId){
   try{const saida=await consultarEmpresa(nomeColecao,empresaId);limparErroColecao(nomeColecao);return saida}catch(e){registrarErroColecao(nomeColecao,e);throw e}
 }
 
+export async function listarDocumentosGrupo(nomeColecao){
+  try{
+    const grupo=grupoAtualId();if(!grupo){limparErroColecao(nomeColecao);return[]}
+    const s=await getDocs(query(collection(db,nomeColecao),where("grupoId","==",grupo))),saida=[];
+    s.forEach(r=>saida.push({id:r.id,...r.data()}));limparErroColecao(nomeColecao);return saida
+  }catch(e){registrarErroColecao(nomeColecao,e);throw e}
+}
+
+export async function criarDocumentoGrupo(nomeColecao,dados){
+  const grupoId=grupoAtualId();if(!grupoId)throw new Error("grupo-nao-selecionado");
+  const ref=await addDoc(collection(db,nomeColecao),{...dados,grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+  return ref.id;
+}
+
 export async function listarDocumentos(nomeColecao){
   try{
     const grupo=grupoAtualId();if(!grupo){limparErroColecao(nomeColecao);return[]}
