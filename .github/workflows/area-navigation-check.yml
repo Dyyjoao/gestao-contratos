@@ -18,7 +18,7 @@ jobs:
         run: |
           set -e
           node --check js/area-navigation.js
-          grep -Fq 'area-navigation.js?v=5' app.js
+          grep -Fq 'area-navigation.js?v=6' app.js
           grep -Fq 'const ordem=["menuMinhaMesa","menuDashboard","menuOperacao","operacaoSubmenu","menuComercial","comercialSubmenu","menuLogistica","logisticaSubmenu","menuCombustivel","menuControladoria","ctrlSubmenu","menuRh","rhSubmenu","menuGovernanca"]' js/area-navigation.js
           grep -Fq 'chaves:["pallets","frota"]' js/area-navigation.js
           grep -Fq 'chaves:["rh","avaliacoesrh","acoesrh","seguranca"]' js/area-navigation.js
@@ -29,3 +29,5 @@ jobs:
           grep -Fq 'SIG_ABRIR_FROTA' js/area-navigation.js
           grep -Fq 'SIG_ABRIR_RH_AVALIACOES' js/area-navigation.js
           grep -Fq 'SIG_ABRIR_RH_ACOES' js/area-navigation.js
+          grep -Fq 'await import("./commercial-workflow.js?v=16")' js/area-navigation.js
+          grep -Fq 'await import("./hr-culture.js?v=6")' js/area-navigation.js
