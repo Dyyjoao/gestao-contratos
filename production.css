@@ -89,3 +89,11 @@
 @media(max-width:1200px){.os-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.os-kpis{grid-template-columns:1fr 1fr}.os-acoes{min-width:230px}}
 @media(max-width:520px){.os-kpis{grid-template-columns:1fr}}
+
+
+/* Abas operacionais compartilhadas (Pallets e módulos de Indústria/Logística) */
+.production-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.production-tab{appearance:none;border:1px solid #d0d5dd;border-radius:999px;padding:8px 12px;background:#fff;color:#475467;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.production-tab:hover{background:#f8fafc;border-color:#98a2b3}
+.production-tab.ativo{background:#15354b;color:#fff;border-color:#15354b}
+@media(max-width:620px){.production-tabs{display:grid;grid-template-columns:1fr}.production-tab{width:100%;text-align:center}}
