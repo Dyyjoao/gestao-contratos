@@ -18,6 +18,31 @@ jobs:
         run: |
           set -e
           node --check app.js
+          ! grep -REn '^async[[:space:]]*          while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            node --check "$file"
+          done < <(find js -type f -name '*.js' -print0 | sort -z)
+      - name: Validar bundle V2
+        shell: bash
+        run: |
+          set -e
+          ! grep -Eq 'contracts-fpa-account-guard|contract-driver-sync|ctrl-dre|ctrl-balance|ctrl-budget|ctrl-forecast|ctrl-premises|ctrl-assets|cashflow-admin-actions|accountability-pdf|payables-cockpit-controls' app.js
+          grep -Fq 'area-navigation.js?v=4' app.js
+          grep -Fq 'controllership-router.js?v=33' app.js
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar artefatos estáticos
+        shell: bash
+        run: |
+          set -e
+          test -s index.html
+          test -s app.js
+          test -s style.css
+          grep -Fq 'app.js?v=128' index.html
+ js --include='*.js'
           while IFS= read -r -d '' file; do
             echo "Checking $file"
             node --check "$file"
