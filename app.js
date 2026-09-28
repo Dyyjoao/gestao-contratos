@@ -20,9 +20,9 @@ import "./js/production.js?v=12";
 import "./js/disposal.js?v=9";
 
 import "./js/pallets.js?v=2";
-import "./js/pallet-dashboard.js";
+import "./js/pallet-dashboard.js?v=2";
 import "./js/service-orders.js?v=8";
-import "./js/service-orders-dashboard.js?v=2";
+import "./js/service-orders-dashboard.js?v=3";
 import "./js/workforce-safety.js";
 import "./js/hr-people.js?v=4";
 import "./js/hr-role-registry.js?v=6";
