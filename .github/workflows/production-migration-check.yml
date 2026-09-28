@@ -22,8 +22,8 @@ jobs:
           node --check js/disposal.js
           node --check js/disposal-dashboard.js
           node --check js/area-navigation.js
-          grep -Fq 'import "./js/production.js"' app.js
-          grep -Fq 'import "./js/disposal.js"' app.js
+          grep -Fq 'production.js?v=' app.js
+          grep -Fq 'disposal.js?v=' app.js
           grep -Fq '["producao","Produção"' js/profiles.js
           grep -Fq '["descarte","Indústria · Perdas"' js/profiles.js
           grep -Fq 'producao:{label:"Produção"' js/area-navigation.js
