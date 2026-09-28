@@ -17,6 +17,7 @@ const podeCadastrar=()=>admin()||permite("frota","cadastrar");
 const podeEditar=()=>admin()||permite("frota","editar");
 const podeManut=()=>admin()||permite("frota","manutencao")||permite("frota","editar");
 const podeObrig=()=>admin()||permite("frota","obrigacoes")||permite("frota","editar");
+const podeVerCombustivel=()=>admin()||permite("combustivel","visualizar")||permite("combustivel","lancar")||permite("combustivel","editar");
 const pagina=()=>$("pagina-frota");
 const contextoIds=()=>empresasSelecionadasIds();
 const contextoOkGravacao=()=>contextoIds().length===1&&!!empresaUnicaSelecionadaId();
@@ -221,7 +222,36 @@ function preencherMotoristas(valorAtual=""){
   if(atual&&![...s.options].some(o=>o.value===atual)){const o=new Option(`${atual} · vínculo anterior`,atual);s.add(o)}
   s.value=atual;
 }
-async function carregar(){if(!podeVer())return;criarPagina();garantirMenu();busy=true;try{const [v,m,a,custo,mo]=await Promise.all([listarDocumentos("veiculos"),listarDocumentos("manutencoesFrota"),listarDocumentos("abastecimentosFrota"),listarDocumentos("custosDiesel"),colaboradoresPorFuncao("MOTORISTA").catch(e=>{console.warn("Motoristas do RH indisponíveis",e);return[]})]);veiculos=v;manutencoes=m;abastecimentos=a;custosDiesel=custo;motoristas=mo;preencherVeiculoSelects();preencherMotoristas();renderTudo()}catch(e){console.error(e);alert(mensagemErroDados(e,"a Gestão de Frota"))}finally{busy=false}}
+async function carregar(){
+  if(!podeVer())return;
+  criarPagina();garantirMenu();busy=true;
+  const falhas=[];
+  const lerSeguro=async(nome,habilitado=true)=>{
+    if(!habilitado)return[];
+    try{return await listarDocumentos(nome)}
+    catch(e){console.warn(`Frota: ${nome} indisponível`,e);falhas.push(nome);return[]}
+  };
+  try{
+    const [v,m,a,custo,mo]=await Promise.all([
+      lerSeguro("veiculos"),
+      lerSeguro("manutencoesFrota"),
+      lerSeguro("abastecimentosFrota",podeVerCombustivel()),
+      lerSeguro("custosDiesel",podeVerCombustivel()),
+      colaboradoresPorFuncao("MOTORISTA").catch(e=>{console.warn("Motoristas do RH indisponíveis",e);falhas.push("motoristas");return[]})
+    ]);
+    veiculos=v;manutencoes=m;abastecimentos=a;custosDiesel=custo;motoristas=mo;
+    preencherVeiculoSelects();preencherMotoristas();renderTudo();
+    const aviso=$("frotaAvisoCarga");
+    if(aviso){
+      if(falhas.length){
+        aviso.textContent=`A Frota foi aberta, mas alguns dados auxiliares não puderam ser carregados: ${[...new Set(falhas)].join(", ")}.`;
+        aviso.classList.remove("hidden");
+      }else{
+        aviso.textContent="";aviso.classList.add("hidden");
+      }
+    }
+  }finally{busy=false}
+}
 function novoVeiculo(){if(!podeCadastrar())return alert("Seu perfil não pode cadastrar veículos.");if(!contextoOkGravacao())return alert("Selecione apenas uma empresa no cabeçalho para cadastrar o veículo.");editVeiculoId=null;$("formVeiculo")?.reset();$("veiculoStatus").value="ativo";if($("veiculoKmLabel"))$("veiculoKmLabel").textContent="Quilometragem inicial";if($("veiculoKmAjuda"))$("veiculoKmAjuda").textContent="Informe o hodômetro no início do controle. Os abastecimentos atualizarão o KM atual.";preencherEmpresaSelect($("veiculoEmpresa"),{valorAtual:empresaUnicaSelecionadaId()});preencherMotoristas("");$("tituloFormVeiculo").textContent="Novo veículo";$("formVeiculoBox").classList.remove("hidden");$("veiculoPlaca")?.focus();trocarTab("veiculos")}
 function editarVeiculo(id){if(!podeEditar())return;const v=vById(id);if(!v)return;editVeiculoId=id;$("veiculoObs").value=v.observacoes||"";$("tituloFormVeiculo").textContent=`Editar ${v.placa||"veículo"}`;$("formVeiculoBox").classList.remove("hidden");trocarTab("veiculos");$("formVeiculoBox").scrollIntoView({behavior:"smooth",block:"start"})}
 function dadosVeiculo(){const atual=editVeiculoId?vById(editVeiculoId):null;return{empresaId:$("veiculoEmpresa").value,placa:String($("veiculoPlaca").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,7),renavam:String($("veiculoRenavam").value||"").replace(/\D/g,"").slice(0,11),marca:$("veiculoMarca").value.trim(),modelo:$("veiculoModelo").value.trim(),anoModelo:Math.trunc(n($("veiculoAno").value))||null,status:$("veiculoStatus").value,quilometragemInicial:atual?.quilometragemInicial??Math.trunc(n($("veiculoKm").value)),quilometragemAtual:Math.trunc(n($("veiculoKm").value)),dataAquisicao:$("veiculoDataAquisicao").value||"",valorAquisicao:n($("veiculoValorAquisicao").value),responsavel:$("veiculoResponsavel").value.trim(),observacoes:$("veiculoObs").value.trim(),obrigacoes:obrigacoes(atual),ultimaConsultaOficialEm:atual?.ultimaConsultaOficialEm||"",proximaConsultaOficialEm:atual?.proximaConsultaOficialEm||""}}
