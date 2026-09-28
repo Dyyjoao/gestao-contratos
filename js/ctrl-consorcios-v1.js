@@ -61,11 +61,6 @@ function criarPagina(){
           <button id="btnNovoConsorcioV1" class="btn-primario" type="button">Novo consórcio</button>
         </div>
       </div>
-
-      <div class="modulo-aviso cons-v1-aviso">
-        <strong>Gestão independente nesta versão:</strong> Consórcios não alimenta DRE, Balanço, Fluxo de Caixa ou Budget/Forecast. A taxa do consórcio é demonstrada separadamente de juros/encargos; consórcio não é tratado como financiamento tradicional e o campo de juros é opcional para contratos que efetivamente possuam esse custo.
-      </div>
-
       <div class="cons-v1-kpis">
         <article class="cons-v1-kpi"><span>Consórcios ativos</span><strong id="consV1KpiAtivos">0</strong><small>Ativos + contemplados</small></article>
         <article class="cons-v1-kpi"><span>Contemplados</span><strong id="consV1KpiContemplados">0</strong><small>Na carteira exibida</small></article>
@@ -126,7 +121,6 @@ function criarPagina(){
             <div class="campo"><label for="consV1Lance">Valor do lance</label><input id="consV1Lance" type="number" min="0" step="0.01"></div>
             <div class="campo"><label for="consV1CreditoUtilizado">Crédito utilizado</label><input id="consV1CreditoUtilizado" type="number" min="0" step="0.01"></div>
             <div class="campo campo-span-2"><label for="consV1BemDestino">Bem / finalidade adquirida</label><input id="consV1BemDestino" placeholder="Ex.: Caminhão Volvo FH 540"></div>
-            <div class="campo campo-span-3"><label for="consV1Observacoes">Observações</label><textarea id="consV1Observacoes" rows="3"></textarea></div>
           </div>
 
           <div class="form-acoes"><button id="btnCancelarConsorcioV1" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar consórcio</button></div>
@@ -304,7 +298,6 @@ function dadosForm(){
     lanceValor:n($("consV1Lance").value),
     creditoUtilizado:n($("consV1CreditoUtilizado").value),
     bemDestino:$("consV1BemDestino").value.trim(),
-    observacoes:$("consV1Observacoes").value.trim(),
     versaoRegistro:"consorcios-v1"
   };
 }
@@ -348,7 +341,6 @@ function preencherForm(c=null){
   $("consV1Lance").value=n(c?.lanceValor)||"";
   $("consV1CreditoUtilizado").value=n(c?.creditoUtilizado)||"";
   $("consV1BemDestino").value=c?.bemDestino||"";
-  $("consV1Observacoes").value=c?.observacoes||"";
   $("consV1Titulo").textContent=c?"Editar consórcio":"Novo consórcio";
   $("consV1Sub").textContent=c?`${c.administradora||"Administradora"} · Grupo ${c.grupo||"—"} · Cota ${c.cota||"—"}`:`${nomeEmpresa(empresaUnicaSelecionadaId())} · nova ficha`;
   msg($("mensagemConsorcioV1"),"");
@@ -488,7 +480,7 @@ function montarRelatorioDetalhe(c,r){
     ["Juros / encargos",`${pct(r.jurosEncargosPct)} · ${moeda(r.jurosEncargosValor)}`],
     ["Total estimado do plano",moeda(r.totalEstimadoPlano)],
     ["Contemplação",c.dataContemplacao?dataBr(c.dataContemplacao):"Não informada"],["Modalidade",MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao||"—"],["Lance",moeda(c.lanceValor||0)],
-    ["Crédito utilizado",moeda(r.creditoUtilizado)],["Saldo da carta",moeda(r.saldoCarta)],["Bem / finalidade",c.bemDestino||"—"],["Observações",c.observacoes||"—"]
+    ["Crédito utilizado",moeda(r.creditoUtilizado)],["Saldo da carta",moeda(r.saldoCarta)],["Bem / finalidade",c.bemDestino||"—"]
   ];
   tb.innerHTML=linhas.map((l,i)=>`<tr><${i===0?"th":"td"}>${esc(l[0])}</${i===0?"th":"td"}><${i===0?"th":"td"}>${esc(l[1])}</${i===0?"th":"td"}></tr>`).join("");
 }
@@ -522,8 +514,7 @@ function renderDetalhe(c){
   $("consV1ContemplacaoResumo").textContent=c.dataContemplacao?`Contemplado em ${dataBr(c.dataContemplacao)}${c.modalidadeContemplacao?` por ${MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao}`:""}.`:"Nenhuma contemplação registrada.";
   $("consV1ContemplacaoDados").innerHTML=[
     definicao("Data",c.dataContemplacao?dataBr(c.dataContemplacao):"—"),definicao("Modalidade",MODALIDADES[c.modalidadeContemplacao]||c.modalidadeContemplacao||"—"),definicao("Lance",moeda(c.lanceValor||0)),
-    definicao("Crédito utilizado",moeda(r.creditoUtilizado)),definicao("Saldo da carta",moeda(r.saldoCarta)),definicao("Bem / finalidade",c.bemDestino||"—"),
-    definicao("Observações",c.observacoes||"—")
+    definicao("Crédito utilizado",moeda(r.creditoUtilizado)),definicao("Saldo da carta",moeda(r.saldoCarta)),definicao("Bem / finalidade",c.bemDestino||"—")
   ].join("");
   $("consV1ParcelasBody").innerHTML=cronograma.map(p=>`<tr>
     <td>${p.numero}</td><td>${esc(p.competencia||"—")}</td><td class="${p.status==="paga"?"cons-v1-parcela-paga":"cons-v1-parcela-futura"}">${p.status==="paga"?"Paga (contagem)":"A vencer"}</td>
