@@ -34,6 +34,8 @@ jobs:
           grep -Fq 'frotaAvisoCarga' js/fleet.js
           grep -Fq 'podeVerCombustivel' js/fleet.js
           grep -Fq 'lerSeguro("abastecimentosFrota",podeVerCombustivel())' js/fleet.js
+          grep -Fq "sem veículos cadastrados" js/fleet-cost-kpi.js
+          grep -Fq "ids.has(String(x.veiculoId" js/fleet-cost-kpi.js
 
   browser-smoke:
     runs-on: ubuntu-latest
