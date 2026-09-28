@@ -1,24 +1,8 @@
 name: SIG Homologacao DRE Contratos FP&A Check
 
 on:
-  push:
-    branches:
-      - main
-      - 'fix/**'
-    paths:
-      - 'js/dre-classification.js'
-      - 'js/account-dre-classification-ui.js'
-      - 'js/dre-dual-view.js'
-      - 'js/dre-view-navigation.js'
-      - 'js/planning-dre-totalizers.js'
-      - 'js/planning-account-coverage.js'
-      - 'js/contract-projection.js'
-      - 'js/contract-driver-sync.js'
-      - 'js/contracts-fpa-account-guard.js'
-      - 'js/payables-contracts.js'
-      - 'app.js'
-      - '.github/workflows/homologacao-dre-contratos-fpa-check.yml'
   pull_request:
+  push:
     branches: [main]
 
 jobs:
@@ -26,42 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Syntax
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Homologar congelamento V2
+        shell: bash
         run: |
           set -e
-          node --check js/dre-classification.js
-          node --check js/account-dre-classification-ui.js
-          node --check js/dre-dual-view.js
-          node --check js/dre-view-navigation.js
-          node --check js/planning-dre-totalizers.js
-          node --check js/planning-account-coverage.js
-          node --check js/contract-projection.js
-          node --check js/contract-driver-sync.js
-          node --check js/contracts-fpa-account-guard.js
+          node --check js/contracts.js
           node --check js/payables-contracts.js
-      - name: DRE approved architecture
-        run: |
-          set -e
-          grep -Fq 'EBITDA GERENCIAL' js/dre-classification.js
-          grep -Fq 'MARGEM DE CONTRIBUIÇÃO' js/dre-classification.js
-          grep -Fq 'Detalhar contas' js/dre-dual-view.js
-          grep -Fq 'Estrutura do plano' js/dre-dual-view.js
-          grep -Fq 'Outras visualizações' js/dre-view-navigation.js
-          grep -Fq 'DRE Societária · CPC 51' js/dre-view-navigation.js
-          grep -Fq 'Totalizadores não são contas' js/account-dre-classification-ui.js
-          grep -Fq 'Σ automático · não lançável' js/planning-dre-totalizers.js
-      - name: Contract drivers and account eligibility
-        run: |
-          set -e
-          grep -Fq 'valorContratoNoMes' js/payables-contracts.js
-          grep -Fq 'snapshotReajusteContrato' js/payables-contracts.js
-          grep -Fq 'inicioComp' js/payables-contracts.js
-          grep -Fq 'String(ant.competencia||"")<inicioComp' js/payables-contracts.js
-          grep -Fq 'valoresContratoNoAno' js/contract-driver-sync.js
-          grep -Fq 'snapshotReajusteContrato' js/contract-driver-sync.js
-          grep -Fq 'contaLancavelResultado' js/contract-driver-sync.js
-          grep -Fq 'contasPermitidas.includes' js/contract-driver-sync.js
-          grep -Fq 'Somente contas analíticas de resultado' js/contracts-fpa-account-guard.js
-          grep -Fq 'Contas novas só aparecem no Budget/Forecast' js/planning-account-coverage.js
-          grep -Fq 'import "./js/contract-driver-sync.js"' app.js
-          grep -Fq 'import "./js/dre-dual-view.js"' app.js
+          node --check js/ctrl-input-v6.js
+          node --check js/controllership-router.js
+          ! grep -Eq 'planoContasGerencial|centrosCusto|fluxoCaixa|budgetLinhas|forecastLinhas|premissasPlanejamento|imobilizados' js/contracts.js
+          ! grep -Eq 'contasBancarias|fluxoCaixa' js/payables-contracts.js
+          ! grep -Eq 'CC_BALANCO|contaBalanco|mapaImobilizado|imobilizados' js/ctrl-input-v6.js
+          ! grep -Eq '\["(dre|balanco|budget|forecast|premissas|imobilizado|caixa|prestacao)"' js/controllership-router.js
+          ! grep -Eq 'contracts-fpa-account-guard|contract-driver-sync|ctrl-dre|ctrl-balance|ctrl-budget|ctrl-forecast|ctrl-premises|ctrl-assets|cashflow-admin-actions|accountability-pdf' app.js
+          grep -A2 -F 'match /budgetLinhas/{id}' firestore.rules | grep -Fq 'allow read, write: if false;'
+          grep -A2 -F 'match /forecastLinhas/{id}' firestore.rules | grep -Fq 'allow read, write: if false;'
