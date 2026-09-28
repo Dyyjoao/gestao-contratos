@@ -43,7 +43,7 @@ import "./js/disposal-dashboard.js?v=2";
 import "./js/sales-guard.js";
 import "./js/sales-report-import.js?v=16";
 import "./js/receipts-report-import.js?v=6";
-import "./js/fleet.js?v=12";
+import("./js/fleet.js?v=13").catch(error => console.error("Módulo de Frota indisponível", error));
 import "./js/fleet-detran-es.js";
 import "./js/fleet-central.js?v=10";
 import "./js/fleet-cost-kpi.js?v=3";
