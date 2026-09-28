@@ -1484,27 +1484,6 @@ service cloud.firestore {
           ]))
         );
       allow delete: if false;
-    } {
-      allow read: if (permissao('controladoria','visualizar') || governancaVisualizar()) && documentoAcessivel(resource.data);
-      allow create: if documentoAcessivel(request.resource.data) && (
-        fpaEditar() ||
-        (governancaConfigurar() && request.resource.data.keys().hasOnly([
-          'grupoId','empresaId','criadoPor','criadoEm','atualizadoEm',
-          'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria'
-        ]))
-      );
-      allow update: if documentoAcessivel(resource.data) &&
-        request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.empresaId == resource.data.empresaId && (
-          fpaEditar() ||
-          (governancaConfigurar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria','atualizadoEm'
-          ])) ||
-          (governancaPlanoAcao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'complianceCiclosAuditoria','atualizadoEm'
-          ]))
-        );
-      allow delete: if false;
     }
 
     match /permutas/{id} {
