@@ -44,11 +44,7 @@ async function estornarTitulo(id){
   try{await atualizarComAuditoria({colecao:"inadimplenciaTitulos",id:x.id,empresaId:x.empresaId,modulo:"inadimplencia",acao:"estorno",motivo:ok.motivo,resumo:`Estorno administrativo do título ${x.documento||x.id}`,snapshotAntes:x,alteracoes:{status:"cancelado",...usuarioMeta(ok.motivo)}});atualizarTela("btnInadAtualizar","inadimplencia")}catch(e){console.error(e);alert("Não foi possível estornar o título.")}
 }
 
-async 
 
-async 
-async 
-async 
 async function estornarInputMensal(){
   const emp=empresaUnicaSelecionadaId(),p=periodoChave(),ano=periodoAno(),cc=$("inputV6Centro")?.value||"";
   if(!emp||!/^m\d{2}$/.test(p)||!cc)return alert("Selecione uma única empresa, uma competência mensal e um Centro/bloco antes de estornar.");
@@ -63,7 +59,6 @@ async function estornarInputMensal(){
   try{await executarCorrecoesComAuditoria({operacoes,empresaId:emp,modulo:"input_mensal",acao:"estorno_competencia",colecao:"realizadoMensal",documentoId:`${emp}:${competencia}:${cc}`,motivo:ok.motivo,resumo:`Estorno de ${arr.length} valor(es) do Input Mensal em ${competencia}`,snapshotAntes:snapshot});atualizarTela("btnAtualizarInputV6","realizado")}catch(e){console.error(e);alert("Não foi possível estornar a competência.")}
 }
 
-async 
 function decorar(){
   if(busy||!admin())return;busy=true;
   try{
