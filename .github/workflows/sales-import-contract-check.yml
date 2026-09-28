@@ -36,4 +36,4 @@ jobs:
           set -e
           test -s index.html
           test -s app.js
-          grep -Fq 'menuComercial' index.html
+          grep -Fq 'menuComercial' js/area-navigation.js
