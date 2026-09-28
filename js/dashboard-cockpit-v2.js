@@ -20,16 +20,16 @@ const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const set=(id,v)=>{if($(id))$(id).textContent=v};
 const percent=(atual,base)=>Math.abs(base)>0.000001?(atual-base)/Math.abs(base)*100:null;
 const pf=v=>v==null?"—":`${v>0?"+":""}${v.toLocaleString("pt-BR",{maximumFractionDigits:1})}%`;
-const podeDre=()=>admin()||permite("controladoria","editar")||permite("controladoria","visualizar")||permite("controladoria","dre");
-const podeBalanco=()=>admin()||permite("controladoria","editar")||permite("controladoria","visualizar")||permite("controladoria","balanco");
-const podeCaixa=()=>admin()||permite("controladoria","editar")||permite("controladoria","visualizar")||permite("controladoria","caixaVisualizar");
+const podeDre=()=>false; // legado FP&A congelado na V2
+const podeBalanco=()=>false; // legado patrimonial congelado na V2
+const podeCaixa=()=>false; // fluxo de caixa legado congelado na V2
 const podeInad=()=>admin()||permite("controladoria","editar")||permite("controladoria","inadimplencia")||permite("controladoria","inadimplenciaEditar");
 const podeCons=()=>admin()||permite("consorcios","visualizar")||permite("consorcios","editar")||permite("controladoria","consorciosVisualizar")||permite("controladoria","consorciosEditar")||permite("controladoria","editar");
 const podePerm=()=>admin()||["visualizar","cadastrar","editar","movimentar","estornar","fechar","inativar"].some(a=>permite("permutas",a));
 const podeVendas=()=>admin()||["visualizar","lancar","editar","vendedores","comissoes"].some(a=>permite("vendas",a));
 
 const WIDGETS={
-  executivo:{nome:"Resumo executivo",perm:()=>podeDre()||podeCaixa()||podeInad()},
+  executivo:{nome:"Resumo executivo",perm:()=>false}, // será redesenhado com fontes operacionais da V2
   evolucao:{nome:"Evolução de resultado",perm:podeDre},
   balanco:{nome:"Análise patrimonial",perm:podeBalanco},
   caixa:{nome:"Posição e projeção de caixa",perm:podeCaixa},
