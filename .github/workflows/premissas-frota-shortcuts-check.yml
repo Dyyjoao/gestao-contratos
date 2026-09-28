@@ -20,7 +20,7 @@ jobs:
           node --check js/fleet.js
           node --check js/fleet-detran-es.js
           grep -A2 -F 'match /premissasPlanejamento/{id}' firestore.rules | grep -Fq 'allow read, write: if false;'
-          grep -Fq 'import "./js/fleet.js"' app.js
+          grep -Fq 'fleet.js?v=' app.js
           grep -Fq 'import "./js/fleet-detran-es.js"' app.js
           grep -Fq 'Detran ES · IPVA/Licenciamento' js/fleet-detran-es.js
           ! grep -Fq 'planoContasGerencial' js/fleet.js
