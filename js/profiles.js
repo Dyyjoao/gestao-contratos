@@ -10,11 +10,11 @@ const SECOES=[
  ]],
  ["Indústria",[
   ["producao","Produção",[["visualizar","Visualizar"],["lancar","Registrar produção"],["editar","Editar lançamentos"],["cadastros","Gerir produções, itens e vínculos"]]],
-  ["descarte","Perdas",[["visualizar","Visualizar"],["lancar","Registrar perdas"],["editar","Editar lançamentos"]]],
+  ["descarte","Indústria · Perdas",[["visualizar","Visualizar"],["lancar","Registrar perdas"],["editar","Editar lançamentos"]]],
   ["ordensServico","Ordens de Serviço",[["visualizar","Visualizar"],["solicitar","Solicitar OS"],["executar","Executar e concluir OS"]]]
  ]],
  ["Comercial",[
-  ["vendas","Consolidado de Vendas",[["visualizar","Visualizar"],["lancar","Registrar vendas"],["editar","Editar/Cancelar vendas"],["vendedores","Gerir vendedores, metas e regras"],["comissoes","Aprovar e marcar comissões como pagas"]]],
+  ["vendas","Vendas & Comissões",[["visualizar","Visualizar"],["lancar","Registrar vendas"],["editar","Editar/Cancelar vendas"],["vendedores","Gerir vendedores, metas e regras"],["comissoes","Aprovar e marcar comissões como pagas"]]],
   ["visitas","Visitas e Contatos",[["visualizar","Visualizar próprios"],["registrar","Registrar contato"],["editar","Editar próprios"],["supervisionar","Acompanhar equipe"]]],
   ["orcamentos","Orçamentos",[["visualizar","Visualizar próprios"],["registrar","Registrar orçamento"],["editar","Editar próprios e registrar follow-up"],["supervisionar","Acompanhar equipe"]]],
   ["reclamacoes","Reclamações",[["visualizar","Visualizar próprias"],["registrar","Registrar"],["tratar","Tratar próprias"],["supervisionar","Acompanhar equipe"]]]
@@ -22,7 +22,7 @@ const SECOES=[
  ["Logística",[
   ["palletMovimentos","Pallets · Entrega e Recolhimento",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
   ["palletInventario","Pallets · Inventário",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
-  ["frota","Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"]]]
+  ["frota","Gestão de Frota",[["visualizar","Visualizar"],["cadastrar","Cadastrar"],["editar","Editar ficha"],["manutencao","Registrar manutenção"],["obrigacoes","Gerir IPVA/licenciamento/multas"]]]
  ]],
  ["Combustível e Diesel",[
   ["combustivel","Combustível e Diesel",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]]
