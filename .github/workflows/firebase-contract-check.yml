@@ -26,5 +26,5 @@ jobs:
           ! grep -Fq 'caixaVisualizar()' firestore.rules
           ! grep -Fq 'prestacaoComentar()' firestore.rules
           grep -Fq 'match /vendas/{id}' firestore.rules
-          grep -Fq 'match /colaboradores/{id}' firestore.rules
+          grep -Fq 'match /rhColaboradores/{id}' firestore.rules
           grep -Fq 'match /planosAcao/{id}' firestore.rules
