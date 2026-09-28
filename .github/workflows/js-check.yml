@@ -42,6 +42,7 @@ jobs:
           grep -Fq 'service-orders-dashboard.js?v=3' app.js
           grep -Fq 'hr-culture.js?v=6' app.js
           grep -Fq 'fleet-fuel.js?v=18' app.js
+          grep -Fq 'fleet-cost-kpi.js?v=4' app.js
 
   browser-smoke:
     runs-on: ubuntu-latest
@@ -54,4 +55,4 @@ jobs:
           test -s index.html
           test -s app.js
           test -s style.css
-          grep -Fq 'app.js?v=132' index.html
+          grep -Fq 'app.js?v=133' index.html
