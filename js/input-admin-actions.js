@@ -2,15 +2,10 @@ import { admin, state } from "./core.js";
 import {
   $, listarDocumentos, empresaUnicaSelecionadaId, periodoAno, periodoChave, emitirAlteracao
 } from "./shared.js";
-import {
-  confirmarAcaoAdministrativa,
-  atualizarComAuditoria,
-  excluirComAuditoria,
-  executarCorrecoesComAuditoria
-} from "./admin-actions.js";
+import { confirmarAcaoAdministrativa, atualizarComAuditoria, executarCorrecoesComAuditoria } from "./admin-actions.js";
 
 const MESES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-let observer=null,timer=null,busy=false,planejamentoBusy=false;
+let observer=null,timer=null,busy=false;
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const agora=()=>new Date().toISOString();
 const usuarioMeta=motivo=>({
@@ -49,41 +44,11 @@ async function estornarTitulo(id){
   try{await atualizarComAuditoria({colecao:"inadimplenciaTitulos",id:x.id,empresaId:x.empresaId,modulo:"inadimplencia",acao:"estorno",motivo:ok.motivo,resumo:`Estorno administrativo do título ${x.documento||x.id}`,snapshotAntes:x,alteracoes:{status:"cancelado",...usuarioMeta(ok.motivo)}});atualizarTela("btnInadAtualizar","inadimplencia")}catch(e){console.error(e);alert("Não foi possível estornar o título.")}
 }
 
-async function estornarPremissa(id){
-  const x=(await docs("premissasPlanejamento")).find(v=>v.id===id);if(!x||x.estornado===true)return;
-  const ok=await confirmarAcaoAdministrativa({titulo:"Estornar premissa",descricao:`A premissa “${x.nome||id}” será inativada por correção administrativa. Budget e Forecast deixarão de considerá-la nas competências futuras aplicáveis.`,motivoLabel:"Motivo obrigatório do estorno",confirmarTexto:"Estornar premissa",perigosa:true});if(!ok)return;
-  try{await atualizarComAuditoria({colecao:"premissasPlanejamento",id:x.id,empresaId:x.empresaId,modulo:"premissas",acao:"estorno",motivo:ok.motivo,resumo:`Estorno administrativo da premissa ${x.nome||x.id}`,snapshotAntes:x,alteracoes:{ativo:false,...usuarioMeta(ok.motivo)}});window.dispatchEvent(new CustomEvent("sig:empresa-changed"));emitirAlteracao("premissas")}catch(e){console.error(e);alert("Não foi possível estornar a premissa.")}
-}
+async 
 
-function referenciaPremissa(v,id){
-  if(!v||typeof v!=="object")return false;
-  return Object.entries(v).some(([k,x])=>/premissa/i.test(k)&&(x===id||(Array.isArray(x)&&x.includes(id))));
-}
-async function dependenciasPremissa(id){
-  const colecoes=["planejamentoDetalhes","budgetLinhas","forecastLinhas","planejamentoMensal"];
-  const refs=[];
-  for(const colecao of colecoes){
-    let itens;
-    try{itens=await listarDocumentos(colecao)}catch(e){console.error(`Falha ao validar dependências de premissa em ${colecao}`,e);throw new Error(`dependencias-premissa:${colecao}`)}
-    const qtd=itens.filter(x=>referenciaPremissa(x,id)).length;if(qtd)refs.push(`${colecao}: ${qtd}`);
-  }
-  return refs;
-}
-async function excluirPremissa(id){
-  const x=(await docs("premissasPlanejamento")).find(v=>v.id===id);if(!x)return;
-  let refs;
-  try{refs=await dependenciasPremissa(id)}catch{return alert("Não foi possível validar todas as dependências da premissa. A exclusão física foi bloqueada por segurança; use o estorno ou tente novamente.")}
-  if(refs.length)return alert(`A exclusão física foi bloqueada porque a premissa possui referência em dados de planejamento (${refs.join(", ")}). Use “Estornar ADM” para preservar o histórico.`);
-  const ok=await confirmarAcaoAdministrativa({titulo:"Excluir premissa definitivamente",descricao:`A premissa “${x.nome||id}” será removida fisicamente. Use somente para cadastro indevido, duplicado ou de teste sem dependências. Esta ação não substitui o estorno de uma premissa válida.`,motivoLabel:"Motivo obrigatório da exclusão",confirmarTexto:"Excluir definitivamente",perigosa:true});if(!ok)return;
-  try{await excluirComAuditoria({colecao:"premissasPlanejamento",id:x.id,empresaId:x.empresaId,modulo:"premissas",acao:"exclusao_fisica",motivo:ok.motivo,resumo:`Exclusão física administrativa da premissa ${x.nome||x.id}`,snapshotAntes:x});window.dispatchEvent(new CustomEvent("sig:empresa-changed"));emitirAlteracao("premissas")}catch(e){console.error(e);alert("Não foi possível excluir a premissa.")}
-}
-
-async function estornarBem(id){
-  const x=(await docs("imobilizados")).find(v=>v.id===id);if(!x||x.estornado===true)return;
-  const ok=await confirmarAcaoAdministrativa({titulo:"Estornar cadastro de Imobilizado / CAPEX",descricao:`Use somente para ficha indevida ou duplicada. Para baixa real de um bem, utilize o status Baixado. O estorno cancelará “${x.descricao||id}” e desligará as integrações automáticas.`,motivoLabel:"Motivo obrigatório do estorno",confirmarTexto:"Estornar ficha",perigosa:true});if(!ok)return;
-  try{await atualizarComAuditoria({colecao:"imobilizados",id:x.id,empresaId:x.empresaId,modulo:"imobilizado",acao:"estorno",motivo:ok.motivo,resumo:`Estorno administrativo do Imobilizado/CAPEX ${x.descricao||x.id}`,snapshotAntes:x,alteracoes:{status:"cancelado",integrarBalanco:false,integrarPlanejamento:false,...usuarioMeta(ok.motivo)}});atualizarTela("btnAtualizarBemV1","imobilizado")}catch(e){console.error(e);alert("Não foi possível estornar a ficha do bem.")}
-}
-
+async 
+async 
+async 
 async function estornarInputMensal(){
   const emp=empresaUnicaSelecionadaId(),p=periodoChave(),ano=periodoAno(),cc=$("inputV6Centro")?.value||"";
   if(!emp||!/^m\d{2}$/.test(p)||!cc)return alert("Selecione uma única empresa, uma competência mensal e um Centro/bloco antes de estornar.");
@@ -98,41 +63,19 @@ async function estornarInputMensal(){
   try{await executarCorrecoesComAuditoria({operacoes,empresaId:emp,modulo:"input_mensal",acao:"estorno_competencia",colecao:"realizadoMensal",documentoId:`${emp}:${competencia}:${cc}`,motivo:ok.motivo,resumo:`Estorno de ${arr.length} valor(es) do Input Mensal em ${competencia}`,snapshotAntes:snapshot});atualizarTela("btnAtualizarInputV6","realizado")}catch(e){console.error(e);alert("Não foi possível estornar a competência.")}
 }
 
-async function estornarDetalhePlanejamento(btn){
-  if(planejamentoBusy)return;
-  const tr=btn.closest("[data-plan-detail]"),id=tr?.dataset.planDetail||"";if(!tr||!id||id.startsWith("new_"))return false;
-  const pagina=btn.closest("section.pagina"),pageId=pagina?.id||"",cenario=pageId.includes("budget")?"budget":pageId.includes("forecast")?"forecast":"";if(!cenario)return false;
-  const emp=empresaUnicaSelecionadaId(),ano=periodoAno(),versao=$(`${pageId}-versao`)?.value||"",conta=tr.dataset.conta||"",cc=tr.dataset.cc||"";
-  const todos=await docs("planejamentoDetalhes"),alvo=todos.find(x=>x.id===id);if(!alvo)return false;
-  const ok=await confirmarAcaoAdministrativa({titulo:`Estornar sublinha de ${cenario==="budget"?"Budget":"Forecast"}`,descricao:`A sublinha “${alvo.descricao||id}” será inativada de forma auditável. A linha agregada será recalculada no mesmo batch.`,motivoLabel:"Motivo obrigatório do estorno",confirmarTexto:"Estornar sublinha",perigosa:true});if(!ok)return true;
-  planejamentoBusy=true;
-  try{
-    const restantes=todos.filter(d=>d.id!==id&&d.status!=="inativo"&&d.cenario===cenario&&d.empresaId===emp&&Number(d.exercicio)===Number(ano)&&d.versao===versao&&d.contaId===conta&&(d.centroCustoId||"")===(cc||""));
-    const valores=Object.fromEntries(MESES.map(m=>[m,restantes.reduce((s,d)=>s+n(d.valores?.[m]),0)]));
-    const colecaoLinha=cenario==="budget"?"budgetLinhas":"forecastLinhas",linhas=(await docs(colecaoLinha)).filter(d=>d.tipoRegistro!=="budget_meta"&&d.empresaId===emp&&Number(d.exercicio)===Number(ano)&&d.versao===versao&&d.contaId===conta&&(d.centroCustoId||"")===(cc||""));
-    const meta=usuarioMeta(ok.motivo),operacoes=[{tipo:"update",colecao:"planejamentoDetalhes",id,alteracoes:{status:"inativo",...meta}}];
-    linhas.forEach(l=>operacoes.push({tipo:"update",colecao:colecaoLinha,id:l.id,alteracoes:{valores,ultimaCorrecaoAdministrativa:{tipo:"estorno_sublinha",detalheId:id,motivo:ok.motivo,em:agora()}}}));
-    await executarCorrecoesComAuditoria({operacoes,empresaId:emp,modulo:cenario,acao:"estorno_sublinha",colecao:"planejamentoDetalhes",documentoId:id,motivo:ok.motivo,resumo:`Estorno da sublinha ${alvo.descricao||id} em ${cenario}`,snapshotAntes:{detalhe:alvo,linhas:linhas.map(l=>({id:l.id,valores:l.valores}))}});
-    $(`${pageId}-atualizar`)?.click();emitirAlteracao(cenario);
-  }catch(e){console.error(e);alert("Não foi possível estornar a sublinha de planejamento.")}finally{planejamentoBusy=false}
-  return true;
-}
-
+async 
 function decorar(){
   if(busy||!admin())return;busy=true;
   try{
     document.querySelectorAll("#salesLista [data-sales-edit]").forEach(edit=>{const id=edit.dataset.salesEdit,acao=edit.closest(".acoes-tabela"),tr=edit.closest("tr");if(!id||!acao||tr?.classList.contains("sales-cancelada"))return;botao(acao,{chave:`venda:${id}`,texto:"Estornar ADM",onClick:()=>estornarVenda(id)})});
     document.querySelectorAll("#listaConsorciosV1 [data-cons-v1-edit]").forEach(edit=>{const id=edit.dataset.consV1Edit,acao=edit.closest(".cons-v1-actions"),tr=edit.closest("tr");if(!id||!acao||/Cancelado/i.test(tr?.textContent||""))return;botao(acao,{chave:`consorcio:${id}`,texto:"Estornar ADM",onClick:()=>estornarConsorcio(id)})});
     document.querySelectorAll("#inadLista [data-inad-edit]").forEach(edit=>{const id=edit.dataset.inadEdit,acao=edit.closest(".inad-acoes");if(!id||!acao)return;botao(acao,{chave:`inad:${id}`,texto:"Estornar ADM",onClick:()=>estornarTitulo(id)})});
-    document.querySelectorAll("#listaPremissasV4 [data-prem-v4-edit]").forEach(edit=>{const id=edit.dataset.premV4Edit,td=edit.closest("td"),tr=edit.closest("tr");if(!id||!td)return;if(!/Inativa/i.test(tr?.textContent||""))botao(td,{chave:`premissa-estorno:${id}`,texto:"Estornar ADM",onClick:()=>estornarPremissa(id)});botao(td,{chave:`premissa-exclusao:${id}`,texto:"Excluir ADM",onClick:()=>excluirPremissa(id)})});
-    document.querySelectorAll("#listaBensV1 [data-bem-edit]").forEach(edit=>{const id=edit.dataset.bemEdit,td=edit.closest("td"),tr=edit.closest("tr");if(!id||!td||/Cancelado/i.test(tr?.textContent||""))return;botao(td,{chave:`bem:${id}`,texto:"Estornar ADM",onClick:()=>estornarBem(id)})});
     const z=$("btnZerarInputV6");if(z&&!$("btnEstornarInputV6")){const b=document.createElement("button");b.id="btnEstornarInputV6";b.type="button";b.className="btn-secundario";b.textContent="Estornar competência";b.addEventListener("click",estornarInputMensal);z.after(b)}
   }finally{busy=false}
 }
 
 function instalar(){
   if(observer)return;observer=new MutationObserver(agendar);observer.observe(document.body,{childList:true,subtree:true});agendar();
-  document.addEventListener("click",async e=>{const b=e.target.closest?.("[data-plan-rem]");if(!b||!admin()||b.dataset.adminBypass==="1")return;const tr=b.closest("[data-plan-detail]"),id=tr?.dataset.planDetail||"";if(!id||id.startsWith("new_"))return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();await estornarDetalhePlanejamento(b)},true);
 }
 
 window.addEventListener("sig:ready",instalar);
