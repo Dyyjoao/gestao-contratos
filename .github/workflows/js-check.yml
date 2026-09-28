@@ -33,7 +33,7 @@ jobs:
           ! grep -Eq 'contracts-fpa-account-guard|contract-driver-sync|ctrl-dre|ctrl-balance|ctrl-budget|ctrl-forecast|ctrl-premises|ctrl-assets|cashflow-admin-actions|accountability-pdf|payables-cockpit-controls' app.js
           grep -Fq 'area-navigation.js?v=5' app.js
           grep -Fq 'controllership-router.js?v=34' app.js
-          grep -Fq 'fleet.js?v=15' app.js
+          grep -Fq 'fleet.js?v=16' app.js
           grep -Fq 'input-admin-actions.js?v=2' app.js
           grep -Fq 'commercial-workflow.js?v=15' app.js
           grep -Fq 'service-orders.js?v=8' app.js
@@ -54,4 +54,4 @@ jobs:
           test -s index.html
           test -s app.js
           test -s style.css
-          grep -Fq 'app.js?v=130' index.html
+          grep -Fq 'app.js?v=131' index.html
