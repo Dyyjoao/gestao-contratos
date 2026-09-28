@@ -7,10 +7,7 @@ const menuContratos=document.getElementById("menuContratos");
 const separador=document.querySelector(".sidebar-menu .menu-separador");
 if(menuContratos&&separador){
   [
-    ["menuPrestadores","prestadores","Prestadores"],
     ["menuFrota","frota","Frota"],
-    ["menuAlmoxarifado","almoxarifado","Almoxarifado"],
-    ["menuCotacoes","cotacoes","Cotações"],
     ["menuControladoria","controladoria","Controladoria"]
   ].forEach(([id,pagina,label])=>{
     if(document.getElementById(id))return;
@@ -26,7 +23,7 @@ if(dashboard){dashboard.innerHTML=`
     <div>
       <span class="eyebrow">VISÃO INTEGRADA</span>
       <h2>Central de Gestão</h2>
-      <p>Indicadores dos módulos operacionais, administrativos e de planejamento.</p>
+      <p>Indicadores dos módulos operacionais e gerenciais do SIG.</p>
     </div>
     <span id="dashAtualizadoEm" class="hero-meta">Atualizando...</span>
   </div>
@@ -48,10 +45,7 @@ if(dashboard){dashboard.innerHTML=`
       <div class="quick-grid">
         <button type="button" data-ir-pagina="contratos" class="quick-card"><span>Contratos</span><small>Vencimentos e valores</small></button>
         <button type="button" data-ir-pagina="frota" class="quick-card"><span>Frota</span><small>Veículos e revisões</small></button>
-        <button type="button" data-ir-pagina="almoxarifado" class="quick-card"><span>Almoxarifado</span><small>Saldo e movimentações</small></button>
-        <button type="button" data-ir-pagina="cotacoes" class="quick-card"><span>Cotações</span><small>Solicitar e aprovar</small></button>
-        <button type="button" data-ir-pagina="controladoria" class="quick-card"><span>Controladoria</span><small>Budget e forecast</small></button>
-        <button type="button" data-ir-pagina="prestadores" class="quick-card"><span>Prestadores</span><small>Fornecedores e oficinas</small></button>
+        <button type="button" data-ir-pagina="controladoria" class="quick-card"><span>Controladoria</span><small>Indicadores e fechamento</small></button>
       </div>
     </section>
   </div>`}
