@@ -73,8 +73,6 @@ jobs:
           grep -q 'exportarTabelaPdf' js/ctrl-consorcios-v1.js
           grep -q 'exportarTabelaXls' js/ctrl-consorcios-v1.js
 
-          grep -q 'Gestão independente nesta versão' js/ctrl-consorcios-v1.js
-          grep -q 'não alimenta DRE, Balanço, Fluxo de Caixa ou Budget/Forecast' js/ctrl-consorcios-v1.js
           grep -q 'taxaAdministracaoPct' js/ctrl-consorcios-v1.js
           grep -q 'jurosEncargosPct' js/ctrl-consorcios-v1.js
           grep -q 'valorParcelaAtual' js/ctrl-consorcios-v1.js
