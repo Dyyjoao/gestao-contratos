@@ -1,5 +1,5 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao } from "./shared.js";
+import { $, esc, msg, permite, state, listarDocumentosGrupo, criarDocumentoGrupo, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao } from "./shared.js";
 import { carregarConfiguracaoModulo, abrirConfiguracaoModulo } from "./module-settings.js";
 
 const TIPOS=["CORRETIVA","MELHORIA","PREVENTIVA"];
@@ -96,13 +96,12 @@ function limpar(){
   editId=null;$("osForm").reset();$("osDataSolicitacao").value=localIso();$("osInicioPrevisto").value=localIso();$("osConclusaoPrevista").value=localIso();preencherCadastrosForm();$("osFormTitulo").textContent="Nova solicitação";msg($("osMensagem"),"")
 }
 function novo(){
-  if(!pode("solicitar"))return;if(!emp())return alert("Selecione apenas uma empresa no cabeçalho.");
+  if(!pode("solicitar"))return;
   limpar();$("osFormBox").classList.remove("hidden");$("osFormBox").scrollIntoView({behavior:"smooth",block:"start"})
 }
 function abrirEdicao(id){
   const x=ordens.find(y=>y.id===id);
   if(!x||!pode("executar")||["cancelada","concluida"].includes(x.status))return;
-  if(x.empresaId!==emp())return alert("Selecione a empresa da OS para editar.");
   editId=id;
   $("osNumero").value=x.numero||"";$("osTipo").value=x.tipo||"";$("osDataSolicitacao").value=x.dataSolicitacao||"";$("osFuncao").value=x.funcao||"";$("osDescricao").value=x.descricao||"";
   $("osInicioPrevisto").value=x.dataInicioPrevista||x.dataInicio||"";$("osConclusaoPrevista").value=x.dataConclusaoPrevista||x.dataFim||"";
@@ -122,17 +121,17 @@ function validar(d){
   return d
 }
 async function salvar(e){
-  e.preventDefault();const empresaId=emp();if(!empresaId)return alert("Selecione apenas uma empresa no cabeçalho.");
+  e.preventDefault();
   try{
     const d=validar(payload());
     if(editId){
-      const x=ordens.find(y=>y.id===editId);if(!pode("executar")||!x||x.empresaId!==empresaId||["cancelada","concluida"].includes(x.status))throw new Error("Edição não autorizada.");
+      const x=ordens.find(y=>y.id===editId);if(!pode("executar")||!x||["cancelada","concluida"].includes(x.status))throw new Error("Edição não autorizada.");
       if(d.numero!==x.numero||d.dataSolicitacao!==x.dataSolicitacao)throw new Error("Número e data de solicitação não podem ser alterados.");
       await atualizarDocumento("ordensServico",editId,{...d,status:x.status,dataInicio:x.dataInicio||"",dataFim:x.dataFim||""})
     }else{
       if(!pode("solicitar"))throw new Error("Sem permissão para solicitar OS.");
-      if(ordens.some(x=>x.empresaId===empresaId&&String(x.numero).toUpperCase()===d.numero.toUpperCase()&&x.status!=="cancelada"))throw new Error("Já existe OS com esse número na empresa.");
-      await criarDocumento("ordensServico",{...d,equipamento:d.local,status:"aberta",dataInicio:"",dataFim:"",statusAlteradoEm:new Date().toISOString(),statusAlteradoPor:state.usuario?.id||"",empresaId:empresaId,origem:"sig",solicitadoPor:state.usuario?.id||""})
+      if(ordens.some(x=>String(x.numero).toUpperCase()===d.numero.toUpperCase()&&x.status!=="cancelada"))throw new Error("Já existe OS com esse número no grupo.");
+      await criarDocumentoGrupo("ordensServico",{...d,equipamento:d.local,status:"aberta",dataInicio:"",dataFim:"",statusAlteradoEm:new Date().toISOString(),statusAlteradoPor:state.usuario?.id||"",origem:"sig",solicitadoPor:state.usuario?.id||""})
     }
     $("osFormBox").classList.add("hidden");limpar();emitirAlteracao("ordensservico");await carregar()
   }catch(err){console.error(err);msg($("osMensagem"),err.message||"Não foi possível salvar.")}
@@ -210,10 +209,11 @@ async function abrirCadastros(){
   })
 }
 async function carregar(){
-  if(busy||!ver()||!emp())return;busy=true;
+  if(busy||!ver())return;busy=true;
   try{
-    const [docs,cfg]=await Promise.all([listarDocumentos("ordensServico"),carregarConfiguracaoModulo("ordensServico",emp()).catch(()=>({}))]);
-    ordens=docs.filter(x=>x.empresaId===emp());configOS=cfg||{};preencherCadastrosForm();render();$("osAviso").classList.add("hidden")
+    const empresaId=emp();
+    const [docs,cfg]=await Promise.all([listarDocumentosGrupo("ordensServico"),empresaId?carregarConfiguracaoModulo("ordensServico",empresaId).catch(()=>({})):Promise.resolve({})]);
+    ordens=docs;configOS=cfg||{};preencherCadastrosForm();render();$("osAviso").classList.add("hidden")
   }catch(e){console.error(e);$("osAviso").textContent="Não foi possível consultar as OS. Confira permissões e Rules publicadas.";$("osAviso").classList.remove("hidden")}finally{busy=false}
 }
 function instalar(){
