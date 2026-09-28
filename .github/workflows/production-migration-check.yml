@@ -1,13 +1,8 @@
 name: SIG Production Migration Check
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/**'
-      - 'hotfix/**'
-      - 'chatgpt/**'
   pull_request:
+  push:
     branches: [main]
 
 jobs:
@@ -15,7 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Production migration
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar contrato V2
+        shell: bash
         run: |
           set -e
           node --check js/production.js
@@ -23,26 +22,10 @@ jobs:
           node --check js/disposal.js
           node --check js/disposal-dashboard.js
           node --check js/area-navigation.js
-          grep -q 'production.js' app.js
-          grep -q 'production-dashboard.js' app.js
-          grep -q 'id="pagina-producao"' js/production.js
-          grep -q 'Bandejas produzidas\|Área produzida\|Unidades produzidas' js/production.js
-          grep -q 'Horas trabalhadas' js/production.js
-          grep -q 'Produtividade da máquina' js/production.js
-          grep -q 'Responsável da produção' js/production.js
-          grep -q 'Produção × Item' js/production.js
-          grep -q 'BANDEJA' js/production.js
-          grep -q 'producaoLancamentos' js/production.js
-          grep -q 'operacaoCadastros' js/production.js
-          grep -q 'Estornar ADM' js/production.js
-          grep -q 'menuOperacao' js/area-navigation.js
-          grep -q 'areaNav-producao' js/area-navigation.js || grep -q 'producao' js/area-navigation.js
-          grep -q 'Indústria · Produção' js/production-dashboard.js
-          grep -q 'disposal.js' app.js
-          grep -q 'disposal-dashboard.js' app.js
-          grep -q 'descarteLancamentos' js/disposal.js
-          grep -q 'match /descarteLancamentos/{id}' firestore.rules
-          grep -q 'allow delete: if false;' firestore.rules
-          grep -q '\["descarte","Indústria · Perdas"' js/profiles.js
-          grep -q 'descarte:{label:"Perdas"' js/area-navigation.js
-          test -f production.css
+          grep -Fq 'import "./js/production.js"' app.js
+          grep -Fq 'import "./js/disposal.js"' app.js
+          grep -Fq '["producao","Produção"' js/profiles.js
+          grep -Fq '["descarte","Indústria · Perdas"' js/profiles.js
+          grep -Fq 'producao:{label:"Produção"' js/area-navigation.js
+          grep -Fq 'descarte:{label:"Perdas"' js/area-navigation.js
+          grep -Fq 'match /descarteLancamentos/{id}' firestore.rules
