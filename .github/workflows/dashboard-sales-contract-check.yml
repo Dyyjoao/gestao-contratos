@@ -24,7 +24,7 @@ jobs:
           node --check js/area-navigation.js
           grep -Fq 'import "./js/dashboard-v2.js"' app.js
           grep -Fq '["vendas","Vendas & Comissões"' js/profiles.js
-          grep -Fq 'vendas:{label:"Vendas"' js/area-navigation.js
+          grep -Fq 'vendas:{label:"Consolidado de vendas"' js/area-navigation.js
           grep -Fq 'permite("vendas","comissoes")' js/sales-guard.js
           grep -Fq 'match /vendas/{id}' firestore.rules
           ! grep -Fq '["vendas","Vendas & Comissões"]' js/controllership-router.js
