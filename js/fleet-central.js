@@ -134,9 +134,6 @@ function renderFicha(id){
     <div class="fleet-tech-grid">
       <div><span>Data de aquisição</span><strong>${v.dataAquisicao?dataBr(v.dataAquisicao):'—'}</strong></div>
       <div><span>Valor de aquisição</span><strong>${moeda(num(v.valorAquisicao))}</strong></div>
-      <div><span>Disponível para uso</span><strong>${v.dataDisponivelUso?dataBr(v.dataDisponivelUso):'—'}</strong></div>
-      <div><span>Vida útil</span><strong>${num(v.vidaUtilMeses)||'—'} meses</strong></div>
-      <div><span>Imobilizado</span><strong>${v.imobilizadoId?'Vinculado':'Pendente'}</strong></div>
       <div><span>Observações</span><strong>${esc(v.observacoes||'—')}</strong></div>
     </div>
   </div>
