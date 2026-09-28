@@ -51,12 +51,18 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(usuarioId)).data.grupoId == usuario().data.grupoId;
     }
 
-    function fpaEditar() { return permissao('controladoria','editar'); }
-    function fpaRealizado() { return fpaEditar() || permissao('controladoria','realizado') || permissao('controladoria','importar'); }
-    function inadimplenciaVisualizar() { return fpaEditar() || permissao('controladoria','inadimplencia') || permissao('controladoria','inadimplenciaEditar'); }
-    function inadimplenciaEditar() { return fpaEditar() || permissao('controladoria','inadimplenciaEditar'); }
-    function consorciosVisualizar() { return fpaEditar() || permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar'); }
-    function consorciosEditar() { return fpaEditar() || permissao('controladoria','consorciosEditar'); }
+    // V2 operacional: a antiga permissão geral de edição de FP&A não concede mais acesso.
+    function fpaEditar() { return false; }
+    function fpaRealizado() { return permissao('controladoria','realizado') || permissao('controladoria','importar'); }
+    function inadimplenciaVisualizar() { return permissao('controladoria','inadimplencia') || permissao('controladoria','inadimplenciaEditar'); }
+    function inadimplenciaEditar() { return permissao('controladoria','inadimplenciaEditar'); }
+    function consorciosVisualizar() {
+      return permissao('consorcios','visualizar') || permissao('consorcios','editar') ||
+        permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar');
+    }
+    function consorciosEditar() {
+      return permissao('consorcios','editar') || permissao('controladoria','consorciosEditar');
+    }
 
     function permutasVisualizar() {
       return permissao('permutas','visualizar') ||
@@ -180,8 +186,8 @@ service cloud.firestore {
         ]);
     }
 
-    function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
-    function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
+    function fechamentoGerir() { return permissao('controladoria','fechamento'); }
+    function fechamentoFechar() { return permissao('controladoria','fecharCompetencia'); }
 
     function contasPagarVisualizar() {
       return permissao('contasPagar','visualizar') ||
@@ -1461,6 +1467,24 @@ service cloud.firestore {
     }
 
     match /configuracoesControladoria/{id} {
+      allow read: if governancaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if documentoAcessivel(request.resource.data) &&
+        governancaConfigurar() && request.resource.data.keys().hasOnly([
+          'grupoId','empresaId','criadoPor','criadoEm','atualizadoEm',
+          'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria'
+        ]);
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          (governancaConfigurar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria','atualizadoEm'
+          ])) ||
+          (governancaPlanoAcao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'complianceCiclosAuditoria','atualizadoEm'
+          ]))
+        );
+      allow delete: if false;
+    } {
       allow read: if (permissao('controladoria','visualizar') || governancaVisualizar()) && documentoAcessivel(resource.data);
       allow create: if documentoAcessivel(request.resource.data) && (
         fpaEditar() ||
