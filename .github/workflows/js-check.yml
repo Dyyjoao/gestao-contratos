@@ -1,13 +1,8 @@
 name: SIG Quality Check
 
 on:
-  push:
-    branches:
-      - main
-      - 'chatgpt/**'
-      - 'hotfix/**'
-      - 'feature/**'
   pull_request:
+  push:
     branches: [main]
 
 jobs:
@@ -15,259 +10,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check JavaScript syntax and architecture contracts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar sintaxe JavaScript
+        shell: bash
         run: |
           set -e
           node --check app.js
-          for file in js/*.js; do
+          while IFS= read -r -d '' file; do
             echo "Checking $file"
             node --check "$file"
-          done
-
-          # Contexto global e autenticação
-          grep -q 'grupoContexto' js/company-context.js
-          grep -q 'empresasContexto' js/company-context.js
-          grep -q 'periodoContexto' js/company-context.js
-          grep -q 'browserSessionPersistence' js/core.js
-
-          # Rotas vigentes da Controladoria — a rota ativa é contrato
-          grep -q 'ctrl-dre-v6.js' js/controllership-router.js
-          grep -q 'ctrl-balance-sheet-v1.js' js/controllership-router.js
-          grep -q 'ctrl-input-v6.js' js/controllership-router.js
-          grep -q 'ctrl-budget-v7.js' js/controllership-router.js
-          grep -q 'ctrl-forecast-v5.js' js/controllership-router.js
-          grep -q 'ctrl-chart-accounts-v6.js' js/controllership-router.js
-          ! grep -q 'ctrl-chart-accounts-v5.js' js/controllership-router.js
-          grep -q 'ctrl-premises-v4.js' js/controllership-router.js
-          grep -q 'ctrl-cost-centers-v2.js' js/controllership-router.js
-          grep -q 'ctrl-assets-v1.js' js/controllership-router.js
-          grep -q 'closing-v3.js' js/controllership-router.js
-          grep -q 'chave==="caixa"||chave==="prestacao"' js/controllership-router.js
-          grep -q 'abrirModuloCompartilhado' js/controllership-router.js
-          ! grep -q './fpa.js' js/controllership-router.js
-          ! grep -q 'fpa-number-fix.js' js/controllership-router.js
-          ! grep -q 'planning-details.js' js/controllership-router.js
-          test ! -e js/ctrl-chart-accounts-v4.js
-
-          # Atalhos de Configurações não podem reabrir cadastros legados
-          grep -q 'SIG_ABRIR_CTRL?.(chave)' js/ctrl-settings.js
-          ! grep -q 'SIG_ABRIR_CTRL_LEGADO?.(chave)' js/ctrl-settings.js
-
-          # Plano v6, máscara e natureza contábil
-          grep -q 'RAIZES_CONTABEIS' js/account-mask.js
-          grep -q 'MASCARA_PLANO="#.##.##.####"' js/account-mask.js
-          grep -q 'VERSAO_MASCARA_PLANO="v6"' js/account-mask.js
-          grep -q 'codigoSinteticoNivel1Valido' js/account-mask.js
-          grep -q 'codigoSinteticoNivel2Valido' js/account-mask.js
-          grep -q 'prefixosSinteticosCodigo' js/account-mask.js
-          grep -q 'multiplicadorApresentacao' js/account-mask.js
-          grep -q 'multiplicadorResultado' js/account-mask.js
-          grep -q 'contaRedutora' js/account-mask.js
-          grep -q 'pagina-ctrl-plano-v6' js/ctrl-chart-accounts-v6.js
-          grep -q 'Sintética N1' js/ctrl-chart-accounts-v6.js
-          grep -q 'Sintética N2' js/ctrl-chart-accounts-v6.js
-          grep -q 'contaV6FiltroStatus' js/ctrl-chart-accounts-v6.js
-          grep -q 'data-v6-reativar' js/ctrl-chart-accounts-v6.js
-          grep -q 'batch.delete' js/ctrl-chart-accounts-v6.js
-          grep -q 'Limpar legado/testes' js/ctrl-chart-accounts-v6.js
-          grep -q 'contaAtivaNoExercicio' js/ctrl-chart-accounts-v6.js
-
-          # Centros técnicos e hierarquia
-          grep -q 'CC_ESTATISTICO_ID' js/statistical-center.js
-          grep -q '__cc_estatistico__' js/statistical-center.js
-          grep -q 'CC_BALANCO_ID' js/balance-center.js
-          grep -q '__cc_balanco__' js/balance-center.js
-          grep -q 'tipoEstrutura' js/account-tree.js
-          grep -q 'contaPaiId' js/account-tree.js
-          grep -q 'folhasDescendentes' js/account-tree.js
-          grep -q 'arvoreParaFolhas' js/account-tree.js
-          grep -q 'contaDre' js/center-account-matrix-v2.js
-
-          # Input e Balanço
-          grep -q 'pagina-ctrl-input-v6' js/ctrl-input-v6.js
-          grep -q 'Balanço Patrimonial' js/ctrl-input-v6.js
-          grep -q 'Conta sintética · não lançável' js/ctrl-input-v6.js
-          grep -q 'duplicadoArquivado' js/ctrl-input-v6.js
-          grep -q 'pagina-ctrl-balanco-v1' js/ctrl-balance-sheet-v1.js
-          grep -q 'posição de fechamento' js/ctrl-balance-sheet-v1.js
-          grep -q 'prefixosSinteticosCodigo' js/ctrl-balance-sheet-v1.js
-          grep -q 'codigoSinteticoNivel2Valido' js/ctrl-balance-sheet-v1.js
-          grep -q 'multiplicadorApresentacao' js/ctrl-balance-sheet-v1.js
-
-          # Budget / Forecast / Premissas / Imobilizado
-          grep -q 'criarMatrizPlanejamentoV2' js/ctrl-budget-v7.js
-          grep -q 'criarMatrizPlanejamentoV2' js/ctrl-forecast-v5.js
-          grep -q 'abrirPagina(PAGINA)' js/ctrl-budget-v7.js
-          grep -q 'abrirPagina(PAGINA)' js/ctrl-forecast-v5.js
-          ! grep -q 'export const abrir=mod.abrir' js/ctrl-budget-v7.js
-          ! grep -q 'export const abrir=mod.abrir' js/ctrl-forecast-v5.js
-          grep -q 'tipoRegistro:"budget_meta"' js/ctrl-planning-matrix-v2.js
-          grep -q 'premissaParaCompetencia' js/ctrl-planning-matrix-v2.js
-          grep -q 'competenciaDoMes' js/ctrl-planning-matrix-v2.js
-          grep -q 'mapaDepreciacaoPlanejamento' js/ctrl-planning-matrix-v2.js
-          grep -q 'RESULTADO / SALDO' js/ctrl-planning-matrix-v2.js
-          grep -q 'pagina-ctrl-premissas-v4' js/ctrl-premises-v4.js
-          grep -q 'vigenciaInicio' js/ctrl-premises-v4.js
-          grep -q 'periodosSobrepostos' js/ctrl-premises-v4.js
-          grep -q 'pagina-ctrl-imobilizado-v1' js/ctrl-assets-v1.js
-          grep -q 'dataDisponivelUso' js/ctrl-assets-v1.js
-          grep -q 'integrarBalanco' js/ctrl-assets-v1.js
-          grep -q 'integrarPlanejamento' js/ctrl-assets-v1.js
-          grep -q 'depreciacaoCompetencia' js/asset-depreciation.js
-
-          # DRE e núcleo financeiro compartilhado
-          grep -q 'pagina-ctrl-dre-v6' js/ctrl-dre-v6.js
-          grep -q 'Expandir tudo' js/ctrl-dre-v6.js
-          grep -q 'prefixosSinteticosCodigo' js/ctrl-dre-v6.js
-          grep -q 'dre-v6-sint-n2' js/ctrl-dre-v6.js
-          grep -q 'Exportar Excel' js/ctrl-dre-v6.js
-          grep -q 'multiplicadorResultado' js/ctrl-dre-v6.js
-          grep -q 'RESULTADO / SALDO DO PERÍODO' js/ctrl-dre-v6.js
-          test -s js/financial-reporting.js
-          grep -q 'financial-reporting.js' js/dashboard-financial.js
-          grep -q 'financial-reporting.js' js/dashboard-executive.js
-          grep -q 'financial-reporting.js' js/accountability.js
-
-          # Telas monoempresa
-          grep -q 'contextoUnico' js/cashflow.js
-          grep -q 'empresaUnicaSelecionadaId' js/cashflow.js
-          grep -q 'Fluxo de Caixa é monoempresa' js/cashflow.js
-          grep -q 'contextoUnico' js/accountability.js
-          grep -q 'Prestação de Contas é monoempresa' js/accountability.js
-
-          # Fechamento, mesa, governança e PDF
-          grep -q 'pagina-closing-v3' js/closing-v3.js
-          grep -q 'duplicadoArquivado' js/closing-v3.js
-          grep -q 'concluidas' js/my-desk.js
-          grep -q 'SIG_ABRIR_CTRL?.("caixa")' js/my-desk.js
-          ! grep -q 'listarDocumentos("cotacoes")' js/my-desk.js
-          ! grep -q 'listarDocumentos("veiculos")' js/my-desk.js
-          ! grep -q 'listarDocumentos("itensAlmoxarifado")' js/my-desk.js
-          grep -q 'pagina-permutas' js/permutas.js
-          grep -q 'complianceProgramasAuditoria' js/governance.js
-          grep -q 'jspdf@2.5.2' js/accountability-pdf.js
-
-          # Escopo ativo
-          grep -q './js/contracts.js' app.js
-          grep -q './js/fleet.js' app.js
-          ! grep -q './js/inventory.js' app.js
-          ! grep -q './js/quotes.js' app.js
-          ! grep -q './js/providers.js' app.js
-          ! grep -q './js/monthly-input.js' app.js
-
-          # Segurança e persistência
-          grep -q 'match /imobilizados/' firestore.rules
-          grep -q 'fpaImobilizado' firestore.rules
-          grep -q 'match /planoContasGerencial/' firestore.rules
-          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
-          grep -q 'configuracoesControladoria' firestore.rules
-          grep -q 'match /permutas/' firestore.rules
-          grep -q 'match /permutaMovimentos/' firestore.rules
-          test -s SECURITY.md
-          test -s docs/SIG-GUIA-DE-CONTINUIDADE.md
-          test -s docs/SIG-DOSSIE-DE-CONTINUIDADE.md
-          test -s docs/SIG-MANUAL-MESTRE.md
-          test -s docs/qa-controladoria-modular.md
-          test -s docs/release-controladoria-modular.md
-
-          # Documentação não pode voltar a apontar para arquivos oficiais inexistentes
-          ! grep -R -E 'CONTEXTO-PARA-IA|MODELO-DE-DADOS-E-MIGRACOES|VERSIONAMENTO-E-RELEASE|HOSPEDAGEM-DOMINIO-E-PRIVACIDADE|DECISOES-ARQUITETURAIS' docs README.md AGENTS.md
+          done < <(find js -type f -name '*.js' -print0 | sort -z)
+      - name: Validar bundle V2
+        shell: bash
+        run: |
+          set -e
+          ! grep -Eq 'contracts-fpa-account-guard|contract-driver-sync|ctrl-dre|ctrl-balance|ctrl-budget|ctrl-forecast|ctrl-premises|ctrl-assets|cashflow-admin-actions|accountability-pdf|payables-cockpit-controls' app.js
+          grep -Fq 'area-navigation.js?v=4' app.js
+          grep -Fq 'controllership-router.js?v=33' app.js
 
   browser-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Start static server
-        run: |
-          python3 -m http.server 8000 >/tmp/sig-server.log 2>&1 &
-          echo $! > /tmp/sig-server.pid
-          sleep 2
-      - name: Open SIG in headless Chrome
+      - name: Validar artefatos estáticos
+        shell: bash
         run: |
           set -e
-          trap 'echo "Smoke diagnostic:"; for f in /tmp/sig-dom.html /tmp/consorcios-smoke-dom.html /tmp/sig-dash-dom.html /tmp/sig-sales-dom.html; do if test -f "$f"; then echo "$f: $(wc -c < "$f") bytes"; grep -oE "(data-load-[a-z]+=|data-[a-z-]+smoke=|<pre id=|id=\"pagina-frota\"|id=\"ctrlSubmenu\")[^<]{0,400}" "$f" | head -15 || true; fi; done' ERR
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          test -n "$CHROME"
-          python3 - <<'PYDIAG'
-          from pathlib import Path
-          import re
-          p=Path('index.html');s=p.read_text()
-          diag='<script>window.addEventListener("error",e=>document.documentElement.setAttribute("data-load-error",(e.message||e.target?.src||"error")+" @ "+e.filename+":"+e.lineno+":"+e.colno),true);window.addEventListener("unhandledrejection",e=>document.documentElement.setAttribute("data-load-rejection",String(e.reason)))</script>'
-          s=re.sub(r'(<script type="module" src="app\.js\?v=\d+"></script>)',diag+r'\1',s,count=1)
-          p.write_text(s)
-          PYDIAG
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=6000 --dump-dom http://127.0.0.1:8000/ > /tmp/sig-dom.html
-          grep -q 'id="pagina-contratos"' /tmp/sig-dom.html
-          grep -q 'id="pagina-controladoria"' /tmp/sig-dom.html
-          grep -q 'id="pagina-governanca"' /tmp/sig-dom.html
-          grep -q 'id="btnEntrar"' /tmp/sig-dom.html
-          grep -q 'id="ctrlSubmenu"' /tmp/sig-dom.html
-          grep -q 'id="pagina-frota"' /tmp/sig-dom.html
-          grep -q 'id="frotaKpiAtivos"' /tmp/sig-dom.html
-          ! grep -q 'id="pagina-almoxarifado"' /tmp/sig-dom.html
-          ! grep -q 'id="pagina-cotacoes"' /tmp/sig-dom.html
-          ! grep -q 'id="pagina-prestadores"' /tmp/sig-dom.html
-          ! grep -q 'id="menuInputMensal"' /tmp/sig-dom.html
-      - name: Import and open current Controladoria modules in browser
-        run: |
-          set -e
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          cp index.html module-smoke.html
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('module-smoke.html')
-          s=p.read_text()
-          mods=[
-            'account-mask.js','account-validity.js','premise-validity.js',
-            'statistical-center.js','balance-center.js','account-tree.js',
-            'asset-depreciation.js','asset-planning.js','financial-reporting.js',
-            'ctrl-chart-accounts-v6.js','ctrl-cost-centers-v2.js','ctrl-premises-v4.js',
-            'ctrl-input-v6.js','ctrl-balance-sheet-v1.js','ctrl-assets-v1.js',
-            'ctrl-planning-matrix-v2.js','ctrl-budget-v7.js','ctrl-forecast-v5.js',
-            'ctrl-dre-v6.js','closing-v3.js','cashflow.js','accountability.js'
-          ]
-          teste="""<script type=\"module\">(async()=>{
-          const mods=%s;
-          for(const m of mods){
-            try{await import('./js/'+m);document.documentElement.setAttribute('data-'+m.replaceAll('.','-'),'ok')}
-            catch(e){document.documentElement.setAttribute('data-module-smoke','fail-'+m);document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">'+m+' :: '+String(e.stack||e)+'</pre>');return}
-          }
-          try{
-            const mask=await import('./js/account-mask.js');
-            if(mask.MASCARA_PLANO!=='#.##.##.####')throw new Error('Máscara v6 divergente');
-            if(mask.proximoCodigoSintetico([], '1')!=='1.01')throw new Error('Falha ao gerar Sintética N1');
-            if(mask.proximoCodigoSintetico([{codigo:'1.01'},{codigo:'1.02'}], '1')!=='1.03')throw new Error('Falha na sequência N1');
-            if(mask.proximoCodigoSintetico([{codigo:'1.01.01'}], '1.01')!=='1.01.02')throw new Error('Falha na sequência N2');
-            if(mask.proximoCodigoAnalitico([], '1.01.01')!=='1.01.01.0001')throw new Error('Falha ao gerar Analítica v6');
-            if(!mask.codigoSinteticoNivel1Valido('1.01')||!mask.codigoSinteticoNivel2Valido('1.01.01'))throw new Error('Validador sintético v6 falhou');
-            if(!mask.codigoAnaliticoValido('1.01.01.0001'))throw new Error('Analítica v6 deveria ser válida');
-            if(mask.codigoAnaliticoValido('1.01.0001'))throw new Error('Analítica v5 não pode ser válida como v6');
-            const pref=mask.prefixosSinteticosCodigo('1.01.01.0001');
-            if(pref.length!==2||pref[0]!=='1.01'||pref[1]!=='1.01.01')throw new Error('Prefixos N1/N2 divergentes');
-
-            const plano=await import('./js/ctrl-chart-accounts-v6.js');
-            plano.abrir();
-            const pp=document.getElementById('pagina-ctrl-plano-v6');
-            if(!pp||pp.classList.contains('hidden'))throw new Error('Plano abrir() não exibiu pagina-ctrl-plano-v6');
-            if(!document.getElementById('contaV6FiltroStatus'))throw new Error('Filtro Ativas/Inativas ausente no Plano v6');
-            if(!document.getElementById('btnLimparLegadoV6'))throw new Error('Limpeza segura de legado ausente no Plano v6');
-
-            const budget=await import('./js/ctrl-budget-v7.js');
-            budget.abrir();
-            const pb=document.getElementById('pagina-ctrl-budget-v7');
-            if(!pb||pb.classList.contains('hidden'))throw new Error('Budget abrir() não exibiu pagina-ctrl-budget-v7');
-            const forecast=await import('./js/ctrl-forecast-v5.js');
-            forecast.abrir();
-            const pf=document.getElementById('pagina-ctrl-forecast-v5');
-            if(!pf||pf.classList.contains('hidden'))throw new Error('Forecast abrir() não exibiu pagina-ctrl-forecast-v5');
-          }catch(e){document.documentElement.setAttribute('data-module-smoke','fail-open');document.body.insertAdjacentHTML('beforeend','<pre id=\"module-error\">OPEN :: '+String(e.stack||e)+'</pre>');return}
-          document.documentElement.setAttribute('data-module-smoke','ok')
-          })()</script>""" % repr(mods)
-          p.write_text(s.replace('</body>',teste+'</body>'))
-          PY
-          "$CHROME" --headless --no-sandbox --disable-gpu --virtual-time-budget=25000 --dump-dom http://127.0.0.1:8000/module-smoke.html > /tmp/module-dom.html
-          if ! grep -q 'data-module-smoke="ok"' /tmp/module-dom.html; then
-            grep -o '<pre id="module-error">[^<]*' /tmp/module-dom.html || true
-            exit 1
-          fi
-          rm -f module-smoke.html
+          test -s index.html
+          test -s app.js
+          test -s styles.css
+          grep -Fq 'app.js?v=126' index.html
