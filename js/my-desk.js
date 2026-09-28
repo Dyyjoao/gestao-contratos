@@ -7,11 +7,10 @@ const hoje=()=>new Date().toISOString().slice(0,10);
 const addDias=(iso,dias)=>{const [a,m,d]=iso.split("-").map(Number),x=new Date(Date.UTC(a,m-1,d));x.setUTCDate(x.getUTCDate()+dias);return x.toISOString().slice(0,10)};
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const critPeso={critica:4,alta:3,media:2,baixa:1};
-const podeAbrirOrigem=origem=>["contratos","controladoria","governanca"].includes(origem);
+const podeAbrirOrigem=origem=>["contratos","governanca"].includes(origem);
 function abrirOrigem(origem){
   if(origem==="contratos")return abrirPagina("contratos");
   if(origem==="governanca")return abrirPagina("governanca");
-  if(origem==="controladoria")return window.SIG_ABRIR_CTRL?.("caixa");
 }
 
 function montar(){
@@ -27,7 +26,7 @@ function montar(){
     <div class="welcome mesa-hero"><div><span class="eyebrow">EXECUÇÃO</span><h2 id="mesaSaudacao">Minha Mesa</h2><p>Prioridades, exceções e planos de ação que precisam de atenção.</p></div><div class="mesa-hero-actions"><button id="btnAtualizarMesa" class="btn-secundario" type="button">Atualizar</button><button id="btnNovoPlanoAcao" class="btn-primario" type="button">+ Plano de ação</button></div></div>
     <div class="kpi-grid kpi-grid-4 mesa-kpis"><div class="kpi-card"><span>Precisam de atenção</span><strong id="mesaQtdExcecoes">—</strong><small>exceções automáticas</small></div><div class="kpi-card"><span>Minhas ações abertas</span><strong id="mesaQtdAcoes">—</strong><small>atribuídas a você</small></div><div class="kpi-card"><span>Ações vencidas</span><strong id="mesaQtdVencidas">—</strong><small>prazo ultrapassado</small></div><div class="kpi-card"><span>Exceções críticas</span><strong id="mesaQtdCriticas">—</strong><small>prioridade máxima</small></div></div>
     <div class="mesa-grid">
-      <section class="lista-card"><div class="lista-cabecalho"><div><h3>Atenção agora</h3><p>Exceções geradas automaticamente por Contratos e Controladoria.</p></div><select id="mesaFiltroCriticidade" class="campo-busca"><option value="">Todas</option><option value="critica">Críticas</option><option value="alta">Altas</option><option value="media">Médias</option></select></div><div id="mesaExcecoes" class="mesa-lista"><div class="empty-state">Carregando...</div></div></section>
+      <section class="lista-card"><div class="lista-cabecalho"><div><h3>Atenção agora</h3><p>Exceções geradas automaticamente por Contratos e Planos de Ação.</p></div><select id="mesaFiltroCriticidade" class="campo-busca"><option value="">Todas</option><option value="critica">Críticas</option><option value="alta">Altas</option><option value="media">Médias</option></select></div><div id="mesaExcecoes" class="mesa-lista"><div class="empty-state">Carregando...</div></div></section>
       <section class="lista-card"><div class="lista-cabecalho"><div><h3>Meus planos de ação</h3><p>Responsabilidades, prazos e andamento.</p></div><select id="mesaFiltroAcoes" class="campo-busca"><option value="abertas">Abertas</option><option value="vencidas">Vencidas</option><option value="concluidas">Concluídas</option><option value="todas">Todas</option></select></div><div id="mesaPlanos" class="mesa-lista"><div class="empty-state">Carregando...</div></div></section>
     </div>
     <section id="mesaTodosPlanosCard" class="lista-card hidden"><div class="lista-cabecalho"><div><h3>Planos de ação da empresa</h3><p>Visão gerencial das ações em andamento.</p></div></div><div id="mesaTodosPlanos" class="mesa-lista"></div></section>
@@ -58,16 +57,8 @@ function addExc(arr,x){arr.push({criticidade:"media",...x})}
 async function montarExcecoes(){
   const arr=[],tarefas=[];
   if(permite("contratos"))tarefas.push(["contratos",listarDocumentos("contratos")]);
-  if(permite("controladoria")){tarefas.push(["caixa",listarDocumentos("fluxoCaixaLancamentos")]);tarefas.push(["contas",listarDocumentos("contasBancarias")]);}
   const res=await Promise.all(tarefas.map(x=>x[1].catch(()=>[]))),d={};tarefas.forEach((x,i)=>d[x[0]]=res[i]);
   (d.contratos||[]).forEach(c=>{if(c.status!=="ativo")return;const dias=diasAte(c.fim);if(dias===null)return;if(dias<0)addExc(arr,{id:`ctr-${c.id}`,origem:"contratos",origemId:c.id,criticidade:"critica",titulo:`Contrato vencido · ${c.numero||c.fornecedor}`,sub:`${c.fornecedor||"Fornecedor"} · vencido há ${Math.abs(dias)} dia(s)`,prazo:c.fim});else if(dias<=30)addExc(arr,{id:`ctr-${c.id}`,origem:"contratos",origemId:c.id,criticidade:"alta",titulo:`Contrato vence em ${dias} dia(s)`,sub:`${c.numero||"Contrato"} · ${c.fornecedor||"Fornecedor"}`,prazo:c.fim});else if(dias<=60)addExc(arr,{id:`ctr-${c.id}`,origem:"contratos",origemId:c.id,criticidade:"media",titulo:`Contrato próximo do vencimento`,sub:`${c.numero||"Contrato"} · ${dias} dias restantes`,prazo:c.fim})});
-  (d.caixa||[]).forEach(l=>{if(l.status!=="liquidado"&&l.status!=="cancelado"&&l.data<hoje())addExc(arr,{id:`cx-venc-${l.id}`,origem:"controladoria",origemId:l.id,criticidade:"alta",titulo:"Lançamento financeiro vencido",sub:`${l.descricao||"Lançamento"} · ${moeda(l.valor)}`,prazo:l.data})});
-  if((d.contas||[]).length){
-    const hojeIso=hoje(),base=d.contas.filter(x=>x.status!=="inativo").reduce((s,x)=>s+n(x.saldoAbertura),0),limite=addDias(hojeIso,90),mov=(d.caixa||[]).filter(x=>x.status!=="cancelado"&&x.data<=limite).sort((a,b)=>String(a.data).localeCompare(String(b.data))),anteriores=mov.filter(x=>x.data<=hojeIso),futuros=mov.filter(x=>x.data>hojeIso);
-    let saldo=base+anteriores.reduce((s,x)=>s+(x.natureza==="entrada"?1:-1)*n(x.valor),0),min=saldo,dataMin=hojeIso,primeiroNegativo=saldo<0?hojeIso:"";
-    futuros.forEach(x=>{saldo+=(x.natureza==="entrada"?1:-1)*n(x.valor);if(!primeiroNegativo&&saldo<0)primeiroNegativo=x.data;if(saldo<min){min=saldo;dataMin=x.data}});
-    if(min<0){const dataRisco=primeiroNegativo||dataMin,dias=diasAte(dataRisco),titulo=dias===null?"Caixa projetado negativo":dias<=0?"Caixa projetado negativo hoje":`Caixa projetado negativo em D+${dias}`;addExc(arr,{id:"cx-negativo",origem:"controladoria",criticidade:"critica",titulo,sub:`Menor posição ${moeda(min)} em ${dataBr(dataMin)}`,prazo:dataRisco})}
-  }
   planos.filter(p=>!["concluido","cancelado"].includes(p.status)&&p.prazo&&p.prazo<hoje()).forEach(p=>addExc(arr,{id:`acao-${p.id}`,origem:"planosAcao",origemId:p.id,criticidade:p.criticidade==="critica"?"critica":"alta",titulo:`Plano de ação vencido · ${p.titulo}`,sub:`Responsável: ${p.responsavelNome||"não informado"}`,prazo:p.prazo}));
   excecoes=arr.sort((a,b)=>(critPeso[b.criticidade]||0)-(critPeso[a.criticidade]||0)||String(a.prazo||"9999").localeCompare(String(b.prazo||"9999")));
 }

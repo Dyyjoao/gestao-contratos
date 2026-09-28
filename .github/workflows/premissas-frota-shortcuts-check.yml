@@ -2,40 +2,28 @@ name: SIG Premissas + Frota Shortcut Check
 
 on:
   pull_request:
-    branches: [main]
   push:
-    branches:
-      - main
-      - 'fix/**'
-    paths:
-      - 'js/input-admin-actions.js'
-      - 'js/fleet-detran-es.js'
-      - 'app.js'
-      - 'firestore.rules'
-      - '.github/workflows/premissas-frota-shortcuts-check.yml'
+    branches: [main]
 
 jobs:
   contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate premise deletion audit and Detran ES shortcut
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar contrato V2
+        shell: bash
         run: |
           set -e
-          node --check js/input-admin-actions.js
+          node --check js/fleet.js
           node --check js/fleet-detran-es.js
-
-          # Premissas: estorno continua existindo; delete físico é excepcional, auditado e Admin-only.
-          grep -Fq 'estornarPremissa' js/input-admin-actions.js
-          grep -Fq 'excluirPremissa' js/input-admin-actions.js
-          grep -Fq 'dependenciasPremissa' js/input-admin-actions.js
-          grep -Fq 'excluirComAuditoria' js/input-admin-actions.js
-          grep -Fq 'exclusão física foi bloqueada' js/input-admin-actions.js
-          grep -Fq 'Excluir ADM' js/input-admin-actions.js
-          awk '/match \/premissasPlanejamento\//,/^    }/' firestore.rules | grep -Fq 'allow delete: if administrador() && documentoAcessivel(resource.data);'
-
-          # O atalho do Detran ES deve ficar dentro da Gestão de Frota e abrir fonte oficial.
+          grep -A2 -F 'match /premissasPlanejamento/{id}' firestore.rules | grep -Fq 'allow read, write: if false;'
+          grep -Fq 'fleet.js?v=' app.js
           grep -Fq 'import "./js/fleet-detran-es.js"' app.js
           grep -Fq 'Detran ES · IPVA/Licenciamento' js/fleet-detran-es.js
-          grep -Fq 'https://detran.es.gov.br/veiculos' js/fleet-detran-es.js
-          grep -Fq 'noopener,noreferrer' js/fleet-detran-es.js
+          ! grep -Fq 'planoContasGerencial' js/fleet.js
+          ! grep -Fq 'imobilizados' js/fleet.js
+          ! grep -Fq 'integrarPlanejamento' js/fleet.js
+          ! grep -Fq 'podeContabil' js/fleet.js

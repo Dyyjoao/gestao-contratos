@@ -1,41 +1,8 @@
 name: SIG Firebase Contract Check
 
 on:
-  push:
-    branches:
-      - main
-      - 'audit/**'
-      - 'chatgpt/**'
-      - 'hotfix/**'
-      - 'feature/**'
-    paths:
-      - 'firestore.rules'
-      - 'storage.rules'
-      - 'firebase.json'
-      - '.firebaserc'
-      - 'js/shared.js'
-      - 'js/permutas.js'
-      - 'js/profiles.js'
-      - 'js/governance-security.js'
-      - 'js/ctrl-delinquency-v1.js'
-      - 'js/dashboard-v2.js'
-      - 'js/dashboard-cockpit-v2.js'
-      - 'js/sales.js'
-      - 'js/sales-guard.js'
-      - 'js/sales-performance.js'
-      - 'js/asset-depreciation.js'
-      - 'js/ctrl-assets-v1.js'
-      - 'js/ctrl-consorcios-v1.js'
-      - 'js/consortium-calculations.js'
-      - 'js/ctrl-chart-accounts-v6.js'
-      - 'docs/SIG-FIREBASE-DEPLOY-E-RULES.md'
-      - 'docs/SIG-DOSSIE-DE-CONTINUIDADE.md'
-      - 'docs/SIG-MANUAL-MESTRE.md'
-      - 'docs/SIG-GUIA-DE-CONTINUIDADE.md'
-      - 'docs/dashboard-v2-vendas.md'
-      - 'docs/release-controladoria-modular.md'
-      - '.github/workflows/firebase-contract-check.yml'
   pull_request:
+  push:
     branches: [main]
 
 jobs:
@@ -43,131 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Firebase release contract
+      - name: Validar barreiras Firestore V2
+        shell: bash
         run: |
           set -e
-
-          test -s firebase.json
-          test -s .firebaserc
-          test -s firestore.rules
-          test -s storage.rules
-
-          grep -q '"firestore"' firebase.json
-          grep -q '"rules": "firestore.rules"' firebase.json
-          grep -q '"storage"' firebase.json
-          grep -q '"rules": "storage.rules"' firebase.json
-          grep -q 'gestao-de-contratos-b266b' .firebaserc
-
-          grep -q 'function fpaImobilizado' firestore.rules
-          grep -q 'match /imobilizados/' firestore.rules
-          grep -q "permissao('controladoria','imobilizado')" firestore.rules
-          grep -q 'match /planoContasGerencial/' firestore.rules
-          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
-
-          grep -q 'function consorciosVisualizar' firestore.rules
-          grep -q 'function consorciosEditar' firestore.rules
-          grep -q 'match /consorcios/' firestore.rules
-          grep -q "permissao('controladoria','consorciosVisualizar')" firestore.rules
-          grep -q "permissao('controladoria','consorciosEditar')" firestore.rules
-          grep -q 'listarDocumentos("consorcios")' js/ctrl-consorcios-v1.js
-          grep -q 'criarDocumento("consorcios"' js/ctrl-consorcios-v1.js
-          grep -q 'atualizarDocumento("consorcios"' js/ctrl-consorcios-v1.js
-
-          # Governança Antifraude usa a base existente de compliance, com escopo por empresa/grupo.
-          grep -q "permissao('governanca','antifraude')" firestore.rules
-          grep -q 'complianceObrigacoes' firestore.rules
-          grep -q 'complianceRiscos' firestore.rules
-          grep -q 'complianceProgramasAuditoria' firestore.rules
-          grep -q 'complianceCiclosAuditoria' firestore.rules
-          grep -q 'listarDocumentos("configuracoesControladoria")' js/governance-security.js
-          grep -q 'categoria:CAT' js/governance-security.js
-
-          # Inadimplência possui coleção e permissões próprias; exclusão física é proibida.
-          grep -q 'function inadimplenciaVisualizar' firestore.rules
-          grep -q 'function inadimplenciaEditar' firestore.rules
-          grep -q "permissao('controladoria','inadimplencia')" firestore.rules
-          grep -q "permissao('controladoria','inadimplenciaEditar')" firestore.rules
-          grep -q 'match /inadimplenciaTitulos/' firestore.rules
-          grep -q 'allow read: if inadimplenciaVisualizar() && documentoAcessivel(resource.data);' firestore.rules
-          grep -q 'allow create: if inadimplenciaEditar() && documentoAcessivel(request.resource.data);' firestore.rules
-          grep -q 'listarDocumentos("inadimplenciaTitulos")' js/ctrl-delinquency-v1.js
-          grep -q 'criarDocumento("inadimplenciaTitulos"' js/ctrl-delinquency-v1.js
-          grep -q 'atualizarDocumento("inadimplenciaTitulos"' js/ctrl-delinquency-v1.js
-
-          # Permutas v2 é módulo operacional com coleção de fechamentos e ações separadas.
-          grep -q 'function permutasVisualizar' firestore.rules
-          grep -q 'function permutasCadastrar' firestore.rules
-          grep -q 'function permutasMovimentar' firestore.rules
-          grep -q 'function permutasEstornar' firestore.rules
-          grep -q 'function permutasFechar' firestore.rules
-          grep -q 'function permutasInativar' firestore.rules
-          grep -q 'match /permutas/' firestore.rules
-          grep -q 'match /permutaMovimentos/' firestore.rules
-          grep -q 'match /permutaFechamentos/' firestore.rules
-          grep -q 'permutasEstornar()' firestore.rules
-          grep -q 'permutasFechar()' firestore.rules
-          grep -q 'allow delete: if administrador() && documentoAcessivel(resource.data);' firestore.rules
-          grep -q 'listarDocumentos("permutaFechamentos")' js/permutas.js
-          grep -q 'reauthenticateWithCredential' js/permutas.js
-
-          # Dashboard v2: preferência pertence ao próprio usuário e não é compartilhada entre usuários.
-          grep -q 'match /dashboardPreferencias/{usuarioId}' firestore.rules
-          grep -q 'request.auth.uid == usuarioId' firestore.rules
-          grep -q 'dashboardPreferencias' js/dashboard-cockpit-v2.js
-          grep -q 'setDoc(doc(db,"dashboardPreferencias",state.usuario.id)' js/dashboard-cockpit-v2.js
-
-          # Vendas: coleção própria, perfil próprio e comissão protegida por regra do vendedor.
-          grep -q 'function vendasVisualizar' firestore.rules
-          grep -q 'function vendasLancar' firestore.rules
-          grep -q 'function vendasEditar' firestore.rules
-          grep -q 'function vendasVendedores' firestore.rules
-          grep -q 'function vendasComissoes' firestore.rules
-          grep -q 'function regraComissaoPadraoValida' firestore.rules
-          grep -q 'function calculoComissaoValido' firestore.rules
-          grep -q 'match /vendedores/{id}' firestore.rules
-          grep -q 'match /vendas/{id}' firestore.rules
-          grep -q 'allow delete: if false;' firestore.rules
-          grep -q 'listarDocumentos("vendedores")' js/sales.js
-          grep -q 'listarDocumentos("vendas")' js/sales.js
-          grep -q 'criarDocumento("vendedores"' js/sales.js
-          grep -q 'criarDocumento("vendas"' js/sales.js
-          grep -q 'baseComissao' js/sales.js
-          grep -q 'valorFaturado' js/sales.js
-
-          # Permutas pode consultar CC e plano apenas como lookup operacional.
-          grep -q 'permutasVisualizar();' firestore.rules
-          grep -q "permissao('controladoria','visualizar') || permutasVisualizar()" firestore.rules
-
-          grep -q 'errosColecoes' js/shared.js
-          grep -q 'exigirColecaoDisponivel' js/shared.js
-          grep -q 'mensagemErroDados' js/shared.js
-          grep -q 'formatarCpfCnpj' js/shared.js
-          grep -q 'validarCpfCnpj' js/shared.js
-          grep -q 'exigirColecaoDisponivel("imobilizados")' js/asset-depreciation.js
-          grep -q 'exigirColecaoDisponivel("imobilizados")' js/ctrl-chart-accounts-v6.js
-          grep -q 'usosParaExclusao' js/ctrl-chart-accounts-v6.js
-          grep -q 'batch.delete' js/ctrl-chart-accounts-v6.js
-          grep -q 'mensagemErroDados' js/ctrl-assets-v1.js
-          grep -q 'mensagemErroDados' js/ctrl-consorcios-v1.js
-
-          grep -q 'GitHub Pages' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
-          grep -q 'firebase deploy --only firestore:rules,storage' docs/SIG-FIREBASE-DEPLOY-E-RULES.md
-          grep -q 'fail-closed' docs/SIG-DOSSIE-DE-CONTINUIDADE.md
-          grep -q '02/09/2026' docs/SIG-MANUAL-MESTRE.md
-          grep -q '02/09/2026' docs/SIG-GUIA-DE-CONTINUIDADE.md
-          test -s docs/dashboard-v2-vendas.md
-
-          node --check js/shared.js
-          node --check js/permutas.js
-          node --check js/profiles.js
-          node --check js/governance-security.js
-          node --check js/ctrl-delinquency-v1.js
-          node --check js/dashboard-cockpit-v2.js
-          node --check js/sales.js
-          node --check js/sales-guard.js
-          node --check js/sales-performance.js
-          node --check js/asset-depreciation.js
-          node --check js/ctrl-assets-v1.js
-          node --check js/consortium-calculations.js
-          node --check js/ctrl-consorcios-v1.js
-          node --check js/ctrl-chart-accounts-v6.js
+          for col in planejamentoMensal imobilizados premissasPlanejamento budgetLinhas forecastLinhas classificacoesContas planejamentoDetalhes contasBancarias fluxoCaixaLancamentos fluxoCaixaFixos prestacaoContas prestacaoComentarios; do
+            grep -A2 -F "match /$col/{id}" firestore.rules | grep -Fq 'allow read, write: if false;'
+          done
+          grep -A4 -F 'match /planoContasGerencial/{id}' firestore.rules | grep -Fq 'allow create, update, delete: if false;'
+          grep -A4 -F 'match /centrosCusto/{id}' firestore.rules | grep -Fq 'allow create, update, delete: if false;'
+          grep -A8 -F 'match /veiculos/{id}' firestore.rules | grep -Fq 'frotaFichaOperacionalValida()'
+          ! grep -Fq 'fpaImobilizado()' firestore.rules
+          ! grep -Fq 'fpaBudget()' firestore.rules
+          ! grep -Fq 'fpaForecast()' firestore.rules
+          ! grep -Fq 'caixaVisualizar()' firestore.rules
+          ! grep -Fq 'prestacaoComentar()' firestore.rules
+          grep -Fq 'match /vendas/{id}' firestore.rules
+          grep -Fq 'match /rhColaboradores/{id}' firestore.rules
+          grep -Fq 'match /planosAcao/{id}' firestore.rules

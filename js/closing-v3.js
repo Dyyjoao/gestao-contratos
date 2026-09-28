@@ -11,7 +11,6 @@ const PADRAO_MENSAL=[
   {id:"capex",titulo:"CAPEX revisado",dia:4},
   {id:"forecast",titulo:"Forecast atualizado",dia:5},
   {id:"caixa",titulo:"Fluxo de caixa atualizado",dia:5},
-  {id:"prestacao",titulo:"Prestação de Contas preparada",dia:6}
 ];
 const PADRAO_ANUAL=[
   {id:"conciliacoes_patrimoniais",titulo:"Conciliações patrimoniais encerradas",dia:1},
