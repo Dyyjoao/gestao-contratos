@@ -51,18 +51,22 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(usuarioId)).data.grupoId == usuario().data.grupoId;
     }
 
-    function fpaEditar() { return permissao('controladoria','editar'); }
-    function fpaRealizado() { return fpaEditar() || permissao('controladoria','realizado') || permissao('controladoria','importar'); }
-    function fpaBudget() { return fpaEditar() || permissao('controladoria','budget'); }
-    function fpaForecast() { return fpaEditar() || permissao('controladoria','forecast'); }
-    function fpaPremissas() { return fpaEditar() || permissao('controladoria','premissas'); }
-    function fpaPlano() { return fpaEditar() || permissao('controladoria','planoContas'); }
-    function fpaCentros() { return fpaEditar() || permissao('controladoria','centrosCusto'); }
-    function fpaImobilizado() { return fpaEditar() || permissao('controladoria','imobilizado'); }
-    function inadimplenciaVisualizar() { return fpaEditar() || permissao('controladoria','inadimplencia') || permissao('controladoria','inadimplenciaEditar'); }
-    function inadimplenciaEditar() { return fpaEditar() || permissao('controladoria','inadimplenciaEditar'); }
-    function consorciosVisualizar() { return fpaEditar() || permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar'); }
-    function consorciosEditar() { return fpaEditar() || permissao('controladoria','consorciosEditar'); }
+    // V2 operacional: permissões antigas de FP&A ficam inativas.
+    function fpaEditar() { return false; }
+    function fpaRealizado() { return permissao('controladoria','realizado') || permissao('controladoria','importar'); }
+    function fpaBudget() { return false; }
+    function fpaForecast() { return false; }
+    function fpaPremissas() { return false; }
+    function fpaPlano() { return false; }
+    function fpaCentros() { return false; }
+    function fpaImobilizado() { return false; }
+    function inadimplenciaVisualizar() { return permissao('controladoria','inadimplencia') || permissao('controladoria','inadimplenciaEditar'); }
+    function inadimplenciaEditar() { return permissao('controladoria','inadimplenciaEditar'); }
+    function consorciosVisualizar() {
+      return permissao('consorcios','visualizar') || permissao('consorcios','editar') ||
+        permissao('controladoria','consorciosVisualizar') || permissao('controladoria','consorciosEditar');
+    }
+    function consorciosEditar() { return permissao('consorcios','editar') || permissao('controladoria','consorciosEditar'); }
 
     function permutasVisualizar() {
       return permissao('permutas','visualizar') ||
@@ -186,16 +190,13 @@ service cloud.firestore {
         ]);
     }
 
-    function caixaVisualizar() {
-      return permissao('controladoria','visualizar') ||
-        permissao('controladoria','caixaVisualizar');
-    }
-    function caixaLancar() { return fpaEditar() || permissao('controladoria','caixaLancar'); }
-    function caixaContas() { return fpaEditar() || permissao('controladoria','caixaContas'); }
-    function caixaFixos() { return fpaEditar() || permissao('controladoria','caixaFixos'); }
-    function prestacaoComentar() { return fpaEditar() || permissao('controladoria','prestacaoComentar'); }
-    function fechamentoGerir() { return fpaEditar() || permissao('controladoria','fechamento'); }
-    function fechamentoFechar() { return fpaEditar() || permissao('controladoria','fecharCompetencia'); }
+    function caixaVisualizar() { return false; }
+    function caixaLancar() { return false; }
+    function caixaContas() { return false; }
+    function caixaFixos() { return false; }
+    function prestacaoComentar() { return false; }
+    function fechamentoGerir() { return permissao('controladoria','fechamento'); }
+    function fechamentoFechar() { return permissao('controladoria','fecharCompetencia'); }
 
     function contasPagarVisualizar() {
       return permissao('contasPagar','visualizar') ||
@@ -1322,6 +1323,9 @@ service cloud.firestore {
     }
 
     match /planejamentoMensal/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaEditar() && documentoAcessivel(request.resource.data);
       allow update: if fpaEditar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1329,6 +1333,10 @@ service cloud.firestore {
     }
 
     match /centrosCusto/{id} {
+      // Dependência histórica: leitura mantida apenas para rotinas ativas que ainda referenciam centro de custo.
+      allow read: if usaCentroCusto() && documentoAcessivel(resource.data);
+      allow create, update, delete: if false;
+    } {
       allow read: if usaCentroCusto() && documentoAcessivel(resource.data);
       allow create: if fpaCentros() && documentoAcessivel(request.resource.data);
       allow update: if fpaCentros() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1336,6 +1344,10 @@ service cloud.firestore {
     }
 
     match /planoContasGerencial/{id} {
+      // Dependência histórica de Permutas/Frota: somente leitura na V2.
+      allow read: if (permissao('controladoria','visualizar') || permutasVisualizar() || frotaVisualizar()) && documentoAcessivel(resource.data);
+      allow create, update, delete: if false;
+    } {
       allow read: if (permissao('controladoria','visualizar') || permutasVisualizar() || frotaVisualizar()) && documentoAcessivel(resource.data);
       allow create: if fpaPlano() && documentoAcessivel(request.resource.data);
       allow update: if fpaPlano() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1343,6 +1355,9 @@ service cloud.firestore {
     }
 
     match /imobilizados/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if (permissao('controladoria','visualizar') || fpaImobilizado()) && documentoAcessivel(resource.data);
       allow create: if fpaImobilizado() && documentoAcessivel(request.resource.data);
       allow update: if fpaImobilizado() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1357,6 +1372,9 @@ service cloud.firestore {
     }
 
     match /premissasPlanejamento/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaPremissas() && documentoAcessivel(request.resource.data);
       allow update: if fpaPremissas() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1416,6 +1434,9 @@ service cloud.firestore {
     }
 
     match /budgetLinhas/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaBudget() && documentoAcessivel(request.resource.data);
       allow update: if fpaBudget() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1423,6 +1444,9 @@ service cloud.firestore {
     }
 
     match /forecastLinhas/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if fpaForecast() && documentoAcessivel(request.resource.data);
       allow update: if fpaForecast() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1430,6 +1454,9 @@ service cloud.firestore {
     }
 
     match /classificacoesContas/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if (fpaPlano() || fpaBudget()) && documentoAcessivel(request.resource.data);
       allow update: if (fpaPlano() || fpaBudget()) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1437,6 +1464,9 @@ service cloud.firestore {
     }
 
     match /planejamentoDetalhes/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if ((request.resource.data.cenario == 'budget' && fpaBudget()) || (request.resource.data.cenario == 'forecast' && fpaForecast()) || fpaEditar()) && documentoAcessivel(request.resource.data);
       allow update: if ((resource.data.cenario == 'budget' && fpaBudget()) || (resource.data.cenario == 'forecast' && fpaForecast()) || fpaEditar()) && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1444,6 +1474,9 @@ service cloud.firestore {
     }
 
     match /contasBancarias/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
       allow create: if caixaContas() && documentoAcessivel(request.resource.data);
       allow update: if caixaContas() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1451,6 +1484,9 @@ service cloud.firestore {
     }
 
     match /fluxoCaixaLancamentos/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
       allow create: if caixaLancar() && documentoAcessivel(request.resource.data) && request.resource.data.status != 'cancelado';
       allow update: if documentoAcessivel(resource.data) &&
@@ -1468,6 +1504,9 @@ service cloud.firestore {
     }
 
     match /fluxoCaixaFixos/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if caixaVisualizar() && documentoAcessivel(resource.data);
       allow create: if caixaFixos() && documentoAcessivel(request.resource.data);
       allow update: if caixaFixos() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1502,6 +1541,9 @@ service cloud.firestore {
     }
 
     match /prestacaoContas/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if prestacaoComentar() && documentoAcessivel(request.resource.data);
       allow update: if prestacaoComentar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1509,6 +1551,9 @@ service cloud.firestore {
     }
 
     match /prestacaoComentarios/{id} {
+      // Módulo congelado na V2: dados históricos preservados, sem acesso pelo SIG.
+      allow read, write: if false;
+    } {
       allow read: if permissao('controladoria','visualizar') && documentoAcessivel(resource.data);
       allow create: if prestacaoComentar() && documentoAcessivel(request.resource.data);
       allow update: if prestacaoComentar() && documentoAcessivel(resource.data) && request.resource.data.grupoId == resource.data.grupoId && request.resource.data.empresaId == resource.data.empresaId;
@@ -1539,6 +1584,24 @@ service cloud.firestore {
     }
 
     match /configuracoesControladoria/{id} {
+      allow read: if (permissao('controladoria','visualizar') || governancaVisualizar()) && documentoAcessivel(resource.data);
+      allow create: if documentoAcessivel(request.resource.data) &&
+        governancaConfigurar() && request.resource.data.keys().hasOnly([
+          'grupoId','empresaId','criadoPor','criadoEm','atualizadoEm',
+          'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria'
+        ]);
+      allow update: if documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId && (
+          (governancaConfigurar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'complianceObrigacoes','complianceRiscos','complianceProgramasAuditoria','complianceCiclosAuditoria','atualizadoEm'
+          ])) ||
+          (governancaPlanoAcao() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'complianceCiclosAuditoria','atualizadoEm'
+          ]))
+        );
+      allow delete: if false;
+    } {
       allow read: if (permissao('controladoria','visualizar') || governancaVisualizar()) && documentoAcessivel(resource.data);
       allow create: if documentoAcessivel(request.resource.data) && (
         fpaEditar() ||
