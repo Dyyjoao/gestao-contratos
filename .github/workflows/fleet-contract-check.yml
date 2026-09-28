@@ -31,6 +31,9 @@ jobs:
           grep -A2 -F 'match /imobilizados/{id}' firestore.rules | grep -Fq 'allow read, write: if false;'
           grep -Fq 'function frotaObrigacaoUpdateValida' firestore.rules
           grep -Fq 'function frotaKmUpdateValida' firestore.rules
+          grep -Fq 'frotaAvisoCarga' js/fleet.js
+          grep -Fq 'podeVerCombustivel' js/fleet.js
+          grep -Fq 'lerSeguro("abastecimentosFrota",podeVerCombustivel())' js/fleet.js
 
   browser-smoke:
     runs-on: ubuntu-latest
