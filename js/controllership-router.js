@@ -13,7 +13,7 @@ function marcarAtivo(chave){
   else if(chave==="vendas"){$("menuControladoria")?.classList.remove("ativo");$("menuVendas")?.classList.add("ativo")}
   else $("menuControladoria")?.classList.add("ativo");
 }
-function nomeModulo(chave){return({inadimplencia:"Inadimplência & Aging",input:"Input Mensal",fechamento:"Cockpit de Fechamento",permutas:"Permutas",vendas:"Consolidado de vendas",consorcios:"Consórcios",config:"Configurações"})[chave]||"módulo"}
+function nomeModulo(chave){return({inadimplencia:"Inadimplência & Aging",input:"Input Mensal",fechamento:"Cockpit de Fechamento",permutas:"Permutas",vendas:"Consolidado de vendas",consorcios:"Consórcios"})[chave]||"módulo"}
 function erroModulo(chave,e){console.error(`Falha ao abrir ${chave}:`,e);const detalhe=e?.code||e?.message||"erro-desconhecido";const texto=`Não foi possível abrir ${nomeModulo(chave)}. Atualize a página e tente novamente. Se persistir, informe o detalhe técnico: ${detalhe}.`;const atual=document.querySelector(".pagina:not(.hidden) .modulo-aviso");if(atual)atual.textContent=texto;else alert(texto)}
 function exigeEmpresaUnica(){return false}
 function validarContexto(chave){if(exigeEmpresaUnica(chave)&&empresasSelecionadasIds().length!==1){alert(`${nomeModulo(chave)} exige uma única empresa selecionada no cabeçalho para evitar mistura de dados entre empresas.`);return false}return true}
@@ -29,7 +29,6 @@ function podeAbrir(chave){
     case"permutas":return moduloAcao("permutas",["visualizar","cadastrar","editar","movimentar","estornar","fechar","inativar"]);
     case"vendas":return moduloAcao("vendas",["visualizar","lancar","editar","vendedores","comissoes"]);
     case"consorcios":return moduloAcao("consorcios",["visualizar","editar"])||ctrlAcao("consorciosVisualizar")||ctrlAcao("consorciosEditar");
-    case"config":return permite("controladoria","editar");
     default:return false;
   }
 }
@@ -46,10 +45,9 @@ const ACOES={
   fechamento:()=>abrirTela("fechamento","./closing-v3.js"),
   permutas:abrirPermutas,
   vendas:()=>abrirTela("vendas","./sales.js"),
-  consorcios:()=>abrirTela("consorcios","./ctrl-consorcios-v1.js"),
-  config:()=>abrirTela("config","./ctrl-settings.js")
+  consorcios:()=>abrirTela("consorcios","./ctrl-consorcios-v1.js")
 };
-const ITENS=[["inadimplencia","Inadimplência & Aging"],["input","Input Mensal"],["fechamento","Cockpit de Fechamento"],["config","Configurações"]];
+const ITENS=[["inadimplencia","Inadimplência & Aging"],["input","Input Mensal"],["fechamento","Cockpit de Fechamento"]];
 
 function css(){if($("ctrl-submenu-css"))return;const s=document.createElement("style");s.id="ctrl-submenu-css";s.textContent=`.ctrl-menu-wrap{display:none;margin:-4px 0 7px 12px;padding:5px 0 5px 10px;border-left:1px solid rgba(255,255,255,.14)}.ctrl-menu-wrap.aberto{display:grid;gap:2px}.ctrl-subitem{border:0;background:transparent;color:rgba(255,255,255,.72);text-align:left;padding:7px 9px;border-radius:7px;font-size:11px;cursor:pointer}.ctrl-subitem:hover,.ctrl-subitem.ativo{background:rgba(25,211,190,.12);color:#fff}.menu-item.ctrl-expansivel::after{content:'▾';float:right;opacity:.7}.menu-item.ctrl-expansivel.fechado::after{content:'▸'}.fpa-contexto-chip{min-height:36px;display:flex;align-items:center;padding:0 10px;border:1px solid #d0d5dd;border-radius:8px;background:#f8fafc;color:#475467;font-size:11px}.budget-inline{padding:12px;background:#f8fafc;border-left:3px solid #0c9488}.budget-inline .tabela input{min-width:82px}.dre-centro td{background:#f7f9fb;font-weight:750}.dre-centro td:first-child{border-left:3px solid #9fb8c7}.dre-filha td:first-child{font-weight:500}.conta-acoes-inline{display:flex;align-items:center;gap:6px}.linha-fechada{opacity:.8}`;document.head.appendChild(s)}
 function aplicarPermissoesSubmenu(){document.querySelectorAll("#ctrlSubmenu .ctrl-subitem").forEach(b=>{const ok=podeAbrir(b.dataset.ctrl);b.classList.toggle("hidden",!ok);if(!ok)b.classList.remove("ativo")})}
