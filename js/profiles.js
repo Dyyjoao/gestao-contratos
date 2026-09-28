@@ -47,7 +47,7 @@ const SECOES=[
   ["modincidentes","Segurança do Trabalho · Ocorrências",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]],
   ["modtreinamentos","Segurança do Trabalho · Treinamentos",[["visualizar","Visualizar"],["lancar","Registrar"],["editar","Editar"]]]
  ]],
- ["Gov. & Compliance",[
+ ["Gov e Compliance",[
   ["governanca","Governança & Compliance",[["visualizar","Visualizar"],["antifraude","Visualizar Cockpit Antifraude & TI"],["auditar","Executar auditoria"],["evidencias","Anexar evidências"],["planoAcao","Gerir planos de ação"],["validar","Validar/encerrar auditoria"],["configurar","Configurar programas e indicadores"]]]
  ]],
  ["Administração",[
