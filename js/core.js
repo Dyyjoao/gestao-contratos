@@ -124,19 +124,30 @@ onAuthStateChanged(auth,async user=>{
     msg(mensagemLogin,"Confirme suas credenciais para iniciar uma nova sessão.");
     setBusy(false);return;
   }
+  let etapa="usuário";
   try{
     setBusy(true,"Validando seu acesso...");
+    etapa="usuário";
     const us=await getDoc(doc(db,"usuarios",user.uid));if(!us.exists())throw new Error("usuario-nao-autorizado");
     const ud=us.data();if(ud.ativo!==true)throw new Error("usuario-inativo");
+    etapa="perfil";
     const ps=await getDoc(doc(db,"perfisAcesso",ud.perfilId));if(!ps.exists()||ps.data().ativo!==true)throw new Error("perfil-indisponivel");
     state.usuario={id:user.uid,...ud};state.perfil={id:ps.id,...ps.data()};
+    etapa="grupo empresarial";
     await carregarGrupoAtual();if(state.grupo?.ativo===false)throw new Error("grupo-inativo");
     telaLogin?.classList.add("hidden");sistema?.classList.remove("hidden");if(nomeUsuario)nomeUsuario.textContent=state.usuario.nome||user.email||"Usuário";if(senha)senha.value="";msg(mensagemLogin,"");setBusy(false);
     configurarMenus();abrirPagina(primeira());if(podeAdministrar())atualizarResumo();
     window.dispatchEvent(new Event("sig:ready"));
   }catch(e){
     sessionStorage.removeItem(SESSION_KEY);
-    console.error(e);const m={"usuario-nao-autorizado":"Usuário autenticado, mas sem cadastro no SIG.","usuario-inativo":"Este usuário está desativado.","perfil-indisponivel":"Seu perfil de acesso está indisponível.","grupo-inativo":"O grupo empresarial está inativo."};msg(mensagemLogin,m[e.message]||"Não foi possível validar seu acesso.");try{await signOut(auth)}catch{}setBusy(false)
+    console.error("Falha no login do SIG",{etapa,code:e?.code,message:e?.message},e);
+    const m={"usuario-nao-autorizado":"Usuário autenticado, mas sem cadastro no SIG.","usuario-inativo":"Este usuário está desativado.","perfil-indisponivel":"Seu perfil de acesso está indisponível.","grupo-inativo":"O grupo empresarial está inativo."};
+    let detalhe="";
+    if(e?.code==="permission-denied")detalhe="O login foi autenticado, mas o Firestore bloqueou a leitura de "+etapa+".";
+    else if(e?.code==="unavailable")detalhe="O Firebase está indisponível ao consultar "+etapa+".";
+    else detalhe="Não foi possível validar "+etapa+". "+(e?.code||e?.message||"");
+    msg(mensagemLogin,m[e.message]||detalhe.trim());
+    try{await signOut(auth)}catch{}setBusy(false)
   }
 });
 
