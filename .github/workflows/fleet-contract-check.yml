@@ -32,6 +32,8 @@ jobs:
           grep -Fq 'function frotaObrigacaoUpdateValida' firestore.rules
           grep -Fq 'function frotaKmUpdateValida' firestore.rules
           grep -Fq 'frotaAvisoCarga' js/fleet.js
+          grep -Fq 'sem veículos cadastrados' js/fleet.js
+          ! grep -Fq 'fleet-cost-kpi.js' app.js
           grep -Fq 'podeVerCombustivel' js/fleet.js
           grep -Fq 'lerSeguro("abastecimentosFrota",podeVerCombustivel())' js/fleet.js
           grep -Fq "sem veículos cadastrados" js/fleet-cost-kpi.js
