@@ -51,8 +51,6 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(usuarioId)).data.grupoId == usuario().data.grupoId;
     }
 
-    // V2 operacional: a antiga permissão geral de edição de FP&A não concede mais acesso.
-    function fpaEditar() { return false; }
     function fpaRealizado() { return permissao('controladoria','realizado') || permissao('controladoria','importar'); }
     function inadimplenciaVisualizar() { return permissao('controladoria','inadimplencia') || permissao('controladoria','inadimplenciaEditar'); }
     function inadimplenciaEditar() { return permissao('controladoria','inadimplenciaEditar'); }
@@ -238,15 +236,6 @@ service cloud.firestore {
     function governancaAuditar() { return governancaConfigurar() || permissao('governanca','auditar') || permissao('governanca','validar'); }
     function governancaPlanoAcao() { return governancaAuditar() || permissao('governanca','planoAcao'); }
     function gerenciaUsuarios() { return permissao('usuarios','visualizar') || permissao('usuarios','cadastrar') || permissao('usuarios','editar'); }
-    function usaCentroCusto() {
-      return permissao('controladoria','visualizar') ||
-        permissao('contratos','visualizar') ||
-        permissao('almoxarifado','visualizar') ||
-        permissao('cotacoes','visualizar') ||
-        frotaVisualizar() ||
-        permutasVisualizar();
-    }
-
     match /usuarios/{usuarioId} {
       allow read: if logado() && (
         request.auth.uid == usuarioId ||
