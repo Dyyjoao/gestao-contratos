@@ -26,8 +26,8 @@ const comStatus=v=>v?.comissaoStatus==="aguardando_faturamento"?"aguardando_rece
 function css(){if($("sales-css"))return;const l=document.createElement("link");l.id="sales-css";l.rel="stylesheet";l.href="sales.css?v=21";document.head.appendChild(l)}
 function pessoaCfg(p,tipo="vendedor"){
   const nome=String(p?.nome||"").trim().toLocaleLowerCase("pt-BR");
-  return configs.find(c=>c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
-    configs.find(c=>(!c.tipoComissao||c.tipoComissao===tipo)&&String(c.nome||"").trim().toLocaleLowerCase("pt-BR")===nome)||
+  return configs.find(c=>c.empresaId===p?.empresaId&&c.tipoComissao===tipo&&c.rhColaboradorId===p.id)||
+    configs.find(c=>c.empresaId===p?.empresaId&&(!c.tipoComissao||c.tipoComissao===tipo)&&String(c.nome||"").trim().toLocaleLowerCase("pt-BR")===nome)||
     null;
 }
 function equipeVendedores(){return vendedoresRh.map(p=>({p,cfg:pessoaCfg(p,"vendedor")}))}
@@ -215,7 +215,7 @@ function abrirItem(item=null){
   $("salesItemBox").classList.remove("hidden");$("salesItemBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function salvarItem(e){
-  e.preventDefault();const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");
+  e.preventDefault();const atual=editItemId?itensComerciais.find(x=>x.id===editItemId):null,emp=empresaAcaoComercial(atual);if(!emp)return alert("Selecione a empresa no formulário correspondente.");
   if(!(podeEditar()||podeLancar()))return;
   const d={codigo:$("salesItemCodigo").value.trim(),nome:$("salesItemNome").value.trim(),categoria:$("salesItemCategoria").value.trim(),unidade:$("salesItemUnidade").value.trim().toUpperCase(),status:$("salesItemStatus").value};
   if(!d.nome)return msg($("salesItemMsg"),"Informe a descrição do item.");
@@ -280,8 +280,7 @@ async function salvarConfig(e){
 
 
 function preencherVendedores(){
-  const sel=$("salesVendedor"),f=$("salesFiltroVendedor"),fc=$("salesClientesVendedor"),eq=equipeVendedores().sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
-  if(sel)sel.innerHTML='<option value="">Selecione...</option>'+eq.map(({p,cfg})=>`<option value="${cfg?.id||""}" ${cfg?"":"disabled"}>${esc(p.nome)}${cfg?"":" · cadastro comercial pendente"}</option>`).join("");
+  const f=$("salesFiltroVendedor"),fc=$("salesClientesVendedor"),eq=equipeVendedores().sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
 
   const mapa=new Map();
   vendas.forEach(v=>{if(v.vendedorId)mapa.set(v.vendedorId,v.vendedorNome||nomeVend(v.vendedorId))});
@@ -297,25 +296,41 @@ function preencherVendedores(){
 }
 
 
-function abrirVenda(v=null){
+async function carregarBaseEmpresaVenda(empresaId,valorAtual=""){
+  if(!empresaId){vendedoresVendaForm=[];configsVendaForm=[];preencherVendedorVenda(valorAtual);return}
+  [vendedoresVendaForm,configsVendaForm]=await Promise.all([
+    colaboradoresPorFuncao("VENDEDOR",{empresaId}).catch(()=>[]),
+    listarDocumentosEmpresa("vendedores",empresaId).catch(()=>[])
+  ]);
+  preencherVendedorVenda(valorAtual)
+}
+function cfgVendaForm(id){return configsVendaForm.find(c=>c.id===id)}
+function preencherVendedorVenda(valorAtual=""){
+  const sel=$("salesVendedor");if(!sel)return;
+  const arr=vendedoresVendaForm.map(p=>({p,cfg:configsVendaForm.find(c=>c.empresaId===p.empresaId&&c.rhColaboradorId===p.id)||configsVendaForm.find(c=>String(c.nome||"").trim().toLocaleLowerCase("pt-BR")===String(p.nome||"").trim().toLocaleLowerCase("pt-BR"))})).sort((a,b)=>String(a.p.nome||"").localeCompare(String(b.p.nome||""),"pt-BR"));
+  sel.innerHTML='<option value="">Selecione...</option>'+arr.map(({p,cfg})=>`<option value="${cfg?.id||""}" ${cfg?"":"disabled"}>${esc(p.nome)}${cfg?"":" · cadastro comercial pendente"}</option>`).join("");
+  if(valorAtual&&[...sel.options].some(o=>o.value===valorAtual))sel.value=valorAtual
+}
+async function abrirVenda(v=null){
   if(!(v?podeEditar():podeLancar()))return alert("Seu perfil não possui permissão para esta ação.");
-  const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");
-  editVendaId=v?.id||"";$("formSalesVenda")?.reset();$("salesVendaTitulo").textContent=v?"Editar venda":"Nova venda";$("salesEmpresa").value=nomeEmpresa(emp);
-  $("salesData").value=v?.data||hoje();$("salesVendedor").value=v?.vendedorId||"";$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";
+  editVendaId=v?.id||"";$("formSalesVenda")?.reset();$("salesVendaTitulo").textContent=v?"Editar venda":"Nova venda";
+  const sel=$("salesEmpresa");await prepararEmpresaInput(sel,{valorAtual:v?.empresaId||""});if(v?.empresaId){sel.value=v.empresaId;sel.disabled=true}else sel.disabled=false;
+  await carregarBaseEmpresaVenda(sel.value,v?.vendedorId||"");
+  $("salesData").value=v?.data||hoje();$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";
   $("salesStatus").value=v?.status||"confirmada";$("salesObs").value=v?.observacao||"";$("salesValor").value=v?n(v.valor):"";
   $("salesVendaBox").classList.remove("hidden");$("salesVendaBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
-
 async function salvarVenda(e){
   e.preventDefault();const nova=!editVendaId;if(nova&&!podeLancar())return;if(!nova&&!podeEditar())return;
-  const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");const cfg=cfgVenda($("salesVendedor").value);if(!cfg)return msg($("salesVendaMsg"),"Selecione um vendedor disponível para lançamento.");
+  let emp="";try{emp=empresaDoInput("salesEmpresa")}catch{return msg($("salesVendaMsg"),"Selecione a empresa da venda.")}
+  const cfg=cfgVendaForm($("salesVendedor").value);if(!cfg||cfg.empresaId!==emp)return msg($("salesVendaMsg"),"Selecione um vendedor válido da empresa escolhida.");
   const atual=nova?null:vendas.find(x=>x.id===editVendaId);if(!nova&&(!atual||atual.empresaId!==emp))return msg($("salesVendaMsg"),"Venda não localizada para a empresa selecionada.");
   const valor=n($("salesValor").value),valorRec=nova?0:recebido(atual),dataRec=nova?null:dataRecebimento(atual),pct=n(nova?cfg.comissaoPct:atual?.comissaoPct??cfg.comissaoPct),st=nova?"aguardando_recebimento":comStatus(atual);
   if(valor<=0)return msg($("salesVendaMsg"),"O valor da venda deve ser maior que zero.");
   if(valorRec>valor)return msg($("salesVendaMsg"),"O valor da venda não pode ficar abaixo do valor já recebido no financeiro.");
   const d={data:$("salesData").value,dataRecebimento:dataRec||null,valorRecebido:valorRec,vendedorId:cfg.id,vendedorRhId:cfg.rhColaboradorId||"",vendedorNome:cfg.nome||"",cliente:$("salesCliente").value.trim(),documento:$("salesDocumento").value.trim(),descricao:"",itens:[],valor,baseComissao:atual?.baseComissao||cfg.baseComissao||"recebido",comissaoPct:pct,comissaoBaseValor:valorRec,comissaoValor:valorRec*pct/100,comissaoStatus:st,status:$("salesStatus").value,observacao:$("salesObs").value.trim()};
-  try{msg($("salesVendaMsg"),"Salvando...");if(editVendaId)await atualizarDocumento("vendas",editVendaId,d);else await criarDocumento("vendas",{...d,empresaId:emp});fecharVenda();await carregar();emitirAlteracao("vendas")}
+  try{msg($("salesVendaMsg"),"Salvando...");if(editVendaId)await atualizarDocumento("vendas",editVendaId,d);else await criarDocumentoEmpresa("vendas",{...d,empresaId:emp});fecharVenda();await carregar();emitirAlteracao("vendas")}
   catch(err){console.error(err);msg($("salesVendaMsg"),"Não foi possível salvar a venda.")}
 }
 
@@ -453,7 +468,7 @@ function render(){
 
   const filtroVend=$("salesFiltroVendedor")?.value||"",filtroSt=$("salesFiltroStatus")?.value||"",lista=per.filter(v=>(!filtroVend||v.vendedorId===filtroVend)&&(!filtroSt||v.status===filtroSt)&&(!filtroClienteVendas||chaveClienteVenda(v)===filtroClienteVendas)).sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))),tb=$("salesLista");
   setText("salesResumo",`${lista.length} venda(s) no período selecionado${filtroClienteVendasNome?" · Cliente: "+filtroClienteVendasNome:""}`);
-  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td><strong>${formatData(v.data)}</strong></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>Pedido ${esc(v.documento||"—")}</small>${resumoParcelas(v)?`<small>${esc(resumoParcelas(v))}</small>`:""}</td><td><strong>${moeda(v.valor)}</strong></td><td><span class="${v.status==="cancelada"?"status-inativo":"status-ativo"}">${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="6">Nenhuma venda no período.</td></tr>';
+  if(tb)tb.innerHTML=lista.length?lista.map(v=>`<tr class="${v.status==="cancelada"?"sales-cancelada":""}"><td>${esc(nomeEmpresa(v.empresaId))}</td><td><strong>${formatData(v.data)}</strong></td><td>${esc(v.vendedorNome||nomeVend(v.vendedorId))}</td><td><strong>${esc(v.cliente||"—")}</strong><small>Pedido ${esc(v.documento||"—")}</small>${resumoParcelas(v)?`<small>${esc(resumoParcelas(v))}</small>`:""}</td><td><strong>${moeda(v.valor)}</strong></td><td><span class="${v.status==="cancelada"?"status-inativo":"status-ativo"}">${v.status==="cancelada"?"Cancelada":"Confirmada"}</span></td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao" data-sales-edit="${v.id}" type="button">Editar</button>`:""}${podeEditar()&&v.status!=="cancelada"?`<button class="btn-acao" data-sales-cancela="${v.id}" type="button">Cancelar</button>`:""}</div></td></tr>`).join(""):'<tr><td colspan="7">Nenhuma venda no período.</td></tr>';
   document.querySelectorAll("[data-sales-edit]").forEach(b=>b.onclick=()=>abrirVenda(vendas.find(v=>v.id===b.dataset.salesEdit)));document.querySelectorAll("[data-sales-cancela]").forEach(b=>b.onclick=()=>cancelarVenda(b.dataset.salesCancela));
 }
 
@@ -461,8 +476,8 @@ function render(){
 async function carregar(){
   if(busy||!podeVer())return;busy=true;
   try{
-    const [vr,cfg,vs,cls]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("clientesComerciais")]);
-    vendedoresRh=vr;configs=cfg;vendas=vs;clientesComerciais=cls;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
+    const [vr,cfg,vs,cls,itens]=await Promise.all([colaboradoresPorFuncao("VENDEDOR"),listarDocumentos("vendedores"),listarDocumentos("vendas"),listarDocumentos("clientesComerciais"),listarDocumentos("itensComerciais").catch(()=>[])]);
+    vendedoresRh=vr;configs=cfg;vendas=vs;clientesComerciais=cls;itensComerciais=itens;preencherVendedores();render();esconderBotoes();$("salesAviso")?.classList.add("hidden");
   }catch(e){console.error("Vendas:",e);const a=$("salesAviso");if(a){a.textContent="Não foi possível carregar Vendas. Verifique permissões, RH e Firestore Rules.";a.classList.remove("hidden")}}finally{busy=false}
 }
 
