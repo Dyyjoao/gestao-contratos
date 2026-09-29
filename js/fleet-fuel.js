@@ -2,7 +2,7 @@ import { abrirPagina, admin } from "./core.js";
 import { $, esc, msg, permite, state, listarDocumentos, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, preencherEmpresaSelect, empresaInicialFormulario, dataBr, emitirAlteracao } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria } from "./admin-actions.js";
 import { periodoAtual } from "./company-context.js";
-import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
+import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=7";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
 let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],veiculosFormulario=[],motoristasFormulario=[],abastecimentosFormulario=[],auditCompras=[],auditAbastecimentos=[],auditAuditorias=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="",motoristaFiltro="",rankingModo="veiculo",auditMesDetalhe="";
