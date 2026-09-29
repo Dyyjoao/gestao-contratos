@@ -1,6 +1,6 @@
 import { abrirPagina, admin } from "./core.js";
 import {
-  $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento,
+  $, esc, msg, permite, state, listarDocumentos, listarDocumentosGrupo, criarDocumento, atualizarDocumento,
   preencherEmpresaSelect, empresaUnicaSelecionadaId, empresasSelecionadasIds, nomeEmpresa,
   moeda, dataBr, diasAte, hojeIso, mensagemErroDados, emitirAlteracao
 } from "./shared.js";
@@ -240,9 +240,28 @@ async function carregar(){
     try{return await listarDocumentos(nome)}
     catch(e){console.warn(`Frota: ${nome} indisponível`,e);falhas.push(nome);return[]}
   };
+  const lerVeiculos=async()=>{
+    const ids=contextoIds(),permitidas=new Set(ids);
+    try{
+      const direto=await listarDocumentos("veiculos");
+      if(direto.length)return direto;
+    }catch(e){
+      console.warn("Frota: leitura contextual de veículos falhou; tentando leitura pelo grupo.",e)
+    }
+    try{
+      const grupo=await listarDocumentosGrupo("veiculos");
+      const filtrados=ids.length?grupo.filter(v=>permitidas.has(v.empresaId)):grupo;
+      if(filtrados.length)console.info(`Frota: fallback pelo grupo recuperou ${filtrados.length} veículo(s).`);
+      return filtrados
+    }catch(e){
+      console.warn("Frota: fallback de veículos pelo grupo indisponível",e);
+      falhas.push("veiculos");
+      return[]
+    }
+  };
   try{
     const [v,m,a,custo,mo]=await Promise.all([
-      lerSeguro("veiculos"),
+      lerVeiculos(),
       lerSeguro("manutencoesFrota"),
       lerSeguro("abastecimentosFrota",podeVerCombustivel()),
       lerSeguro("custosDiesel",podeVerCombustivel()),
