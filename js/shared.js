@@ -154,6 +154,16 @@ export function validarEmpresaFormulario(empresaId){
   if(!podeEmpresa(empresaId))throw new Error("sem-acesso-empresa");
   return empresaId;
 }
+export function empresaDoInput(inputOuId){
+  const el=typeof inputOuId==="string"?$(inputOuId):inputOuId;
+  return validarEmpresaFormulario(String(el?.value||""));
+}
+export async function prepararEmpresaInput(inputOuId,{valorAtual="",todas=false}={}){
+  const el=typeof inputOuId==="string"?$(inputOuId):inputOuId;
+  if(!el)return"";
+  await preencherEmpresaSelect(el,{todas,valorAtual:valorAtual||empresaInicialFormulario()});
+  return String(el.value||"");
+}
 export async function criarDocumentoEmpresa(nomeColecao,dados){
   const empresaId=validarEmpresaFormulario(dados?.empresaId),grupoId=grupoAtualId();
   if(!grupoId)throw new Error("grupo-nao-selecionado");
