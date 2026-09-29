@@ -33,15 +33,20 @@ jobs:
           ! grep -Eq 'contracts-fpa-account-guard|contract-driver-sync|ctrl-dre|ctrl-balance|ctrl-budget|ctrl-forecast|ctrl-premises|ctrl-assets|cashflow-admin-actions|accountability-pdf|payables-cockpit-controls' app.js
           grep -Fq 'area-navigation.js?v=6' app.js
           grep -Fq 'controllership-router.js?v=34' app.js
-          grep -Fq 'fleet.js?v=21' app.js
+          grep -Fq 'fleet.js?v=22' app.js
           grep -Fq 'input-admin-actions.js?v=2' app.js
-          grep -Fq 'commercial-workflow.js?v=16' app.js
+          grep -Fq 'commercial-workflow.js?v=17' app.js
           grep -Fq 'service-orders.js?v=8' app.js
           grep -Fq 'pallets.js?v=2' app.js
           grep -Fq 'pallet-dashboard.js?v=2' app.js
           grep -Fq 'service-orders-dashboard.js?v=3' app.js
           grep -Fq 'hr-culture.js?v=6' app.js
           grep -Fq 'hr-role-registry.js?v=7' app.js
+          grep -Fq 'my-desk.js?v=2' app.js
+          grep -Fq 'contracts.js?v=2' app.js
+          grep -Fq 'payables.js?v=2' app.js
+          grep -Fq 'sales-report-import.js?v=17' app.js
+          grep -Fq 'receipts-report-import.js?v=7' app.js
           grep -Fq 'admin-fuel-settings.js?v=3' app.js
           grep -Fq 'fleet-central.js?v=11' app.js
           grep -Fq 'fleet-fuel.js?v=19' app.js
@@ -58,4 +63,4 @@ jobs:
           test -s index.html
           test -s app.js
           test -s style.css
-          grep -Fq 'app.js?v=138' index.html
+          grep -Fq 'app.js?v=139' index.html
