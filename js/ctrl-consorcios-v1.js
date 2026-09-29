@@ -1,7 +1,7 @@
 import { abrirPagina, admin } from "./core.js";
 import {
-  $, esc, msg, permite, listarDocumentos, criarDocumento, atualizarDocumento,
-  empresaUnicaSelecionadaId, empresasSelecionadasIds, nomeEmpresa, moeda,
+  $, esc, msg, permite, listarDocumentos, criarDocumentoEmpresa, atualizarDocumento,
+  prepararEmpresaInput, empresaDoInput, empresasSelecionadasIds, nomeEmpresa, moeda,
   dataBr, mensagemErroDados, emitirAlteracao
 } from "./shared.js";
 import { calcularConsorcio, gerarCronogramaConsorcio, statusConsorcioAtivo } from "./consortium-calculations.js";
@@ -30,7 +30,6 @@ const MODALIDADES={
 
 const CATEGORIAS={veiculo:"Veículo",imovel:"Imóvel",equipamento:"Equipamento",servico:"Serviço",outro:"Outro"};
 
-function contextoNovoOk(){return empresasSelecionadasIds().length===1&&!!empresaUnicaSelecionadaId()}
 function pct(v){return `${n(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`}
 function numero(v,d=0){return n(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d})}
 function textoStatus(status){return STATUS[status]?.[0]||status||"—"}
@@ -136,7 +135,7 @@ function criarPagina(){
             <select id="consV1FiltroStatus"><option value="ativos">Ativos + contemplados</option><option value="todos">Todos</option><option value="ativo">Ativos</option><option value="contemplado">Contemplados</option><option value="encerrado">Encerrados</option><option value="cancelado">Cancelados</option></select>
           </div>
         </div>
-        <div class="tabela-container"><table id="consV1TabelaCarteira" class="tabela cons-v1-table"><thead><tr><th>Consórcio</th><th>Status</th><th>Crédito atual</th><th>Parcela atual</th><th>Progresso</th><th>Taxa consórcio</th><th>Saldo teórico</th><th>Próx. vencimento</th><th class="nao-exportar">Ações</th></tr></thead><tbody id="listaConsorciosV1"></tbody></table></div>
+        <div class="tabela-container"><table id="consV1TabelaCarteira" class="tabela cons-v1-table"><thead><tr><th>Empresa</th><th>Consórcio</th><th>Status</th><th>Crédito atual</th><th>Parcela atual</th><th>Progresso</th><th>Taxa consórcio</th><th>Saldo teórico</th><th>Próx. vencimento</th><th class="nao-exportar">Ações</th></tr></thead><tbody id="listaConsorciosV1"></tbody></table></div>
       </section>
     </div>
 
@@ -342,7 +341,7 @@ function preencherForm(c=null){
   $("consV1CreditoUtilizado").value=n(c?.creditoUtilizado)||"";
   $("consV1BemDestino").value=c?.bemDestino||"";
   $("consV1Titulo").textContent=c?"Editar consórcio":"Novo consórcio";
-  $("consV1Sub").textContent=c?`${c.administradora||"Administradora"} · Grupo ${c.grupo||"—"} · Cota ${c.cota||"—"}`:`${nomeEmpresa(empresaUnicaSelecionadaId())} · nova ficha`;
+  $("consV1Sub").textContent=c?`${c.administradora||"Administradora"} · Grupo ${c.grupo||"—"} · Cota ${c.cota||"—"}`:`${nomeEmpresa(String($("consV1Empresa")?.value||""))} · nova ficha`;
   msg($("mensagemConsorcioV1"),"");
   atualizarCalculadora();
   $("formConsorcioV1Box")?.classList.remove("hidden");
@@ -357,21 +356,15 @@ function mostrarCarteira(){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
-function novo(){
+async function novo(){
   if(!podeEditar())return alert("Seu perfil não possui permissão para gerenciar consórcios.");
-  if(!contextoNovoOk())return alert("Para cadastrar um consórcio, selecione apenas uma empresa no cabeçalho.");
-  mostrarCarteira();
-  editId=null;
-  preencherForm();
+  mostrarCarteira();editId=null;const sel=$("consV1Empresa");await prepararEmpresaInput(sel);sel.disabled=false;preencherForm()
 }
 
-function editar(id){
+async function editar(id){
   if(!podeEditar())return;
-  const c=consorcios.find(x=>x.id===id);
-  if(!c)return;
-  mostrarCarteira();
-  editId=id;
-  preencherForm(c);
+  const c=consorcios.find(x=>x.id===id);if(!c)return;
+  mostrarCarteira();editId=id;const sel=$("consV1Empresa");await prepararEmpresaInput(sel,{valorAtual:c.empresaId});sel.value=c.empresaId;sel.disabled=true;preencherForm(c)
 }
 
 function fecharForm(){editId=null;$("formConsorcioV1Box")?.classList.add("hidden");msg($("mensagemConsorcioV1"),"")}
@@ -390,11 +383,11 @@ async function salvar(e){
   if(dataDepois(d.dataInicio,d.dataFimPrevista))return msg(m,"A data de início não pode ser posterior ao fim previsto.");
   if(d.creditoUtilizado>r.creditoBase)return msg(m,"O crédito utilizado não pode ser maior que a carta de crédito atual.");
   if(d.status==="contemplado"&&!d.dataContemplacao)return msg(m,"Informe a data de contemplação para um consórcio contemplado.");
-  if(!editId&&!contextoNovoOk())return msg(m,"Selecione apenas uma empresa no cabeçalho antes de cadastrar.");
+  let empresaId="";try{empresaId=empresaDoInput("consV1Empresa")}catch{return msg(m,"Selecione a empresa do consórcio.")}
   try{
     busy=true;msg(m,"Salvando...");
-    if(editId)await atualizarDocumento("consorcios",editId,d);
-    else await criarDocumento("consorcios",d);
+    if(editId){const atual=consorcios.find(x=>x.id===editId);if(!atual||atual.empresaId!==empresaId)throw new Error("A empresa do consórcio não pode ser alterada.");await atualizarDocumento("consorcios",editId,d)}
+    else await criarDocumentoEmpresa("consorcios",{...d,empresaId});
     msg(m,"Consórcio salvo com sucesso.",true);
     emitirAlteracao("consorcios");
     await carregar();
@@ -433,7 +426,7 @@ function render(){
     const sa=statusConsorcioAtivo(a.status)?0:1,sb=statusConsorcioAtivo(b.status)?0:1;
     return sa-sb||String(a.proximoVencimento||"9999-12-31").localeCompare(String(b.proximoVencimento||"9999-12-31"))||String(a.descricao||"").localeCompare(String(b.descricao||""),"pt-BR");
   });
-  if(!arr.length){lista.innerHTML='<tr><td colspan="9">Nenhum consórcio encontrado para os filtros selecionados.</td></tr>';return}
+  if(!arr.length){lista.innerHTML='<tr><td colspan="10">Nenhum consórcio encontrado para os filtros selecionados.</td></tr>';return}
   lista.innerHTML=arr.map(c=>{
     const r=calc(c),parcela=r.valorParcelaAtual>0?r.valorParcelaAtual:r.parcelaMediaEstimada;
     const complemento=[c.grupo?`Grupo ${c.grupo}`:"",c.cota?`Cota ${c.cota}`:"",c.empresaId?nomeEmpresa(c.empresaId):""].filter(Boolean).join(" · ");
@@ -567,14 +560,14 @@ function atualizarContexto(){
 async function carregar(){
   criarPagina();
   if(!podeVisualizar())return;
-  const lista=$("listaConsorciosV1");if(lista)lista.innerHTML='<tr><td colspan="9">Carregando consórcios...</td></tr>';
+  const lista=$("listaConsorciosV1");if(lista)lista.innerHTML='<tr><td colspan="10">Carregando consórcios...</td></tr>';
   try{
     consorcios=await listarDocumentos("consorcios");
     atualizarContexto();render();
     if(detalheId){const atual=consorcios.find(x=>x.id===detalheId);if(atual)renderDetalhe(atual);else mostrarCarteira()}
   }catch(e){
     console.error(e);consorcios=[];atualizarKpis();
-    if(lista)lista.innerHTML=`<tr><td colspan="9">${esc(mensagemErroDados(e,"Consórcios"))}</td></tr>`;
+    if(lista)lista.innerHTML=`<tr><td colspan="10">${esc(mensagemErroDados(e,"Consórcios"))}</td></tr>`;
   }
 }
 
