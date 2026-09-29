@@ -479,12 +479,11 @@ async function salvarOrcamentoDaVisita(e){
   if(!orcamentoId){
     try{
       msg($("visitasOrcamentoMensagem"),"Criando orçamento...");
-      const ref=await addDoc(collection(db,"orcamentosComerciais"),{
-        grupoId:grupoAtualId(),empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,materiais,valor,numeroVb,comprador,
+      orcamentoId=await criarDocumentoEmpresa("orcamentosComerciais",{
+        empresaId,visitaId:visita.id,clienteId:visita.clienteId||"",cliente:visita.cliente||"",data,produto,materiais,valor,numeroVb,comprador,
         vendedorId:vend.id,vendedor:vend.nome,status,motivoPerda:status==="perdido_concorrente"?motivoPerda:"",justificativa:status==="perdido_concorrente"?motivoPerda:"",
-        responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:"",criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()
-      });
-      orcamentoId=ref.id
+        responsavelId:uid(),origem:"visita",proximoContatoEm:ABERTOS.has(status)?proximo24():"",ultimoContatoEm:""
+      })
     }catch(err){
       console.error("Erro ao criar orçamento da visita",err);
       const detalhe=err?.code==="permission-denied"?"O Firestore bloqueou a criação do orçamento. Atualize as Rules mais recentes e confirme a permissão de registrar orçamento.":(err?.message||"Não foi possível criar o orçamento.");
