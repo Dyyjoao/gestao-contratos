@@ -17,23 +17,93 @@ jobs:
         shell: bash
         run: |
           set -e
+          ACTIVE_FILES=(
+            js/my-desk.js
+            js/contracts.js
+            js/payables.js
+            js/production.js
+            js/disposal.js
+            js/pallets.js
+            js/service-orders.js
+            js/workforce-safety.js
+            js/hr-people.js
+            js/hr-performance.js
+            js/hr-actions.js
+            js/hr-cycle-config.js
+            js/customer-complaints.js
+            js/commercial-workflow.js
+            js/sales.js
+            js/sales-report-import.js
+            js/receipts-report-import.js
+            js/permutas.js
+            js/ctrl-consorcios-v1.js
+            js/closing-v3.js
+            js/governance.js
+            js/governance-security.js
+            js/fleet.js
+            js/fleet-fuel.js
+            js/fleet-central.js
+            js/admin-fuel-settings.js
+            js/module-settings.js
+          )
+
           node --check js/shared.js
           node --check js/company-context.js
           node --check js/hr-role-registry.js
-          node --check js/fleet.js
-          node --check js/fleet-fuel.js
-          node --check js/fleet-central.js
-          node --check js/admin-fuel-settings.js
+          for file in "${ACTIVE_FILES[@]}"; do
+            echo "Checking context contract: $file"
+            node --check "$file"
+            if grep -Fq 'empresaUnicaSelecionadaId' "$file"; then
+              echo "Erro: módulo ativo ainda depende de empresa única do cabeçalho: $file"
+              exit 1
+            fi
+            if grep -Eq 'Selecione (apenas )?uma empresa no cabeçalho|Selecione uma única empresa no cabeçalho' "$file"; then
+              echo "Erro: módulo ativo ainda exige empresa única no cabeçalho: $file"
+              exit 1
+            fi
+            if grep -Eq '[^A-Za-z]criarDocumento\(' "$file"; then
+              echo "Erro: gravação empresarial deve usar criarDocumentoEmpresa: $file"
+              exit 1
+            fi
+          done
+
           grep -Fq 'Visualizar empresas' js/company-context.js
           grep -Fq 'empresaInicialFormulario' js/shared.js
+          grep -Fq 'empresaDoInput' js/shared.js
           grep -Fq 'criarDocumentoEmpresa' js/shared.js
+          ! sed -n '/function empresaParaGravacao/,/^}/p' js/shared.js | grep -Fq 'empresaUnicaSelecionadaId'
+
+          grep -Fq 'id="planoEmpresa"' js/my-desk.js
+          grep -Fq 'id="contratoEmpresa"' index.html
+          grep -Fq 'id="apEmpresa"' js/payables.js
+          grep -Fq 'id="prodEmpresa"' js/production.js
+          grep -Fq 'id="descarteEmpresa"' js/disposal.js
+          grep -Fq 'id="palletEmpresa"' js/pallets.js
+          grep -Fq 'id="osEmpresa"' js/service-orders.js
+          grep -Fq 'Empresa" required' js/workforce-safety.js
+          grep -Fq 'rhConfigEmpresa' js/hr-people.js
+          grep -Fq 'id="rhAvalEmpresa"' js/hr-performance.js
+          grep -Fq 'id="rhAcoesEmpresa"' js/hr-actions.js
+          grep -Fq 'id="rhCicloEmpresa"' js/hr-cycle-config.js
+          grep -Fq 'id="reclEmpresa"' js/customer-complaints.js
+          grep -Fq 'id="visEmpresa"' js/commercial-workflow.js
+          grep -Fq 'id="orcEmpresa"' js/commercial-workflow.js
+          grep -Fq 'id="salesEmpresa"' js/sales.js
+          grep -Fq 'id="salesReportEmpresa"' js/sales-report-import.js
+          grep -Fq 'id="receiptImportEmpresa"' js/receipts-report-import.js
+          grep -Fq 'id="permutaEmpresa"' js/permutas.js
+          grep -Fq 'consV1Empresa' js/ctrl-consorcios-v1.js
+          grep -Fq 'id="closingV3Empresa"' js/closing-v3.js
+          grep -Fq 'id="governancaEmpresa"' js/governance.js
           grep -Fq 'id="veiculoEmpresa"' js/fleet.js
           grep -Fq 'id="fuelEmpresa"' js/fleet-fuel.js
           grep -Fq 'id="fuelAuditEmpresa"' js/fleet-fuel.js
           grep -Fq 'id="adminFuelEmpresa"' js/admin-fuel-settings.js
-          ! grep -Fq 'empresaUnicaSelecionadaId' js/fleet.js
-          ! grep -Fq 'empresaUnicaSelecionadaId' js/fleet-fuel.js
-          ! grep -Fq 'empresaUnicaSelecionadaId' js/fleet-central.js
-          ! grep -Fq 'empresaUnicaSelecionadaId' js/admin-fuel-settings.js
-          grep -Fq 'Abrir relatório detalhado do veículo' js/fleet-central.js
+
+          grep -Fq 'criarDocumentoEmpresa("planosAcao"' js/my-desk.js
+          grep -Fq 'criarDocumentoEmpresa("contratos"' js/contracts.js
+          grep -Fq 'criarDocumentoEmpresa(COLECAO' js/payables.js
           grep -Fq 'function documentoAcessivel(dados) { return mesmoGrupo(dados.grupoId) && acessoEmpresa(dados.empresaId); }' firestore.rules
+
+          # Cadastros realmente compartilhados no grupo podem existir sem empresaId.
+          grep -Fq 'clientesRelacionamento' js/commercial-workflow.js
