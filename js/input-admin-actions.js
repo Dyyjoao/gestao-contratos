@@ -1,6 +1,6 @@
 import { admin, state } from "./core.js";
 import {
-  $, listarDocumentos, empresaUnicaSelecionadaId, periodoAno, periodoChave, emitirAlteracao
+  $, listarDocumentos, periodoAno, periodoChave, emitirAlteracao
 } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria, executarCorrecoesComAuditoria } from "./admin-actions.js";
 
@@ -46,8 +46,8 @@ async function estornarTitulo(id){
 
 
 async function estornarInputMensal(){
-  const emp=empresaUnicaSelecionadaId(),p=periodoChave(),ano=periodoAno(),cc=$("inputV6Centro")?.value||"";
-  if(!emp||!/^m\d{2}$/.test(p)||!cc)return alert("Selecione uma única empresa, uma competência mensal e um Centro/bloco antes de estornar.");
+  const emp=String($("inputV6Empresa")?.value||""),p=periodoChave(),ano=periodoAno(),cc=$("inputV6Centro")?.value||"";
+  if(!emp||!/^m\d{2}$/.test(p)||!cc)return alert("Selecione a empresa no Input Mensal, uma competência mensal e um Centro/bloco antes de estornar.");
   const mi=Number(p.slice(1))-1,mes=MESES[mi],competencia=`${ano}-${p.slice(1)}`;if(!mes)return;
   const arr=(await docs("realizadoMensal")).filter(x=>x.empresaId===emp&&Number(x.exercicio)===Number(ano)&&(x.centroCustoId||"")===cc&&x.legadoArquivado!==true&&x.duplicadoArquivado!==true&&n(x.valores?.[mes])!==0);
   if(!arr.length)return alert("Não há valores persistidos diferentes de zero nessa competência para estornar.");
