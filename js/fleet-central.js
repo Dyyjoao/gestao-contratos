@@ -1,5 +1,5 @@
 import { $, esc, listarDocumentos, dataBr, moeda } from './shared.js';
-import { colaboradoresPorFuncao } from './hr-role-registry.js?v=6';
+import { colaboradoresPorFuncao } from './hr-role-registry.js?v=7';
 import { periodoAtual } from './company-context.js';
 
 let veiculos=[],manutencoes=[],abastecimentos=[],custosDiesel=[],motoristas=[],busy=false,timer=0,observer=null,veiculoSelecionado='';
