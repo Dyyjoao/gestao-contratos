@@ -28,3 +28,6 @@ jobs:
           grep -Fq 'match /vendas/{id}' firestore.rules
           grep -Fq 'match /rhColaboradores/{id}' firestore.rules
           grep -Fq 'match /planosAcao/{id}' firestore.rules
+          grep -Fq 'match /kamishibaiRotas/{id}' firestore.rules
+          grep -Fq 'match /kamishibaiExecucoes/{id}' firestore.rules
+          grep -Fq 'visitaLegadaSemEmpresa' firestore.rules
