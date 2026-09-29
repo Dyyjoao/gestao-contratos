@@ -493,7 +493,7 @@ async function salvarOrcamentoDaVisita(e){
 
   try{
     msg($("visitasOrcamentoMensagem"),"Vinculando orçamento à visita...");
-    await updateDoc(doc(db,"visitasComerciais",visita.id),{status:"orcamento",orcamentoId,orcamentoEmpresaId:empresaId,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+    await updateDoc(doc(db,"visitasComerciais",visita.id),{...(visita.empresaId?{}:{empresaId}),status:"orcamento",orcamentoId,orcamentoEmpresaId:empresaId,orcamentoCriadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
     visita.status="orcamento";visita.orcamentoId=orcamentoId;visita.orcamentoEmpresaId=empresaId;fecharOrcamentoVisita();emitirAlteracao("orcamentos");emitirAlteracao("visitas");renderVisitas();
     alert("Orçamento criado e vinculado à visita.")
   }catch(err){
@@ -518,7 +518,7 @@ async function novo(k){
 async function abrirEdicao(k,id){
   const x=dados[k].find(v=>v.id===id);if(!x||!editar(k)||(!gestor(k)&&x.responsavelId!==uid()))return;
   if(k==="visitas"){
-    edicao[k]=id;limpar(k);edicao[k]=id;const sel=$("visEmpresa");await prepararEmpresaInput(sel,{valorAtual:x.empresaId||""});if(x.empresaId){sel.value=x.empresaId;sel.disabled=true}else sel.disabled=false;preencherBasesVisitas();
+    edicao[k]=id;limpar(k);edicao[k]=id;const empresaAtual=empresaEfetivaVisita(x),sel=$("visEmpresa");await prepararEmpresaInput(sel,{valorAtual:empresaAtual});if(x.empresaId){sel.value=x.empresaId;sel.disabled=true}else{if(empresaAtual)sel.value=empresaAtual;sel.disabled=false}preencherBasesVisitas();
     el(k,"Data").value=x.data||"";
     const vend=vendedoresVisitas.find(v=>v.id===x.vendedorId)||vendedoresVisitas.find(v=>norm(v.nome)===norm(x.vendedor));if(vend)el(k,"Vendedor").value=vend.id;
     const cli=clientesVisitas.find(v=>v.id===x.clienteId)||clientesVisitas.find(v=>chaveCliente(v.nome,v.cidade)===chaveCliente(x.cliente,x.cidade))||clientesVisitas.find(v=>norm(v.nome)===norm(x.cliente));if(cli)el(k,"Cliente").value=cli.id;
@@ -538,8 +538,14 @@ function formularioDados(k){
   }
   return {}
 }
+function empresaEfetivaVisita(x){return String(x?.empresaId||x?.orcamentoEmpresaId||"")}
 async function consultar(k){
   const grupo=grupoAtualId(),id=uid(),empresas=empresasSelecionadasIds();if(!grupo||!empresas.length)return[];
+  if(k==="visitas"){
+    const cond=[where("grupoId","==",grupo)];if(!gestor(k))cond.push(where("responsavelId","==",id));
+    const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond)),selecionadas=new Set(empresas),permitidas=idsEmpresasPermitidas(),todas=permitidas.length>0&&permitidas.every(x=>selecionadas.has(x));
+    return s.docs.map(x=>({id:x.id,...x.data()})).filter(x=>{const e=empresaEfetivaVisita(x);return e?selecionadas.has(e):todas})
+  }
   const blocos=await Promise.all(empresas.map(async empresaId=>{const cond=[where("grupoId","==",grupo),where("empresaId","==",empresaId)];if(!gestor(k))cond.push(where("responsavelId","==",id));const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond));return s.docs.map(x=>({id:x.id,...x.data()}))}));return blocos.flat()
 }
 async function carregar(k){
@@ -601,7 +607,7 @@ function renderVisitas(){
     const editarBtn=editar("visitas")?`<button type="button" class="btn-acao destaque" data-visitas-edit="${esc(x.id)}">Editar</button>`:"";
     const orcBtn=registrar("orcamentos")?(x.orcamentoId?`<span class="commercial-action-done">Orçamento criado</span>`:`<button type="button" class="btn-acao" data-visitas-orcamento="${esc(x.id)}">Orçamento</button>`):"";
     const excluirBtn=podeExcluir?`<button type="button" class="btn-acao perigo" data-visitas-excluir="${esc(x.id)}">Excluir</button>`:"";
-    return `<tr><td>${esc(nomeEmpresa(x.empresaId))}</td><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td><span class="${statusVisita==="Orçamento"?"status-ativo":"status-inativo"}">${statusVisita}</span></td><td>${esc(x.assunto||"—")}</td><td><div class="commercial-row-actions">${editarBtn}${orcBtn}${excluirBtn}</div></td></tr>`
+    const empresaVisita=empresaEfetivaVisita(x);return `<tr><td>${empresaVisita?esc(nomeEmpresa(empresaVisita)):'<span class="status-aviso">Empresa pendente</span>'}</td><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td><span class="${statusVisita==="Orçamento"?"status-ativo":"status-inativo"}">${statusVisita}</span></td><td>${esc(x.assunto||"—")}</td><td><div class="commercial-row-actions">${editarBtn}${orcBtn}${excluirBtn}</div></td></tr>`
   }).join("")||'<tr><td colspan="8">Nenhum registro encontrado no período.</td></tr>';
   document.querySelectorAll("[data-visitas-edit]").forEach(b=>b.addEventListener("click",()=>abrirEdicao("visitas",b.dataset.visitasEdit)));
   document.querySelectorAll("[data-visitas-orcamento]").forEach(b=>b.addEventListener("click",()=>abrirOrcamentoDaVisita(b.dataset.visitasOrcamento)));
