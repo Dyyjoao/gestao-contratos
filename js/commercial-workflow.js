@@ -383,8 +383,8 @@ function preencherEmpresasOrcamentoVisita(){
   if(itens.length===1)sel.value=itens[0].id
 }
 function preencherVendedorOrcamentoVisita(visita){
-  const sel=$("orcVisVendedor");if(!sel)return;
-  sel.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");
+  const sel=$("orcVisVendedor");if(!sel)return;const empresaId=String($("orcVisEmpresa")?.value||""),arr=vendedoresVisitas.filter(x=>!empresaId||x.empresaId===empresaId);
+  sel.innerHTML='<option value="">Selecione...</option>'+arr.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");
   const vend=vendedoresVisitas.find(x=>x.id===visita?.vendedorId)||vendedoresVisitas.find(x=>norm(x.nome)===norm(visita?.vendedor));
   if(vend)sel.value=vend.id
 }
@@ -510,23 +510,23 @@ function limpar(k){
   if(k==="visitas"){preencherBasesVisitas();if($("visCidade"))$("visCidade").value="";carregarProdutosVisita()}
   $(k+"FormTitulo").textContent="Novo registro";msg($(k+"Mensagem"),"")
 }
-function novo(k){
+async function novo(k){
   if(!registrar(k))return;
-  if(k!=="visitas"&&!empresaUnicaSelecionadaId())return alert("Selecione apenas uma empresa no cabeçalho.");
-  limpar(k);$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
+  limpar(k);const sel=$(k==="visitas"?"visEmpresa":"orcEmpresa");if(sel){sel.disabled=false;await prepararEmpresaInput(sel)}
+  if(k==="visitas"){preencherBasesVisitas();carregarProdutosVisita()}else if(k==="orcamentos")carregarMateriaisOrcamentoTela();
+  $(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
 }
-function abrirEdicao(k,id){
+async function abrirEdicao(k,id){
   const x=dados[k].find(v=>v.id===id);if(!x||!editar(k)||(!gestor(k)&&x.responsavelId!==uid()))return;
   if(k==="visitas"){
-    edicao[k]=id;limpar(k);edicao[k]=id;
+    edicao[k]=id;limpar(k);edicao[k]=id;const sel=$("visEmpresa");await prepararEmpresaInput(sel,{valorAtual:x.empresaId||""});if(x.empresaId){sel.value=x.empresaId;sel.disabled=true}else sel.disabled=false;preencherBasesVisitas();
     el(k,"Data").value=x.data||"";
     const vend=vendedoresVisitas.find(v=>v.id===x.vendedorId)||vendedoresVisitas.find(v=>norm(v.nome)===norm(x.vendedor));if(vend)el(k,"Vendedor").value=vend.id;
     const cli=clientesVisitas.find(v=>v.id===x.clienteId)||clientesVisitas.find(v=>chaveCliente(v.nome,v.cidade)===chaveCliente(x.cliente,x.cidade))||clientesVisitas.find(v=>norm(v.nome)===norm(x.cliente));if(cli)el(k,"Cliente").value=cli.id;
     ["Obra","Cidade","Assunto","Observacao"].forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});
     carregarProdutosVisita(x);el(k,"Tipo").value=tipoVisitaCanon(x.tipo);$("visitasFormTitulo").textContent="Editar visita / contato";$("visitasFormBox").classList.remove("hidden");$("visitasFormBox").scrollIntoView({behavior:"smooth",block:"start"});return
   }
-  if(x.empresaId!==empresaUnicaSelecionadaId())return alert("Selecione a empresa deste registro para editar.");
-  edicao[k]=id;const nomes=["Data","Vendedor","Cliente","Cidade","Comprador","NumeroVb","Status","Telefone","Email","Observacao","Justificativa"];nomes.forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});if(k==="orcamentos")carregarMateriaisOrcamentoTela(x);$(k+"FormTitulo").textContent="Editar registro";$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
+  edicao[k]=id;const sel=$("orcEmpresa");await prepararEmpresaInput(sel,{valorAtual:x.empresaId||""});if(x.empresaId){sel.value=x.empresaId;sel.disabled=true}else sel.disabled=false;const nomes=["Data","Vendedor","Cliente","Cidade","Comprador","NumeroVb","Status","Telefone","Email","Observacao","Justificativa"];nomes.forEach(n=>{el(k,n).value=x[n.charAt(0).toLowerCase()+n.slice(1)]??""});if(k==="orcamentos")carregarMateriaisOrcamentoTela(x);$(k+"FormTitulo").textContent="Editar registro";$(k+"FormBox").classList.remove("hidden");$(k+"FormBox").scrollIntoView({behavior:"smooth",block:"start"})
 }
 function formularioDados(k){
   if(k==="visitas"){
@@ -540,12 +540,7 @@ function formularioDados(k){
   return {}
 }
 async function consultar(k){
-  const grupo=grupoAtualId(),id=uid();if(!grupo)return[];
-  if(k==="visitas"){
-    const cond=[where("grupoId","==",grupo)];if(!gestor(k))cond.push(where("responsavelId","==",id));
-    const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond));return s.docs.map(x=>({id:x.id,...x.data()}))
-  }
-  const empresas=empresasSelecionadasIds();if(!empresas.length)return[];
+  const grupo=grupoAtualId(),id=uid(),empresas=empresasSelecionadasIds();if(!grupo||!empresas.length)return[];
   const blocos=await Promise.all(empresas.map(async empresaId=>{const cond=[where("grupoId","==",grupo),where("empresaId","==",empresaId)];if(!gestor(k))cond.push(where("responsavelId","==",id));const s=await getDocs(query(collection(db,MODELOS[k].colecao),...cond));return s.docs.map(x=>({id:x.id,...x.data()}))}));return blocos.flat()
 }
 async function carregar(k){
@@ -607,8 +602,8 @@ function renderVisitas(){
     const editarBtn=editar("visitas")?`<button type="button" class="btn-acao destaque" data-visitas-edit="${esc(x.id)}">Editar</button>`:"";
     const orcBtn=registrar("orcamentos")?(x.orcamentoId?`<span class="commercial-action-done">Orçamento criado</span>`:`<button type="button" class="btn-acao" data-visitas-orcamento="${esc(x.id)}">Orçamento</button>`):"";
     const excluirBtn=podeExcluir?`<button type="button" class="btn-acao perigo" data-visitas-excluir="${esc(x.id)}">Excluir</button>`:"";
-    return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td><span class="${statusVisita==="Orçamento"?"status-ativo":"status-inativo"}">${statusVisita}</span></td><td>${esc(x.assunto||"—")}</td><td><div class="commercial-row-actions">${editarBtn}${orcBtn}${excluirBtn}</div></td></tr>`
-  }).join("")||'<tr><td colspan="7">Nenhum registro encontrado no período.</td></tr>';
+    return `<tr><td>${esc(nomeEmpresa(x.empresaId))}</td><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.cidade||x.obra||"")}</small></td><td>${esc(x.vendedor)}</td><td>${esc(tipoVisitaNome(x.tipo))}</td><td><span class="${statusVisita==="Orçamento"?"status-ativo":"status-inativo"}">${statusVisita}</span></td><td>${esc(x.assunto||"—")}</td><td><div class="commercial-row-actions">${editarBtn}${orcBtn}${excluirBtn}</div></td></tr>`
+  }).join("")||'<tr><td colspan="8">Nenhum registro encontrado no período.</td></tr>';
   document.querySelectorAll("[data-visitas-edit]").forEach(b=>b.addEventListener("click",()=>abrirEdicao("visitas",b.dataset.visitasEdit)));
   document.querySelectorAll("[data-visitas-orcamento]").forEach(b=>b.addEventListener("click",()=>abrirOrcamentoDaVisita(b.dataset.visitasOrcamento)));
   document.querySelectorAll("[data-visitas-excluir]").forEach(b=>b.addEventListener("click",()=>excluirVisita(b.dataset.visitasExcluir)))
@@ -616,7 +611,7 @@ function renderVisitas(){
 function render(k){
   if(k==="visitas"){renderVisitas();return}
   const termo=String($(k+"Busca")?.value||"").toLocaleLowerCase("pt-BR"),status=$(k+"FiltroStatus")?.value||"",filtrados=dados[k].filter(x=>[x.cliente,x.vendedor,x.produto].some(s=>String(s||"").toLocaleLowerCase("pt-BR").includes(termo))&&(!status||x.status===status));const abertos=filtrados.filter(x=>ABERTOS.has(x.status)),vencidos=abertos.filter(x=>x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now());$(k+"KpiTotal").textContent=String(abertos.length);$(k+"KpiSegundo").textContent=String(vencidos.length);$("orcamentosKpiValor").textContent=dinheiro(abertos.reduce((a,x)=>a+Number(x.valor||0),0));renderMesa();
-  $(k+"Lista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const acao=editar(k)?`<button type="button" class="btn-acao destaque" data-${k}-edit="${esc(x.id)}">Editar</button>`:"",vencido=ABERTOS.has(x.status)&&x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now();return `<tr><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.produto)}</small></td><td>${esc(x.vendedor)}</td><td>${dinheiro(x.valor)}</td><td><strong>${esc(STATUS[x.status]||x.status)}</strong>${ABERTOS.has(x.status)?`<small>${vencido?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${acao}${ABERTOS.has(x.status)&&editar(k)?`<button type="button" class="btn-acao" data-orc-follow="${esc(x.id)}">Registrar contato</button>`:""}${Array.isArray(x.contatos)&&x.contatos.length?`<button type="button" class="btn-acao" data-orc-history="${esc(x.id)}">Histórico (${x.contatos.length})</button>`:""}</td></tr>`}).join("")||'<tr><td colspan="6">Nenhum registro encontrado.</td></tr>';
+  $(k+"Lista").innerHTML=filtrados.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>{const acao=editar(k)?`<button type="button" class="btn-acao destaque" data-${k}-edit="${esc(x.id)}">Editar</button>`:"",vencido=ABERTOS.has(x.status)&&x.proximoContatoEm&&Date.parse(x.proximoContatoEm)<=Date.now();return `<tr><td>${esc(nomeEmpresa(x.empresaId))}</td><td>${dataBr(x.data)}</td><td><strong>${esc(x.cliente)}</strong><small>${esc(x.produto)}</small></td><td>${esc(x.vendedor)}</td><td>${dinheiro(x.valor)}</td><td><strong>${esc(STATUS[x.status]||x.status)}</strong>${ABERTOS.has(x.status)?`<small>${vencido?"Contato pendente":"Próximo contato"}: ${new Date(x.proximoContatoEm).toLocaleString("pt-BR")}</small>`:""}</td><td>${acao}${ABERTOS.has(x.status)&&editar(k)?`<button type="button" class="btn-acao" data-orc-follow="${esc(x.id)}">Registrar contato</button>`:""}${Array.isArray(x.contatos)&&x.contatos.length?`<button type="button" class="btn-acao" data-orc-history="${esc(x.id)}">Histórico (${x.contatos.length})</button>`:""}</td></tr>`}).join("")||'<tr><td colspan="7">Nenhum registro encontrado.</td></tr>';
   document.querySelectorAll(`[data-${k}-edit]`).forEach(b=>b.addEventListener("click",()=>abrirEdicao(k,b.dataset[`${k}Edit`])));
   document.querySelectorAll("[data-orc-follow]").forEach(b=>b.addEventListener("click",()=>followUp(b.dataset.orcFollow)));
   document.querySelectorAll("[data-orc-history]").forEach(b=>b.addEventListener("click",()=>{const x=dados.orcamentos.find(v=>v.id===b.dataset.orcHistory);if(!x)return;alert((x.contatos||[]).map(c=>`${new Date(c.em).toLocaleString("pt-BR")} · ${c.resultado}`).join("\n\n"))}))
