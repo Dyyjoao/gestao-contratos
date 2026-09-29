@@ -5,7 +5,7 @@ import { periodoAtual } from "./company-context.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
-let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],veiculosFormulario=[],motoristasFormulario=[],auditCompras=[],auditAbastecimentos=[],auditAuditorias=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="",motoristaFiltro="",rankingModo="veiculo",auditMesDetalhe="";
+let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],veiculosFormulario=[],motoristasFormulario=[],abastecimentosFormulario=[],auditCompras=[],auditAbastecimentos=[],auditAuditorias=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="",motoristaFiltro="",rankingModo="veiculo",auditMesDetalhe="";
 const pode=a=>admin()||permite("combustivel",a);
 const ver=()=>["visualizar","lancar","editar"].some(pode);
 const frotaVer=()=>admin()||permite("frota","visualizar")||permite("frota","cadastrar")||permite("frota","editar")||permite("frota","manutencao")||permite("frota","obrigacoes");
@@ -16,6 +16,7 @@ const localIso=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.get
 const empresaForm=()=>String($("fuelEmpresa")?.value||"");
 const empresaAuditoria=()=>String($("fuelAuditEmpresa")?.value||"");
 const ativosAbastecimento=()=>abastecimentos.filter(x=>x.status!=="estornado"&&x.tipo!=="recebimento");
+const ativosAbastecimentoFormulario=()=>abastecimentosFormulario.filter(x=>x.status!=="estornado"&&x.tipo!=="recebimento");
 const comprasAtivas=()=>compras.filter(x=>x.status!=="estornado");
 const nomeVeiculo=v=>[v?.marca,v?.modelo].filter(Boolean).join(" ")||v?.placa||"Veículo";
 
@@ -28,7 +29,7 @@ function dentroPeriodo(x,p){const ym=String(x.data||"").slice(0,7);return p.mese
 function veiculoPorId(id){return veiculos.find(v=>v.id===id)}
 function veiculoPorPlaca(placa,empresaId=empresaForm()){return [...veiculosFormulario,...veiculos].find(v=>v.placa===placa&&(!empresaId||v.empresaId===empresaId))}
 function ultimoAbastecimento(veiculoId,{antesData="",ignorarId=""}={}){
-  return ativosAbastecimento().filter(x=>x.veiculoId===veiculoId&&x.id!==ignorarId&&(!antesData||x.data<=antesData)&&x.kmAtual!=null)
+  return ativosAbastecimentoFormulario().filter(x=>x.veiculoId===veiculoId&&x.id!==ignorarId&&(!antesData||x.data<=antesData)&&x.kmAtual!=null)
     .sort((a,b)=>String(b.data).localeCompare(String(a.data))||String(b.criadoEm||"").localeCompare(String(a.criadoEm||"")))[0]||null;
 }
 function kmBaseVeiculo(v,data="",ignorarId=""){
@@ -162,17 +163,18 @@ function trocar(k){
   if(k==="compras"){$("fuelNovo").textContent="+ Nova compra";$("fuelHistoricoTitulo").textContent="Compras de diesel";$("fuelHistoricoSub").textContent="Data da compra, NF, litros, valor total e custo por litro."}
   render()
 }
-function limpar(){editId=null;$("fuelForm").reset();if($("fuelEmpresa"))$("fuelEmpresa").disabled=false;$("fuelData").value=localIso();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";veiculosFormulario=[];motoristasFormulario=[];calcularCustoLitro();preencherMotoristas();preencherVeiculos();preencherKm();msg($("fuelMensagem"),"")}
+function limpar(){editId=null;$("fuelForm").reset();if($("fuelEmpresa"))$("fuelEmpresa").disabled=false;$("fuelData").value=localIso();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";veiculosFormulario=[];motoristasFormulario=[];abastecimentosFormulario=[];calcularCustoLitro();preencherMotoristas();preencherVeiculos();preencherKm();msg($("fuelMensagem"),"")}
 function calcularCustoLitro(){const litros=num($("fuelLitrosCompra")?.value),total=num($("fuelValor")?.value),el=$("fuelCustoLitro");if(el)el.value=litros>0?money(total/litros):""}
 function preencherMotoristas(valor=""){const s=$("fuelMotorista");if(!s)return;const atual=valor||s.value||"";s.innerHTML='<option value="">Selecione...</option>'+motoristasFormulario.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${esc(p.cargoNome||"Motorista")}</option>`).join("");if(atual&&![...s.options].some(o=>o.value===atual))s.add(new Option(`${atual} · vínculo anterior`,atual));s.value=atual}
 function preencherVeiculos(valor=""){const s=$("fuelPlaca");if(!s)return;const atual=valor||s.value||"";s.innerHTML='<option value="">Selecione...</option>'+veiculosFormulario.filter(x=>x.status!=="inativo"&&x.status!=="baixado").sort((a,b)=>String(a.placa).localeCompare(String(b.placa))).map(x=>`<option value="${esc(x.placa)}">${esc(x.placa)} · ${esc(nomeVeiculo(x))}</option>`).join("");if(atual)s.value=atual}
 async function carregarDependenciasFormulario(empresaId,{placa="",motorista=""}={}){
   if(!empresaId){veiculosFormulario=[];motoristasFormulario=[];preencherVeiculos(placa);preencherMotoristas(motorista);return}
-  const [vs,ms]=await Promise.all([
+  const [vs,ms,abs]=await Promise.all([
     listarDocumentosEmpresa("veiculos",empresaId).catch(()=>[]),
-    colaboradoresPorFuncao("MOTORISTA",{empresaId}).catch(()=>[])
+    colaboradoresPorFuncao("MOTORISTA",{empresaId}).catch(()=>[]),
+    listarDocumentosEmpresa("abastecimentosFrota",empresaId).catch(()=>[])
   ]);
-  veiculosFormulario=vs;motoristasFormulario=ms;preencherVeiculos(placa);preencherMotoristas(motorista);preencherKm()
+  veiculosFormulario=vs;motoristasFormulario=ms;abastecimentosFormulario=abs;preencherVeiculos(placa);preencherMotoristas(motorista);preencherKm()
 }
 async function prepararEmpresaFormulario(valorAtual=""){
   await preencherEmpresaSelect($("fuelEmpresa"),{valorAtual:valorAtual||empresaInicialFormulario()});
@@ -402,7 +404,7 @@ async function carregar(){
   }catch(e){console.error(e);$("fuelAviso").textContent="Não foi possível carregar Combustível e Diesel. Confira permissões e regras publicadas.";$("fuelAviso").classList.remove("hidden")}finally{busy=false}
 }
 async function atualizarKmVeiculo(v,novoKm){
-  if(!v||!Number.isFinite(novoKm))return;const maxMov=Math.max(novoKm,...ativosAbastecimento().filter(x=>x.veiculoId===v.id&&x.id!==editId).map(x=>num(x.kmAtual)));if(maxMov>=num(v.quilometragemAtual))await atualizarDocumento("veiculos",v.id,{quilometragemAtual:Math.trunc(maxMov)})
+  if(!v||!Number.isFinite(novoKm))return;const maxMov=Math.max(novoKm,...ativosAbastecimentoFormulario().filter(x=>x.veiculoId===v.id&&x.id!==editId).map(x=>num(x.kmAtual)));if(maxMov>=num(v.quilometragemAtual))await atualizarDocumento("veiculos",v.id,{quilometragemAtual:Math.trunc(maxMov)})
 }
 async function salvar(e){
   e.preventDefault();const empresaId=empresaForm(),data=$("fuelData").value;if(!empresaId)return alert("Selecione a empresa do lançamento.");if(!/^\d{4}-\d{2}-\d{2}$/.test(data))return msg($("fuelMensagem"),"Informe a data.");
@@ -443,6 +445,9 @@ async function estornar(id){
 function instalar(){if(!document.querySelector('link[href^="production.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="production.css?v=1";document.head.appendChild(l)}montar();menu();$("fuelNovo")?.classList.toggle("hidden",!pode("lancar"))}
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();if(ver()&&frotaVer())carregar()});
-window.addEventListener("sig:empresa-contexto",()=>{if(!$("pagina-combustivel")?.classList.contains("hidden"))carregar()});
+const recarregarFiltroVisual=()=>{if(!$("pagina-combustivel")?.classList.contains("hidden"))carregar()};
+window.addEventListener("sig:empresa-changed",recarregarFiltroVisual);
+window.addEventListener("sig:contexto-changed",recarregarFiltroVisual);
+window.addEventListener("sig:empresa-contexto",recarregarFiltroVisual);
 window.addEventListener("sig:periodo-changed",()=>{if(!$("pagina-combustivel")?.classList.contains("hidden"))render()});
 window.addEventListener("sig:data-changed",e=>{if(["combustivel","frota","rh"].includes(e.detail?.modulo)&&!$("pagina-combustivel")?.classList.contains("hidden"))carregar()});
