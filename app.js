@@ -36,7 +36,7 @@ import "./js/admin-fuel-settings.js?v=3";
 import "./js/area-navigation.js?v=6";
 import("./js/commercial-workflow.js?v=18").catch(error => console.error("Módulo Comercial · Visitas/Orçamentos indisponível", error));
 import "./js/governance.js";
-import "./js/governance-kamishibai.js?v=1";
+import "./js/governance-kamishibai.js?v=2";
 import "./js/governance-security.js";
 import "./js/dashboard-v2.js?v=2";
 import "./js/production-dashboard.js?v=2";
