@@ -58,7 +58,7 @@ function montarContexto(){
   garantirCss();
   const wrap=document.createElement("div");wrap.id="contextoGlobal";wrap.className="contexto-global";wrap.innerHTML=`
     <div class="ctx-campo"><label for="grupoContexto">Grupo empresarial</label><select id="grupoContexto" class="ctx-select ctx-grupo" aria-label="Grupo empresarial"></select></div>
-    <div class="ctx-campo"><label>Empresas</label><details id="empresasContexto" class="ctx-empresas"><summary id="empresasContextoResumo">Carregando...</summary><div id="empresasContextoLista" class="ctx-empresas-pop"></div></details></div>
+    <div class="ctx-campo"><label>Visualizar empresas</label><details id="empresasContexto" class="ctx-empresas"><summary id="empresasContextoResumo">Carregando...</summary><div id="empresasContextoLista" class="ctx-empresas-pop"></div></details></div>
     <div class="ctx-campo"><label>Exercício</label><div class="ctx-periodo"><button id="ctxAnoAnterior" class="ctx-ano-btn" type="button" aria-label="Exercício anterior">‹</button><span id="ctxAnoAtual" class="ctx-ano-atual"></span><button id="ctxAnoProximo" class="ctx-ano-btn" type="button" aria-label="Próximo exercício">›</button></div></div>
     <div class="ctx-campo"><label for="periodoContexto">Competência</label><select id="periodoContexto" class="ctx-select" aria-label="Competência">${opcoesPeriodo()}</select></div>`;
   usuario.before(wrap);
@@ -81,9 +81,10 @@ async function buscarEmpresasPermitidas(){
   state.empresas=new Map([...state.empresas,...mapa]);return mapa;
 }
 
-function ocultarSeletoresLocais(){
-  const ids=["contratoEmpresa","prestadorEmpresa","veiculoEmpresa","itemEmpresa","cotacaoEmpresa","ctrlEmpresa","controladoriaEmpresaFiltro"];
-  ids.forEach(id=>{const el=$(id);if(!el)return;const campo=el.closest(".campo");if(campo){campo.classList.add("empresa-local-oculta");campo.setAttribute("aria-hidden","true")}});
+function liberarSeletoresLocais(){
+  const ids=["contratoEmpresa","prestadorEmpresa","veiculoEmpresa","itemEmpresa","cotacaoEmpresa","ctrlEmpresa","controladoriaEmpresaFiltro","fuelEmpresa","adminFuelEmpresa"];
+  ids.forEach(id=>{const el=$(id);if(!el)return;const campo=el.closest(".campo");if(campo){campo.classList.remove("empresa-local-oculta");campo.removeAttribute("aria-hidden")}});
+  document.querySelectorAll(".empresa-local-oculta").forEach(campo=>{campo.classList.remove("empresa-local-oculta");campo.removeAttribute("aria-hidden")});
 }
 
 function atualizarGrupo(){
@@ -123,7 +124,8 @@ function atualizarSubtitulo(){
 }
 
 function emitirContexto(tipo="contexto"){
-  const detail={grupoId:grupoAtualId(),empresaIds:empresasSelecionadasIds(),empresaId:empresaUnicaSelecionadaId(),multiEmpresa:empresasSelecionadasIds().length>1,ano:periodoAno(),periodo:periodoChave(),periodoLabel:periodoLabel()};
+  const filtroEmpresaIds=empresasSelecionadasIds(),filtroEmpresaId=empresaUnicaSelecionadaId();
+  const detail={grupoId:grupoAtualId(),empresaIds:filtroEmpresaIds,empresaId:filtroEmpresaId,filtroEmpresaIds,filtroEmpresaId,multiEmpresa:filtroEmpresaIds.length>1,ano:periodoAno(),periodo:periodoChave(),periodoLabel:periodoLabel()};
   window.dispatchEvent(new CustomEvent("sig:contexto-changed",{detail}));
   if(tipo==="empresa"||tipo==="contexto")window.dispatchEvent(new CustomEvent("sig:empresa-changed",{detail}));
   if(tipo==="periodo"||tipo==="contexto")window.dispatchEvent(new CustomEvent("sig:periodo-changed",{detail}));
@@ -150,7 +152,7 @@ export function definirEmpresasSelecionadas(ids,{emitir=true,todas=false}={}){
   const validos=[...new Set((ids||[]).filter(id=>state.empresas.has(id)&&state.empresas.get(id)?.grupoId===grupoAtualId()&&state.empresas.get(id)?.ativo!==false))];
   if(!validos.length)return false;
   state.empresasSelecionadasIds=validos;state.empresaAtualId=validos[0];state.todasEmpresasSelecionadas=todas===true;
-  atualizarResumoEmpresas();atualizarListaEmpresas();atualizarSubtitulo();ocultarSeletoresLocais();salvarContexto();if(emitir)emitirContexto("empresa");return true;
+  atualizarResumoEmpresas();atualizarListaEmpresas();atualizarSubtitulo();liberarSeletoresLocais();salvarContexto();if(emitir)emitirContexto("empresa");return true;
 }
 
 export function definirPeriodo(ano,chave,{emitir=true}={}){
@@ -167,9 +169,9 @@ export async function carregarContextoEmpresa(){
     const salvo=contextoSalvo(),permitidos=new Set(arr.map(e=>e.id));let ids=(Array.isArray(salvo.empresaIds)?salvo.empresaIds:[]).filter(id=>permitidos.has(id));
     if(salvo.todasEmpresas===true)ids=arr.map(e=>e.id);if(!ids.length){const inicial=[state.usuario?.empresaId,arr[0]?.id].find(id=>id&&permitidos.has(id));ids=inicial?[inicial]:[arr[0].id]}
     state.periodoAno=Number(salvo.ano)||new Date().getFullYear();state.periodoChave=PERIODOS[salvo.periodo]?salvo.periodo:`m${String(new Date().getMonth()+1).padStart(2,"0")}`;
-    definirEmpresasSelecionadas(ids,{emitir:false,todas:salvo.todasEmpresas===true&&ids.length===arr.length});definirPeriodo(state.periodoAno,state.periodoChave,{emitir:false});atualizarListaEmpresas();ocultarSeletoresLocais();emitirContexto("contexto");
+    definirEmpresasSelecionadas(ids,{emitir:false,todas:salvo.todasEmpresas===true&&ids.length===arr.length});definirPeriodo(state.periodoAno,state.periodoChave,{emitir:false});atualizarListaEmpresas();liberarSeletoresLocais();emitirContexto("contexto");
   }catch(e){console.error("Erro ao carregar contexto global",e);if(resumo)resumo.textContent="Erro ao carregar"}
 }
 
 window.addEventListener("sig:ready",carregarContextoEmpresa);
-window.addEventListener("sig:page",()=>{ocultarSeletoresLocais();atualizarSubtitulo()});
+window.addEventListener("sig:page",()=>{liberarSeletoresLocais();atualizarSubtitulo()});
