@@ -1,10 +1,9 @@
-import { $, esc, listarDocumentos, empresaUnicaSelecionadaId, dataBr, moeda } from './shared.js';
+import { $, esc, listarDocumentos, dataBr, moeda } from './shared.js';
 import { colaboradoresPorFuncao } from './hr-role-registry.js?v=6';
 import { periodoAtual } from './company-context.js';
 
 let veiculos=[],manutencoes=[],abastecimentos=[],custosDiesel=[],motoristas=[],busy=false,timer=0,observer=null,veiculoSelecionado='';
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
-const emp=()=>empresaUnicaSelecionadaId();
 const agora=()=>new Date();
 const diasDesde=s=>{if(!s)return null;const d=new Date(`${String(s).slice(0,10)}T12:00:00`);return Number.isNaN(d.getTime())?null:Math.floor((agora()-d)/86400000)};
 const diasAte=s=>{if(!s)return null;const d=new Date(`${s}T12:00:00`);return Number.isNaN(d.getTime())?null:Math.ceil((d-agora())/86400000)};
@@ -29,7 +28,7 @@ const classificacao=s=>s>=90?'Excelente':s>=75?'Saudável':s>=60?'Atenção':s>=
 
 function css(){if(document.querySelector('link[href^="fleet-central.css"]'))return;const l=document.createElement('link');l.rel='stylesheet';l.href='fleet-central.css?v=1';document.head.appendChild(l)}
 async function lerSeguro(c){try{return await listarDocumentos(c)}catch(e){console.warn(`Frota: ${c} indisponível`,e);return[]}}
-async function carregar(){if(busy||!emp())return;busy=true;try{const [v,m,a,c,mo]=await Promise.all([lerSeguro('veiculos'),lerSeguro('manutencoesFrota'),lerSeguro('abastecimentosFrota'),lerSeguro('custosDiesel'),colaboradoresPorFuncao('MOTORISTA').catch(()=>[])]);veiculos=v.filter(x=>x.empresaId===emp());manutencoes=m.filter(x=>x.empresaId===emp());abastecimentos=a.filter(x=>x.empresaId===emp());custosDiesel=c.filter(x=>x.empresaId===emp());motoristas=mo.filter(x=>x.empresaId===emp());decorar();renderSaude();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)}finally{busy=false}}
+async function carregar(){if(busy)return;busy=true;try{const [v,m,a,c,mo]=await Promise.all([lerSeguro('veiculos'),lerSeguro('manutencoesFrota'),lerSeguro('abastecimentosFrota'),lerSeguro('custosDiesel'),colaboradoresPorFuncao('MOTORISTA').catch(()=>[])]);veiculos=v;manutencoes=m;abastecimentos=a;custosDiesel=c;motoristas=mo;decorar();renderSaude();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)}finally{busy=false}}
 
 function selectMotorista(input,placeholder){
   if(!input)return;
@@ -189,7 +188,7 @@ function renderFicha(id){
   b.scrollIntoView({behavior:'smooth',block:'start'})
 }
 function fmtLitros(v){return num(v).toLocaleString('pt-BR',{maximumFractionDigits:2})}
-function decorarLinhas(){document.querySelectorAll('#listaVeiculos tr').forEach(tr=>{if(tr.dataset.ficha==='1')return;const placa=String(tr.cells?.[0]?.innerText||'').trim().split(' ')[0],v=veiculos.find(x=>x.placa===placa);if(!v)return;tr.dataset.ficha='1';const ac=tr.cells?.[6]?.querySelector('.acoes-tabela');if(ac){const b=document.createElement('button');b.className='btn-acao';b.type='button';b.textContent='Ficha';b.onclick=()=>{document.querySelector('[data-fleet-tab="visao"]')?.click();setTimeout(()=>renderFicha(v.id),40)};ac.prepend(b)}});decorarResumoLinhas()}
+function decorarLinhas(){document.querySelectorAll('#listaVeiculos tr').forEach(tr=>{if(tr.dataset.ficha==='1')return;const id=tr.dataset.veiculoId||'',placa=String(tr.cells?.[0]?.innerText||'').trim().split(' ')[0],v=veiculos.find(x=>x.id===id)||veiculos.find(x=>x.placa===placa);if(!v)return;tr.dataset.ficha='1';tr.dataset.veiculoId=v.id;tr.style.cursor='pointer';tr.tabIndex=0;tr.setAttribute('role','button');tr.title='Abrir relatório detalhado do veículo';const abrir=e=>{if(e?.target?.closest?.('button,a,input,select'))return;document.querySelector('[data-fleet-tab="visao"]')?.click();setTimeout(()=>renderFicha(v.id),40)};tr.addEventListener('click',abrir);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();abrir(e)}})});decorarResumoLinhas()}
 function decorarResumoLinhas(){const tb=$('frotaResumoVeiculos'),table=tb?.closest('table');if(!tb||!table)return;const p=periodoInfo();tb.querySelectorAll('tr').forEach(tr=>{const id=tr.dataset.veiculoId||'',placa=String(tr.cells?.[0]?.innerText||'').trim().split(' ')[0],v=veiculos.find(x=>x.id===id)||veiculos.find(x=>x.placa===placa);if(!v)return;const c12=custo(v),cp=custoPeriodo(v);if(tr.cells[5])tr.cells[5].textContent=moeda(c12.total);if(tr.cells[6])tr.cells[6].innerHTML=`<strong>${moeda(cp.total)}</strong><br><small>${esc(p.label)} ${p.ano}</small>`;tr.style.cursor='pointer';tr.tabIndex=0;tr.setAttribute('role','button');tr.title='Abrir detalhamento técnico do veículo';const abrir=e=>{if(e?.target?.closest?.('button,a,input,select'))return;renderFicha(v.id)};tr.onclick=abrir;tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();renderFicha(v.id)}}})}
 
 function filtrar(sel,pred){document.querySelectorAll(sel).forEach(tr=>{tr.style.display=pred(tr)?'':'none'})}
@@ -216,6 +215,6 @@ function instalarCliqueResumo(){
 }
 function agenda(){clearTimeout(timer);timer=setTimeout(carregar,100)}
 function instalar(){if(observer)return;observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{decorarFormularios();cards();decorarLinhas()},60)});observer.observe(document.body,{childList:true,subtree:true});agenda()}
-window.addEventListener('sig:ready',agenda);window.addEventListener('sig:fleet-open-detail',e=>{const id=e.detail?.veiculoId;if(id)renderFicha(id)});window.addEventListener('sig:fleet-summary-rendered',()=>setTimeout(decorarResumoLinhas,0));window.addEventListener('sig:empresa-contexto',agenda);window.addEventListener('sig:periodo-changed',()=>{decorarResumoLinhas();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)});window.addEventListener('sig:data-changed',e=>{if(['frota','combustivel','rh'].includes(e.detail?.modulo))agenda()});window.addEventListener('sig:page',e=>{if(['frota','combustivel'].includes(e.detail?.pagina))agenda()});
+window.addEventListener('sig:ready',agenda);window.addEventListener('sig:fleet-open-detail',e=>{const id=e.detail?.veiculoId;if(id)renderFicha(id)});window.addEventListener('sig:fleet-summary-rendered',()=>setTimeout(decorarResumoLinhas,0));window.addEventListener('sig:empresa-changed',agenda);window.addEventListener('sig:contexto-changed',agenda);window.addEventListener('sig:empresa-contexto',agenda);window.addEventListener('sig:periodo-changed',()=>{decorarResumoLinhas();if(veiculoSelecionado&&!$('fleetFichaCentral')?.classList.contains('hidden'))renderFicha(veiculoSelecionado)});window.addEventListener('sig:data-changed',e=>{if(['frota','combustivel','rh'].includes(e.detail?.modulo))agenda()});window.addEventListener('sig:page',e=>{if(['frota','combustivel'].includes(e.detail?.pagina))agenda()});
 instalar();
 instalarCliqueResumo();
