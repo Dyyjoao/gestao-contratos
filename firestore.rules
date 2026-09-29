@@ -1468,6 +1468,33 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /kamishibaiRotas/{id} {
+      allow read: if governancaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if governancaConfigurar() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.status in ['ativo','inativo'] &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.setor is string && request.resource.data.setor.size() > 0 &&
+        request.resource.data.pontos is list;
+      allow update: if governancaConfigurar() && documentoAcessivel(resource.data) &&
+        request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nome','setor','periodicidade','responsavel','status','objetivo','pontos',
+          'ultimaExecucaoEm','ultimaExecucaoData','ultimaConformidade','ultimoDesvios','atualizadoEm'
+        ]);
+      allow delete: if false;
+    }
+
+    match /kamishibaiExecucoes/{id} {
+      allow read: if governancaVisualizar() && documentoAcessivel(resource.data);
+      allow create: if governancaAuditar() && documentoAcessivel(request.resource.data) &&
+        request.resource.data.auditorId == request.auth.uid &&
+        request.resource.data.status == 'concluida' &&
+        request.resource.data.rotaId is string && request.resource.data.rotaId.size() > 0 &&
+        request.resource.data.respostas is list;
+      allow update, delete: if false;
+    }
+
     match /configuracoesControladoria/{id} {
       allow read: if documentoAcessivel(resource.data) &&
         (governancaVisualizar() || fechamentoGerir() || fechamentoFechar());
