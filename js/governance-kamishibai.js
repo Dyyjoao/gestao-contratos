@@ -37,7 +37,7 @@ function instalar(){
       <div class="campo"><label for="kamiRotaStatus">Status</label><select id="kamiRotaStatus"><option value="ativo">Ativa</option><option value="inativo">Inativa</option></select></div>
       <div class="campo"><label for="kamiRotaObjetivo">Objetivo</label><input id="kamiRotaObjetivo" placeholder="Ex.: Segurança, 5S e padrão operacional"></div>
     </div>
-    <div class="lista-cabecalho"><div><h4>Pontos da rota</h4><p>Cadastre na mesma ordem em que a pessoa percorre fisicamente o chão de fábrica.</p></div></div>
+    <div class="lista-cabecalho"><div><h4>Pontos da rota</h4><p>Cadastre na mesma ordem em que a pessoa percorre fisicamente o chão de fábrica.</p></div><button id="btnKamiModeloFabrica" class="btn-secundario" type="button">Usar modelo pré-moldados</button></div>
     <div class="kami-point-builder"><div class="campo"><label for="kamiPontoLocal">Local / etapa</label><input id="kamiPontoLocal" placeholder="Ex.: Central de concreto"></div><div class="campo"><label for="kamiPontoCriterio">O que verificar / padrão</label><input id="kamiPontoCriterio" placeholder="Ex.: Área limpa, sem material fora da faixa demarcada"></div><div class="campo"><label for="kamiPontoSeveridade">Criticidade</label><select id="kamiPontoSeveridade">${Object.entries(SEVERIDADES).map(([v,t])=>`<option value="${v}">${t}</option>`).join("")}</select></div><button id="btnKamiAddPonto" class="btn-secundario" type="button">Adicionar</button></div>
     <div id="kamiPontosDraft"></div>
     <div class="form-acoes"><button id="btnKamiCancelarRota" class="btn-secundario" type="button">Cancelar</button><button class="btn-primario" type="submit">Salvar rota</button></div><p id="kamiRotaMsg" class="mensagem-form"></p></form></section>
@@ -48,6 +48,7 @@ function instalar(){
   $("btnNovaRotaKami")?.addEventListener("click",()=>abrirRota());
   $("btnKamiCancelarRota")?.addEventListener("click",fecharRota);
   $("btnKamiAddPonto")?.addEventListener("click",addPonto);
+  $("btnKamiModeloFabrica")?.addEventListener("click",carregarModeloFabrica);
   $("kamiRotaForm")?.addEventListener("submit",salvarRota);
   $("governancaEmpresa")?.addEventListener("change",()=>{if(!view.classList.contains("hidden"))carregar()});
   return true
@@ -61,6 +62,28 @@ function renderPontosDraft(){
   box.querySelectorAll("[data-kami-down]").forEach(b=>b.onclick=()=>moverPonto(b.dataset.kamiDown,1))
 }
 function moverPonto(id,delta){const i=pontosDraft.findIndex(x=>x.id===id),j=i+delta;if(i<0||j<0||j>=pontosDraft.length)return;[pontosDraft[i],pontosDraft[j]]=[pontosDraft[j],pontosDraft[i]];renderPontosDraft()}
+function carregarModeloFabrica(){
+  if(pontosDraft.length&&!confirm("Substituir os pontos atuais pelo modelo de pré-moldados?"))return;
+  const base=[
+    ["Acesso / início da rota","Corredores e faixas de circulação livres, sinalizados e sem materiais obstruindo a passagem.","alta"],
+    ["EPI e comportamento seguro","Equipe utilizando EPIs obrigatórios e sem condição ou ato inseguro evidente.","critica"],
+    ["Central de concreto","Área limpa e organizada; insumos identificados; vazamentos, derrames e acúmulos tratados.","alta"],
+    ["Armação","Vergalhões, telas e armações armazenados de forma segura, identificados e fora das áreas de circulação.","alta"],
+    ["Formas e moldes","Formas íntegras, limpas, organizadas e prontas para uso conforme padrão definido.","media"],
+    ["Produção / moldagem","Posto organizado; padrão operacional seguido; materiais e ferramentas nos locais definidos.","alta"],
+    ["Movimentação de cargas","Pontes rolantes, cintas, ganchos e acessórios sem avaria aparente e operação dentro da área segura.","critica"],
+    ["Cura e estoque intermediário","Peças identificadas, posicionadas com estabilidade e respeitando área e tempo de cura.","alta"],
+    ["Pátio / produto acabado","Empilhamento estável, identificação visível e corredores livres para movimentação.","critica"],
+    ["Expedição","Carga e amarração organizadas; área sem peças soltas ou condições que comprometam a segurança.","critica"],
+    ["5S / descarte","Resíduos segregados; sucata, madeira, aço e descartes nos locais definidos; ausência de acúmulo desnecessário.","media"],
+    ["Gestão à vista","Quadros e indicadores do setor atualizados, legíveis e coerentes com a situação observada.","baixa"]
+  ];
+  pontosDraft=base.map(([local,criterio,severidade])=>({id:`kp_${uid()}`,local,criterio,severidade}));
+  if(!$("kamiRotaNome").value)$("kamiRotaNome").value="Rota Kamishibai · Chão de Fábrica";
+  if(!$("kamiRotaSetor").value)$("kamiRotaSetor").value="Produção / Pátio";
+  if(!$("kamiRotaObjetivo").value)$("kamiRotaObjetivo").value="Segurança, 5S, padrão operacional e qualidade";
+  renderPontosDraft()
+}
 function addPonto(){const local=String($("kamiPontoLocal")?.value||"").trim(),criterio=String($("kamiPontoCriterio")?.value||"").trim(),severidade=$("kamiPontoSeveridade")?.value||"media";if(!local||!criterio)return; pontosDraft.push({id:`kp_${uid()}`,local,criterio,severidade});$("kamiPontoLocal").value="";$("kamiPontoCriterio").value="";renderPontosDraft()}
 function abrirRota(id=""){if(!podeConfig())return;const r=id?rotas.find(x=>x.id===id):null;rotaEditId=r?.id||null;pontosDraft=(r?.pontos||[]).map(x=>({...x}));$("kamiRotaForm")?.reset();$("kamiRotaFormTitulo").textContent=r?"Editar rota Kamishibai":"Nova rota Kamishibai";$("kamiRotaNome").value=r?.nome||"";$("kamiRotaSetor").value=r?.setor||"";$("kamiRotaPeriodicidade").value=r?.periodicidade||"semanal";$("kamiRotaResponsavel").value=r?.responsavel||"";$("kamiRotaStatus").value=r?.status||"ativo";$("kamiRotaObjetivo").value=r?.objetivo||"";renderPontosDraft();$("kamiRotaFormBox")?.classList.remove("hidden");$("kamiRotaFormBox")?.scrollIntoView({behavior:"smooth",block:"start"})}
 function fecharRota(){rotaEditId=null;pontosDraft=[];$("kamiRotaForm")?.reset();$("kamiRotaFormBox")?.classList.add("hidden")}
