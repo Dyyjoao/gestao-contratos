@@ -74,7 +74,7 @@ jobs:
           ! sed -n '/function empresaParaGravacao/,/^}/p' js/shared.js | grep -Fq 'empresaUnicaSelecionadaId'
 
           grep -Fq 'id="planoEmpresa"' js/my-desk.js
-          grep -Fq 'id="contratoEmpresa"' index.html
+          grep -Fq 'id="contratoEmpresa"' js/shell.js
           grep -Fq 'id="apEmpresa"' js/payables.js
           grep -Fq 'id="prodEmpresa"' js/production.js
           grep -Fq 'id="descarteEmpresa"' js/disposal.js
