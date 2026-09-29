@@ -1,4 +1,4 @@
-import { $, esc, permite, admin, moeda, listarDocumentos, listarDocumentosEmpresa, criarDocumento, atualizarDocumento, excluirDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
+import { $, esc, permite, admin, moeda, listarDocumentos, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, excluirDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=7";
 import { normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes } from "./import-center.js";
 
@@ -383,7 +383,7 @@ async function garantirClientes(emp,linhas,lote){
   const mapa=new Map(clientes.filter(x=>x.empresaId===emp).map(x=>[chaveCodigo(x.codigo),x]));
   const unicos=new Map();linhas.forEach(r=>{const k=chaveCodigo(r.clienteCodigo);if(k&&!mapa.has(k)&&!unicos.has(k))unicos.set(k,r)});
   for(const r of unicos.values()){
-    const id=await criarDocumento("clientesComerciais",{empresaId:emp,codigo:r.clienteCodigo,nome:r.clienteNome,cidade:r.clienteCidade||"",uf:r.clienteUf||"",status:"ativo",origem:"importacao_relatorio_vendas",importacaoLoteId:lote});
+    const id=await criarDocumentoEmpresa("clientesComerciais",{empresaId:emp,codigo:r.clienteCodigo,nome:r.clienteNome,cidade:r.clienteCidade||"",uf:r.clienteUf||"",status:"ativo",origem:"importacao_relatorio_vendas",importacaoLoteId:lote});
     const x={id,empresaId:emp,codigo:r.clienteCodigo,nome:r.clienteNome,cidade:r.clienteCidade||"",uf:r.clienteUf||"",status:"ativo",importacaoLoteId:lote};clientes.push(x);mapa.set(chaveCodigo(r.clienteCodigo),x)
   }
   return mapa
@@ -395,7 +395,7 @@ async function garantirConfigs(emp,linhas,lote){
     const rh=vendedoresRh.find(x=>chaveCodigo(x.codigoVendedor)===k);if(!rh)throw new Error(`Código de vendedor ${linhas.find(r=>chaveCodigo(r.vendedorCodigo)===k)?.vendedorCodigo||k} não está vinculado a um colaborador vendedor no RH.`);
     let cfg=cfgPorRh(rh.id);
     if(!cfg){
-      const id=await criarDocumento("vendedores",{empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true,origem:"importacao_relatorio_vendas",importacaoLoteId:lote});
+      const id=await criarDocumentoEmpresa("vendedores",{empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true,origem:"importacao_relatorio_vendas",importacaoLoteId:lote});
       cfg={id,empresaId:emp,rhColaboradorId:rh.id,nome:rh.nome||"",codigoVendedor:rh.codigoVendedor||"",tipoComissao:"vendedor",metaMensal:0,comissaoPct:0,baseComissao:"recebido",status:"ativo",configuracaoPendente:true,origem:"importacao_relatorio_vendas",importacaoLoteId:lote};configs.push(cfg)
     }
     mapa.set(k,{rh,cfg})
@@ -408,7 +408,7 @@ function snapshotVenda(v){
 }
 async function registrarSnapshot(lote,emp,v){
   const existente=snapshots.find(s=>s.empresaId===emp&&s.loteId===lote&&s.vendaId===v.id);if(existente)return existente.id;
-  const id=await criarDocumento("importacoesVendasAlteracoes",{empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v),registradoEm:new Date().toISOString()});
+  const id=await criarDocumentoEmpresa("importacoesVendasAlteracoes",{empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v),registradoEm:new Date().toISOString()});
   snapshots.push({id,empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes:snapshotVenda(v)});return id
 }
 function parcelasParaVenda(r,existente=null){
@@ -442,14 +442,14 @@ async function confirmar(){
   busy=true;let logId="",lote="",criadas=0,atualizadas=0;
   try{
     lote=loteId();
-    logId=await criarDocumento("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:operacoes.length,quantidadeNovasPrevista:novas,quantidadeAtualizacoesPrevista:atualizacoes,quantidadeConflitos:conflitos.length,quantidadeParcelasPrevista:qtdParcelas,valorPrevisto:operacoes.reduce((s,x)=>s+n(x.r.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
+    logId=await criarDocumentoEmpresa("importacoesVendas",{empresaId:emp,loteId:lote,origem:"relatorio_vendas",arquivo:arquivoAtual||"arquivo_excel",aba:analise.aba||"",lojasOrigem:lojas,status:"processando",quantidadePrevista:operacoes.length,quantidadeNovasPrevista:novas,quantidadeAtualizacoesPrevista:atualizacoes,quantidadeConflitos:conflitos.length,quantidadeParcelasPrevista:qtdParcelas,valorPrevisto:operacoes.reduce((s,x)=>s+n(x.r.valor),0),iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
     msg($("salesReportImportMsg"),`Lote ${lote} · validando clientes e vendedores...`);
     const linhasOp=operacoes.map(x=>x.r),clienteMap=await garantirClientes(emp,linhasOp,lote),vendMap=await garantirConfigs(emp,linhasOp,lote);
     for(let i=0;i<operacoes.length;i++){
       const op=operacoes[i],r=op.r,cl=clienteMap.get(chaveCodigo(r.clienteCodigo)),v=vendMap.get(chaveCodigo(r.vendedorCodigo));if(!cl||!v)throw new Error("vinculo-incompleto");
       msg($("salesReportImportMsg"),`Lote ${lote} · processando ${i+1} de ${operacoes.length}...`);
       if(op.tipo==="nova"){
-        await criarDocumento("vendas",{...dadosVendaImportada(r,cl,v,lote),empresaId:emp,importacaoLoteId:lote});criadas++
+        await criarDocumentoEmpresa("vendas",{...dadosVendaImportada(r,cl,v,lote),empresaId:emp,importacaoLoteId:lote});criadas++
       }else{
         const atual=vendas.find(x=>x.id===op.existente.id)||op.existente;
         await registrarSnapshot(lote,emp,atual);
