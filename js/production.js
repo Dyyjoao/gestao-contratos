@@ -1,5 +1,5 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao, periodoAno, periodoChave } from "./shared.js";
+import { $, esc, msg, permite, state, listarDocumentos, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, dataBr, emitirAlteracao, periodoAno, periodoChave } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria } from "./admin-actions.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=7";
 
@@ -15,11 +15,10 @@ const VINCULOS_PADRAO={
   "MAQ.2":["BANDEJA"]
 };
 
-let registros=[],cadastros=[],vinculos=[],responsaveis=[],editId=null,busy=false,detalheTipo="",analiseModo="producao";
+let registros=[],cadastrosForm=[],vinculosForm=[],responsaveisForm=[],editId=null,busy=false,detalheTipo="",analiseModo="producao";
 const pagina=()=>$("pagina-producao");
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const norm=v=>String(v||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
-const emp=()=>empresaUnicaSelecionadaId();
 const podeVer=()=>admin()||["visualizar","lancar","editar","cadastros"].some(a=>permite("producao",a));
 const podeLancar=()=>admin()||permite("producao","lancar");
 const podeEditar=()=>admin()||permite("producao","editar");
@@ -69,6 +68,7 @@ function criarPagina(){
   <section id="producaoFormBox" class="form-card hidden">
     <div class="form-card-titulo"><div><h3 id="producaoFormTitulo">Novo lançamento</h3><p>O item é filtrado conforme a produção selecionada. Responsáveis vêm do RH.</p></div></div>
     <form id="formProducao"><div class="form-grid form-grid-3">
+      <div class="campo"><label for="prodEmpresa">Empresa</label><select id="prodEmpresa" required></select><small>A empresa pertence ao lançamento; o cabeçalho filtra apenas a análise.</small></div>
       <div class="campo"><label for="prodData">Data</label><input id="prodData" type="date" required></div>
       <div class="campo"><label for="prodRecurso">Produção / máquina</label><select id="prodRecurso" required></select></div>
       <div class="campo"><label for="prodItem">Item</label><select id="prodItem" required></select><small id="prodItemAjuda">Selecione a produção para carregar os itens vinculados.</small></div>
@@ -81,7 +81,8 @@ function criarPagina(){
   </section>
 
   <section id="producaoCadastrosBox" class="form-card hidden">
-    <div class="form-card-titulo"><div><h3>Cadastros da Indústria</h3><p>Administre produções, itens e a relação Produção × Item.</p></div><button id="btnFecharCadastrosProducao" class="btn-secundario" type="button">Fechar</button></div>
+    <div class="form-card-titulo"><div><h3>Cadastros da Indústria</h3><p>Administre produções, itens e a relação Produção × Item por empresa.</p></div><button id="btnFecharCadastrosProducao" class="btn-secundario" type="button">Fechar</button></div>
+    <div class="form-grid form-grid-3" style="margin-bottom:14px"><div class="campo"><label for="prodCadEmpresa">Empresa</label><select id="prodCadEmpresa" required></select><small>Produções, itens e vínculos pertencem à empresa selecionada aqui.</small></div></div>
     <div class="production-master-grid production-master-grid-2">
       ${Object.entries(TIPOS).map(([k,l])=>`<div class="production-master"><h4>${l}</h4><div class="production-master-add"><input data-master-input="${k}" placeholder="Novo cadastro"><button class="btn-secundario" data-master-add="${k}" type="button">Adicionar</button></div><div data-master-list="${k}"></div></div>`).join("")}
     </div>
@@ -119,28 +120,29 @@ function criarPagina(){
     <div id="prodAcompanhamentoGrafico" class="production-annual-chart"></div>
   </section>
 
-  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Histórico de lançamentos</h3><p id="prodQtdRegistros">—</p></div><span class="production-history-note">Estornos permanecem visíveis e não entram nos indicadores.</span></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Produção</th><th>Item</th><th>Total</th><th>Horas</th><th>Produtividade</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="prodLista"></tbody></table></div></section>`;
+  <section class="lista-card"><div class="lista-cabecalho"><div><h3>Histórico de lançamentos</h3><p id="prodQtdRegistros">—</p></div><span class="production-history-note">Estornos permanecem visíveis e não entram nos indicadores.</span></div><div class="tabela-container"><table class="tabela"><thead><tr><th>Empresa</th><th>Data</th><th>Produção</th><th>Item</th><th>Total</th><th>Horas</th><th>Produtividade</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="prodLista"></tbody></table></div></section>`;
   main.appendChild(s);ligarEventos();
 }
 
 function listaCadastros(tipo){
   const mapa=new Map((LEGADO[tipo]||[]).map(nome=>[norm(nome),{id:"",nome,ativo:true,legado:true}]));
-  cadastros.filter(x=>x.tipo===tipo&&x.empresaId===emp()).forEach(x=>mapa.set(norm(x.nome),{...x,legado:false}));
+  cadastrosForm.filter(x=>x.tipo===tipo).forEach(x=>mapa.set(norm(x.nome),{...x,legado:false}));
   return [...mapa.values()]
 }
 function producoesAtivas(){return listaCadastros("recurso").filter(x=>x.ativo!==false).map(x=>x.nome)}
 function itensAtivos(){return listaCadastros("item").filter(x=>x.ativo!==false).map(x=>x.nome)}
+function producoesAnalise(){const mapa=new Map(LEGADO.recurso.map(v=>[norm(v),v]));registros.forEach(x=>{if(x.recurso)mapa.set(norm(x.recurso),x.recurso)});return[...mapa.values()].sort((a,b)=>a.localeCompare(b,"pt-BR"))}
 function opcoesLista(valores,{vazio=true,label="Selecione..."}={}){return `${vazio?`<option value="">${label}</option>`:""}${[...new Set(valores)].sort((a,b)=>a.localeCompare(b,"pt-BR")).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")}`}
 function itensParaProducao(recurso){
   if(!recurso)return[];
-  const todos=vinculos.filter(x=>x.empresaId===emp()&&norm(x.recurso)===norm(recurso));
+  const todos=vinculosForm.filter(x=>norm(x.recurso)===norm(recurso));
   if(todos.length)return todos.filter(x=>x.ativo!==false).map(x=>x.item).filter(Boolean);
   const padrao=VINCULOS_PADRAO[Object.keys(VINCULOS_PADRAO).find(k=>norm(k)===norm(recurso))]||[];
   return padrao.length?padrao:itensAtivos()
 }
 function preencherResponsaveis(valor=""){
   const s=$("prodConcretador");if(!s)return;const atual=valor||s.value||"";
-  const nomes=responsaveis.map(x=>x.nome).filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  const nomes=responsaveisForm.map(x=>x.nome).filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));
   s.innerHTML='<option value="">Selecione...</option>'+nomes.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
   if(atual&&![...s.options].some(o=>o.value===atual))s.add(new Option(`${atual} · vínculo anterior`,atual));
   s.value=atual
@@ -165,7 +167,7 @@ function atualizarSelects(){
   if(r&&vr&&[...r.options].some(o=>o.value===vr))r.value=vr;
   const anual=$("prodAcompanhamentoProducao"),anualAtual=anual?.value||"MAQUINAS_CONSOLIDADO";
   if(anual){
-    const recursos=producoesAtivas().filter(x=>tipoBloco(x)!=="maquina").sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const recursos=producoesAnalise().filter(x=>tipoBloco(x)!=="maquina").sort((a,b)=>a.localeCompare(b,"pt-BR"));
     anual.innerHTML='<option value="MAQUINAS_CONSOLIDADO">Máquinas · consolidado</option><option value="MAQ.1">MAQ.1</option><option value="MAQ.2">MAQ.2</option>'+recursos.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
     anual.value=[...anual.options].some(o=>o.value===anualAtual)?anualAtual:"MAQUINAS_CONSOLIDADO";
   }
@@ -282,53 +284,61 @@ function render(){
   renderDetalheProdutos(arr);
   renderAcompanhamentoAnual();
 
-  const tb=$("prodLista");if(tb)tb.innerHTML=historico.sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))).map(x=>{const u=x.unidadeMedida||unidadeRecurso(x.recurso),rate=n(x.horasTrabalhadas)?n(x.quantidade)/n(x.horasTrabalhadas):0;return`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${dataBr(x.data)}</td><td><strong>${esc(x.recurso||"-")}</strong>${x.status==="estornado"?'<small class="sig-admin-estorno-info">Estornado</small>':""}</td><td>${esc(x.item||"-")}</td><td>${fmt(x.quantidade)} ${unidadeTexto(u)}</td><td>${n(x.horasTrabalhadas)?fmt(x.horasTrabalhadas):"—"}</td><td>${tipoBloco(x.recurso)==="maquina"&&rate?fmt(rate)+" b/h":"—"}</td><td>${esc(x.responsavel||x.concretador||"-")}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&podeEditar()?`<button class="btn-acao destaque" data-prod-edit="${x.id}" type="button">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button class="btn-acao perigo" data-prod-estorno="${x.id}" type="button">Estornar ADM</button>`:""}</div></td></tr>`}).join("")||'<tr><td colspan="8">Nenhum lançamento encontrado.</td></tr>';
+  const tb=$("prodLista");if(tb)tb.innerHTML=historico.sort((a,b)=>String(b.data||"").localeCompare(String(a.data||""))).map(x=>{const u=x.unidadeMedida||unidadeRecurso(x.recurso),rate=n(x.horasTrabalhadas)?n(x.quantidade)/n(x.horasTrabalhadas):0;return`<tr class="${x.status==="estornado"?"sig-admin-estornado":""}"><td>${esc(nomeEmpresa(x.empresaId))}</td><td>${dataBr(x.data)}</td><td><strong>${esc(x.recurso||"-")}</strong>${x.status==="estornado"?'<small class="sig-admin-estorno-info">Estornado</small>':""}</td><td>${esc(x.item||"-")}</td><td>${fmt(x.quantidade)} ${unidadeTexto(u)}</td><td>${n(x.horasTrabalhadas)?fmt(x.horasTrabalhadas):"—"}</td><td>${tipoBloco(x.recurso)==="maquina"&&rate?fmt(rate)+" b/h":"—"}</td><td>${esc(x.responsavel||x.concretador||"-")}</td><td><div class="acoes-tabela">${x.status!=="estornado"&&podeEditar()?`<button class="btn-acao destaque" data-prod-edit="${x.id}" type="button">Editar</button>`:""}${x.status!=="estornado"&&admin()?`<button class="btn-acao perigo" data-prod-estorno="${x.id}" type="button">Estornar ADM</button>`:""}</div></td></tr>`}).join("")||'<tr><td colspan="9">Nenhum lançamento encontrado.</td></tr>';
   document.querySelectorAll("[data-prod-edit]").forEach(b=>b.onclick=()=>abrirEdicao(b.dataset.prodEdit));document.querySelectorAll("[data-prod-estorno]").forEach(b=>b.onclick=()=>estornar(b.dataset.prodEstorno))
 }
 
 function renderCadastros(){
   Object.keys(TIPOS).forEach(tipo=>{const el=document.querySelector(`[data-master-list="${tipo}"]`);if(!el)return;el.innerHTML=listaCadastros(tipo).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(x=>`<div class="production-master-row"><span>${esc(x.nome)}</span>${x.legado?'<small>base do Script</small>':`<button type="button" data-master-toggle="${x.id}">${x.ativo===false?"Reativar":"Inativar"}</button>`}</div>`).join("")});
   document.querySelectorAll("[data-master-toggle]").forEach(b=>b.onclick=()=>toggleCadastro(b.dataset.masterToggle));
-  const host=$("prodVinculosLista");if(host){const arr=vinculos.filter(x=>x.empresaId===emp()).sort((a,b)=>String(a.recurso).localeCompare(String(b.recurso),"pt-BR")||String(a.item).localeCompare(String(b.item),"pt-BR"));host.innerHTML=`<table class="tabela"><thead><tr><th>Produção</th><th>Item</th><th>Status</th><th>Ação</th></tr></thead><tbody>${arr.map(x=>`<tr><td>${esc(x.recurso)}</td><td>${esc(x.item)}</td><td>${x.ativo===false?"Inativo":"Ativo"}</td><td><button class="btn-acao" data-vinculo-toggle="${x.id}" type="button">${x.ativo===false?"Reativar":"Inativar"}</button></td></tr>`).join("")||'<tr><td colspan="4">Nenhum vínculo explícito. O padrão legado está sendo usado.</td></tr>'}</tbody></table>`;host.querySelectorAll("[data-vinculo-toggle]").forEach(b=>b.onclick=()=>toggleVinculo(b.dataset.vinculoToggle))}
+  const host=$("prodVinculosLista");if(host){const arr=vinculosForm.sort((a,b)=>String(a.recurso).localeCompare(String(b.recurso),"pt-BR")||String(a.item).localeCompare(String(b.item),"pt-BR"));host.innerHTML=`<table class="tabela"><thead><tr><th>Produção</th><th>Item</th><th>Status</th><th>Ação</th></tr></thead><tbody>${arr.map(x=>`<tr><td>${esc(x.recurso)}</td><td>${esc(x.item)}</td><td>${x.ativo===false?"Inativo":"Ativo"}</td><td><button class="btn-acao" data-vinculo-toggle="${x.id}" type="button">${x.ativo===false?"Reativar":"Inativar"}</button></td></tr>`).join("")||'<tr><td colspan="4">Nenhum vínculo explícito. O padrão legado está sendo usado.</td></tr>'}</tbody></table>`;host.querySelectorAll("[data-vinculo-toggle]").forEach(b=>b.onclick=()=>toggleVinculo(b.dataset.vinculoToggle))}
   atualizarVinculoSelects()
 }
 
 async function carregar(){
   if(busy||!podeVer())return;busy=true;msg($("producaoAviso"),"");
   try{
-    const [r,c,v,p]=await Promise.all([listarDocumentos("producaoLancamentos"),listarDocumentos("operacaoCadastros"),listarDocumentos("producaoItensConfig"),colaboradoresPorFuncao("PRODUCAO").catch(()=>[])]);
-    registros=r.filter(x=>x.empresaId===emp());cadastros=c.filter(x=>x.empresaId===emp());vinculos=v.filter(x=>x.empresaId===emp());responsaveis=p.filter(x=>x.empresaId===emp());
-    atualizarSelects();render();renderCadastros();$("producaoAviso")?.classList.add("hidden")
-  }catch(e){console.error(e);const a=$("producaoAviso");if(a){a.classList.remove("hidden");a.textContent="Não foi possível carregar a Produção. Confira permissões, vínculos do RH e Firestore Rules."}registros=[];cadastros=[];vinculos=[];responsaveis=[];atualizarSelects();render();renderCadastros()}finally{busy=false}
+    registros=await listarDocumentos("producaoLancamentos");atualizarSelects();render();$("producaoAviso")?.classList.add("hidden")
+  }catch(e){console.error(e);const a=$("producaoAviso");if(a){a.classList.remove("hidden");a.textContent="Não foi possível carregar a Produção. Confira permissões, vínculos do RH e Firestore Rules."}registros=[];atualizarSelects();render()}finally{busy=false}
+}
+async function carregarDependenciasEmpresa(empresaId,{recurso="",item="",responsavel="",cadastros=false}={}){
+  if(!empresaId){cadastrosForm=[];vinculosForm=[];responsaveisForm=[];atualizarSelects();renderCadastros();return}
+  const [c,v,p]=await Promise.all([
+    listarDocumentosEmpresa("operacaoCadastros",empresaId).catch(()=>[]),
+    listarDocumentosEmpresa("producaoItensConfig",empresaId).catch(()=>[]),
+    colaboradoresPorFuncao("PRODUCAO",{empresaId}).catch(()=>[])
+  ]);
+  cadastrosForm=c;vinculosForm=v;responsaveisForm=p;atualizarSelects();
+  if(recurso&&$("prodRecurso"))$("prodRecurso").value=recurso;atualizarItemDoForm(item);preencherResponsaveis(responsavel);if(cadastros)renderCadastros()
 }
 
 function calcularMedia(){const r=$("prodRecurso")?.value,q=n($("prodQuantidade")?.value),h=n($("prodHoras")?.value);if($("prodMedia"))$("prodMedia").value=tipoBloco(r)==="maquina"?(h?`${fmt(q/h)} bandejas/h`:"—"):"Não aplicável"}
 function limparForm(){editId=null;$("formProducao")?.reset();if($("prodData"))$("prodData").value=dataHoje();if($("producaoFormTitulo"))$("producaoFormTitulo").textContent="Novo lançamento";msg($("prodFormMsg"),"");atualizarSelects();atualizarItemDoForm();atualizarMetricaForm();calcularMedia()}
-function abrirNovo(){if(!podeLancar())return alert("Seu perfil não pode registrar produção.");if(!emp())return alert("Selecione apenas uma empresa no cabeçalho para lançar produção.");limparForm();$("producaoFormBox")?.classList.remove("hidden");$("producaoFormBox")?.scrollIntoView({behavior:"smooth",block:"start"})}
-function abrirEdicao(id){if(!podeEditar())return;const x=registros.find(v=>v.id===id);if(!x||x.status==="estornado")return;editId=id;$("prodData").value=x.data||"";$("prodRecurso").value=x.recurso||"";atualizarItemDoForm(x.item||"");$("prodQuantidade").value=n(x.quantidade);$("prodHoras").value=n(x.horasTrabalhadas);preencherResponsaveis(x.responsavel||x.concretador||"");if($("producaoFormTitulo"))$("producaoFormTitulo").textContent="Editar lançamento";atualizarMetricaForm();calcularMedia();$("producaoFormBox")?.classList.remove("hidden");$("producaoFormBox")?.scrollIntoView({behavior:"smooth",block:"start"})}
+async function abrirNovo(){if(!podeLancar())return alert("Seu perfil não pode registrar produção.");limparForm();const s=$("prodEmpresa");if(s){s.disabled=false;await prepararEmpresaInput(s);await carregarDependenciasEmpresa(s.value)}$("producaoFormBox")?.classList.remove("hidden");$("producaoFormBox")?.scrollIntoView({behavior:"smooth",block:"start"})}
+async function abrirEdicao(id){if(!podeEditar())return;const x=registros.find(v=>v.id===id);if(!x||x.status==="estornado")return;editId=id;const s=$("prodEmpresa");if(s){await prepararEmpresaInput(s,{valorAtual:x.empresaId});s.value=x.empresaId;s.disabled=true;await carregarDependenciasEmpresa(x.empresaId,{recurso:x.recurso||"",item:x.item||"",responsavel:x.responsavel||x.concretador||""})}$("prodData").value=x.data||"";$("prodQuantidade").value=n(x.quantidade);$("prodHoras").value=n(x.horasTrabalhadas);if($("producaoFormTitulo"))$("producaoFormTitulo").textContent="Editar lançamento";atualizarMetricaForm();calcularMedia();$("producaoFormBox")?.classList.remove("hidden");$("producaoFormBox")?.scrollIntoView({behavior:"smooth",block:"start"})}
 function validar(payload){
   const tipo=tipoBloco(payload.recurso);if(!payload.data||!payload.recurso)throw new Error("Preencha data e produção/máquina.");if(!payload.item)throw new Error("Selecione um item vinculado à produção.");if(!payload.responsavel)throw new Error("Selecione o responsável da produção.");if(!Number.isFinite(payload.quantidade)||payload.quantidade<=0)throw new Error("Informe uma quantidade produzida maior que zero.");if(!Number.isFinite(payload.horasTrabalhadas)||payload.horasTrabalhadas<0)throw new Error("Horas trabalhadas inválidas.");if(tipo==="maquina"&&payload.horasTrabalhadas<=0)throw new Error("MAQ.1 e MAQ.2 exigem horas trabalhadas para calcular bandejas/hora.");
   payload.unidadeMedida=unidadeRecurso(payload.recurso);payload.producaoPorHora=payload.horasTrabalhadas?payload.quantidade/payload.horasTrabalhadas:0;return payload
 }
 async function salvar(e){
-  e.preventDefault();const empresaId=emp();if(!empresaId)return alert("Selecione apenas uma empresa no cabeçalho.");
+  e.preventDefault();
   try{
-    const nomeResp=$("prodConcretador").value,resp=responsaveis.find(x=>x.nome===nomeResp);
+    const empresaId=empresaDoInput("prodEmpresa"),nomeResp=$("prodConcretador").value,resp=responsaveisForm.find(x=>x.nome===nomeResp);
     const payload=validar({empresaId,data:$("prodData").value,recurso:$("prodRecurso").value,item:$("prodItem").value,quantidade:n($("prodQuantidade").value),horasTrabalhadas:n($("prodHoras").value),responsavel:nomeResp,responsavelId:resp?.id||"",concretador:nomeResp,status:"ativo",origem:"sig",atualizadoPor:state.usuario?.id||""});
-    msg($("prodFormMsg"),"Salvando...");if(editId){if(!podeEditar())throw new Error("sem-permissao");await atualizarDocumento("producaoLancamentos",editId,payload)}else{if(!podeLancar())throw new Error("sem-permissao");await criarDocumento("producaoLancamentos",payload)}
+    msg($("prodFormMsg"),"Salvando...");if(editId){const atual=registros.find(x=>x.id===editId);if(!podeEditar()||!atual||atual.empresaId!==empresaId)throw new Error("Edição não autorizada.");await atualizarDocumento("producaoLancamentos",editId,payload)}else{if(!podeLancar())throw new Error("sem-permissao");await criarDocumentoEmpresa("producaoLancamentos",payload)}
     msg($("prodFormMsg"),"Lançamento salvo.",true);emitirAlteracao("producao");await carregar();setTimeout(()=>{$("producaoFormBox")?.classList.add("hidden");limparForm()},250)
   }catch(err){console.error(err);msg($("prodFormMsg"),err.message||"Não foi possível salvar.")}
 }
 async function estornar(id){const x=registros.find(v=>v.id===id);if(!x||x.status==="estornado")return;const ok=await confirmarAcaoAdministrativa({titulo:"Estornar lançamento de produção",descricao:`O lançamento de ${x.recurso||"produção"} em ${dataBr(x.data)} deixará de compor indicadores, mas continuará no histórico.`,motivoLabel:"Motivo obrigatório do estorno",confirmarTexto:"Estornar lançamento",perigosa:true});if(!ok)return;try{await atualizarComAuditoria({colecao:"producaoLancamentos",id:x.id,empresaId:x.empresaId,modulo:"producao",acao:"estorno",motivo:ok.motivo,resumo:`Estorno de produção ${x.recurso||""} em ${x.data||""}`,snapshotAntes:x,alteracoes:{status:"estornado",motivoEstorno:ok.motivo,estornadoPor:state.usuario?.id||"",estornadoEm:new Date().toISOString()}});emitirAlteracao("producao");await carregar()}catch(e){console.error(e);alert("Não foi possível estornar o lançamento.")}}
 
-async function adicionarCadastro(tipo){if(!podeCadastros())return;const input=document.querySelector(`[data-master-input="${tipo}"]`),nome=String(input?.value||"").trim();if(!nome)return;const empresaId=emp();if(!empresaId)return alert("Selecione apenas uma empresa no cabeçalho.");const existente=cadastros.find(x=>x.tipo===tipo&&norm(x.nome)===norm(nome));if(existente){if(existente.ativo===false){await atualizarDocumento("operacaoCadastros",existente.id,{ativo:true});if(input)input.value="";await carregar();return}return msg($("prodMasterMsg"),"Este cadastro já existe.")}try{await criarDocumento("operacaoCadastros",{empresaId,tipo,nome,ativo:true,origem:"sig"});if(input)input.value="";msg($("prodMasterMsg"),"Cadastro incluído.",true);await carregar()}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível salvar o cadastro.")}}
-async function toggleCadastro(id){if(!podeCadastros())return;const x=cadastros.find(v=>v.id===id);if(!x)return;try{await atualizarDocumento("operacaoCadastros",id,{ativo:x.ativo===false});await carregar()}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível alterar o cadastro.")}}
-async function adicionarVinculo(){if(!podeCadastros())return;const recurso=$("prodVinculoRecurso")?.value,item=$("prodVinculoItem")?.value,empresaId=emp();if(!recurso||!item||!empresaId)return msg($("prodMasterMsg"),"Selecione produção e item.");const existente=vinculos.find(x=>norm(x.recurso)===norm(recurso)&&norm(x.item)===norm(item));try{if(existente){if(existente.ativo===false)await atualizarDocumento("producaoItensConfig",existente.id,{ativo:true});else return msg($("prodMasterMsg"),"Este vínculo já está ativo.")}else await criarDocumento("producaoItensConfig",{empresaId,recurso,item,ativo:true});msg($("prodMasterMsg"),"Vínculo salvo.",true);await carregar()}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível salvar o vínculo.")}}
-async function toggleVinculo(id){if(!podeCadastros())return;const x=vinculos.find(v=>v.id===id);if(!x)return;try{await atualizarDocumento("producaoItensConfig",id,{ativo:x.ativo===false});await carregar()}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível alterar o vínculo.")}}
+async function adicionarCadastro(tipo){if(!podeCadastros())return;const input=document.querySelector(`[data-master-input="${tipo}"]`),nome=String(input?.value||"").trim();if(!nome)return;let empresaId="";try{empresaId=empresaDoInput("prodCadEmpresa")}catch{return msg($("prodMasterMsg"),"Selecione a empresa dos cadastros.")}const existente=cadastrosForm.find(x=>x.tipo===tipo&&norm(x.nome)===norm(nome));if(existente){if(existente.ativo===false){await atualizarDocumento("operacaoCadastros",existente.id,{ativo:true});if(input)input.value="";await carregarDependenciasEmpresa(empresaId,{cadastros:true});return}return msg($("prodMasterMsg"),"Este cadastro já existe.")}try{await criarDocumentoEmpresa("operacaoCadastros",{empresaId,tipo,nome,ativo:true,origem:"sig"});if(input)input.value="";msg($("prodMasterMsg"),"Cadastro incluído.",true);await carregarDependenciasEmpresa(empresaId,{cadastros:true})}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível salvar o cadastro.")}}
+async function toggleCadastro(id){if(!podeCadastros())return;const x=cadastrosForm.find(v=>v.id===id);if(!x)return;try{await atualizarDocumento("operacaoCadastros",id,{ativo:x.ativo===false});await carregarDependenciasEmpresa(x.empresaId,{cadastros:true})}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível alterar o cadastro.")}}
+async function adicionarVinculo(){if(!podeCadastros())return;const recurso=$("prodVinculoRecurso")?.value,item=$("prodVinculoItem")?.value;let empresaId="";try{empresaId=empresaDoInput("prodCadEmpresa")}catch{return msg($("prodMasterMsg"),"Selecione a empresa dos cadastros.")}if(!recurso||!item)return msg($("prodMasterMsg"),"Selecione produção e item.");const existente=vinculosForm.find(x=>norm(x.recurso)===norm(recurso)&&norm(x.item)===norm(item));try{if(existente){if(existente.ativo===false)await atualizarDocumento("producaoItensConfig",existente.id,{ativo:true});else return msg($("prodMasterMsg"),"Este vínculo já está ativo.")}else await criarDocumentoEmpresa("producaoItensConfig",{empresaId,recurso,item,ativo:true});msg($("prodMasterMsg"),"Vínculo salvo.",true);await carregarDependenciasEmpresa(empresaId,{cadastros:true})}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível salvar o vínculo.")}}
+async function toggleVinculo(id){if(!podeCadastros())return;const x=vinculosForm.find(v=>v.id===id);if(!x)return;try{await atualizarDocumento("producaoItensConfig",id,{ativo:x.ativo===false});await carregarDependenciasEmpresa(x.empresaId,{cadastros:true})}catch(e){console.error(e);msg($("prodMasterMsg"),"Não foi possível alterar o vínculo.")}}
 
 function ligarEventos(){
   $("btnNovaProducao")?.addEventListener("click",abrirNovo);$("btnAtualizarProducao")?.addEventListener("click",carregar);$("btnCancelarProducao")?.addEventListener("click",()=>{$("producaoFormBox")?.classList.add("hidden");limparForm()});
-  $("formProducao")?.addEventListener("submit",salvar);$("prodQuantidade")?.addEventListener("input",calcularMedia);$("prodHoras")?.addEventListener("input",calcularMedia);
+  $("formProducao")?.addEventListener("submit",salvar);$("prodEmpresa")?.addEventListener("change",()=>carregarDependenciasEmpresa($("prodEmpresa").value));$("prodQuantidade")?.addEventListener("input",calcularMedia);$("prodHoras")?.addEventListener("input",calcularMedia);
   $("prodRecurso")?.addEventListener("change",()=>{atualizarItemDoForm();atualizarMetricaForm()});
   ["prodFiltroDataIni","prodFiltroDataFim"].forEach(id=>$(id)?.addEventListener("change",render));
   document.querySelectorAll("[data-detalhe]").forEach(b=>b.addEventListener("click",()=>{detalheTipo=detalheTipo===b.dataset.detalhe?"":b.dataset.detalhe;render()}));
@@ -337,7 +347,7 @@ function ligarEventos(){
   $("prodModoHora")?.addEventListener("click",()=>{analiseModo="hora";render()});
   $("prodAcompanhamentoProducao")?.addEventListener("change",renderAcompanhamentoAnual);
   $("prodLimparIntervalo")?.addEventListener("click",()=>{if($("prodFiltroDataIni"))$("prodFiltroDataIni").value="";if($("prodFiltroDataFim"))$("prodFiltroDataFim").value="";render()});
-  $("btnProducaoCadastros")?.addEventListener("click",()=>{if(!podeCadastros())return;$("producaoCadastrosBox")?.classList.remove("hidden");renderCadastros();$("producaoCadastrosBox")?.scrollIntoView({behavior:"smooth",block:"start"})});
+  $("btnProducaoCadastros")?.addEventListener("click",async()=>{if(!podeCadastros())return;const s=$("prodCadEmpresa");if(s){await prepararEmpresaInput(s);await carregarDependenciasEmpresa(s.value,{cadastros:true})}$("producaoCadastrosBox")?.classList.remove("hidden");$("producaoCadastrosBox")?.scrollIntoView({behavior:"smooth",block:"start"})});$("prodCadEmpresa")?.addEventListener("change",()=>carregarDependenciasEmpresa($("prodCadEmpresa").value,{cadastros:true}));
   $("btnFecharCadastrosProducao")?.addEventListener("click",()=>$("producaoCadastrosBox")?.classList.add("hidden"));
   document.querySelectorAll("[data-master-add]").forEach(b=>b.addEventListener("click",()=>adicionarCadastro(b.dataset.masterAdd)));
   $("btnProdVincularItem")?.addEventListener("click",adicionarVinculo)
