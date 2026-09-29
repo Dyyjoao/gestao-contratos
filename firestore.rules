@@ -574,8 +574,12 @@ service cloud.firestore {
       );
     }
 
+    function visitaLegadaSemEmpresa(dados) {
+      return mesmoGrupo(dados.grupoId) && !('empresaId' in dados);
+    }
+
     function visitasPodeVerGrupo(dados) {
-      return documentoAcessivel(dados) && (
+      return (documentoAcessivel(dados) || visitaLegadaSemEmpresa(dados)) && (
         administrador() || permissao('visitas','supervisionar') ||
         (dados.responsavelId == request.auth.uid && (
           permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar')
@@ -598,7 +602,10 @@ service cloud.firestore {
         request.resource.data.tipo in ['telefone','whatsapp','presencial','email'];
       allow update: if visitasPodeVerGrupo(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
-        request.resource.data.empresaId == resource.data.empresaId &&
+        (
+          (('empresaId' in resource.data) && request.resource.data.empresaId == resource.data.empresaId) ||
+          (visitaLegadaSemEmpresa(resource.data) && acessoEmpresa(request.resource.data.empresaId))
+        ) &&
         request.resource.data.responsavelId == resource.data.responsavelId && (
           (
             (administrador() || permissao('visitas','supervisionar') ||
@@ -609,7 +616,7 @@ service cloud.firestore {
             request.resource.data.tipo in ['telefone','whatsapp','presencial','email'] &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'data','vendedorId','vendedor','clienteId','clienteOrigem','cliente','obra','cidade',
-              'material','produtos','valorProdutos','assunto','tipo','email','observacao','atualizadoEm'
+              'empresaId','material','produtos','valorProdutos','assunto','tipo','email','observacao','atualizadoEm'
             ])
           ) || (
             request.resource.data.status == 'orcamento' &&
@@ -619,7 +626,7 @@ service cloud.firestore {
               (resource.data.responsavelId == request.auth.uid && permissao('orcamentos','registrar'))
             ) &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status','orcamentoIniciadoEm','orcamentoId','orcamentoEmpresaId','orcamentoCriadoEm','atualizadoEm'
+              'empresaId','status','orcamentoIniciadoEm','orcamentoId','orcamentoEmpresaId','orcamentoCriadoEm','atualizadoEm'
             ])
           )
         );
