@@ -194,12 +194,12 @@ async function carregarBasesVisitas(){
   const hoje=localIso(),rhAtivos=new Map(rhs.filter(x=>x.status!=="estornado"&&(!x.admissao||x.admissao<=hoje)&&(!x.demissao||x.demissao>=hoje)).map(x=>[x.id,x])),vendMap=new Map();
   configs.filter(x=>x.status!=="inativo"&&(!x.tipoComissao||x.tipoComissao==="vendedor")).forEach(v=>{
     const rh=rhAtivos.get(v.rhColaboradorId),nome=String(rh?.nome||v.nome||"").trim();if(!nome)return;
-    const chave=String(v.rhColaboradorId||norm(nome)),atual=vendMap.get(chave);
-    vendMap.set(chave,{id:chave,nome,email:rh?.email||v.email||"",cargoNome:rh?.cargoNome||v.cargoNome||"",origem:"rh",configIds:[...(atual?.configIds||[]),v.id]})
+    const empresaId=rh?.empresaId||v.empresaId||"",chave=`${empresaId}::${String(v.rhColaboradorId||norm(nome))}`,atual=vendMap.get(chave);
+    vendMap.set(chave,{id:chave,empresaId,nome,email:rh?.email||v.email||"",cargoNome:rh?.cargoNome||v.cargoNome||"",origem:"rh",configIds:[...(atual?.configIds||[]),v.id]})
   });
   if(rhAtivos.size){
     [...rhAtivos.values()].filter(x=>x.codigoVendedor||/vendedor|comercial/i.test(String(x.cargoNome||""))).forEach(rh=>{
-      const chave=String(rh.id),atual=vendMap.get(chave);if(!atual)vendMap.set(chave,{id:chave,nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",origem:"rh",configIds:[]})
+      const chave=`${rh.empresaId||""}::${String(rh.id)}`,atual=vendMap.get(chave);if(!atual)vendMap.set(chave,{id:chave,empresaId:rh.empresaId||"",nome:rh.nome||"",email:rh.email||"",cargoNome:rh.cargoNome||"",origem:"rh",configIds:[]})
     })
   }
   vendedoresVisitas=[...vendMap.values()].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
@@ -207,11 +207,11 @@ async function carregarBasesVisitas(){
   const cliMap=new Map();
   clientesSales.filter(x=>x.status!=="inativo").forEach(x=>{
     const nome=String(x.nome||"").trim();if(!nome)return;const cidade=String(x.cidade||"").trim(),uf=String(x.uf||"").trim().toUpperCase(),ch=chaveCliente(nome,cidade);
-    const atual=cliMap.get(ch);if(!atual)cliMap.set(ch,{id:"sales:"+x.id,nome,cidade,uf,origem:"vendas",ids:[x.id]});else atual.ids.push(x.id)
+    const atual=cliMap.get(ch);if(!atual)cliMap.set(ch,{id:"sales:"+x.id,nome,cidade,uf,origem:"vendas",ids:[x.id],empresaIds:[x.empresaId].filter(Boolean)});else{atual.ids.push(x.id);if(x.empresaId&&!atual.empresaIds.includes(x.empresaId))atual.empresaIds.push(x.empresaId)}
   });
   clientesRelacionamento.filter(x=>x.status!=="inativo").forEach(x=>{
     const nome=String(x.nome||"").trim();if(!nome)return;const cidade=String(x.cidade||"").trim(),uf=String(x.uf||"").trim().toUpperCase(),ch=chaveCliente(nome,cidade);
-    if(!cliMap.has(ch))cliMap.set(ch,{id:"rel:"+x.id,nome,cidade,uf,origem:"relacionamento",ids:[x.id]})
+    if(!cliMap.has(ch))cliMap.set(ch,{id:"rel:"+x.id,nome,cidade,uf,origem:"relacionamento",ids:[x.id],empresaIds:[]})
   });
   clientesVisitas=[...cliMap.values()].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")||a.cidade.localeCompare(b.cidade,"pt-BR"));
   preencherBasesVisitas()
@@ -234,15 +234,17 @@ function opcoesMateriaisVisitas(empresaId="",valor=""){
 }
 
 function preencherBasesVisitas(){
-  const sv=$("visVendedor"),sc=$("visCliente"),sf=$("visitasFiltroVendedor");
-  if(sv){const atual=sv.value;sv.innerHTML='<option value="">Selecione...</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cargoNome?" · "+esc(x.cargoNome):""}</option>`).join("");if([...sv.options].some(o=>o.value===atual))sv.value=atual}
-  if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
-  if(sf){const atual=sf.value;sf.innerHTML='<option value="">Todos os vendedores</option>'+vendedoresVisitas.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("");if([...sf.options].some(o=>o.value===atual))sf.value=atual}
+  const empresaId=String($("visEmpresa")?.value||""),selecionadas=new Set(empresasSelecionadasIds()),sv=$("visVendedor"),sc=$("visCliente"),sf=$("visitasFiltroVendedor");
+  const vendedoresForm=vendedoresVisitas.filter(x=>!empresaId||x.empresaId===empresaId);
+  const clientesForm=clientesVisitas.filter(x=>x.origem==="relacionamento"||!empresaId||!x.empresaIds?.length||x.empresaIds.includes(empresaId));
+  if(sv){const atual=sv.value;sv.innerHTML='<option value="">Selecione...</option>'+vendedoresForm.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cargoNome?" · "+esc(x.cargoNome):""}</option>`).join("");if([...sv.options].some(o=>o.value===atual))sv.value=atual}
+  if(sc){const atual=sc.value;sc.innerHTML='<option value="">Selecione...</option>'+clientesForm.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)}${x.cidade?" · "+esc(x.cidade+(x.uf?" / "+x.uf:"")):""}</option>`).join("");if([...sc.options].some(o=>o.value===atual))sc.value=atual}
+  if(sf){const atual=sf.value,arr=vendedoresVisitas.filter(x=>!selecionadas.size||selecionadas.has(x.empresaId));sf.innerHTML='<option value="">Todos os vendedores</option>'+arr.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)} · ${esc(nomeEmpresa(x.empresaId))}</option>`).join("");if([...sf.options].some(o=>o.value===atual))sf.value=atual}
   $("visitasConfigurar")?.classList.toggle("hidden",!admin());
   renderMateriaisVisitas()
 }
 function opcoesProdutosVisita(valor=""){
-  const arr=materiaisConsolidadosVisitas();
+  const arr=materiaisAtivosVisitas(String($("visEmpresa")?.value||""));
   return '<option value="">Selecione...</option>'+arr.map(x=>`<option value="${esc(x.id)}" ${x.id===valor?"selected":""}>${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome||"")}${x.unidade?" · "+esc(x.unidade):""}</option>`).join("")
 }
 function atualizarResumoProdutosVisita(){
@@ -258,7 +260,7 @@ function adicionarProdutoVisita(dado={}){
   const box=$("visProdutosLista");if(!box)return;
   const row=document.createElement("div");row.className="commercial-visit-product-row";
   let itemId=dado.itemId||"";
-  if(!itemId&&dado.nome){const achado=materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
+  if(!itemId&&dado.nome){const achado=materiaisAtivosVisitas(String($("visEmpresa")?.value||"")).find(x=>norm(x.nome)===norm(dado.nome))||materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
   const qtd=Number(dado.quantidade||0)>0?Number(dado.quantidade):1,valor=dado.valorTotal??dado.valor??"";
   row.innerHTML=`<select data-vis-produto required>${opcoesProdutosVisita(itemId)}</select><input data-vis-prod-qtd type="number" min="0.0001" step="0.0001" value="${qtd}" required><input data-vis-prod-valor type="number" min="0" step="0.01" value="${valor!==""?esc(String(valor)):""}" required><div class="commercial-unit-cost"><input data-vis-prod-unit type="number" step="0.01" readonly><small data-vis-prod-unidade>R$/unid.</small></div><button type="button" class="btn-acao perigo" data-vis-prod-remover>Remover</button>`;
   if(dado.nome&&!itemId){const sel=row.querySelector("[data-vis-produto]");sel.insertAdjacentHTML("beforeend",`<option value="__historico__" selected>${esc(dado.nome)} · histórico</option>`);row.dataset.historicoNome=dado.nome}
@@ -329,7 +331,7 @@ async function carregarMateriaisOrcamentos(){
   materiaisVisitas=s.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.status!=="inativo").sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"))
 }
 function opcoesMateriaisOrcamentoTela(valor=""){
-  const empresaId=empresaUnicaSelecionadaId()||"",arr=materiaisAtivosVisitas(empresaId);
+  const empresaId=String($("orcEmpresa")?.value||""),arr=materiaisAtivosVisitas(empresaId);
   return '<option value="">Selecione...</option>'+arr.map(x=>`<option value="${esc(x.id)}" ${x.id===valor?"selected":""}>${esc(x.codigo?x.codigo+" · ":"")}${esc(x.nome||"")}${x.unidade?" · "+esc(x.unidade):""}</option>`).join("")
 }
 function atualizarResumoMateriaisOrcamentoTela(){
@@ -343,7 +345,7 @@ function atualizarResumoMateriaisOrcamentoTela(){
 }
 function adicionarMaterialOrcamentoTela(dado={}){
   const box=$("orcMateriaisLista");if(!box)return;const row=document.createElement("div");row.className="commercial-budget-material-row";
-  let itemId=dado.itemId||"";if(!itemId&&dado.nome){const achado=materiaisAtivosVisitas(empresaUnicaSelecionadaId()||"").find(x=>norm(x.nome)===norm(dado.nome))||materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
+  let itemId=dado.itemId||"";if(!itemId&&dado.nome){const achado=materiaisAtivosVisitas(String($("orcEmpresa")?.value||"")).find(x=>norm(x.nome)===norm(dado.nome))||materiaisConsolidadosVisitas().find(x=>norm(x.nome)===norm(dado.nome));if(achado)itemId=achado.id}
   const qtd=Number(dado.quantidade||0)>0?Number(dado.quantidade):1,valor=dado.valorTotal??dado.valor??"";
   row.innerHTML=`<select data-orc-tela-item required>${opcoesMateriaisOrcamentoTela(itemId)}</select><input data-orc-tela-qtd type="number" min="0.0001" step="0.0001" value="${qtd}" required><input data-orc-tela-valor type="number" min="0" step="0.01" value="${valor!==""?esc(String(valor)):""}" required><div class="commercial-unit-cost"><input data-orc-tela-unit type="number" step="0.01" readonly><small data-orc-tela-unidade>R$/unid.</small></div><button type="button" class="btn-acao perigo" data-orc-tela-remover>Remover</button>`;
   if(dado.nome&&!itemId){const sel=row.querySelector("[data-orc-tela-item]");sel.insertAdjacentHTML("beforeend",`<option value="__historico__" selected>${esc(dado.nome)} · histórico</option>`);row.dataset.historicoNome=dado.nome;row.dataset.historicoUnidade=dado.unidade||""}
