@@ -1,5 +1,5 @@
 import { $, esc, msg, permite, admin, state } from "./core.js";
-import { listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, nomeEmpresa, dataBr, moeda } from "./shared.js";
+import { $, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, dataBr, moeda } from "./shared.js";
 
 const AREA="Segurança da Informação & Antifraude";
 const CAT="seguranca_antifraude";
@@ -15,7 +15,8 @@ const podeConfig=()=>admin()||permite("governanca","configurar");
 const podeAuditar=()=>admin()||permite("governanca","auditar")||permite("governanca","validar")||permite("governanca","configurar");
 const podePlano=()=>admin()||permite("governanca","planoAcao")||permite("planosAcao","cadastrar");
 
-function config(){return configs.find(x=>x.empresaId===empresaUnicaSelecionadaId())||null}
+const empresaSeguranca=()=>String($("governancaEmpresa")?.value||"");
+function config(){return configs.find(x=>x.empresaId===empresaSeguranca())||null}
 function obrigacoes(){return Array.isArray(config()?.complianceObrigacoes)?config().complianceObrigacoes:[]}
 function riscos(){return Array.isArray(config()?.complianceRiscos)?config().complianceRiscos:[]}
 function programas(){return Array.isArray(config()?.complianceProgramasAuditoria)?config().complianceProgramasAuditoria:[]}
@@ -69,9 +70,9 @@ function abrirTab(tab){if(!podeVer())return alert("Seu perfil não possui permis
 function aplicarAcesso(){montar();const tab=$("govSegurancaTab");tab?.classList.toggle("hidden",!podeVer());if(!podeVer()&&!secao()?.classList.contains("hidden"))$("pagina-governanca")?.querySelector('[data-gov-tab="obrigacoes"]')?.click();["btnSecBaseline","btnSecNovoControle","btnSecNovaOcorrencia","btnSecSalvarSenha"].forEach(id=>$(id)?.classList.toggle("hidden",!podeConfig()));$("btnSecCriarAuditoria")?.classList.toggle("hidden",!podeAuditar())}
 
 async function carregar(){
-  montar();if(carregando||!podeVer())return;const emp=empresaUnicaSelecionadaId(),av=$("govSecAviso");if(!emp){if(av){av.classList.remove("hidden");av.textContent="O Cockpit Antifraude & TI exige uma única empresa selecionada no cabeçalho."}configs=[];planos=[];render();return}
-  carregando=true;try{const[r1,r2]=await Promise.all([listarDocumentos("configuracoesControladoria"),listarDocumentos("planosAcao").catch(()=>[])]);configs=r1;planos=r2;if(av){av.classList.remove("hidden");av.innerHTML=`Empresa: <strong>${esc(nomeEmpresa(emp))}</strong> · controles simples, responsáveis e evidências.`}render()}catch(e){console.error("Cockpit Antifraude & TI:",e);if(av){av.classList.remove("hidden");av.textContent="Não foi possível carregar o Cockpit Antifraude & TI. Verifique as permissões e as regras publicadas do Firestore."}}finally{carregando=false}}
-async function salvarCampo(campo,valor){const c=config();if(c)await atualizarDocumento("configuracoesControladoria",c.id,{[campo]:valor});else await criarDocumento("configuracoesControladoria",{[campo]:valor});await carregar()}
+  montar();if(carregando||!podeVer())return;const sel=$("governancaEmpresa");if(sel&&!sel.options.length)await prepararEmpresaInput(sel);const emp=empresaSeguranca(),av=$("govSecAviso");if(!emp){if(av){av.classList.remove("hidden");av.textContent="Selecione a empresa no campo da Governança."}configs=[];planos=[];render();return}
+  carregando=true;try{const[r1,r2]=await Promise.all([listarDocumentosEmpresa("configuracoesControladoria",emp),listarDocumentosEmpresa("planosAcao",emp).catch(()=>[])]);configs=r1;planos=r2;if(av){av.classList.remove("hidden");av.innerHTML=`Empresa: <strong>${esc(nomeEmpresa(emp))}</strong> · controles simples, responsáveis e evidências.`}render()}catch(e){console.error("Cockpit Antifraude & TI:",e);if(av){av.classList.remove("hidden");av.textContent="Não foi possível carregar o Cockpit Antifraude & TI. Verifique as permissões e as regras publicadas do Firestore."}}finally{carregando=false}}
+async function salvarCampo(campo,valor){const emp=empresaDoInput("governancaEmpresa"),c=config();if(c)await atualizarDocumento("configuracoesControladoria",c.id,{[campo]:valor});else await criarDocumentoEmpresa("configuracoesControladoria",{empresaId:emp,[campo]:valor});await carregar()}
 
 function baselineControles(){const base=hoje(),proximo=addMeses(base,1);return[
   {controleCodigo:"pagamento_dados_bancarios",titulo:"Validar alteração de dados bancários de fornecedor por canal independente",orientacao:"Callback para contato oficial já conhecido + segunda aprovação antes de pagar.",periodicidade:"Mensal",vencimento:proximo},
@@ -100,7 +101,7 @@ function baselinePrograma(){const checklist=[
   ["Plano de resposta","Teste se contatos oficiais do banco e fluxo de escalonamento estão disponíveis.","Procedimento atualizado"]
 ].map(([titulo,procedimento,evidenciaEsperada])=>({id:`teste_${uid()}`,titulo,procedimento,evidenciaEsperada}));return{id:`prog_${uid()}`,tipoPrograma:"seguranca_antifraude",nome:"Auditoria Mensal · Antifraude & Segurança TI",area:AREA,periodicidade:"Mensal",responsavel:"TI / Controladoria",status:"ativo",risco:"critico",objetivo:"Reduzir risco de fraude financeira, comprometimento de credenciais e falhas básicas de segurança nas estações de trabalho.",escopo:"Pagamentos, e-mail corporativo, acessos, máquinas, atualizações, antivírus, backups e resposta a incidentes.",checklist,criadoEm:agora(),atualizadoEm:agora()}}
 
-async function implantarBaseline(){if(!podeConfig())return;if(!empresaUnicaSelecionadaId())return alert("Selecione uma única empresa.");if(!confirm("Implantar o conjunto inicial de controles antifraude e o programa mensal de auditoria de TI nesta empresa?"))return;try{const atuais=obrigacoes(),existentes=new Set(atuais.map(x=>x.controleCodigo).filter(Boolean)),novos=baselineControles().filter(x=>!existentes.has(x.controleCodigo));if(novos.length)await salvarCampo("complianceObrigacoes",[...atuais,...novos]);await carregar();if(!programaSeguranca())await salvarCampo("complianceProgramasAuditoria",[...programas(),baselinePrograma()]);await carregar()}catch(e){console.error(e);alert("Não foi possível implantar os controles recomendados.")}}
+async function implantarBaseline(){if(!podeConfig())return;if(!empresaSeguranca())return alert("Selecione a empresa no campo da Governança.");if(!confirm("Implantar o conjunto inicial de controles antifraude e o programa mensal de auditoria de TI nesta empresa?"))return;try{const atuais=obrigacoes(),existentes=new Set(atuais.map(x=>x.controleCodigo).filter(Boolean)),novos=baselineControles().filter(x=>!existentes.has(x.controleCodigo));if(novos.length)await salvarCampo("complianceObrigacoes",[...atuais,...novos]);await carregar();if(!programaSeguranca())await salvarCampo("complianceProgramasAuditoria",[...programas(),baselinePrograma()]);await carregar()}catch(e){console.error(e);alert("Não foi possível implantar os controles recomendados.")}}
 
 function abrirControle(){if(!podeConfig())return;$("formSecControle")?.reset();$("secControleVencimento").value=addMeses(hoje(),1);$("secControleFormBox")?.classList.remove("hidden")}
 async function salvarControle(e){e.preventDefault();if(!podeConfig())return;const item={id:`sec_${uid()}`,categoria:CAT,area:AREA,titulo:$("secControleTitulo").value.trim(),periodicidade:$("secControlePeriodicidade").value,vencimento:$("secControleVencimento").value,responsavel:$("secControleResp").value.trim(),orientacao:$("secControleOrientacao").value.trim(),status:"pendente"};try{await salvarCampo("complianceObrigacoes",[...obrigacoes(),item]);$("secControleFormBox")?.classList.add("hidden")}catch(e2){console.error(e2)}}
@@ -117,7 +118,7 @@ async function criarAuditoriaMes(){if(!podeAuditar())return;let p=programaSegura
 function abrirAuditoriaCompleta(){const b=pagina()?.querySelector('[data-gov-tab="auditoria"]');b?.click();setTimeout(()=>$("listaCiclosAuditoria")?.scrollIntoView({behavior:"smooth",block:"start"}),100)}
 
 function render(){
-  montar();aplicarAcesso();const emp=empresaUnicaSelecionadaId();if(!emp){["secScore","secVencidos","secIncidentes","secAuditoria"].forEach(id=>{if($(id))$(id).textContent="—"});if($("secListaControles"))$("secListaControles").innerHTML='<tr><td colspan="6">Selecione uma única empresa.</td></tr>';if($("secListaOcorrencias"))$("secListaOcorrencias").innerHTML='<tr><td colspan="6">Selecione uma única empresa.</td></tr>';return}
+  montar();aplicarAcesso();const emp=empresaSeguranca();if(!emp){["secScore","secVencidos","secIncidentes","secAuditoria"].forEach(id=>{if($(id))$(id).textContent="—"});if($("secListaControles"))$("secListaControles").innerHTML='<tr><td colspan="6">Selecione uma empresa no campo da Governança.</td></tr>';if($("secListaOcorrencias"))$("secListaOcorrencias").innerHTML='<tr><td colspan="6">Selecione uma empresa no campo da Governança.</td></tr>';return}
   const cs=controles(),venc=cs.filter(x=>x.vencimento&&x.vencimento<hoje()&&x.status!=="dispensado"),ok=cs.filter(x=>statusControle(x).txt==="Em dia");$("secScore").textContent=cs.length?`${Math.round(ok.length/cs.length*100)}%`:"—";$("secVencidos").textContent=String(venc.length);
   const limite=addDias(hoje(),-90),inc=incidentes().filter(x=>(x.dataOcorrencia||"")>=limite);$("secIncidentes").textContent=String(inc.length);
   const atual=ciclosSeguranca().find(x=>x.referencia===competenciaAtual())||null,sc=scoreAuditoria(atual);$("secAuditoria").textContent=atual?(atual.status==="concluido"?fmtPct(sc):"Em curso"):"Pendente";$("secAuditoriaSub").textContent=atual?(atual.status==="concluido"?"ciclo concluído":`${(atual.testes||[]).filter(x=>x.resultado&&x.resultado!=="pendente").length}/${(atual.testes||[]).length} testes executados`):"crie o ciclo mensal";$("secPlanosAbertos").textContent=String(planoAberto());
@@ -128,4 +129,4 @@ function render(){
   const cred=controleCredenciais();if($("secPoliticaSenha"))$("secPoliticaSenha").value=String(cred?.politicaSenha||"evento");if($("secUltimaSenha"))$("secUltimaSenha").value=cred?.ultimaRevisaoSenha||hoje();renderPolitica();
 }
 
-montar();garantirArea();aplicarAcesso();window.addEventListener("sig:ready",()=>{montar();garantirArea();aplicarAcesso()});window.addEventListener("sig:empresa-changed",()=>{if(secao()&&!secao().classList.contains("hidden"))carregar()});
+montar();garantirArea();aplicarAcesso();window.addEventListener("sig:ready",()=>{montar();garantirArea();aplicarAcesso()});window.addEventListener("sig:empresa-changed",()=>{});window.addEventListener("sig:contexto-changed",()=>{});
