@@ -214,7 +214,7 @@ function renderRanking(p){
   if(rankingModo==="motorista"){
     if(titulo)titulo.textContent="Consumo por motorista";
     const mapa=new Map();
-    ativosAbastecimento().filter(x=>x.empresaId===emp()&&dentroPeriodo(x,p)).forEach(x=>{
+    ativosAbastecimento().filter(x=>dentroPeriodo(x,p)).forEach(x=>{
       const nome=String(x.motorista||"Não informado").trim()||"Não informado",z=mapa.get(nome)||{nome,litros:0,km:0,qtd:0};
       z.litros+=num(x.quantidade);z.km+=(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0);z.qtd++;mapa.set(nome,z)
     });
@@ -227,7 +227,7 @@ function renderRanking(p){
   }
 
   if(titulo)titulo.textContent="Consumo por veículo";
-  const empresaId=emp(),ativosFrota=veiculos.filter(v=>v.empresaId===empresaId&&v.status!=="baixado");
+  const ativosFrota=veiculos.filter(v=>v.status!=="baixado");
   const rows=ativosFrota.map(v=>{const a=ativosAbastecimento().filter(x=>x.veiculoId===v.id&&dentroPeriodo(x,p)),litros=a.reduce((s,x)=>s+num(x.quantidade),0),km=a.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0),0);return{v,litros,km,kml:litros&&km?km/litros:0}}).sort((a,b)=>b.litros-a.litros);
   const max=Math.max(0,...rows.map(x=>x.litros));
   host.innerHTML=rows.map((x,i)=>`<div class="fuel-rank-row ${veiculoFiltroId===x.v.id?"ativo":""}" data-fuel-veiculo="${esc(x.v.id)}" role="button" tabindex="0" aria-pressed="${veiculoFiltroId===x.v.id?"true":"false"}"><div class="fuel-rank-name"><strong>${i+1}. ${esc(x.v.placa||"—")}</strong><small>${esc(nomeVeiculo(x.v))}</small></div><div class="fuel-rank-track"><i style="width:${max?Math.max(x.litros?3:0,x.litros/max*100):0}%"></i></div><strong>${fmt(x.litros)} L</strong><span>${x.kml?fmt(x.kml)+" km/L":"—"}</span></div>`).join("")||'<div class="rh-empty">Nenhum veículo cadastrado.</div>';
@@ -250,9 +250,9 @@ function saldoTeoricoAte(dataFim){
   const dataInicial=String(configCombustivel.estoqueInicialData||""),inicial=num(configCombustivel.estoqueInicialLitros);
   if(!dataInicial||dataFim<dataInicial)return{configurado:false,inicial:0,entradas:0,saidas:0,ajustes:0,saldo:0,ultimoInventario:null};
 
-  const entradasLista=comprasAtivas().filter(x=>x.data>=dataInicial&&x.data<=dataFim);
-  const saidasLista=ativosAbastecimento().filter(x=>x.data>=dataInicial&&x.data<=dataFim);
-  const auditoriasLista=auditoriasAtivas().filter(x=>x.empresaId===emp()&&x.data>=dataInicial&&x.data<=dataFim);
+  const entradasLista=auditCompras.filter(x=>x.status!=="estornado"&&x.data>=dataInicial&&x.data<=dataFim);
+  const saidasLista=auditAbastecimentos.filter(x=>x.status!=="estornado"&&x.tipo!=="recebimento"&&x.data>=dataInicial&&x.data<=dataFim);
+  const auditoriasLista=auditoriasAtivas().filter(x=>x.data>=dataInicial&&x.data<=dataFim);
 
   const entradas=entradasLista.reduce((s,x)=>s+num(x.quantidade),0);
   const saidas=saidasLista.reduce((s,x)=>s+num(x.quantidade),0);
@@ -280,7 +280,7 @@ function saldoTeoricoAte(dataFim){
   return{configurado:true,inicial,entradas,saidas,ajustes,saldo,ultimoInventario}
 }
 function classeDiferenca(v){return Math.abs(num(v))<0.005?"fuel-diff-ok":num(v)>0?"fuel-diff-pos":"fuel-diff-neg"}
-function auditoriasAtivas(){return auditoriasTanque.filter(x=>x.status!=="estornado")}
+function auditoriasAtivas(){return auditAuditorias.filter(x=>x.status!=="estornado")}
 function atualizarPreviewAuditoria(){
   const data=$("fuelAuditData")?.value,saldo=Number($("fuelAuditSaldoFisico")?.value),out=$("fuelAuditPreview");if(!out)return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||!Number.isFinite(saldo)||saldo<0){out.textContent="Informe a data e o saldo físico para calcular a diferença.";out.className="fuel-config-note";return}
@@ -289,23 +289,23 @@ function atualizarPreviewAuditoria(){
 }
 async function salvarAuditoriaTanque(){
   if(!pode("lancar"))return alert("Seu perfil não possui permissão para lançar conferências de combustível.");
-  const empresaId=emp(),data=$("fuelAuditData")?.value,saldoFisico=Number($("fuelAuditSaldoFisico")?.value),observacao=String($("fuelAuditObservacao")?.value||"").trim().slice(0,160);
-  if(!empresaId)return alert("Selecione apenas uma empresa.");
+  const empresaId=empresaAuditoria(),data=$("fuelAuditData")?.value,saldoFisico=Number($("fuelAuditSaldoFisico")?.value),observacao=String($("fuelAuditObservacao")?.value||"").trim().slice(0,160);
+  if(!empresaId)return alert("Selecione a empresa da auditoria.");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||!Number.isFinite(saldoFisico)||saldoFisico<0)return alert("Informe data e saldo físico válidos.");
   const pos=saldoTeoricoAte(data);if(!pos.configurado)return alert("A auditoria deve ocorrer a partir da data configurada para o estoque inicial.");
   const diferenca=saldoFisico-pos.saldo;
   try{
-    await criarDocumento("auditoriasTanqueDiesel",{empresaId,data,saldoFisico,saldoTeorico:pos.saldo,diferenca,observacao,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""});
-    $("fuelAuditSaldoFisico").value="";$("fuelAuditObservacao").value="";await carregar();emitirAlteracao("combustivel")
+    await criarDocumentoEmpresa("auditoriasTanqueDiesel",{empresaId,data,saldoFisico,saldoTeorico:pos.saldo,diferenca,observacao,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""});
+    $("fuelAuditSaldoFisico").value="";$("fuelAuditObservacao").value="";await carregarAuditoriaEmpresa();emitirAlteracao("combustivel")
   }catch(e){console.error(e);alert(e?.code==="permission-denied"?"Gravação negada pelo Firestore. Publique as Rules atualizadas.":"Não foi possível registrar a conferência do tanque.")}
 }
 async function estornarAuditoriaTanque(id){
-  if(!admin())return;const x=auditoriasTanque.find(a=>a.id===id&&a.status!=="estornado");if(!x)return;
+  if(!admin())return;const x=auditAuditorias.find(a=>a.id===id&&a.status!=="estornado");if(!x)return;
   const ok=await confirmarAcaoAdministrativa({titulo:"Estornar conferência do tanque",descricao:`Conferência de ${dataBr(x.data)} · diferença ${fmt(x.diferenca)} L`,motivoLabel:"Motivo obrigatório",confirmarTexto:"Estornar",perigosa:true});if(!ok)return;
-  try{await atualizarComAuditoria({colecao:"auditoriasTanqueDiesel",id,empresaId:x.empresaId,modulo:"combustivel",acao:"estorno",motivo:ok.motivo,resumo:`Estorno auditoria tanque ${x.data}`,snapshotAntes:x,alteracoes:{status:"estornado",motivoEstorno:ok.motivo,estornadoPor:state.usuario?.id||"",estornadoEm:new Date().toISOString()}});emitirAlteracao("combustivel");await carregar()}catch(e){console.error(e);alert("Não foi possível estornar a conferência.")}
+  try{await atualizarComAuditoria({colecao:"auditoriasTanqueDiesel",id,empresaId:x.empresaId,modulo:"combustivel",acao:"estorno",motivo:ok.motivo,resumo:`Estorno auditoria tanque ${x.data}`,snapshotAntes:x,alteracoes:{status:"estornado",motivoEstorno:ok.motivo,estornadoPor:state.usuario?.id||"",estornadoEm:new Date().toISOString()}});emitirAlteracao("combustivel");await carregarAuditoriaEmpresa()}catch(e){console.error(e);alert("Não foi possível estornar a conferência.")}
 }
 function renderGraficoDiferencas(p){
-  const ativos=auditoriasAtivas().filter(x=>x.empresaId===emp());
+  const ativos=auditoriasAtivas();
   const mesesPermitidos=new Set(p.indices.map(i=>i+1));
   if(auditMesDetalhe&&!mesesPermitidos.has(Number(auditMesDetalhe)))auditMesDetalhe="";
 
@@ -344,20 +344,29 @@ function renderGraficoDiferencas(p){
 
 }
 function renderAuditoria(p){
+  if(!empresaAuditoria()){
+    if($("fuelConfigResumo"))$("fuelConfigResumo").innerHTML='<div class="modulo-aviso">Selecione uma empresa para visualizar a auditoria da bomba.</div>';
+    if($("fuelAuditoriaResumo"))$("fuelAuditoriaResumo").innerHTML="";
+    if($("fuelAuditoriaMeses"))$("fuelAuditoriaMeses").innerHTML="";
+    if($("fuelAuditoriaHistorico"))$("fuelAuditoriaHistorico").innerHTML="";
+    if($("fuelAuditGraficoMes"))$("fuelAuditGraficoMes").innerHTML="";
+    if($("fuelAuditGraficoDia"))$("fuelAuditGraficoDia").innerHTML="";
+    return
+  }
   const dataInicial=String(configCombustivel.estoqueInicialData||""),inicial=num(configCombustivel.estoqueInicialLitros),capacidade=num(configCombustivel.capacidadeTanqueLitros);
   const resumoCfg=$("fuelConfigResumo");if(resumoCfg)resumoCfg.innerHTML=`<div class="fuel-audit-card"><span>Data-base</span><strong>${dataInicial?dataBr(dataInicial):"—"}</strong></div><div class="fuel-audit-card"><span>Estoque inicial</span><strong>${dataInicial?fmt(inicial)+" L":"—"}</strong></div><div class="fuel-audit-card"><span>Capacidade</span><strong>${capacidade?fmt(capacidade)+" L":"—"}</strong></div>`;$("fuelAbrirConfigTanque")?.classList.toggle("hidden",!admin());
   $("fuelAuditoriaPeriodo").textContent=`Posição acumulada até ${dataBr(p.fim)} · filtro atual: ${p.label} ${p.ano}`;
-  const pos=saldoTeoricoAte(p.fim),entradasPeriodo=comprasAtivas().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),saidasPeriodo=ativosAbastecimento().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),ajustesPeriodo=auditoriasAtivas().filter(x=>x.empresaId===emp()&&dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.diferenca),0),pct=capacidade>0?Math.max(0,Math.min(100,pos.saldo/capacidade*100)):0;
+  const pos=saldoTeoricoAte(p.fim),entradasPeriodo=auditCompras.filter(x=>x.status!=="estornado"&&dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),saidasPeriodo=auditAbastecimentos.filter(x=>x.status!=="estornado"&&x.tipo!=="recebimento"&&dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.quantidade),0),ajustesPeriodo=auditoriasAtivas().filter(x=>dentroPeriodo(x,p)).reduce((s,x)=>s+num(x.diferenca),0),pct=capacidade>0?Math.max(0,Math.min(100,pos.saldo/capacidade*100)):0;
   $("fuelAuditoriaResumo").innerHTML=pos.configurado?`<div class="fuel-audit-grid"><div class="fuel-audit-card"><span>Estoque inicial</span><strong>${fmt(pos.inicial)} L</strong><small>${dataBr(dataInicial)}</small></div><div class="fuel-audit-card"><span>Entradas acumuladas</span><strong>${fmt(pos.entradas)} L</strong><small>Compras desde o estoque inicial</small></div><div class="fuel-audit-card"><span>Saídas acumuladas</span><strong>${fmt(pos.saidas)} L</strong><small>Abastecimentos registrados</small></div><div class="fuel-audit-card"><span>Ajustes de inventário</span><strong class="${classeDiferenca(pos.ajustes)}">${pos.ajustes>=0?"+":""}${fmt(pos.ajustes)} L</strong><small>Diferenças físicas acumuladas</small></div></div><div class="fuel-audit-grid" style="margin-top:12px"><div class="fuel-audit-card"><span>Saldo teórico ajustado</span><strong>${fmt(pos.saldo)} L</strong><small>Base efetiva após inventários</small></div>${pos.ultimoInventario?`<div class="fuel-audit-card"><span>Última conferência física</span><strong>${fmt(pos.ultimoInventario.saldoFisico)} L</strong><small>${dataBr(pos.ultimoInventario.data)} · ajuste ${pos.ultimoInventario.ajuste>=0?"+":""}${fmt(pos.ultimoInventario.ajuste)} L</small></div>`:""}</div><div class="fuel-tank"><strong>Nível teórico do tanque</strong><div class="fuel-tank-bar"><i style="width:${capacidade?pct:0}%"></i></div><div class="fuel-tank-meta"><span>${capacidade?`${fmt(pct)}% da capacidade`:"Cadastre a capacidade para visualizar o nível"}</span><span>${capacidade?`${fmt(pos.saldo)} / ${fmt(capacidade)} L`:`${fmt(pos.saldo)} L`}</span></div></div><div class="fuel-audit-grid" style="margin-top:12px"><div class="fuel-audit-card"><span>Entradas no período</span><strong>${fmt(entradasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Saídas no período</span><strong>${fmt(saidasPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Ajustes no período</span><strong class="${classeDiferenca(ajustesPeriodo)}">${ajustesPeriodo>=0?"+":""}${fmt(ajustesPeriodo)} L</strong></div><div class="fuel-audit-card"><span>Movimento líquido ajustado</span><strong>${fmt(entradasPeriodo-saidasPeriodo+ajustesPeriodo)} L</strong></div></div>`:'<div class="modulo-aviso">Configure a data e o estoque inicial do tanque para iniciar a auditoria da bomba.</div>';
   const meses=p.indices.map(i=>({mes:i+1,rotulo:new Date(2020,i,1).toLocaleDateString("pt-BR",{month:"short"}).replace(".",""),entrada:0,saida:0,ajuste:0,saldo:0}));
-  meses.forEach(m=>{const prefix=`${p.ano}-${String(m.mes).padStart(2,"0")}`;m.entrada=comprasAtivas().filter(x=>String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.quantidade),0);m.saida=ativosAbastecimento().filter(x=>String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.quantidade),0);m.ajuste=auditoriasAtivas().filter(x=>x.empresaId===emp()&&String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.diferenca),0);const fimMes=new Date(p.ano,m.mes,0).getDate();m.saldo=saldoTeoricoAte(`${prefix}-${String(fimMes).padStart(2,"0")}`).saldo});
+  meses.forEach(m=>{const prefix=`${p.ano}-${String(m.mes).padStart(2,"0")}`;m.entrada=auditCompras.filter(x=>x.status!=="estornado"&&String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.quantidade),0);m.saida=auditAbastecimentos.filter(x=>x.status!=="estornado"&&x.tipo!=="recebimento"&&String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.quantidade),0);m.ajuste=auditoriasAtivas().filter(x=>String(x.data).startsWith(prefix)).reduce((s,x)=>s+num(x.diferenca),0);const fimMes=new Date(p.ano,m.mes,0).getDate();m.saldo=saldoTeoricoAte(`${prefix}-${String(fimMes).padStart(2,"0")}`).saldo});
   const max=Math.max(1,...meses.flatMap(x=>[x.entrada,x.saida,Math.max(0,x.saldo)]));
   $("fuelAuditoriaMeses").innerHTML=meses.map(x=>`<div class="fuel-audit-month"><strong style="text-transform:capitalize">${esc(x.rotulo)}</strong><div class="fuel-audit-bars"><div class="fuel-audit-track entrada"><i style="width:${x.entrada/max*100}%"></i></div><div class="fuel-audit-track saida"><i style="width:${x.saida/max*100}%"></i></div><div class="fuel-audit-track saldo"><i style="width:${Math.max(0,x.saldo)/max*100}%"></i></div></div><span>+${fmt(x.entrada)} L</span><span>−${fmt(x.saida)} L</span><strong>${pos.configurado?fmt(x.saldo)+" L":"—"}</strong></div>`).join("");
   if($("fuelAuditData")&&!$("fuelAuditData").value)$("fuelAuditData").value=localIso();$("fuelSalvarAuditoria")?.classList.toggle("hidden",!pode("lancar"));atualizarPreviewAuditoria();
-  const historico=auditoriasAtivas().filter(x=>x.empresaId===emp()&&dentroPeriodo(x,p)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));$("fuelAuditoriaHistorico").innerHTML=`<table class="tabela"><thead><tr><th>Data</th><th>Teórico</th><th>Físico</th><th>Diferença</th><th>Observação</th><th>Ações</th></tr></thead><tbody>${historico.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${fmt(x.saldoTeorico)} L</td><td>${fmt(x.saldoFisico)} L</td><td class="${classeDiferenca(x.diferenca)}">${num(x.diferenca)>=0?"+":""}${fmt(x.diferenca)} L</td><td>${esc(x.observacao||"—")}</td><td>${admin()?`<button class="btn-acao perigo" data-audit-estorno="${esc(x.id)}">Estornar ADM</button>`:"—"}</td></tr>`).join("")||`<tr><td colspan="6">Nenhuma conferência no período selecionado.</td></tr>`}</tbody></table>`;$("fuelAuditoriaHistorico").querySelectorAll("[data-audit-estorno]").forEach(b=>b.onclick=()=>estornarAuditoriaTanque(b.dataset.auditEstorno));renderGraficoDiferencas(p)
+  const historico=auditoriasAtivas().filter(x=>dentroPeriodo(x,p)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));$("fuelAuditoriaHistorico").innerHTML=`<table class="tabela"><thead><tr><th>Data</th><th>Teórico</th><th>Físico</th><th>Diferença</th><th>Observação</th><th>Ações</th></tr></thead><tbody>${historico.map(x=>`<tr><td>${dataBr(x.data)}</td><td>${fmt(x.saldoTeorico)} L</td><td>${fmt(x.saldoFisico)} L</td><td class="${classeDiferenca(x.diferenca)}">${num(x.diferenca)>=0?"+":""}${fmt(x.diferenca)} L</td><td>${esc(x.observacao||"—")}</td><td>${admin()?`<button class="btn-acao perigo" data-audit-estorno="${esc(x.id)}">Estornar ADM</button>`:"—"}</td></tr>`).join("")||`<tr><td colspan="6">Nenhuma conferência no período selecionado.</td></tr>`}</tbody></table>`;$("fuelAuditoriaHistorico").querySelectorAll("[data-audit-estorno]").forEach(b=>b.onclick=()=>estornarAuditoriaTanque(b.dataset.auditEstorno));renderGraficoDiferencas(p)
 }
 async function salvarConfiguracaoTanque(){
-  if(!admin())return;const empresaId=emp();if(!empresaId)return alert("Selecione apenas uma empresa.");
+  if(!admin())return;const empresaId=empresaAuditoria();if(!empresaId)return alert("Selecione a empresa da auditoria.");
   const data=$("fuelEstoqueInicialData").value,estoque=Number($("fuelEstoqueInicialLitros").value),capacidade=Number($("fuelCapacidadeTanque").value||0);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||!Number.isFinite(estoque)||estoque<0||!Number.isFinite(capacidade)||capacidade<0)return alert("Revise a data, o estoque inicial e a capacidade.");
   try{configCombustivel=await salvarConfiguracaoModulo("combustivel",{estoqueInicialData:data,estoqueInicialLitros:estoque,capacidadeTanqueLitros:capacidade},empresaId);render()}catch(e){console.error(e);alert("Não foi possível salvar a configuração do tanque.")}
@@ -366,7 +375,7 @@ async function salvarConfiguracaoTanque(){
 function render(){
   if(!$("fuelLista"))return;const p=periodoCombustivel();
   if(aba==="auditoria"){renderAuditoria(p);return}
-  let arr=(aba==="compras"?compras:abastecimentos).filter(x=>x.empresaId===emp()&&x.status!=="estornado"&&dentroPeriodo(x,p));if(aba==="abastecimentos"&&veiculoFiltroId)arr=arr.filter(x=>x.veiculoId===veiculoFiltroId);if(aba==="abastecimentos"&&motoristaFiltro)arr=arr.filter(x=>String(x.motorista||"").trim()===motoristaFiltro);
+  let arr=(aba==="compras"?compras:abastecimentos).filter(x=>x.status!=="estornado"&&dentroPeriodo(x,p));if(aba==="abastecimentos"&&veiculoFiltroId)arr=arr.filter(x=>x.veiculoId===veiculoFiltroId);if(aba==="abastecimentos"&&motoristaFiltro)arr=arr.filter(x=>String(x.motorista||"").trim()===motoristaFiltro);
   if(aba==="abastecimentos"){
     const litros=arr.reduce((s,x)=>s+num(x.quantidade),0),km=arr.reduce((s,x)=>s+(x.kmAtual!=null&&x.kmAnterior!=null?Math.max(0,num(x.kmAtual)-num(x.kmAnterior)):0),0);
     const filtroAtivo=veiculoFiltroId||motoristaFiltro;$("fuelLabelA").textContent=veiculoFiltroId?"Litros · veículo":motoristaFiltro?"Litros · motorista":"Litros abastecidos";$("fuelLabelB").textContent=veiculoFiltroId?"Abastecimentos · veículo":motoristaFiltro?"Abastecimentos · motorista":"Abastecimentos";$("fuelLabelC").textContent=veiculoFiltroId?"Média do veículo":motoristaFiltro?"Média do motorista":"Média geral";$("fuelValorA").textContent=fmt(litros)+" L";$("fuelValorB").textContent=String(arr.length);$("fuelValorC").textContent=litros&&km?fmt(km/litros)+" km/L":"—";
@@ -382,23 +391,24 @@ function render(){
 }
 
 async function carregar(){
-  if(busy||!ver()||!frotaVer()||!emp())return;busy=true;
+  if(busy||!ver()||!frotaVer())return;busy=true;
   try{
-    const empresaId=emp(),[a,c,v,m,at,cfg]=await Promise.all([
-      listarDocumentos("abastecimentosFrota"),listarDocumentos("custosDiesel"),listarDocumentos("veiculos"),colaboradoresPorFuncao("MOTORISTA").catch(()=>[]),listarDocumentos("auditoriasTanqueDiesel"),carregarConfiguracaoModulo("combustivel",empresaId).catch(()=>({}))
+    const [a,c,v,m,at]=await Promise.all([
+      listarDocumentos("abastecimentosFrota"),listarDocumentos("custosDiesel"),listarDocumentos("veiculos"),colaboradoresPorFuncao("MOTORISTA").catch(()=>[]),listarDocumentos("auditoriasTanqueDiesel")
     ]);
-    abastecimentos=a.filter(x=>x.empresaId===empresaId);compras=c.filter(x=>x.empresaId===empresaId);veiculos=v.filter(x=>x.empresaId===empresaId);motoristas=m.filter(x=>x.empresaId===empresaId);auditoriasTanque=at.filter(x=>x.empresaId===empresaId);configCombustivel=cfg||{};
-    preencherMotoristas();preencherVeiculos();render();$("fuelAviso").classList.add("hidden")
+    abastecimentos=a;compras=c;veiculos=v;motoristas=m;auditoriasTanque=at;
+    if($("fuelAuditEmpresa")&&!$("fuelAuditEmpresa").options.length)await prepararEmpresaAuditoria();
+    render();$("fuelAviso").classList.add("hidden")
   }catch(e){console.error(e);$("fuelAviso").textContent="Não foi possível carregar Combustível e Diesel. Confira permissões e regras publicadas.";$("fuelAviso").classList.remove("hidden")}finally{busy=false}
 }
 async function atualizarKmVeiculo(v,novoKm){
   if(!v||!Number.isFinite(novoKm))return;const maxMov=Math.max(novoKm,...ativosAbastecimento().filter(x=>x.veiculoId===v.id&&x.id!==editId).map(x=>num(x.kmAtual)));if(maxMov>=num(v.quilometragemAtual))await atualizarDocumento("veiculos",v.id,{quilometragemAtual:Math.trunc(maxMov)})
 }
 async function salvar(e){
-  e.preventDefault();const empresaId=emp(),data=$("fuelData").value;if(!empresaId)return alert("Selecione apenas uma empresa no cabeçalho.");if(!/^\d{4}-\d{2}-\d{2}$/.test(data))return msg($("fuelMensagem"),"Informe a data.");
+  e.preventDefault();const empresaId=empresaForm(),data=$("fuelData").value;if(!empresaId)return alert("Selecione a empresa do lançamento.");if(!/^\d{4}-\d{2}-\d{2}$/.test(data))return msg($("fuelMensagem"),"Informe a data.");
   const d={data};
   if(aba==="abastecimentos"){
-    const placa=$("fuelPlaca").value,v=veiculoPorPlaca(placa);d.placa=placa;d.veiculoId=v?.id||"";d.motorista=$("fuelMotorista").value;d.tipo="consumo";d.quantidade=Number($("fuelQuantidade").value);d.kmAnterior=v?Math.trunc(kmBaseVeiculo(v,data,editId)):null;d.kmAtual=Number($("fuelKmAtual").value);
+    const placa=$("fuelPlaca").value,v=veiculoPorPlaca(placa,empresaId);d.placa=placa;d.veiculoId=v?.id||"";d.motorista=$("fuelMotorista").value;d.tipo="consumo";d.quantidade=Number($("fuelQuantidade").value);d.kmAnterior=v?Math.trunc(kmBaseVeiculo(v,data,editId)):null;d.kmAtual=Number($("fuelKmAtual").value);
     if(!v)return msg($("fuelMensagem"),"Selecione um veículo válido.");
     if(!d.motorista)return msg($("fuelMensagem"),"Selecione o motorista. Se a lista estiver vazia, confira no RH se o cargo do colaborador está com a função SIG Motorista / Frota.");
     if(!Number.isFinite(d.quantidade)||d.quantidade<=0)return msg($("fuelMensagem"),"Informe uma quantidade de litros válida.");
@@ -411,10 +421,10 @@ async function salvar(e){
   }else return;
   try{
     msg($("fuelMensagem"),"Salvando...");const col=aba==="compras"?"custosDiesel":"abastecimentosFrota";let salvoId=editId||"",avisoKm="";
-    if(editId){const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(v=>v.id===editId);if(!x||!pode("editar")||x.status!=="ativo")throw new Error("Edição não autorizada.");await atualizarDocumento(col,editId,d)}
-    else{if(!pode("lancar"))throw new Error("Sem permissão.");salvoId=await criarDocumento(col,{...d,empresaId,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""})}
+    if(editId){const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(v=>v.id===editId);if(!x||!pode("editar")||x.status!=="ativo"||x.empresaId!==empresaId)throw new Error("Edição não autorizada.");await atualizarDocumento(col,editId,d)}
+    else{if(!pode("lancar"))throw new Error("Sem permissão.");salvoId=await criarDocumentoEmpresa(col,{...d,empresaId,status:"ativo",origem:"sig",registradoPor:state.usuario?.id||""})}
     if(aba==="abastecimentos"){
-      try{await atualizarKmVeiculo(veiculoPorPlaca(d.placa),d.kmAtual)}
+      try{await atualizarKmVeiculo(veiculoPorPlaca(d.placa,empresaId),d.kmAtual)}
       catch(eKm){console.warn("Abastecimento salvo, mas o KM do veículo não foi sincronizado",eKm);avisoKm=" O abastecimento foi salvo, mas o KM da ficha do veículo não pôde ser atualizado."}
     }
     $("fuelFormBox").classList.add("hidden");limpar();await carregar();
