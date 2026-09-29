@@ -219,7 +219,7 @@ async function salvarItem(e){
   if(!(podeEditar()||podeLancar()))return;
   const d={codigo:$("salesItemCodigo").value.trim(),nome:$("salesItemNome").value.trim(),categoria:$("salesItemCategoria").value.trim(),unidade:$("salesItemUnidade").value.trim().toUpperCase(),status:$("salesItemStatus").value};
   if(!d.nome)return msg($("salesItemMsg"),"Informe a descrição do item.");
-  try{msg($("salesItemMsg"),"Salvando...");if(editItemId)await atualizarDocumento("itensComerciais",editItemId,d);else await criarDocumento("itensComerciais",{...d,empresaId:emp});fecharItem();await carregar();emitirAlteracao("vendas")}
+  try{msg($("salesItemMsg"),"Salvando...");if(editItemId)await atualizarDocumento("itensComerciais",editItemId,d);else await criarDocumentoEmpresa("itensComerciais",{...d,empresaId:emp});fecharItem();await carregar();emitirAlteracao("vendas")}
   catch(err){console.error(err);msg($("salesItemMsg"),"Não foi possível salvar o item.")}
 }
 function opcoesItens(valor=""){
@@ -273,7 +273,7 @@ async function salvarConfig(e){
   const d={rhColaboradorId:p.id,nome:p.nome||"",email:p.email||"",cargoNome:p.cargoNome||"",tipoComissao:tipo,metaMensal:meta,comissaoPct:pct,baseComissao:tipo==="supervisor"?"venda":"recebido",status:"ativo"};
   try{
     msg($("salesCfgMsg"),"Salvando...");
-    if(cfg)await atualizarDocumento("vendedores",cfg.id,d);else await criarDocumento("vendedores",{...d,empresaId:emp});
+    if(cfg)await atualizarDocumento("vendedores",cfg.id,d);else await criarDocumentoEmpresa("vendedores",{...d,empresaId:emp});
     fecharConfig();await carregar();emitirAlteracao("vendas");
   }catch(err){console.error(err);msg($("salesCfgMsg"),"Não foi possível salvar a configuração.")}
 }
