@@ -177,7 +177,7 @@ function renavam(v){return String(v||"").replace(/\D/g,"").slice(0,11)}
 function veiculoNome(v){return `${v.marca||""} ${v.modelo||""}`.trim()||v.placa||"Veículo"}
 function vById(id){return veiculos.find(v=>v.id===id)}
 function obrigacoes(v){return Array.isArray(v?.obrigacoes)?v.obrigacoes:[]}
-function statusObrig(o){if(o.status==="pago"||o.status==="cancelado"||o.status==="em_recurso")return o.status;const d=diasAte(o.vencimento);return d!=null&&d<0?"vencido":"aberto"}
+function statusObrig(o){if(!o||typeof o!=="object")return "aberto";if(o.status==="pago"||o.status==="cancelado"||o.status==="em_recurso")return o.status;const d=diasAte(o.vencimento);return d!=null&&d<0?"vencido":"aberto"}
 function obrigacoesTodas(){const out=[];for(const v of veiculos)for(const o of obrigacoes(v))out.push({...o,veiculoId:v.id,veiculo:v});return out}
 function manutVencida(m){if(["concluida","cancelada"].includes(m.status))return false;const v=vById(m.veiculoId),d=diasAte(m.dataPrevista),porData=d!=null&&d<0,porKm=n(m.kmPrevisto)>0&&n(v?.quilometragemAtual)>=n(m.kmPrevisto);return porData||porKm}
 function manutProxima(m){if(["concluida","cancelada"].includes(m.status))return false;const v=vById(m.veiculoId),d=diasAte(m.dataPrevista),km=n(m.kmPrevisto)-n(v?.quilometragemAtual);return (d!=null&&d>=0&&d<=30)||(n(m.kmPrevisto)>0&&km>=0&&km<=1000)}
@@ -211,7 +211,16 @@ function renderResumoVeiculos(){const t=$("buscaFrotaVisao")?.value||"",arr=veic
 function renderVeiculos(){const t=$("buscaVeiculos")?.value||"",arr=veiculos.filter(v=>matchVeiculo(v,t));$("frotaQtdVeiculos").textContent=`${arr.length} veículo(s)`;$("listaVeiculos").innerHTML=arr.length?arr.map(v=>`<tr><td><span class="fleet-vehicle-title">${esc(v.placa||"—")} · ${esc(veiculoNome(v))}</span><span class="fleet-vehicle-sub">RENAVAM ${esc(v.renavam||"—")}</span></td><td>${esc(nomeEmpresa(v.empresaId))}</td><td><span class="fleet-badge ${v.status==="ativo"?"ok":v.status==="manutencao"?"warn":""}">${esc(v.status||"—")}</span></td><td>${n(v.quilometragemAtual).toLocaleString("pt-BR")} km</td><td>${v.ultimaConsultaOficialEm?dataBr(v.ultimaConsultaOficialEm):"—"}</td><td><div class="acoes-tabela">${podeEditar()?`<button class="btn-acao destaque" data-fe="${v.id}" type="button">Editar</button>`:""}${podeObrig()?`<button class="btn-acao" data-fo="${v.id}" type="button">Obrigação</button>`:""}${podeManut()?`<button class="btn-acao" data-fm="${v.id}" type="button">Manutenção</button>`:""}<button class="btn-acao" data-fc="${v.id}" type="button">Consulta hoje</button></div></td></tr>`).join(""):'<tr><td colspan="6" class="fleet-empty">Nenhum veículo cadastrado.</td></tr>';document.querySelectorAll("[data-fe]").forEach(b=>b.addEventListener("click",()=>editarVeiculo(b.dataset.fe)));document.querySelectorAll("[data-fo]").forEach(b=>b.addEventListener("click",()=>novaObrigacao(b.dataset.fo)));document.querySelectorAll("[data-fm]").forEach(b=>b.addEventListener("click",()=>novaManutencao(b.dataset.fm)));document.querySelectorAll("[data-fc]").forEach(b=>b.addEventListener("click",()=>registrarConsulta(b.dataset.fc)))}
 function renderObrigacoes(){const filtro=$("filtroObrigTipo")?.value||"",arr=obrigacoesTodas().filter(o=>!filtro||o.tipo===filtro).sort((a,b)=>String(a.vencimento||"").localeCompare(String(b.vencimento||"")));$("listaObrigacoes").innerHTML=arr.length?arr.map(o=>{const s=statusObrig(o),cl=s==="vencido"?"fleet-row-overdue":(diasAte(o.vencimento)??99)<=30&&!["pago","cancelado"].includes(s)?"fleet-row-due":"";return`<tr class="${cl}"><td>${esc(o.veiculo.placa||"—")}<br><small>${esc(veiculoNome(o.veiculo))}</small></td><td>${esc(tipoObrig(o.tipo))}</td><td>${esc(o.exercicio||o.auto||o.descricao||"—")}</td><td>${dataBr(o.vencimento)}</td><td>${moeda(o.valor)}</td><td><span class="fleet-badge ${classeStatusObrig(o)}">${esc(labelStatusObrig(o))}</span></td><td>${o.tipo==="multa"?`${esc(o.orgao||"")} ${o.pontos?`· ${esc(o.pontos)} pt(s)`:""}`:esc(o.descricao||"—")}</td><td>${podeObrig()&&s!=="pago"&&s!=="cancelado"?`<button class="btn-acao destaque" data-op="${o.veiculoId}|${o.id}" type="button">Marcar pago</button>`:"—"}</td></tr>`}).join(""):'<tr><td colspan="8" class="fleet-empty">Nenhuma obrigação cadastrada.</td></tr>';document.querySelectorAll("[data-op]").forEach(b=>b.addEventListener("click",()=>{const [vid,oid]=b.dataset.op.split("|");marcarObrigacaoPaga(vid,oid)}))}
 function renderManutencoes(){const t=String($("buscaManut")?.value||"").toLowerCase(),arr=manutencoes.filter(m=>{const v=vById(m.veiculoId);return !t||[v?.placa,v?.modelo,m.descricao,m.oficina].some(x=>String(x||"").toLowerCase().includes(t))}).sort((a,b)=>String(a.dataPrevista||"9999").localeCompare(String(b.dataPrevista||"9999")));$("listaManutencoes").innerHTML=arr.length?arr.map(m=>{const v=vById(m.veiculoId),ven=manutVencida(m);return`<tr class="${ven?"fleet-row-overdue":""}"><td>${esc(v?.placa||"—")}<br><small>${esc(veiculoNome(v||{}))}</small></td><td>${esc(m.descricao||"—")}<br><small>${esc(m.tipo||"")} ${m.oficina?`· ${esc(m.oficina)}`:""}</small></td><td><span class="fleet-badge ${m.status==="concluida"?"ok":ven?"bad":"warn"}">${esc(m.status||"—")}</span></td><td>${m.dataPrevista?dataBr(m.dataPrevista):"—"}${m.kmPrevisto?`<br><small>${n(m.kmPrevisto).toLocaleString("pt-BR")} km</small>`:""}</td><td>${moeda(m.status==="concluida"?m.custoReal:m.custoPrevisto)}</td><td>${m.proximaData?dataBr(m.proximaData):"—"}${m.proximoKm?`<br><small>${n(m.proximoKm).toLocaleString("pt-BR")} km</small>`:""}</td><td>${podeManut()?`<button class="btn-acao destaque" data-me="${m.id}" type="button">Editar</button>`:"—"}</td></tr>`}).join(""):'<tr><td colspan="7" class="fleet-empty">Nenhuma manutenção cadastrada.</td></tr>';document.querySelectorAll("[data-me]").forEach(b=>b.addEventListener("click",()=>editarManutencao(b.dataset.me)))}
-function renderTudo(){atualizarKpis();renderAlertas();renderSaude();renderResumoVeiculos();renderVeiculos();renderObrigacoes();renderManutencoes()}
+function renderSeguro(nome,fn){try{fn()}catch(e){console.error(`Frota: falha ao renderizar ${nome}`,e)}}
+function renderTudo(){
+  renderSeguro("veículos",renderVeiculos);
+  renderSeguro("resumo por veículo",renderResumoVeiculos);
+  renderSeguro("KPIs",atualizarKpis);
+  renderSeguro("alertas",renderAlertas);
+  renderSeguro("saúde",renderSaude);
+  renderSeguro("obrigações",renderObrigacoes);
+  renderSeguro("manutenções",renderManutencoes);
+}
 
 function preencherVeiculoSelects(){const opts=veiculos.filter(v=>v.status!=="baixado").sort((a,b)=>String(a.placa||"").localeCompare(String(b.placa||""))).map(v=>`<option value="${esc(v.id)}">${esc(v.placa||"—")} · ${esc(veiculoNome(v))}</option>`).join("");["obrigVeiculo","manutVeiculo"].forEach(id=>{if($(id))$(id).innerHTML='<option value="">Selecione...</option>'+opts})}
 function preencherMotoristas(valorAtual=""){
@@ -223,7 +232,7 @@ function preencherMotoristas(valorAtual=""){
   s.value=atual;
 }
 async function carregar(){
-  if(!podeVer())return;
+  if(!podeVer()||busy)return;
   criarPagina();garantirMenu();busy=true;
   const falhas=[];
   const lerSeguro=async(nome,habilitado=true)=>{
@@ -273,9 +282,11 @@ function bootstrap(){garantirCss();garantirMenu();criarPagina();const b=$("btnNo
 bootstrap();
 instalarDelegacaoFrota();
 window.SIG_ABRIR_FROTA=()=>{if(!podeVer())return;criarPagina();abrirPagina("frota");carregar()};
+const recarregarContexto=()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()};
 window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="frota"&&podeVer())carregar()});
 window.addEventListener("sig:ready",()=>{bootstrap();if(podeVer())carregar()});
-window.addEventListener("sig:page",e=>{if(e.detail?.pagina==="frota"&&podeVer())carregar()});
-window.addEventListener("sig:empresa-contexto",()=>{if(pagina()&&!pagina().classList.contains("hidden"))carregar()});
+window.addEventListener("sig:empresa-changed",recarregarContexto);
+window.addEventListener("sig:contexto-changed",recarregarContexto);
+window.addEventListener("sig:empresa-contexto",recarregarContexto);
 
 export { carregar };
