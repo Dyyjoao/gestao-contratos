@@ -1,5 +1,5 @@
 import { $, esc, msg, permite, admin, state } from "./core.js";
-import { $, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, dataBr, moeda } from "./shared.js";
+import { listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, dataBr, moeda } from "./shared.js";
 
 const AREA="Segurança da Informação & Antifraude";
 const CAT="seguranca_antifraude";
