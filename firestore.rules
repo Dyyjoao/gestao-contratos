@@ -575,7 +575,7 @@ service cloud.firestore {
     }
 
     function visitasPodeVerGrupo(dados) {
-      return mesmoGrupo(dados.grupoId) && (
+      return documentoAcessivel(dados) && (
         administrador() || permissao('visitas','supervisionar') ||
         (dados.responsavelId == request.auth.uid && (
           permissao('visitas','visualizar') || permissao('visitas','registrar') || permissao('visitas','editar')
@@ -586,7 +586,7 @@ service cloud.firestore {
     match /visitasComerciais/{id} {
       allow read: if visitasPodeVerGrupo(resource.data);
       allow create: if permissao('visitas','registrar') &&
-        mesmoGrupo(request.resource.data.grupoId) &&
+        documentoAcessivel(request.resource.data) &&
         request.resource.data.responsavelId == request.auth.uid &&
         request.resource.data.criadoPor == request.auth.uid &&
         request.resource.data.status == 'visita' &&
@@ -598,6 +598,7 @@ service cloud.firestore {
         request.resource.data.tipo in ['telefone','whatsapp','presencial','email'];
       allow update: if visitasPodeVerGrupo(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.responsavelId == resource.data.responsavelId && (
           (
             (administrador() || permissao('visitas','supervisionar') ||
@@ -718,15 +719,16 @@ service cloud.firestore {
 
     match /palletMovimentos/{id} {
       allow read: if (permissao('palletMovimentos','visualizar') || permissao('palletMovimentos','lancar') ||
-        permissao('palletMovimentos','editar')) && mesmoGrupo(resource.data.grupoId);
-      allow create: if permissao('palletMovimentos','lancar') && mesmoGrupo(request.resource.data.grupoId) &&
+        permissao('palletMovimentos','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('palletMovimentos','lancar') && documentoAcessivel(request.resource.data) &&
         request.resource.data.status == 'ativo' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.motorista is string && request.resource.data.motorista.size() > 0 &&
         request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
         request.resource.data.recolhido is int && request.resource.data.recolhido >= 0;
-      allow update: if mesmoGrupo(resource.data.grupoId) &&
+      allow update: if documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
         resource.data.status == 'ativo' &&
         request.resource.data.entregue is int && request.resource.data.entregue >= 0 &&
         request.resource.data.recolhido is int && request.resource.data.recolhido >= 0 && (
@@ -745,14 +747,15 @@ service cloud.firestore {
 
     match /palletInventarios/{id} {
       allow read: if (permissao('palletInventario','visualizar') || permissao('palletInventario','lancar') ||
-        permissao('palletInventario','editar')) && mesmoGrupo(resource.data.grupoId);
-      allow create: if permissao('palletInventario','lancar') && mesmoGrupo(request.resource.data.grupoId) &&
+        permissao('palletInventario','editar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('palletInventario','lancar') && documentoAcessivel(request.resource.data) &&
         request.resource.data.status == 'ativo' &&
         request.resource.data.data is string && request.resource.data.data.size() == 10 &&
         request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
         request.resource.data.quantidade is int && request.resource.data.quantidade >= 0;
-      allow update: if mesmoGrupo(resource.data.grupoId) &&
+      allow update: if documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
         resource.data.status == 'ativo' &&
         request.resource.data.tipo in ['PALLET COM MATERIAL','PALLET VAZIO','ENTRADA DE PALLET','SAIDA DE PALLET','COMPRA DE PALLET'] &&
         request.resource.data.quantidade is int && request.resource.data.quantidade >= 0 && (
@@ -768,8 +771,8 @@ service cloud.firestore {
 
     match /ordensServico/{id} {
       allow read: if (permissao('ordensServico','visualizar') || permissao('ordensServico','solicitar') ||
-        permissao('ordensServico','executar')) && mesmoGrupo(resource.data.grupoId);
-      allow create: if permissao('ordensServico','solicitar') && mesmoGrupo(request.resource.data.grupoId) &&
+        permissao('ordensServico','executar')) && documentoAcessivel(resource.data);
+      allow create: if permissao('ordensServico','solicitar') && documentoAcessivel(request.resource.data) &&
         request.resource.data.status == 'aberta' &&
         request.resource.data.numero is string && request.resource.data.numero.size() > 0 &&
         request.resource.data.tipo in ['CORRETIVA','MELHORIA','PREVENTIVA'] &&
@@ -784,8 +787,9 @@ service cloud.firestore {
         request.resource.data.dataConclusaoPrevista >= request.resource.data.dataInicioPrevista &&
         request.resource.data.solicitadoPor == request.auth.uid &&
         request.resource.data.dataInicio == '' && request.resource.data.dataFim == '';
-      allow update: if permissao('ordensServico','executar') && mesmoGrupo(resource.data.grupoId) &&
+      allow update: if permissao('ordensServico','executar') && documentoAcessivel(resource.data) &&
         request.resource.data.grupoId == resource.data.grupoId &&
+        request.resource.data.empresaId == resource.data.empresaId &&
         request.resource.data.numero == resource.data.numero &&
         request.resource.data.dataSolicitacao == resource.data.dataSolicitacao &&
         (!('solicitadoPor' in resource.data) || request.resource.data.solicitadoPor == resource.data.solicitadoPor) &&
