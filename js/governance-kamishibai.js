@@ -1,4 +1,4 @@
-import { $, esc, permite, admin, state } from "./core.js";
+import { $, esc, msg, permite, admin, state } from "./core.js";
 import { listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, nomeEmpresa, dataBr, emitirAlteracao } from "./shared.js";
 
 let rotas=[],execucoes=[],busy=false,rotaEditId=null,pontosDraft=[],execucaoRotaId="";
