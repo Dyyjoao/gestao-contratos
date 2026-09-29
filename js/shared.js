@@ -83,18 +83,23 @@ export async function carregarEmpresasModulo(){
   return mapa;
 }
 
+export function empresaInicialFormulario(valorAtual=""){
+  if(valorAtual&&podeEmpresa(valorAtual))return valorAtual;
+  const ids=empresasSelecionadasIds().filter(podeEmpresa);
+  return ids.length===1?ids[0]:"";
+}
+export function filtrarPorEmpresasSelecionadas(dados=[]){
+  const ids=new Set(empresasSelecionadasIds().filter(podeEmpresa));
+  if(!ids.size)return[];
+  return (Array.isArray(dados)?dados:[]).filter(x=>ids.has(x?.empresaId));
+}
 export async function preencherEmpresaSelect(select,{todas=false,valorAtual=""}={}){
   if(!select)return;
-  const mapa=await carregarEmpresasModulo(),selecionadas=empresasSelecionadasIds().filter(id=>mapa.has(id));
-  if(selecionadas.length===1){
-    const e=mapa.get(selecionadas[0]);
-    select.innerHTML=`<option value="${esc(e.id)}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`;
-    select.value=e.id;return;
-  }
-  const arr=[...mapa.values()].filter(e=>!selecionadas.length||selecionadas.includes(e.id)).sort((a,b)=>String(a.nomeFantasia||a.razaoSocial||"").localeCompare(String(b.nomeFantasia||b.razaoSocial||""),"pt-BR"));
-  select.innerHTML=(todas?'<option value="">Todas as empresas selecionadas</option>':'<option value="">Selecione a empresa...</option>')+arr.map(e=>`<option value="${e.id}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`).join("");
-  if(valorAtual&&[...select.options].some(o=>o.value===valorAtual))select.value=valorAtual;
-  else if(!todas&&arr.length===1)select.value=arr[0].id;
+  const mapa=await carregarEmpresasModulo();
+  const arr=[...mapa.values()].filter(e=>podeEmpresa(e.id)).sort((a,b)=>String(a.nomeFantasia||a.razaoSocial||"").localeCompare(String(b.nomeFantasia||b.razaoSocial||""),"pt-BR"));
+  select.innerHTML=(todas?'<option value="">Todas as empresas</option>':'<option value="">Selecione a empresa...</option>')+arr.map(e=>`<option value="${e.id}">${esc(e.nomeFantasia||e.razaoSocial||e.id)}</option>`).join("");
+  const inicial=empresaInicialFormulario(valorAtual);
+  if(inicial&&[...select.options].some(o=>o.value===inicial))select.value=inicial;
 }
 export function nomeEmpresa(id){const e=state.empresas.get(id);return e?.nomeFantasia||e?.razaoSocial||"-"}
 
@@ -141,10 +146,20 @@ function empresaParaGravacao(dados={}){
   if(dados.empresaId){if(!podeEmpresa(dados.empresaId))throw new Error("sem-acesso-empresa");return dados.empresaId}
   const id=empresaUnicaSelecionadaId();
   if(id)return id;
-  if(typeof window!=="undefined")window.alert("Para cadastrar ou alterar um registro que pertence a uma empresa, selecione apenas uma empresa no cabeçalho do SIG.");
-  throw new Error("selecione-uma-empresa");
+  if(typeof window!=="undefined")window.alert("Selecione a empresa no formulário do registro.");
+  throw new Error("empresa-obrigatoria-no-formulario");
 }
-
+export function validarEmpresaFormulario(empresaId){
+  if(!empresaId)throw new Error("empresa-obrigatoria-no-formulario");
+  if(!podeEmpresa(empresaId))throw new Error("sem-acesso-empresa");
+  return empresaId;
+}
+export async function criarDocumentoEmpresa(nomeColecao,dados){
+  const empresaId=validarEmpresaFormulario(dados?.empresaId),grupoId=grupoAtualId();
+  if(!grupoId)throw new Error("grupo-nao-selecionado");
+  const ref=await addDoc(collection(db,nomeColecao),{...dados,empresaId,grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
+  return ref.id;
+}
 export async function criarDocumento(nomeColecao,dados){
   const empresaId=empresaParaGravacao(dados),grupoId=grupoAtualId();
   if(!grupoId)throw new Error("grupo-nao-selecionado");
