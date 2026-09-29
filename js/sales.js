@@ -1,12 +1,12 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, moeda, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, nomeEmpresa, periodoAno, periodoChave, emitirAlteracao, state } from "./shared.js";
-import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
+import { $, esc, msg, permite, moeda, listarDocumentos, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, empresaInicialFormulario, empresasSelecionadasIds, nomeEmpresa, periodoAno, periodoChave, emitirAlteracao, state } from "./shared.js";
+import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=7";
 
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const PERIODOS={total:[0,1,2,3,4,5,6,7,8,9,10,11],t1:[0,1,2],t2:[3,4,5],t3:[6,7,8],t4:[9,10,11]};
 for(let i=0;i<12;i++)PERIODOS[`m${String(i+1).padStart(2,"0")}`]=[i];
 
-let vendedoresRh=[],supervisoresRh=[],configs=[],vendas=[],clientesComerciais=[],itensComerciais=[],busy=false,editVendaId="",editItemId="",configAtual=null,filtroClienteVendas="",filtroClienteVendasNome="";
+let vendedoresRh=[],supervisoresRh=[],configs=[],vendedoresVendaForm=[],configsVendaForm=[],vendas=[],clientesComerciais=[],itensComerciais=[],busy=false,editVendaId="",editItemId="",configAtual=null,filtroClienteVendas="",filtroClienteVendasNome="";
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const pagina=()=>$("pagina-vendas");
 const podeVer=()=>admin()||["visualizar","lancar","editar","vendedores","comissoes"].some(a=>permite("vendas",a));
@@ -117,7 +117,7 @@ function montar(){
   <section id="salesVendaBox" class="form-card hidden">
     <div class="form-card-titulo"><div><h3 id="salesVendaTitulo">Nova venda</h3><p>Registre aqui somente os dados da venda. Recebimentos e inadimplência são tratados no módulo financeiro.</p></div></div>
     <form id="formSalesVenda"><div class="form-grid form-grid-3">
-      <div class="campo"><label for="salesEmpresa">Empresa</label><input id="salesEmpresa" disabled></div>
+      <div class="campo"><label for="salesEmpresa">Empresa</label><select id="salesEmpresa" required></select><small>A empresa pertence à venda; o cabeçalho apenas filtra o consolidado.</small></div>
       <div class="campo"><label for="salesData">Data da venda</label><input id="salesData" type="date" required></div>
       <div class="campo"><label for="salesVendedor">Vendedor</label><select id="salesVendedor" required></select><small>Origem: RH · função Vendedor / Comercial.</small></div>
       <div class="campo campo-span-2"><label for="salesCliente">Cliente</label><input id="salesCliente" required></div>
@@ -179,7 +179,7 @@ function montar(){
 
   <section class="lista-card">
     <div class="lista-cabecalho"><div><h3>Vendas registradas</h3><p id="salesResumo">—</p></div><div class="sales-filtros"><select id="salesFiltroVendedor"><option value="">Todos os vendedores</option></select><select id="salesFiltroStatus"><option value="">Todos os status</option><option value="confirmada">Confirmadas</option><option value="cancelada">Canceladas</option></select></div></div>
-    <div class="tabela-container sales-history-scroll"><table class="tabela sales-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente / referência</th><th>Valor vendido</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
+    <div class="tabela-container sales-history-scroll"><table class="tabela sales-table"><thead><tr><th>Empresa</th><th>Data</th><th>Vendedor</th><th>Cliente / referência</th><th>Valor vendido</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesLista"></tbody></table></div>
   </section>`;
   main.appendChild(s);
 
@@ -189,7 +189,7 @@ function montar(){
   $("btnSalesAtualizar")?.addEventListener("click",carregar);
   $("btnSalesVenda")?.addEventListener("click",()=>abrirVenda());
   $("btnSalesVendaCancelar")?.addEventListener("click",fecharVenda);
-  $("formSalesVenda")?.addEventListener("submit",salvarVenda);
+  $("formSalesVenda")?.addEventListener("submit",salvarVenda);$("salesEmpresa")?.addEventListener("change",()=>carregarBaseEmpresaVenda($("salesEmpresa").value));
   $("salesFiltroVendedor")?.addEventListener("change",render);
   $("salesFiltroStatus")?.addEventListener("change",render);
   $("salesModoGrafico")?.addEventListener("change",render);
@@ -201,20 +201,21 @@ function montar(){
   $("salesClientesListaOrdem")?.addEventListener("change",render);
 }
 
-function contextoUnico(){const emp=empresaUnicaSelecionadaId();if(!emp){alert("Para cadastrar ou editar, selecione uma única empresa no cabeçalho.");return""}return emp}
+const empresaVenda=()=>String($("salesEmpresa")?.value||"");
+const empresaAcaoComercial=registro=>String(registro?.empresaId||empresaVenda()||empresaInicialFormulario()||"");
 function esconderBotoes(){$("btnSalesVenda")?.classList.toggle("hidden",!podeLancar())}
 function fecharVenda(){editVendaId="";$("formSalesVenda")?.reset();$("salesVendaBox")?.classList.add("hidden");msg($("salesVendaMsg"),"")}
 function fecharConfig(){configAtual=null;$("formSalesConfig")?.reset();$("salesConfigBox")?.classList.add("hidden");msg($("salesCfgMsg"),"")}
 function fecharItem(){editItemId="";$("formSalesItem")?.reset();$("salesItemBox")?.classList.add("hidden");msg($("salesItemMsg"),"")}
 function abrirItem(item=null){
   if(!(podeEditar()||podeLancar()))return alert("Seu perfil não pode manter a base de itens.");
-  const emp=contextoUnico();if(!emp)return;
+  const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");
   editItemId=item?.id||"";$("formSalesItem")?.reset();$("salesItemTitulo").textContent=item?"Editar item comercial":"Novo item comercial";
   $("salesItemCodigo").value=item?.codigo||"";$("salesItemNome").value=item?.nome||"";$("salesItemCategoria").value=item?.categoria||"";$("salesItemUnidade").value=item?.unidade||"";$("salesItemStatus").value=item?.status||"ativo";
   $("salesItemBox").classList.remove("hidden");$("salesItemBox").scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function salvarItem(e){
-  e.preventDefault();const emp=contextoUnico();if(!emp)return;
+  e.preventDefault();const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");
   if(!(podeEditar()||podeLancar()))return;
   const d={codigo:$("salesItemCodigo").value.trim(),nome:$("salesItemNome").value.trim(),categoria:$("salesItemCategoria").value.trim(),unidade:$("salesItemUnidade").value.trim().toUpperCase(),status:$("salesItemStatus").value};
   if(!d.nome)return msg($("salesItemMsg"),"Informe a descrição do item.");
@@ -250,7 +251,7 @@ function renderItensCadastro(){
 function abrirConfig(p,tipo){
   if(tipo==="supervisor")return alert("A comissão da supervisão está congelada por enquanto.");
   if(!podeConfig())return alert("Seu perfil não pode alterar metas e comissões.");
-  const emp=contextoUnico();if(!emp||p.empresaId!==emp)return;
+  const emp=String(p?.empresaId||"");if(!emp)return;
   const cfg=pessoaCfg(p,tipo);
   configAtual={p,tipo,cfg};
   $("formSalesConfig")?.reset();
@@ -266,7 +267,7 @@ function abrirConfig(p,tipo){
 }
 async function salvarConfig(e){
   e.preventDefault();if(!configAtual||!podeConfig())return;
-  const {p,tipo,cfg}=configAtual,emp=contextoUnico();if(!emp)return;
+  const {p,tipo,cfg}=configAtual,emp=String(p?.empresaId||"");if(!emp)return;
   const pct=n($("salesCfgPct").value),meta=tipo==="vendedor"?n($("salesCfgMeta").value):0;
   if(pct<0||pct>100)return msg($("salesCfgMsg"),"Percentual inválido.");
   const d={rhColaboradorId:p.id,nome:p.nome||"",email:p.email||"",cargoNome:p.cargoNome||"",tipoComissao:tipo,metaMensal:meta,comissaoPct:pct,baseComissao:tipo==="supervisor"?"venda":"recebido",status:"ativo"};
@@ -298,7 +299,7 @@ function preencherVendedores(){
 
 function abrirVenda(v=null){
   if(!(v?podeEditar():podeLancar()))return alert("Seu perfil não possui permissão para esta ação.");
-  const emp=contextoUnico();if(!emp)return;
+  const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");
   editVendaId=v?.id||"";$("formSalesVenda")?.reset();$("salesVendaTitulo").textContent=v?"Editar venda":"Nova venda";$("salesEmpresa").value=nomeEmpresa(emp);
   $("salesData").value=v?.data||hoje();$("salesVendedor").value=v?.vendedorId||"";$("salesCliente").value=v?.cliente||"";$("salesDocumento").value=v?.documento||"";
   $("salesStatus").value=v?.status||"confirmada";$("salesObs").value=v?.observacao||"";$("salesValor").value=v?n(v.valor):"";
@@ -308,7 +309,7 @@ function abrirVenda(v=null){
 
 async function salvarVenda(e){
   e.preventDefault();const nova=!editVendaId;if(nova&&!podeLancar())return;if(!nova&&!podeEditar())return;
-  const emp=contextoUnico();if(!emp)return;const cfg=cfgVenda($("salesVendedor").value);if(!cfg)return msg($("salesVendaMsg"),"Selecione um vendedor disponível para lançamento.");
+  const emp=empresaAcaoComercial(item);if(!emp)return alert("Selecione a empresa no formulário correspondente.");const cfg=cfgVenda($("salesVendedor").value);if(!cfg)return msg($("salesVendaMsg"),"Selecione um vendedor disponível para lançamento.");
   const atual=nova?null:vendas.find(x=>x.id===editVendaId);if(!nova&&(!atual||atual.empresaId!==emp))return msg($("salesVendaMsg"),"Venda não localizada para a empresa selecionada.");
   const valor=n($("salesValor").value),valorRec=nova?0:recebido(atual),dataRec=nova?null:dataRecebimento(atual),pct=n(nova?cfg.comissaoPct:atual?.comissaoPct??cfg.comissaoPct),st=nova?"aguardando_recebimento":comStatus(atual);
   if(valor<=0)return msg($("salesVendaMsg"),"O valor da venda deve ser maior que zero.");
