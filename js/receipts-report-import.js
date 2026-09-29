@@ -1,4 +1,4 @@
-import { $, esc, permite, admin, moeda, listarDocumentosEmpresa, criarDocumento, atualizarDocumento, excluirDocumento, prepararEmpresaInput, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
+import { $, esc, permite, admin, moeda, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, excluirDocumento, prepararEmpresaInput, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
 import { normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes } from "./import-center.js";
 
 const XLSX_CDNS=["./vendor/xlsx.full.min.js?v=1","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"];
@@ -26,7 +26,7 @@ function snapshotVendaRecebimento(v){
 }
 async function registrarSnapshot(lote,emp,v){
   const existente=snapshots.find(s=>s.empresaId===emp&&s.loteId===lote&&s.vendaId===v.id);if(existente)return existente.id;
-  const antes=snapshotVendaRecebimento(v),id=await criarDocumento("importacoesRecebimentosAlteracoes",{empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes,registradoEm:new Date().toISOString()});
+  const antes=snapshotVendaRecebimento(v),id=await criarDocumentoEmpresa("importacoesRecebimentosAlteracoes",{empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes,registradoEm:new Date().toISOString()});
   snapshots.push({id,empresaId:emp,loteId:lote,vendaId:v.id,pedido:v.documento||"",antes});return id
 }
 function statusImportacao(s){return({processando:"Processando",concluida:"Concluída",parcial:"Parcial",erro:"Erro",excluindo:"Excluindo",excluida:"Excluída",exclusao_parcial:"Exclusão parcial"})[s]||s||"—"}
@@ -114,7 +114,7 @@ async function confirmar(){
   if(!confirm(`Importar ${validos.length} recebimento(s), totalizando ${moeda(total)}, para ${nomeEmpresa(emp)}?\n\nPrincipal baixado agora: ${moeda(principal)} · excedente pendente de tratamento: ${moeda(excedente)}.\nO excedente não será aplicado automaticamente à próxima parcela.`))return;
   busy=true;let lote="",logId="",feitos=0;
   try{
-    lote=loteId();logId=await criarDocumento("importacoesRecebimentos",{empresaId:emp,loteId:lote,arquivo:arquivoAtual,status:"processando",quantidadePrevista:validos.length,valorPrevisto:total,principalPrevisto:principal,excedentePendentePrevisto:excedente,iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
+    lote=loteId();logId=await criarDocumentoEmpresa("importacoesRecebimentos",{empresaId:emp,loteId:lote,arquivo:arquivoAtual,status:"processando",quantidadePrevista:validos.length,valorPrevisto:total,principalPrevisto:principal,excedentePendentePrevisto:excedente,iniciadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
     await carregarBases();classes=simular(emp);validos=classes.filter(x=>x.tipo==="nova");
     for(const x of validos){
       const r=x.r,v=vendas.find(z=>z.id===x.v.id);if(!v)throw new Error("venda-nao-encontrada");
@@ -122,7 +122,7 @@ async function confirmar(){
       const totalRec=arredondarCentavos(baixa.parcelas.reduce((s,p)=>s+n(p.valorRecebido),0)),base=v.baseComissao||"recebido",pct=n(v.comissaoPct),comBase=base==="venda"?n(v.valor):totalRec,comStatus=["aprovada","paga"].includes(String(v.comissaoStatus||""))?v.comissaoStatus:(totalRec>0?"provisionada":"aguardando_recebimento"),chaves=[...new Set([...(Array.isArray(v.recebimentoChaves)?v.recebimentoChaves:[]),r.chaveRecebimento])],dataRec=!v.dataRecebimento||r.dataRecebimento>v.dataRecebimento?r.dataRecebimento:v.dataRecebimento;
       if(!baixa.semPrincipal){await registrarSnapshot(lote,emp,v);await atualizarDocumento("vendas",v.id,{parcelas:baixa.parcelas,parcelasVersao:1,valorRecebido:totalRec,dataRecebimento:dataRec,statusFinanceiro:totalRec>=n(v.valor)-0.009?"recebido":"parcial",recebimentoChaves:chaves,comissaoBaseValor:comBase,comissaoValor:comBase*pct/100,comissaoStatus:comStatus});Object.assign(v,{parcelas:baixa.parcelas,valorRecebido:totalRec,dataRecebimento:dataRec,recebimentoChaves:chaves})}
       const pend=arredondarCentavos(baixa.semPrincipal?r.valor:n(baixa.valorExcedentePendente));
-      await criarDocumento("recebimentosVendas",{empresaId:emp,loteId:lote,chaveRecebimento:r.chaveRecebimento,origem:"relatorio_recebimentos",arquivo:arquivoAtual,pedido:r.pedido,clienteCodigo:r.clienteCodigo,clienteNome:r.clienteNome,valor:r.valor,valorPrincipal:baixa.valorPrincipal,valorAcrescimos:0,valorAntecipado:0,valorPendenteClassificacao:pend,statusTratamento:pend>0?"pendente":"concluido",tipoBaixa:baixa.parcial?"parcial":pend>0?"quitacao_com_excedente_pendente":"quitacao",dataRecebimento:r.dataRecebimento,vendaId:v.id,alocacoes:baixa.alocacoes,tratamentos:[],importadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
+      await criarDocumentoEmpresa("recebimentosVendas",{empresaId:emp,loteId:lote,chaveRecebimento:r.chaveRecebimento,origem:"relatorio_recebimentos",arquivo:arquivoAtual,pedido:r.pedido,clienteCodigo:r.clienteCodigo,clienteNome:r.clienteNome,valor:r.valor,valorPrincipal:baixa.valorPrincipal,valorAcrescimos:0,valorAntecipado:0,valorPendenteClassificacao:pend,statusTratamento:pend>0?"pendente":"concluido",tipoBaixa:baixa.parcial?"parcial":pend>0?"quitacao_com_excedente_pendente":"quitacao",dataRecebimento:r.dataRecebimento,vendaId:v.id,alocacoes:baixa.alocacoes,tratamentos:[],importadoEm:new Date().toISOString(),importadoPor:state.usuario?.id||""});
       recebimentos.push({empresaId:emp,chaveRecebimento:r.chaveRecebimento,vendaId:v.id,pedido:r.pedido,clienteCodigo:r.clienteCodigo,clienteNome:r.clienteNome,valor:r.valor,valorPrincipal:baixa.valorPrincipal,valorAcrescimos:0,valorAntecipado:0,valorPendenteClassificacao:pend,statusTratamento:pend>0?"pendente":"concluido",dataRecebimento:r.dataRecebimento,alocacoes:baixa.alocacoes});feitos++;msg($("receiptImportMsg"),`Lote ${lote} · processando ${feitos} de ${validos.length}...`)
     }
     await atualizarDocumento("importacoesRecebimentos",logId,{status:"concluida",quantidadeRecebimentos:feitos,valorTotal:validos.reduce((s,x)=>s+x.r.valor,0),principalTotal:validos.reduce((s,x)=>s+n(x.valorPrincipal),0),excedentePendenteTotal:validos.reduce((s,x)=>s+n(x.valorExcedentePendente),0),concluidoEm:new Date().toISOString()});
