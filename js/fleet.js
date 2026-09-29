@@ -195,7 +195,7 @@ function manutVencida(m){if(["concluida","cancelada"].includes(m.status))return 
 function manutProxima(m){if(["concluida","cancelada"].includes(m.status))return false;const v=vById(m.veiculoId),d=diasAte(m.dataPrevista),km=n(m.kmPrevisto)-n(v?.quilometragemAtual);return (d!=null&&d>=0&&d<=30)||(n(m.kmPrevisto)>0&&km>=0&&km<=1000)}
 function dentro12m(data){if(!data)return false;const d=new Date(`${data}T12:00:00`),lim=new Date();lim.setMonth(lim.getMonth()-12);return d>=lim&&d<=new Date()}
 function dentroPeriodo(data){if(!data)return false;const p=periodoAtual(),meses=new Set(p.indices.map(i=>String(i+1).padStart(2,"0"))),s=String(data);return s.slice(0,4)===String(p.ano)&&meses.has(s.slice(5,7))}
-function precoMedioDiesel(filtro){const compras=custosDiesel.filter(x=>x.status!=="estornado"&&filtro(x.data)),valor=compras.reduce((s,x)=>s+n(x.valorTotal??x.valor),0),litros=compras.reduce((s,x)=>s+n(x.quantidade),0);return litros?valor/litros:0}
+function precoMedioDiesel(filtro,empresaId=""){const compras=custosDiesel.filter(x=>x.status!=="estornado"&&(!empresaId||x.empresaId===empresaId)&&filtro(x.data)),valor=compras.reduce((s,x)=>s+n(x.valorTotal??x.valor),0),litros=compras.reduce((s,x)=>s+n(x.quantidade),0);return litros?valor/litros:0}
 function abastecimentosDoVeiculo(id){
   const v=vById(id),placa=String(v?.placa||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   const operacionais=veiculos.filter(x=>x.empresaId===v?.empresaId&&!["baixado"].includes(x.status));
@@ -208,7 +208,7 @@ function abastecimentosDoVeiculo(id){
     return semVinculo&&operacionais.length===1&&operacionais[0].id===id;
   })
 }
-function custoVeiculoPorFiltro(id,filtro){const m=manutencoes.filter(x=>x.veiculoId===id&&x.status==="concluida"&&filtro(x.dataRealizada||x.dataPrevista)).reduce((t,x)=>t+n(x.custoReal),0),o=obrigacoes(vById(id)).filter(x=>x.status==="pago"&&filtro(x.dataPagamento||x.vencimento)).reduce((t,x)=>t+n(x.valor),0),litros=abastecimentosDoVeiculo(id).filter(x=>filtro(x.data)).reduce((t,x)=>t+n(x.quantidade),0),combustivel=litros*precoMedioDiesel(filtro);return{manutencao:m,obrigacoes:o,combustivel,total:m+o+combustivel}}
+function custoVeiculoPorFiltro(id,filtro){const v=vById(id),m=manutencoes.filter(x=>x.veiculoId===id&&x.status==="concluida"&&filtro(x.dataRealizada||x.dataPrevista)).reduce((t,x)=>t+n(x.custoReal),0),o=obrigacoes(v).filter(x=>x.status==="pago"&&filtro(x.dataPagamento||x.vencimento)).reduce((t,x)=>t+n(x.valor),0),litros=abastecimentosDoVeiculo(id).filter(x=>filtro(x.data)).reduce((t,x)=>t+n(x.quantidade),0),combustivel=litros*precoMedioDiesel(filtro,v?.empresaId||"");return{manutencao:m,obrigacoes:o,combustivel,total:m+o+combustivel}}
 function custo12Veiculo(id){return custoVeiculoPorFiltro(id,dentro12m).total}
 function custoPeriodoVeiculo(id){return custoVeiculoPorFiltro(id,dentroPeriodo).total}
 function proxEvento(v){const arr=[];obrigacoes(v).forEach(o=>{if(!["pago","cancelado"].includes(o.status)&&o.vencimento)arr.push({data:o.vencimento,texto:`${tipoObrig(o.tipo)} ${o.exercicio||""}`.trim()})});manutencoes.filter(m=>m.veiculoId===v.id&&!["concluida","cancelada"].includes(m.status)&&m.dataPrevista).forEach(m=>arr.push({data:m.dataPrevista,texto:m.descricao||"Manutenção"}));arr.sort((a,b)=>String(a.data).localeCompare(String(b.data)));return arr[0]||null}
