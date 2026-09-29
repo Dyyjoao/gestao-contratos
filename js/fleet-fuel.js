@@ -1,11 +1,11 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, state, listarDocumentos, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao } from "./shared.js";
+import { $, esc, msg, permite, state, listarDocumentos, listarDocumentosEmpresa, criarDocumentoEmpresa, atualizarDocumento, preencherEmpresaSelect, empresaInicialFormulario, dataBr, emitirAlteracao } from "./shared.js";
 import { confirmarAcaoAdministrativa, atualizarComAuditoria } from "./admin-actions.js";
 import { periodoAtual } from "./company-context.js";
 import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
-let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="",motoristaFiltro="",rankingModo="veiculo",auditMesDetalhe="";
+let abastecimentos=[],compras=[],veiculos=[],motoristas=[],auditoriasTanque=[],veiculosFormulario=[],motoristasFormulario=[],auditCompras=[],auditAbastecimentos=[],auditAuditorias=[],configCombustivel={},aba="abastecimentos",editId=null,busy=false,veiculoFiltroId="",motoristaFiltro="",rankingModo="veiculo",auditMesDetalhe="";
 const pode=a=>admin()||permite("combustivel",a);
 const ver=()=>["visualizar","lancar","editar"].some(pode);
 const frotaVer=()=>admin()||permite("frota","visualizar")||permite("frota","cadastrar")||permite("frota","editar")||permite("frota","manutencao")||permite("frota","obrigacoes");
@@ -13,7 +13,8 @@ const num=v=>Number.isFinite(Number(v))?Number(v):0;
 const fmt=v=>num(v).toLocaleString("pt-BR",{maximumFractionDigits:2});
 const money=v=>num(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const localIso=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
-const emp=()=>empresaUnicaSelecionadaId();
+const empresaForm=()=>String($("fuelEmpresa")?.value||"");
+const empresaAuditoria=()=>String($("fuelAuditEmpresa")?.value||"");
 const ativosAbastecimento=()=>abastecimentos.filter(x=>x.status!=="estornado"&&x.tipo!=="recebimento");
 const comprasAtivas=()=>compras.filter(x=>x.status!=="estornado");
 const nomeVeiculo=v=>[v?.marca,v?.modelo].filter(Boolean).join(" ")||v?.placa||"Veículo";
@@ -25,7 +26,7 @@ function periodoCombustivel(){
 }
 function dentroPeriodo(x,p){const ym=String(x.data||"").slice(0,7);return p.meses.some(m=>ym===`${p.ano}-${m}`)}
 function veiculoPorId(id){return veiculos.find(v=>v.id===id)}
-function veiculoPorPlaca(placa){return veiculos.find(v=>v.placa===placa&&v.empresaId===emp())}
+function veiculoPorPlaca(placa,empresaId=empresaForm()){return [...veiculosFormulario,...veiculos].find(v=>v.placa===placa&&(!empresaId||v.empresaId===empresaId))}
 function ultimoAbastecimento(veiculoId,{antesData="",ignorarId=""}={}){
   return ativosAbastecimento().filter(x=>x.veiculoId===veiculoId&&x.id!==ignorarId&&(!antesData||x.data<=antesData)&&x.kmAtual!=null)
     .sort((a,b)=>String(b.data).localeCompare(String(a.data))||String(b.criadoEm||"").localeCompare(String(a.criadoEm||"")))[0]||null;
@@ -74,6 +75,7 @@ function montar(){
   <section id="fuelFormBox" class="form-card hidden">
     <div class="form-card-titulo"><h3 id="fuelFormTitulo">Novo abastecimento</h3></div>
     <form id="fuelForm"><div class="form-grid form-grid-3">
+      <div class="campo"><label for="fuelEmpresa">Empresa</label><select id="fuelEmpresa" required></select><small>A empresa pertence ao lançamento; o filtro superior controla apenas a visualização.</small></div>
       <div class="campo"><label for="fuelData">Data</label><input id="fuelData" type="date" required></div>
       <div class="campo" data-fuel-abastecimento><label for="fuelMotorista">Motorista</label><select id="fuelMotorista"></select></div>
       <div class="campo" data-fuel-abastecimento><label for="fuelPlaca">Veículo / placa</label><select id="fuelPlaca"></select></div>
@@ -107,6 +109,7 @@ function montar(){
         <div><h3>Parâmetros da bomba</h3><p>Estoque inicial e capacidade são protegidos e administrados fora da operação.</p></div>
         <span class="badge">Protegido</span>
       </div>
+      <div class="campo" style="max-width:360px;margin-bottom:12px"><label for="fuelAuditEmpresa">Empresa da auditoria</label><select id="fuelAuditEmpresa"></select><small>O tanque e seu estoque são controlados por empresa.</small></div>
       <div id="fuelConfigResumo" class="fuel-audit-grid"></div>
       <div class="form-acoes"><button id="fuelAbrirConfigTanque" class="btn-secundario hidden" type="button">Abrir configuração administrativa</button></div>
       <p class="fuel-config-note">Alterações de parâmetro ficam restritas ao menu Administração e exigem desbloqueio explícito.</p>
@@ -134,6 +137,8 @@ function montar(){
   $("fuelAtualizar").onclick=carregar;
   $("fuelCancelar").onclick=()=>{$("fuelFormBox").classList.add("hidden");limpar()};
   $("fuelForm").addEventListener("submit",salvar);
+  $("fuelEmpresa").addEventListener("change",()=>carregarDependenciasFormulario($("fuelEmpresa").value));
+  $("fuelAuditEmpresa").addEventListener("change",carregarAuditoriaEmpresa);
   $("fuelPlaca").addEventListener("change",preencherKm);
   $("fuelData").addEventListener("change",preencherKm);
   ["fuelLitrosCompra","fuelValor"].forEach(id=>$(id)?.addEventListener("input",calcularCustoLitro));
@@ -157,10 +162,37 @@ function trocar(k){
   if(k==="compras"){$("fuelNovo").textContent="+ Nova compra";$("fuelHistoricoTitulo").textContent="Compras de diesel";$("fuelHistoricoSub").textContent="Data da compra, NF, litros, valor total e custo por litro."}
   render()
 }
-function limpar(){editId=null;$("fuelForm").reset();$("fuelData").value=localIso();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";calcularCustoLitro();preencherMotoristas();preencherVeiculos();preencherKm();msg($("fuelMensagem"),"")}
+function limpar(){editId=null;$("fuelForm").reset();if($("fuelEmpresa"))$("fuelEmpresa").disabled=false;$("fuelData").value=localIso();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";veiculosFormulario=[];motoristasFormulario=[];calcularCustoLitro();preencherMotoristas();preencherVeiculos();preencherKm();msg($("fuelMensagem"),"")}
 function calcularCustoLitro(){const litros=num($("fuelLitrosCompra")?.value),total=num($("fuelValor")?.value),el=$("fuelCustoLitro");if(el)el.value=litros>0?money(total/litros):""}
-function preencherMotoristas(valor=""){const s=$("fuelMotorista");if(!s)return;const atual=valor||s.value||"";s.innerHTML='<option value="">Selecione...</option>'+motoristas.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${esc(p.cargoNome||"Motorista")}</option>`).join("");if(atual&&![...s.options].some(o=>o.value===atual))s.add(new Option(`${atual} · vínculo anterior`,atual));s.value=atual}
-function preencherVeiculos(valor=""){const s=$("fuelPlaca");if(!s)return;const atual=valor||s.value||"",empresaId=emp();s.innerHTML='<option value="">Selecione...</option>'+veiculos.filter(x=>x.empresaId===empresaId&&x.status!=="inativo"&&x.status!=="baixado").sort((a,b)=>String(a.placa).localeCompare(String(b.placa))).map(x=>`<option value="${esc(x.placa)}">${esc(x.placa)} · ${esc(nomeVeiculo(x))}</option>`).join("");if(atual)s.value=atual}
+function preencherMotoristas(valor=""){const s=$("fuelMotorista");if(!s)return;const atual=valor||s.value||"";s.innerHTML='<option value="">Selecione...</option>'+motoristasFormulario.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${esc(p.cargoNome||"Motorista")}</option>`).join("");if(atual&&![...s.options].some(o=>o.value===atual))s.add(new Option(`${atual} · vínculo anterior`,atual));s.value=atual}
+function preencherVeiculos(valor=""){const s=$("fuelPlaca");if(!s)return;const atual=valor||s.value||"";s.innerHTML='<option value="">Selecione...</option>'+veiculosFormulario.filter(x=>x.status!=="inativo"&&x.status!=="baixado").sort((a,b)=>String(a.placa).localeCompare(String(b.placa))).map(x=>`<option value="${esc(x.placa)}">${esc(x.placa)} · ${esc(nomeVeiculo(x))}</option>`).join("");if(atual)s.value=atual}
+async function carregarDependenciasFormulario(empresaId,{placa="",motorista=""}={}){
+  if(!empresaId){veiculosFormulario=[];motoristasFormulario=[];preencherVeiculos(placa);preencherMotoristas(motorista);return}
+  const [vs,ms]=await Promise.all([
+    listarDocumentosEmpresa("veiculos",empresaId).catch(()=>[]),
+    colaboradoresPorFuncao("MOTORISTA",{empresaId}).catch(()=>[])
+  ]);
+  veiculosFormulario=vs;motoristasFormulario=ms;preencherVeiculos(placa);preencherMotoristas(motorista);preencherKm()
+}
+async function prepararEmpresaFormulario(valorAtual=""){
+  await preencherEmpresaSelect($("fuelEmpresa"),{valorAtual:valorAtual||empresaInicialFormulario()});
+  await carregarDependenciasFormulario(empresaForm())
+}
+async function carregarAuditoriaEmpresa(){
+  const empresaId=empresaAuditoria();
+  if(!empresaId){auditCompras=[];auditAbastecimentos=[];auditAuditorias=[];configCombustivel={};if(aba==="auditoria")renderAuditoria(periodoCombustivel());return}
+  [auditCompras,auditAbastecimentos,auditAuditorias,configCombustivel]=await Promise.all([
+    listarDocumentosEmpresa("custosDiesel",empresaId).catch(()=>[]),
+    listarDocumentosEmpresa("abastecimentosFrota",empresaId).catch(()=>[]),
+    listarDocumentosEmpresa("auditoriasTanqueDiesel",empresaId).catch(()=>[]),
+    carregarConfiguracaoModulo("combustivel",empresaId).catch(()=>({}))
+  ]);
+  if(aba==="auditoria")renderAuditoria(periodoCombustivel())
+}
+async function prepararEmpresaAuditoria(valorAtual=""){
+  await preencherEmpresaSelect($("fuelAuditEmpresa"),{valorAtual:valorAtual||empresaInicialFormulario()});
+  await carregarAuditoriaEmpresa()
+}
 function preencherKm(){
   const placa=$("fuelPlaca")?.value,v=veiculoPorPlaca(placa),data=$("fuelData")?.value||localIso(),base=v?kmBaseVeiculo(v,data,editId):0;
   const kmAtual=$("fuelKmAtual"),motorista=$("fuelMotorista");
@@ -170,8 +202,8 @@ function preencherKm(){
     motorista.value=v.responsavel;
   }
 }
-function novo(){if(!pode("lancar")||aba==="auditoria")return;if(!emp())return alert("Selecione apenas uma empresa no cabeçalho.");limpar();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
-function editarRegistro(id){if(!pode("editar"))return;const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(y=>y.id===id);if(!x||x.status!=="ativo"||x.empresaId!==emp())return;editId=id;$("fuelData").value=x.data;if(aba==="abastecimentos"){preencherMotoristas(x.motorista);preencherVeiculos(x.placa);$("fuelKmAtual").value=x.kmAtual??"";$("fuelQuantidade").value=x.quantidade;preencherKm()}else{$("fuelNf").value=x.nf||"";$("fuelLitrosCompra").value=x.quantidade||"";$("fuelValor").value=x.valorTotal??x.valor??"";calcularCustoLitro()}$("fuelFormTitulo").textContent="Editar lançamento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
+async function novo(){if(!pode("lancar")||aba==="auditoria")return;limpar();await prepararEmpresaFormulario();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
+async function editarRegistro(id){if(!pode("editar"))return;const fonte=aba==="compras"?compras:abastecimentos,x=fonte.find(y=>y.id===id);if(!x||x.status!=="ativo")return;editId=id;$("fuelForm").reset();await prepararEmpresaFormulario(x.empresaId);$("fuelEmpresa").value=x.empresaId;$("fuelEmpresa").disabled=true;$("fuelData").value=x.data;if(aba==="abastecimentos"){await carregarDependenciasFormulario(x.empresaId,{placa:x.placa,motorista:x.motorista});$("fuelKmAtual").value=x.kmAtual??"";$("fuelQuantidade").value=x.quantidade;preencherKm()}else{$("fuelNf").value=x.nf||"";$("fuelLitrosCompra").value=x.quantidade||"";$("fuelValor").value=x.valorTotal??x.valor??"";calcularCustoLitro()}$("fuelFormTitulo").textContent="Editar lançamento";$("fuelFormBox").classList.remove("hidden");$("fuelFormBox").scrollIntoView({behavior:"smooth",block:"start"})}
 
 function alternarFiltroVeiculo(id){veiculoFiltroId=veiculoFiltroId===id?"":id;motoristaFiltro="";render()}
 function alternarFiltroMotorista(nome){motoristaFiltro=motoristaFiltro===nome?"":nome;veiculoFiltroId="";render()}
