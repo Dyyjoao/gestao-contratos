@@ -175,6 +175,18 @@ function fechar(box,form,mensagem){$(box)?.classList.add("hidden");$(form)?.rese
 function placa(v){return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,7)}
 function renavam(v){return String(v||"").replace(/\D/g,"").slice(0,11)}
 function veiculoNome(v){return `${v.marca||""} ${v.modelo||""}`.trim()||v.placa||"Veículo"}
+function matchVeiculo(v,termo=""){
+  const t=String(termo||"").trim().toLowerCase();
+  if(!t)return true;
+  return [
+    v?.placa,
+    v?.marca,
+    v?.modelo,
+    v?.renavam,
+    v?.responsavel,
+    nomeEmpresa(v?.empresaId)
+  ].some(x=>String(x||"").toLowerCase().includes(t))
+}
 function vById(id){return veiculos.find(v=>v.id===id)}
 function obrigacoes(v){return Array.isArray(v?.obrigacoes)?v.obrigacoes:[]}
 function statusObrig(o){if(!o||typeof o!=="object")return "aberto";if(o.status==="pago"||o.status==="cancelado"||o.status==="em_recurso")return o.status;const d=diasAte(o.vencimento);return d!=null&&d<0?"vencido":"aberto"}
