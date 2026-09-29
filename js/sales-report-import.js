@@ -1,5 +1,5 @@
 import { $, esc, permite, admin, moeda, listarDocumentos, criarDocumento, atualizarDocumento, excluirDocumento, empresaUnicaSelecionadaId, nomeEmpresa, emitirAlteracao, state } from "./shared.js";
-import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=6";
+import { colaboradoresPorFuncao } from "./hr-role-registry.js?v=7";
 import { normalizarChave, chaveImportacao, arredondarCentavos, executarEmLotes } from "./import-center.js";
 
 const XLSX_CDNS=["./vendor/xlsx.full.min.js?v=1","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js","https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js","https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"];
