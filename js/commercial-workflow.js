@@ -1,6 +1,6 @@
 import { collection, query, where, getDocs, arrayUnion, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { abrirPagina, admin } from "./core.js";
-import { $, db, esc, msg, permite, state, criarDocumento, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, empresasSelecionadasIds, idsEmpresasPermitidas, nomeEmpresa, grupoAtualId, periodoAno, periodoChave, dataBr, emitirAlteracao } from "./shared.js";
+import { $, db, esc, msg, permite, state, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, empresasSelecionadasIds, idsEmpresasPermitidas, nomeEmpresa, grupoAtualId, periodoAno, periodoChave, dataBr, emitirAlteracao } from "./shared.js";
 
 const MODELOS={
   visitas:{titulo:"Visitas e contatos",colecao:"visitasComerciais",permissao:"visitas"},
@@ -299,7 +299,7 @@ async function salvarMaterialVisita(e){
   if(materiaisVisitas.some(x=>norm(x.nome)===norm(nome)&&x.status!=="inativo"))return msg($("visMaterialConfigMsg"),"Este material já está cadastrado no grupo.");
   try{
     msg($("visMaterialConfigMsg"),"Salvando...");
-    await criarDocumento("itensComerciais",{empresaId:empresaIds[0],empresaIds,compartilhadoGrupo:true,codigo:String($("visNovoMaterialCodigo")?.value||"").trim(),nome,categoria:String($("visNovoMaterialCategoria")?.value||"").trim(),unidade,status:"ativo"});
+    await criarDocumentoEmpresa("itensComerciais",{empresaId:empresaIds[0],empresaIds,compartilhadoGrupo:true,codigo:String($("visNovoMaterialCodigo")?.value||"").trim(),nome,categoria:String($("visNovoMaterialCategoria")?.value||"").trim(),unidade,status:"ativo"});
     $("visitasMaterialForm")?.reset();atualizarResumoEmpresasMaterial();msg($("visMaterialConfigMsg"),"");await carregarBasesVisitas();emitirAlteracao("vendas")
   }catch(err){console.error("Erro ao salvar item comercial compartilhado",err);msg($("visMaterialConfigMsg"),err?.message||"Não foi possível salvar o material.")}
 }
