@@ -143,10 +143,7 @@ export async function listarDocumentos(nomeColecao){
 }
 
 function empresaParaGravacao(dados={}){
-  if(dados.empresaId){if(!podeEmpresa(dados.empresaId))throw new Error("sem-acesso-empresa");return dados.empresaId}
-  const id=empresaUnicaSelecionadaId();
-  if(id)return id;
-  if(typeof window!=="undefined")window.alert("Selecione a empresa no formulário do registro.");
+  if(dados.empresaId)return validarEmpresaFormulario(dados.empresaId);
   throw new Error("empresa-obrigatoria-no-formulario");
 }
 export function validarEmpresaFormulario(empresaId){
@@ -171,10 +168,8 @@ export async function criarDocumentoEmpresa(nomeColecao,dados){
   return ref.id;
 }
 export async function criarDocumento(nomeColecao,dados){
-  const empresaId=empresaParaGravacao(dados),grupoId=grupoAtualId();
-  if(!grupoId)throw new Error("grupo-nao-selecionado");
-  const ref=await addDoc(collection(db,nomeColecao),{...dados,empresaId,grupoId,criadoPor:state.usuario.id,criadoEm:serverTimestamp(),atualizadoEm:serverTimestamp()});
-  return ref.id;
+  empresaParaGravacao(dados);
+  return criarDocumentoEmpresa(nomeColecao,dados);
 }
 export async function atualizarDocumento(nomeColecao,id,dados){await updateDoc(doc(db,nomeColecao,id),{...dados,atualizadoEm:serverTimestamp()})}
 export async function excluirDocumento(nomeColecao,id){await deleteDoc(doc(db,nomeColecao,id))}
