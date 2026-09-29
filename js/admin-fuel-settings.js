@@ -1,5 +1,5 @@
 import { $, admin, abrirPagina } from "./core.js";
-import { empresaUnicaSelecionadaId, emitirAlteracao } from "./shared.js";
+import { preencherEmpresaSelect, empresaInicialFormulario, emitirAlteracao } from "./shared.js";
 import { carregarConfiguracaoModulo, salvarConfiguracaoModulo } from "./module-settings.js";
 
 let desbloqueado=false;
@@ -52,6 +52,11 @@ function montar(){
 
         <div class="form-grid form-grid-3">
           <div class="campo">
+            <label for="adminFuelEmpresa">Empresa</label>
+            <select id="adminFuelEmpresa"></select>
+            <small>A configuração pertence à empresa; o filtro superior não controla esta tela.</small>
+          </div>
+          <div class="campo">
             <label for="adminFuelEstoqueData">Data do estoque inicial</label>
             <input id="adminFuelEstoqueData" type="date" disabled>
           </div>
@@ -84,6 +89,7 @@ function montar(){
     main.appendChild(s);
 
     $("btnVoltarConfigBomba").onclick=()=>abrirPagina("administracao");
+    $("adminFuelEmpresa").onchange=async()=>{desbloqueado=false;aplicarBloqueio();await carregar()};
     $("btnDesbloquearConfigBomba").onclick=desbloquear;
     $("btnCancelarConfigBomba").onclick=async()=>{
       desbloqueado=false;
@@ -117,9 +123,10 @@ function aplicarBloqueio(){
 
 async function carregar(){
   if(!admin()||carregando)return;
-  const empresaId=empresaUnicaSelecionadaId();
+  if($("adminFuelEmpresa")&&!$("adminFuelEmpresa").options.length)await preencherEmpresaSelect($("adminFuelEmpresa"),{valorAtual:empresaInicialFormulario()});
+  const empresaId=String($("adminFuelEmpresa")?.value||"");
   if(!empresaId){
-    if($("configBombaMensagem"))$("configBombaMensagem").textContent="Selecione apenas uma empresa no cabeçalho.";
+    if($("configBombaMensagem"))$("configBombaMensagem").textContent="Selecione a empresa nesta tela.";
     return;
   }
 
@@ -149,8 +156,8 @@ function desbloquear(){
 
 async function salvar(){
   if(!admin()||!desbloqueado)return;
-  const empresaId=empresaUnicaSelecionadaId();
-  if(!empresaId)return alert("Selecione apenas uma empresa.");
+  const empresaId=String($("adminFuelEmpresa")?.value||"");
+  if(!empresaId)return alert("Selecione a empresa desta configuração.");
 
   const data=$("adminFuelEstoqueData").value;
   const estoque=Number($("adminFuelEstoqueLitros").value);
@@ -184,6 +191,7 @@ async function salvar(){
 function instalar(){
   montar();
   atualizarVisibilidade();
+  if(admin()&&$("adminFuelEmpresa")&&!$("adminFuelEmpresa").options.length)preencherEmpresaSelect($("adminFuelEmpresa"),{valorAtual:empresaInicialFormulario()}).then(carregar).catch(()=>{});
 }
 
 instalar();
