@@ -1,6 +1,6 @@
 import { collection, query, where, getDocs, arrayUnion, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { abrirPagina, admin } from "./core.js";
-import { $, db, esc, msg, permite, state, criarDocumento, atualizarDocumento, empresaUnicaSelecionadaId, empresasSelecionadasIds, idsEmpresasPermitidas, grupoAtualId, periodoAno, periodoChave, dataBr, emitirAlteracao } from "./shared.js";
+import { $, db, esc, msg, permite, state, criarDocumento, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, empresasSelecionadasIds, idsEmpresasPermitidas, nomeEmpresa, grupoAtualId, periodoAno, periodoChave, dataBr, emitirAlteracao } from "./shared.js";
 
 const MODELOS={
   visitas:{titulo:"Visitas e contatos",colecao:"visitasComerciais",permissao:"visitas"},
@@ -64,6 +64,7 @@ function formulario(k){
   if(k==="visitas"){
     const tipos=TIPOS_VISITA.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("");
     return `<section id="visitasFormBox" class="form-card hidden"><div class="form-card-titulo"><div><h3 id="visitasFormTitulo">Novo registro</h3><p>Registre a interação com o cliente. Vendedor e cliente são vinculados às bases corporativas do grupo.</p></div></div><form id="visitasForm"><div class="form-grid form-grid-3">
+      <div class="campo"><label for="visEmpresa">Empresa</label><select id="visEmpresa" required></select><small>A empresa pertence à visita; o cabeçalho filtra somente a visualização.</small></div>
       <div class="campo"><label for="visData">Data</label><input id="visData" type="date" required></div>
       <div class="campo"><label for="visVendedor">Vendedor</label><select id="visVendedor" required><option value="">Selecione...</option></select><small>Origem: colaboradores/vendedores vinculados ao RH.</small></div>
       <div class="campo"><label for="visCliente">Cliente</label><div class="commercial-select-action"><select id="visCliente" required><option value="">Selecione...</option></select><button id="visClienteNovo" class="btn-secundario" type="button">+ Incluir</button></div><small>Base de clientes do Comercial + clientes incluídos para relacionamento.</small></div>
@@ -84,6 +85,7 @@ function formulario(k){
   }
   if(k==="orcamentos"){
     return `<section id="orcamentosFormBox" class="form-card hidden"><div class="form-card-titulo"><div><h3 id="orcamentosFormTitulo">Novo orçamento</h3><p>Informe os dados do orçamento e adicione quantos materiais forem necessários.</p></div></div><form id="orcamentosForm"><div class="form-grid form-grid-3">
+      <div class="campo"><label for="orcEmpresa">Empresa</label><select id="orcEmpresa" required></select><small>A empresa pertence ao orçamento; o cabeçalho filtra somente a visualização.</small></div>
       <div class="campo"><label for="orcData">Data</label><input id="orcData" type="date" required></div>
       <div class="campo"><label for="orcVendedor">Vendedor</label><input id="orcVendedor" type="text" required></div>
       <div class="campo"><label for="orcCliente">Cliente</label><input id="orcCliente" type="text" required></div>
@@ -114,9 +116,9 @@ function montar(k){
   const s=document.createElement("section");s.id="pagina-"+k;s.className="pagina hidden commercial-flow-page";
 
   if(k==="visitas"){
-    s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>Visitas e contatos</h2><p>Visão consolidada do grupo empresarial, independente do filtro de empresa do cabeçalho.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="visitasNovo" type="button">+ Incluir visita / contato</button><button class="btn-secundario hidden" id="visitasConfigurar" type="button" title="Configurações de Visitas e contatos">⚙ Configurações</button><button class="btn-secundario" id="visitasAtualizar" type="button">Atualizar</button></div></div>
+    s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>Visitas e contatos</h2><p>Visão consolidada das empresas selecionadas no cabeçalho do SIG.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="visitasNovo" type="button">+ Incluir visita / contato</button><button class="btn-secundario hidden" id="visitasConfigurar" type="button" title="Configurações de Visitas e contatos">⚙ Configurações</button><button class="btn-secundario" id="visitasAtualizar" type="button">Atualizar</button></div></div>
       <div id="visitasAviso" class="modulo-aviso hidden"></div>
-      <div class="commercial-group-note"><strong>Escopo:</strong> esta tela consolida todas as empresas do grupo. O período continua seguindo o filtro geral do SIG.</div>
+      <div class="commercial-group-note"><strong>Escopo:</strong> esta tela consolida as empresas marcadas no filtro superior. Cada visita mantém sua empresa de origem.</div>
       <div class="commercial-visit-master-filter"><div><label for="visitasFiltroVendedor">Vendedor</label><select id="visitasFiltroVendedor"><option value="">Todos os vendedores</option></select></div><small>Este filtro se aplica a todos os cards, gráficos e ao histórico abaixo.</small></div>
       <div class="production-kpis commercial-visits-kpis"><div class="kpi-card"><span>Total de visitas / contatos</span><strong id="visitasKpiTotal">—</strong><small id="visitasKpiPeriodo">período selecionado</small></div><div class="kpi-card"><span>Clientes distintos</span><strong id="visitasKpiSegundo">—</strong><small>clientes contatados no período</small></div><div class="kpi-card"><span>Visitas convertidas em orçamento</span><strong id="visitasKpiConversao">—</strong><small id="visitasKpiConversaoTaxa">—</small></div></div>
       ${formulario(k)}
@@ -128,9 +130,9 @@ function montar(k){
         <section class="lista-card"><div class="lista-cabecalho"><div><h3>Visitas por cliente</h3><p>Clientes com maior número de contatos no período.</p></div></div><div id="visitasGraficoCliente" class="commercial-bars commercial-bars-scroll"></div></section>
         <section class="lista-card"><div class="lista-cabecalho"><div><h3>Visitas por cidade</h3><p>Total de contatos por cidade no período.</p></div></div><div id="visitasGraficoCidade" class="commercial-bars commercial-bars-scroll"></div></section>
       </div>
-      <section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Histórico de contatos</h3><p>${gestor(k)?"Visão consolidada da equipe e de todas as empresas do grupo.":"Registros sob sua responsabilidade, consolidados no grupo."}</p></div><div class="production-filtros"><input type="search" id="visitasBusca" placeholder="Buscar cliente ou vendedor"><select id="visitasFiltroTipo"><option value="">Todos os tipos</option>${TIPOS_VISITA.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select></div></div><div class="tabela-container commercial-history-scroll"><table class="tabela"><thead><tr><th>Data</th><th>Cliente / Cidade</th><th>Vendedor</th><th>Tipo</th><th>Status</th><th>Assunto</th><th>Ações</th></tr></thead><tbody id="visitasLista"></tbody></table></div></section>`;
+      <section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Histórico de contatos</h3><p>${gestor(k)?"Visão consolidada da equipe e de todas as empresas do grupo.":"Registros sob sua responsabilidade, consolidados no grupo."}</p></div><div class="production-filtros"><input type="search" id="visitasBusca" placeholder="Buscar cliente ou vendedor"><select id="visitasFiltroTipo"><option value="">Todos os tipos</option>${TIPOS_VISITA.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join("")}</select></div></div><div class="tabela-container commercial-history-scroll"><table class="tabela"><thead><tr><th>Empresa</th><th>Data</th><th>Cliente / Cidade</th><th>Vendedor</th><th>Tipo</th><th>Status</th><th>Assunto</th><th>Ações</th></tr></thead><tbody id="visitasLista"></tbody></table></div></section>`;
   }else{
-    s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>${MODELOS[k].titulo}</h2><p>Acompanhe cada orçamento e as próximas ações da equipe.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="${k}Novo" type="button">+ Novo registro</button><button class="btn-secundario" id="${k}Atualizar" type="button">Atualizar</button></div></div><div id="${k}Aviso" class="modulo-aviso hidden"></div><div class="production-kpis"><div class="kpi-card"><span>Orçamentos em aberto</span><strong id="${k}KpiTotal">—</strong></div><div class="kpi-card"><span>Próximo contato vencido</span><strong id="${k}KpiSegundo">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="orcamentosKpiValor">—</strong></div></div>${formulario(k)}<section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Minha Mesa · Orçamentos</h3><p>${gestor(k)?"Visão consolidada da equipe, com acesso por empresa.":"Registros sob sua responsabilidade."}</p></div><div class="production-filtros"><input type="search" id="${k}Busca" placeholder="Buscar cliente ou vendedor"><select id="${k}FiltroStatus"><option value="">Todos os status</option>${Object.entries(STATUS).map(([v,t])=>`<option value="${v}">${t}</option>`).join("")}</select></div></div><div class="tabela-container"><table class="tabela"><thead><tr>${["Data","Cliente / Produto","Vendedor","Valor","Status / próximo contato","Ações"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody id="${k}Lista"></tbody></table></div></section>`;
+    s.innerHTML=`<div class="pagina-cabecalho"><div><span class="eyebrow">COMERCIAL</span><h2>${MODELOS[k].titulo}</h2><p>Acompanhe cada orçamento e as próximas ações da equipe.</p></div><div class="acoes-cabecalho"><button class="btn-primario" id="${k}Novo" type="button">+ Novo registro</button><button class="btn-secundario" id="${k}Atualizar" type="button">Atualizar</button></div></div><div id="${k}Aviso" class="modulo-aviso hidden"></div><div class="production-kpis"><div class="kpi-card"><span>Orçamentos em aberto</span><strong id="${k}KpiTotal">—</strong></div><div class="kpi-card"><span>Próximo contato vencido</span><strong id="${k}KpiSegundo">—</strong></div><div class="kpi-card"><span>Valor em aberto</span><strong id="orcamentosKpiValor">—</strong></div></div>${formulario(k)}<section class="lista-card"><div class="lista-cabecalho production-toolbar"><div><h3>Minha Mesa · Orçamentos</h3><p>${gestor(k)?"Visão consolidada da equipe, com acesso por empresa.":"Registros sob sua responsabilidade."}</p></div><div class="production-filtros"><input type="search" id="${k}Busca" placeholder="Buscar cliente ou vendedor"><select id="${k}FiltroStatus"><option value="">Todos os status</option>${Object.entries(STATUS).map(([v,t])=>`<option value="${v}">${t}</option>`).join("")}</select></div></div><div class="tabela-container"><table class="tabela"><thead><tr>${["Empresa","Data","Cliente / Produto","Vendedor","Valor","Status / próximo contato","Ações"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody id="${k}Lista"></tbody></table></div></section>`;
   }
 
   main.appendChild(s);
@@ -140,11 +142,11 @@ function montar(k){
   $(k+"Form")?.addEventListener("submit",e=>salvar(k,e));
   $(k+"Busca")?.addEventListener("input",()=>render(k));
   $(k+"FiltroStatus")?.addEventListener("change",()=>render(k));
-  if(k==="orcamentos")$("orcAdicionarMaterial")?.addEventListener("click",()=>adicionarMaterialOrcamentoTela());
+  if(k==="orcamentos"){$("orcAdicionarMaterial")?.addEventListener("click",()=>adicionarMaterialOrcamentoTela());$("orcEmpresa")?.addEventListener("change",()=>carregarMateriaisOrcamentoTela())}
 
   if(k==="visitas"){
     $("visitasFiltroTipo")?.addEventListener("change",()=>render(k));
-    $("visitasFiltroVendedor")?.addEventListener("change",()=>render(k));
+    $("visitasFiltroVendedor")?.addEventListener("change",()=>render(k));$("visEmpresa")?.addEventListener("change",()=>{preencherBasesVisitas();carregarProdutosVisita()});
     $("visCliente")?.addEventListener("change",sincronizarClienteVisita);
     $("visAdicionarProduto")?.addEventListener("click",()=>adicionarProdutoVisita());
     $("visClienteNovo")?.addEventListener("click",()=>{$("visitasClienteBox")?.classList.remove("hidden");$("visNovoClienteNome")?.focus()});
@@ -156,7 +158,7 @@ function montar(k){
     $("visitasOrcamentoCancelar")?.addEventListener("click",fecharOrcamentoVisita);
     $("visitasOrcamentoForm")?.addEventListener("submit",salvarOrcamentoDaVisita);
     $("orcVisStatus")?.addEventListener("change",atualizarMotivoPerda);
-    $("orcVisEmpresa")?.addEventListener("change",()=>{
+    $("orcVisEmpresa")?.addEventListener("change",()=>{preencherVendedorOrcamentoVisita(dados.visitas.find(v=>v.id===visitaOrcamentoAtual));
       const atuais=materiaisOrcamentoForm(),box=$("orcVisMateriaisLista");if(box)box.innerHTML="";
       if(atuais.length)atuais.forEach(adicionarMaterialOrcamento);else resetMateriaisOrcamento();
       atualizarResumoMateriaisOrcamento()
