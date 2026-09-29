@@ -39,6 +39,7 @@ jobs:
             js/ctrl-consorcios-v1.js
             js/closing-v3.js
             js/governance.js
+            js/governance-kamishibai.js
             js/governance-security.js
             js/fleet.js
             js/fleet-fuel.js
