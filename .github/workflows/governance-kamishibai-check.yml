@@ -1,0 +1,32 @@
+name: SIG Governance Kamishibai Check
+
+on:
+  push:
+    branches: [main, 'feature/**', 'chatgpt/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  kamishibai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar rota Kamishibai
+        shell: bash
+        run: |
+          set -e
+          node --check js/governance-kamishibai.js
+          grep -Fq 'governance-kamishibai.js?v=1' app.js
+          grep -Fq 'data-gov-view="kamishibai"' js/governance-kamishibai.js
+          grep -Fq 'kamishibaiRotas' js/governance-kamishibai.js
+          grep -Fq 'kamishibaiExecucoes' js/governance-kamishibai.js
+          grep -Fq 'criarDocumentoEmpresa("kamishibaiRotas"' js/governance-kamishibai.js
+          grep -Fq 'criarDocumentoEmpresa("kamishibaiExecucoes"' js/governance-kamishibai.js
+          grep -Fq 'criarDocumentoEmpresa("planosAcao"' js/governance-kamishibai.js
+          grep -Fq 'Usar modelo pré-moldados' js/governance-kamishibai.js
+          grep -Fq 'match /kamishibaiRotas/{id}' firestore.rules
+          grep -Fq 'match /kamishibaiExecucoes/{id}' firestore.rules
+          ! grep -Fq 'empresaUnicaSelecionadaId' js/governance-kamishibai.js
