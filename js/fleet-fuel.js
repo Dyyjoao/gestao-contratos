@@ -161,6 +161,7 @@ function trocar(k){
   $("fuelNovo")?.classList.toggle("hidden",k==="auditoria"||!pode("lancar"));
   if(k==="abastecimentos"){$("fuelNovo").textContent="+ Novo abastecimento";$("fuelHistoricoTitulo").textContent="Abastecimentos";$("fuelHistoricoSub").textContent="KM anterior automático, KM atual informado e litros abastecidos."}
   if(k==="compras"){$("fuelNovo").textContent="+ Nova compra";$("fuelHistoricoTitulo").textContent="Compras de diesel";$("fuelHistoricoSub").textContent="Data da compra, NF, litros, valor total e custo por litro."}
+  if(k==="auditoria"&&$("fuelAuditEmpresa")&&!$("fuelAuditEmpresa").options.length)prepararEmpresaAuditoria().catch(e=>console.warn("Empresa da auditoria indisponível",e));
   render()
 }
 function limpar(){editId=null;$("fuelForm").reset();if($("fuelEmpresa"))$("fuelEmpresa").disabled=false;$("fuelData").value=localIso();$("fuelFormTitulo").textContent=aba==="compras"?"Nova compra de diesel":"Novo abastecimento";veiculosFormulario=[];motoristasFormulario=[];abastecimentosFormulario=[];calcularCustoLitro();preencherMotoristas();preencherVeiculos();preencherKm();msg($("fuelMensagem"),"")}
