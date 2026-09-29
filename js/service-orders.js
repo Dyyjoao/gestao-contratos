@@ -1,5 +1,5 @@
 import { abrirPagina, admin } from "./core.js";
-import { $, esc, msg, permite, state, listarDocumentosGrupo, criarDocumentoGrupo, atualizarDocumento, empresaUnicaSelecionadaId, dataBr, emitirAlteracao } from "./shared.js?v=2";
+import { $, esc, msg, permite, state, listarDocumentos, criarDocumentoEmpresa, atualizarDocumento, prepararEmpresaInput, empresaDoInput, nomeEmpresa, dataBr, emitirAlteracao } from "./shared.js?v=2";
 import { carregarConfiguracaoModulo, abrirConfiguracaoModulo } from "./module-settings.js";
 
 const TIPOS=["CORRETIVA","MELHORIA","PREVENTIVA"];
@@ -9,13 +9,14 @@ let ordens=[],configOS={},editId=null,busy=false;
 
 const pode=a=>admin()||permite("ordensServico",a);
 const ver=()=>["visualizar","solicitar","executar","supervisionar"].some(pode);
-const emp=()=>empresaUnicaSelecionadaId();
 const localIso=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
 const campo=(id,label,type="text",required=false)=>`<div class="campo"><label for="os${id}">${label}</label><input id="os${id}" type="${type}" ${required?"required":""}></div>`;
 const select=(id,label,values,required=false)=>`<div class="campo"><label for="os${id}">${label}</label><select id="os${id}" ${required?"required":""}><option value="">Selecione...</option>${values.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></div>`;
 const unicos=arr=>[...new Set(arr.map(x=>String(x||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+const empresaForm=()=>String($("osEmpresa")?.value||"");
 function cfgLista(chave,campoLegado){
-  return unicos([...(Array.isArray(configOS?.[chave])?configOS[chave]:[]),...ordens.map(x=>x[campoLegado])])
+  const emp=empresaForm();
+  return unicos([...(Array.isArray(configOS?.[chave])?configOS[chave]:[]),...ordens.filter(x=>!emp||x.empresaId===emp).map(x=>x[campoLegado])])
 }
 function preencherSelect(id,valores,valor=""){
   const s=$(id);if(!s)return;const atual=valor||s.value||"";
@@ -38,7 +39,7 @@ function montar(){
   const s=document.createElement("section");s.id="pagina-ordensservico";s.className="pagina hidden production-page";s.innerHTML=`
   <div class="pagina-cabecalho production-head">
     <div><span class="eyebrow">INDÚSTRIA</span><h2>Ordens de Serviço</h2><p>Solicitação, prazos previstos e acompanhamento do status das OS.</p></div>
-    <div class="acoes-cabecalho"><button class="btn-secundario hidden" id="osCadastros" type="button">Cadastros OS</button><button class="btn-primario" id="osNova" type="button">+ Solicitar serviço</button><button class="btn-secundario" id="osAtualizar" type="button">Atualizar</button></div>
+    <div class="acoes-cabecalho"><select id="osEmpresaConfig" class="ctx-select hidden" aria-label="Empresa dos cadastros de OS"></select><button class="btn-secundario hidden" id="osCadastros" type="button">Cadastros OS</button><button class="btn-primario" id="osNova" type="button">+ Solicitar serviço</button><button class="btn-secundario" id="osAtualizar" type="button">Atualizar</button></div>
   </div>
   <div id="osAviso" class="modulo-aviso hidden"></div>
   <div class="production-kpis os-kpis">
@@ -52,6 +53,7 @@ function montar(){
   <section class="form-card hidden" id="osFormBox">
     <div class="form-card-titulo"><div><h3 id="osFormTitulo">Nova solicitação</h3><p>Uma nova OS é sempre criada com status <strong>Aberta</strong>. O status é atualizado diretamente na linha da OS.</p></div></div>
     <form id="osForm"><div class="form-grid form-grid-3">
+      <div class="campo"><label for="osEmpresa">Empresa</label><select id="osEmpresa" required></select><small>A empresa pertence à OS; o cabeçalho só filtra a visualização.</small></div>
       ${campo("Numero","Número da OS","text",true)}
       ${select("Tipo","Tipo de serviço",TIPOS,true)}
       <div class="campo"><label for="osSolicitante">Solicitante</label><select id="osSolicitante" required></select></div>
@@ -75,14 +77,14 @@ function montar(){
       <div><h3>Acompanhamento das OS</h3><p>Atualize o status diretamente na linha. OS com início previsto vencido ficam sinalizadas.</p></div>
       <div class="production-filtros"><input id="osBusca" type="search" placeholder="OS, local, solicitante"><select id="osFiltroStatus"><option value="">Todos os status</option><option value="__inicio_vencido__">Início vencido</option><option value="__parada__">Com parada de produção</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div>
     </div>
-    <div class="tabela-container"><table class="tabela os-table"><thead><tr><th>Nº OS</th><th>Solicitação</th><th>Local / serviço</th><th>Prazo previsto</th><th>Status</th><th>Executante</th><th>Ações</th></tr></thead><tbody id="osLista"></tbody></table></div>
+    <div class="tabela-container"><table class="tabela os-table"><thead><tr><th>Empresa</th><th>Nº OS</th><th>Solicitação</th><th>Local / serviço</th><th>Prazo previsto</th><th>Status</th><th>Executante</th><th>Ações</th></tr></thead><tbody id="osLista"></tbody></table></div>
   </section>`;
   main.appendChild(s);
   $("osNova").addEventListener("click",novo);
   $("osAtualizar").addEventListener("click",carregar);
   $("osCadastros").addEventListener("click",abrirCadastros);
   $("osCancelar").addEventListener("click",()=>{$("osFormBox").classList.add("hidden");limpar()});
-  $("osForm").addEventListener("submit",salvar);
+  $("osForm").addEventListener("submit",salvar);$("osEmpresa").addEventListener("change",async()=>{await carregarConfigEmpresa($("osEmpresa").value);preencherCadastrosForm()});
   $("osBusca").addEventListener("input",render);
   $("osFiltroStatus").addEventListener("change",render);
   document.querySelectorAll("[data-os-card-filter]").forEach(card=>card.addEventListener("click",()=>aplicarFiltroCard(card.dataset.osCardFilter)))
@@ -95,14 +97,15 @@ function menu(){
 function limpar(){
   editId=null;$("osForm").reset();$("osDataSolicitacao").value=localIso();$("osInicioPrevisto").value=localIso();$("osConclusaoPrevista").value=localIso();preencherCadastrosForm();$("osFormTitulo").textContent="Nova solicitação";msg($("osMensagem"),"")
 }
-function novo(){
+async function carregarConfigEmpresa(empresaId){configOS=empresaId?await carregarConfiguracaoModulo("ordensServico",empresaId).catch(()=>({})):{}}
+async function novo(){
   if(!pode("solicitar"))return;
-  limpar();$("osFormBox").classList.remove("hidden");$("osFormBox").scrollIntoView({behavior:"smooth",block:"start"})
+  limpar();const s=$("osEmpresa");if(s){s.disabled=false;await prepararEmpresaInput(s);await carregarConfigEmpresa(s.value);preencherCadastrosForm()}$("osFormBox").classList.remove("hidden");$("osFormBox").scrollIntoView({behavior:"smooth",block:"start"})
 }
-function abrirEdicao(id){
+async function abrirEdicao(id){
   const x=ordens.find(y=>y.id===id);
   if(!x||!pode("executar")||["cancelada","concluida"].includes(x.status))return;
-  editId=id;
+  editId=id;const s=$("osEmpresa");if(s){await prepararEmpresaInput(s,{valorAtual:x.empresaId});s.value=x.empresaId;s.disabled=true;await carregarConfigEmpresa(x.empresaId)}
   $("osNumero").value=x.numero||"";$("osTipo").value=x.tipo||"";$("osDataSolicitacao").value=x.dataSolicitacao||"";$("osFuncao").value=x.funcao||"";$("osDescricao").value=x.descricao||"";
   $("osInicioPrevisto").value=x.dataInicioPrevista||x.dataInicio||"";$("osConclusaoPrevista").value=x.dataConclusaoPrevista||x.dataFim||"";
   $("osParada").checked=x.paradaProducao===true;$("osPeca").checked=x.trocaPeca===true;$("osObservacao").value=x.observacao||"";
@@ -123,15 +126,15 @@ function validar(d){
 async function salvar(e){
   e.preventDefault();
   try{
-    const d=validar(payload());
+    const empresaId=empresaDoInput("osEmpresa"),d=validar(payload());
     if(editId){
-      const x=ordens.find(y=>y.id===editId);if(!pode("executar")||!x||["cancelada","concluida"].includes(x.status))throw new Error("Edição não autorizada.");
+      const x=ordens.find(y=>y.id===editId);if(!pode("executar")||!x||x.empresaId!==empresaId||["cancelada","concluida"].includes(x.status))throw new Error("Edição não autorizada.");
       if(d.numero!==x.numero||d.dataSolicitacao!==x.dataSolicitacao)throw new Error("Número e data de solicitação não podem ser alterados.");
       await atualizarDocumento("ordensServico",editId,{...d,status:x.status,dataInicio:x.dataInicio||"",dataFim:x.dataFim||""})
     }else{
       if(!pode("solicitar"))throw new Error("Sem permissão para solicitar OS.");
-      if(ordens.some(x=>String(x.numero).toUpperCase()===d.numero.toUpperCase()&&x.status!=="cancelada"))throw new Error("Já existe OS com esse número no grupo.");
-      await criarDocumentoGrupo("ordensServico",{...d,equipamento:d.local,status:"aberta",dataInicio:"",dataFim:"",statusAlteradoEm:new Date().toISOString(),statusAlteradoPor:state.usuario?.id||"",origem:"sig",solicitadoPor:state.usuario?.id||""})
+      if(ordens.some(x=>x.empresaId===empresaId&&String(x.numero).toUpperCase()===d.numero.toUpperCase()&&x.status!=="cancelada"))throw new Error("Já existe OS com esse número nesta empresa.");
+      await criarDocumentoEmpresa("ordensServico",{...d,empresaId,equipamento:d.local,status:"aberta",dataInicio:"",dataFim:"",statusAlteradoEm:new Date().toISOString(),statusAlteradoPor:state.usuario?.id||"",origem:"sig",solicitadoPor:state.usuario?.id||""})
     }
     $("osFormBox").classList.add("hidden");limpar();emitirAlteracao("ordensservico");await carregar()
   }catch(err){console.error(err);msg($("osMensagem"),err.message||"Não foi possível salvar.")}
@@ -177,7 +180,7 @@ function render(){
   $("osLista").innerHTML=arr.sort((a,b)=>String(b.dataSolicitacao).localeCompare(String(a.dataSolicitacao))).map(x=>{
     const atrasada=osInicioVencido(x),local=x.local||x.equipamento||"—",opcoes=opcoesStatus(x);
     return `<tr class="${x.status==="cancelada"?"sig-admin-estornado":""} ${atrasada?"os-row-atrasada":""}">
-      <td><strong>${esc(x.numero)}</strong>${atrasada?'<small class="os-alerta-texto">Início vencido</small>':""}</td>
+      <td>${esc(nomeEmpresa(x.empresaId))}</td><td><strong>${esc(x.numero)}</strong>${atrasada?'<small class="os-alerta-texto">Início vencido</small>':""}</td>
       <td>${dataBr(x.dataSolicitacao)}<small>${esc(x.solicitante)}</small></td>
       <td><strong>${esc(local)}</strong><small>${esc(x.descricao)}</small></td>
       <td><strong>Início ${dataBr(x.dataInicioPrevista||x.dataInicio)}</strong><small>Conclusão ${dataBr(x.dataConclusaoPrevista||x.dataFim)}</small></td>
@@ -185,16 +188,16 @@ function render(){
       <td>${esc(x.executante||"—")}</td>
       <td><div class="acoes-tabela os-acoes">${pode("executar")&&!["concluida","cancelada"].includes(x.status)?`<button class="btn-acao" data-os-edit="${esc(x.id)}" type="button">Editar</button>${opcoes.length?`<select data-os-status="${esc(x.id)}"><option value="">Novo status...</option>${opcoes.map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select><button class="btn-acao destaque" data-os-atualizar="${esc(x.id)}" type="button">Atualizar</button>`:""}`:"—"}</div></td>
     </tr>`
-  }).join("")||'<tr><td colspan="7">Nenhuma OS encontrada.</td></tr>';
+  }).join("")||'<tr><td colspan="8">Nenhuma OS encontrada.</td></tr>';
 
   document.querySelectorAll("[data-os-edit]").forEach(b=>b.addEventListener("click",()=>abrirEdicao(b.dataset.osEdit)));
   document.querySelectorAll("[data-os-atualizar]").forEach(b=>b.addEventListener("click",()=>{const s=document.querySelector(`[data-os-status="${CSS.escape(b.dataset.osAtualizar)}"]`);if(!s?.value)return alert("Selecione o novo status.");atualizarStatus(b.dataset.osAtualizar,s.value)}))
 }
 async function abrirCadastros(){
   if(!admin())return;
-  const empresaId=emp();if(!empresaId)return alert("Selecione apenas uma empresa no cabeçalho.");
+  let empresaId="";try{empresaId=empresaDoInput("osEmpresaConfig")}catch{return alert("Selecione a empresa dos cadastros de OS.")}
   const cfg=await carregarConfiguracaoModulo("ordensServico",empresaId),txt=(arr)=>esc((Array.isArray(arr)?arr:[]).join("\n"));
-  await abrirConfiguracaoModulo("ordensServico",{
+  await abrirConfiguracaoModulo("ordensServico",{empresaId,travarEmpresa:true,
     titulo:"Cadastros · Ordens de Serviço",
     extraHtml:`<div class="form-grid form-grid-3">
       <div class="campo"><label for="cfgOsSolicitantes">Solicitantes</label><textarea id="cfgOsSolicitantes" rows="8" placeholder="Um nome por linha">${txt(cfg.solicitantes)}</textarea><small>Um solicitante por linha.</small></div>
@@ -211,14 +214,12 @@ async function abrirCadastros(){
 async function carregar(){
   if(busy||!ver())return;busy=true;
   try{
-    const empresaId=emp();
-    const [docs,cfg]=await Promise.all([listarDocumentosGrupo("ordensServico"),empresaId?carregarConfiguracaoModulo("ordensServico",empresaId).catch(()=>({})):Promise.resolve({})]);
-    ordens=docs;configOS=cfg||{};preencherCadastrosForm();render();$("osAviso").classList.add("hidden")
+    ordens=await listarDocumentos("ordensServico");render();$("osAviso").classList.add("hidden")
   }catch(e){console.error(e);$("osAviso").textContent="Não foi possível consultar as OS. Confira permissões e Rules publicadas.";$("osAviso").classList.remove("hidden")}finally{busy=false}
 }
-function instalar(){
+async function instalar(){
   if(!document.querySelector('link[href^="production.css"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="production.css?v=6";document.head.appendChild(l)}
-  montar();menu();$("osNova")?.classList.toggle("hidden",!pode("solicitar"));$("osCadastros")?.classList.toggle("hidden",!admin())
+  montar();menu();$("osNova")?.classList.toggle("hidden",!pode("solicitar"));$("osCadastros")?.classList.toggle("hidden",!admin());$("osEmpresaConfig")?.classList.toggle("hidden",!admin());if(admin()&&$("osEmpresaConfig")&&!$("osEmpresaConfig").options.length)await prepararEmpresaInput($("osEmpresaConfig"))
 }
 instalar();
 window.addEventListener("sig:ready",()=>{instalar();if(ver())carregar()});
