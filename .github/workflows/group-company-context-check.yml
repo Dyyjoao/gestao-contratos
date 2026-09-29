@@ -1,0 +1,39 @@
+name: Group Company Context Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar contrato grupo, empresa e filtro visual
+        shell: bash
+        run: |
+          set -e
+          node --check js/shared.js
+          node --check js/company-context.js
+          node --check js/hr-role-registry.js
+          node --check js/fleet.js
+          node --check js/fleet-fuel.js
+          node --check js/fleet-central.js
+          node --check js/admin-fuel-settings.js
+          grep -Fq 'Visualizar empresas' js/company-context.js
+          grep -Fq 'empresaInicialFormulario' js/shared.js
+          grep -Fq 'criarDocumentoEmpresa' js/shared.js
+          grep -Fq 'id="veiculoEmpresa"' js/fleet.js
+          grep -Fq 'id="fuelEmpresa"' js/fleet-fuel.js
+          grep -Fq 'id="fuelAuditEmpresa"' js/fleet-fuel.js
+          grep -Fq 'id="adminFuelEmpresa"' js/admin-fuel-settings.js
+          ! grep -Fq 'empresaUnicaSelecionadaId' js/fleet.js
+          ! grep -Fq 'empresaUnicaSelecionadaId' js/fleet-fuel.js
+          ! grep -Fq 'empresaUnicaSelecionadaId' js/fleet-central.js
+          ! grep -Fq 'empresaUnicaSelecionadaId' js/admin-fuel-settings.js
+          grep -Fq 'Abrir relatório detalhado do veículo' js/fleet-central.js
+          grep -Fq 'function documentoAcessivel(dados) { return mesmoGrupo(dados.grupoId) && acessoEmpresa(dados.empresaId); }' firestore.rules
